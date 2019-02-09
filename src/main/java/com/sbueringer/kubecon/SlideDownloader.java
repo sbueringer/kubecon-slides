@@ -32,7 +32,7 @@ public class SlideDownloader {
 
         SlideDownloader dl = new SlideDownloader();
         dl.initDriver();
-        dl.getSlides("https://events.linuxfoundation.org/events/kubecon-cloudnativecon-north-america-2018/schedule/", "slides/2018-kubecon-na");
+        dl.getSlides("https://kccna18.sched.com/", "slides/2018-kubecon-na");
 //        dl.getSlides("https://kccnceu18.sched.com", "slides/2018-kubecon-eu");
 //        dl.getSlides("https://kccncna17.sched.com/", "slides/2017-kubecon-na");
 //        dl.getSlides("https://cloudnativeeu2017.sched.com/", "slides/2017-kubecon-eu");
