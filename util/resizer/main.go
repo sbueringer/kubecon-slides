@@ -14,15 +14,24 @@ import (
 // dnf install ImageMagick-devel
 func main() {
 
-	folders := []string{
-		//"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/content/post/2017-kubecon-eu",
+	sourceFolders := []string{
+		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/slides/2017-kubecon-eu",
+		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/slides/2017-kubecon-na",
+		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/slides/2018-kubecon-eu",
+		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/slides/2018-kubecon-na",
+	}
+	targetFolders := []string{
+		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/content/post/2017-kubecon-eu",
 		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/content/post/2017-kubecon-na",
 		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/content/post/2018-kubecon-eu",
 		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/content/post/2018-kubecon-na",
 	}
-	remove := true
 
-	for _, folder := range folders {
+	//remove := true
+	remove := false
+
+	for i, folder := range sourceFolders {
+		targetFolder := targetFolders[i]
 		fileInfos, err := ioutil.ReadDir(folder)
 		if err != nil {
 			panic(err)
@@ -30,7 +39,13 @@ func main() {
 		for _, f := range fileInfos {
 			if strings.HasSuffix(f.Name(), ".pdf") {
 				pdfName := path.Join(folder, f.Name())
-				imageName := strings.TrimSuffix(pdfName, ".pdf") + ".jpg"
+				var imageName string
+				if strings.HasSuffix(f.Name(), ".pdf") {
+					imageName = path.Join(targetFolder, strings.TrimSuffix(f.Name(), ".pdf")+".jpg")
+				}
+				if strings.HasSuffix(f.Name(), ".pptx") {
+					imageName = path.Join(targetFolder, strings.TrimSuffix(f.Name(), ".pptx")+".jpg")
+				}
 
 				if remove {
 					os.Remove(imageName)
