@@ -1,5 +1,7 @@
 # KubeCon Slides
 
+Hosted @ https://sbueringer.github.io/kubecon-slides
+
 This repository contains a utility to download KubeCon slides from sched. Just clone the repository and open it in your favorite IDE. Then adjust the `main` method if necessary and execute the program.
 
 Already downloaded slides can be found here:
