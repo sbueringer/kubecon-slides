@@ -14,48 +14,58 @@ import (
 // dnf install ImageMagick-devel
 func main() {
 
-	sourceFolders := []string{
-		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/slides/2017-kubecon-eu",
-		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/slides/2017-kubecon-na",
-		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/slides/2018-kubecon-eu",
-		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/slides/2018-kubecon-na",
+	sourceRootFolder := "/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/slides"
+	targetRootFolder := "/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/content/post"
+
+	sourceFileInfos, err := ioutil.ReadDir(sourceRootFolder)
+	if err != nil {
+		panic(err)
 	}
-	targetFolders := []string{
-		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/content/post/2017-kubecon-eu",
-		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/content/post/2017-kubecon-na",
-		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/content/post/2018-kubecon-eu",
-		"/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/content/post/2018-kubecon-na",
+
+	var sourceFolders []string
+	for _, f := range sourceFileInfos {
+		if f.IsDir() {
+			sourceFolders = append(sourceFolders, path.Join(sourceRootFolder, f.Name()))
+		}
 	}
 
 	//remove := true
 	remove := false
 
-	for i, folder := range sourceFolders {
-		targetFolder := targetFolders[i]
-		fileInfos, err := ioutil.ReadDir(folder)
+	for _, sourceFolder := range sourceFolders {
+		targetFolder := path.Join(targetRootFolder, path.Base(sourceFolder))
+
+		if _, err := os.Stat(targetFolder); os.IsNotExist(err) {
+			err := os.MkdirAll(targetFolder, 0755)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		fileInfos, err := ioutil.ReadDir(sourceFolder)
 		if err != nil {
 			panic(err)
 		}
 		for _, f := range fileInfos {
+			pdfName := path.Join(sourceFolder, f.Name())
+			var imageName string
 			if strings.HasSuffix(f.Name(), ".pdf") {
-				pdfName := path.Join(folder, f.Name())
-				var imageName string
-				if strings.HasSuffix(f.Name(), ".pdf") {
-					imageName = path.Join(targetFolder, strings.TrimSuffix(f.Name(), ".pdf")+".jpg")
-				}
-				if strings.HasSuffix(f.Name(), ".pptx") {
-					imageName = path.Join(targetFolder, strings.TrimSuffix(f.Name(), ".pptx")+".jpg")
-				}
+				imageName = path.Join(targetFolder, strings.TrimSuffix(f.Name(), ".pdf")+".png")
+			} else {
+				continue
+			}
+			//if strings.HasSuffix(f.Name(), ".pptx") {
+			//	imageName = path.Join(targetFolder, strings.TrimSuffix(f.Name(), ".pptx")+".png")
+			//}
 
-				if remove {
-					os.Remove(imageName)
-				}
+			if remove {
+				os.Remove(imageName)
+			}
 
-				if _, err := os.Stat(imageName); os.IsNotExist(err) {
-					fmt.Printf("Creating imge %s from pdf %s\n", imageName, pdfName)
-					if err := ConvertPdfToJpg(pdfName, imageName); err != nil {
-						log.Fatal(err)
-					}
+			if _, err := os.Stat(imageName); os.IsNotExist(err) {
+				fmt.Printf("Creating imge %s from pdf %s\n", imageName, pdfName)
+				if err := ConvertPdfToJpg(pdfName, imageName); err != nil {
+					log.Fatal(err)
 				}
 			}
 		}
@@ -76,35 +86,41 @@ func ConvertPdfToJpg(pdfName string, imageName string) error {
 
 	// Must be *before* ReadImageFile
 	// Make sure our image is high quality
-	if err := mw.SetResolution(300, 300); err != nil {
-		return err
-	}
+	//if err := mw.SetResolution(300, 300); err != nil {
+	//	return err
+	//}
 
 	// Load the image file into imagick
 	if err := mw.ReadImage(pdfName); err != nil {
 		return err
 	}
 
+	// Select only first page of pdf
+	mw.SetIteratorIndex(0)
+
+	mw.ThumbnailImage(500, 300)
+
+	//mw.TrimImage()
+
+	mw.SharpenImage(0, 1.0)
+
 	// Must be *after* ReadImageFile
 	// Flatten image and remove alpha channel, to prevent alpha turning black in jpg
-	if err := mw.SetImageAlphaChannel(imagick.ALPHA_CHANNEL_FLATTEN); err != nil {
-		return err
-	}
+	//if err := mw.SetImageAlphaChannel(imagick.ALPHA_CHANNEL_FLATTEN); err != nil {
+	//	return err
+	//}
 
-	if err := mw.ResizeImage(mw.GetImageWidth()/5, mw.GetImageHeight()/5, imagick.FILTER_LANCZOS, 1); err != nil {
-		return err
-	}
+	//if err := mw.ResizeImage(mw.GetImageWidth()/5, mw.GetImageHeight()/5, imagick.FILTER_LANCZOS, 1); err != nil {
+	//	return err
+	//}
 
 	// Set any compression (100 = max quality)
 	if err := mw.SetCompressionQuality(95); err != nil {
 		return err
 	}
 
-	// Select only first page of pdf
-	mw.SetIteratorIndex(0)
-
 	// Convert into JPG
-	if err := mw.SetFormat("jpg"); err != nil {
+	if err := mw.SetFormat("png"); err != nil {
 		return err
 	}
 
