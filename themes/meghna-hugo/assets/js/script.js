@@ -56,6 +56,14 @@ jQuery(function ($) {
 		autoplaySpeed: 4000
 	});
 
+	/* TODO move to better place caseinsensitive contains */
+	$.extend($.expr[":"], {
+		"containsIN": function(elem, i, match, array) {
+		return (elem.textContent || elem.innerText || "").toLowerCase().indexOf((match[3] || "").toLowerCase()) >= 0;
+		}
+	});
+	/* ========================================================================= */
+
 	/* ========================================================================= */
 	/*	Magnific popup pdf
 	/* =========================================================================  */
