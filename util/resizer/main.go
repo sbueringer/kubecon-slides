@@ -63,9 +63,9 @@ func main() {
 			}
 
 			if _, err := os.Stat(imageName); os.IsNotExist(err) {
-				fmt.Printf("Creating imge %s from pdf %s\n", imageName, pdfName)
+				fmt.Printf("Creating image %s from pdf %s\n", imageName, pdfName)
 				if err := ConvertPdfToJpg(pdfName, imageName); err != nil {
-					log.Fatal(err)
+					log.Printf("error occured: %v", err)
 				}
 			}
 		}
