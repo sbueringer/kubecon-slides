@@ -15,7 +15,7 @@ import (
 func main() {
 
 	sourceRootFolder := "/home/sbuerin/code/src/github.com/sbueringer/kubecon-slides/slides"
-	targetRootFolder := "/home/sbuerin/code/src/github.com/sbueringer/kubecon-slides/content/post"
+	targetRootFolder := "/home/sbuerin/code/src/github.com/sbueringer/kubecon-slides/content"
 
 	sourceFileInfos, err := ioutil.ReadDir(sourceRootFolder)
 	if err != nil {
