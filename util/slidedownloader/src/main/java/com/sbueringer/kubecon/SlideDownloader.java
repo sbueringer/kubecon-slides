@@ -28,11 +28,13 @@ public class SlideDownloader {
     private boolean isDriverInitialied = false;
 
     public static void main(String[] args) {
-//        System.setProperty("webdriver.chrome.driver", "C:\\Workspaces\\Github\\kubecon-slides\\bin\\chromedriver.exe");
+
+
 
         SlideDownloader dl = new SlideDownloader();
         dl.initDriver();
-        dl.getSlides("https://kccnceu19.sched.com/", "slides/2019-kubecon-eu");
+        dl.getSlides("https://kccncna19.sched.com/", "slides/2019-kubecon-na");
+//        dl.getSlides("https://kccnceu19.sched.com/", "slides/2019-kubecon-eu");
 //        dl.getSlides("https://kccna18.sched.com/", "slides/2018-kubecon-na");
 //        dl.getSlides("https://kccnceu18.sched.com", "slides/2018-kubecon-eu");
 //        dl.getSlides("https://kccncna17.sched.com/", "slides/2017-kubecon-na");

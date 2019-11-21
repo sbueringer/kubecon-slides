@@ -14,8 +14,8 @@ import (
 // dnf install ImageMagick-devel
 func main() {
 
-	sourceRootFolder := "/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/slides"
-	targetRootFolder := "/home/fedora/code/gopath/src/github.com/sbueringer/kubecon-slides/content/post"
+	sourceRootFolder := "/home/sbuerin/code/src/github.com/sbueringer/kubecon-slides/slides"
+	targetRootFolder := "/home/sbuerin/code/src/github.com/sbueringer/kubecon-slides/content/post"
 
 	sourceFileInfos, err := ioutil.ReadDir(sourceRootFolder)
 	if err != nil {
@@ -24,7 +24,7 @@ func main() {
 
 	var sourceFolders []string
 	for _, f := range sourceFileInfos {
-		if f.IsDir() {
+		if f.IsDir() && f.Name() ==  "2019-kubecon-na" {
 			sourceFolders = append(sourceFolders, path.Join(sourceRootFolder, f.Name()))
 		}
 	}

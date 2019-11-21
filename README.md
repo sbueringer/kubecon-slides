@@ -6,6 +6,7 @@ This repository contains a utility to download KubeCon slides from sched. Just c
 
 Already downloaded slides can be found here:
 * 2019:
+    * [KubeCon NA 2019](https://github.com/sbueringer/kubecon-slides/tree/master/slides/2019-kubecon-na/README.md)
     * [KubeCon Europe 2019](https://github.com/sbueringer/kubecon-slides/tree/master/slides/2019-kubecon-eu/README.md)
 * 2018:
     * [KubeCon NA 2018](https://github.com/sbueringer/kubecon-slides/tree/master/slides/2018-kubecon-na)
