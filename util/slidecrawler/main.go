@@ -6,6 +6,7 @@ import (
 	"github.com/anaskhan96/soup"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,17 +18,17 @@ import (
 )
 
 var (
-	url string
+	crawlURL  string
 	outputDir string
 )
 
 func main() {
-	flag.StringVar(&url, "url", "", "url to crawl from")
+	flag.StringVar(&crawlURL, "url", "", "url to crawl from")
 	flag.StringVar(&outputDir, "output-dir", "", "directory to download files to")
 
 	flag.Parse()
 
-	if url == "" || outputDir == "" {
+	if crawlURL == "" || outputDir == "" {
 		panic(fmt.Errorf("you have to set --url and --output-dir"))
 	}
 
@@ -37,7 +38,7 @@ func main() {
 
 	start := time.Now()
 
-	events, err := getEvents(url)
+	events, err := getEvents(crawlURL)
 	if err != nil {
 		panic(err)
 	}
@@ -73,7 +74,7 @@ func main() {
 	downloadWg.Add(downloadWorker)
 	var attachmentCounter uint64
 	for i := 0; i < downloadWorker; i++ {
-		go func () {
+		go func() {
 			defer downloadWg.Done()
 			for attachments := range attachmentChan {
 				for _, a := range attachments {
@@ -139,9 +140,13 @@ func getAttachments(e event) ([]attachment, error) {
 	var ret []attachment
 	for _, attachmentTag := range attachmentTags {
 		if href, ok := attachmentTag.Attrs()["href"]; ok {
+			name, err := generateFilename(e, href)
+			if err != nil {
+				fmt.Printf("Err: %v", err)
+			}
 			ret = append(ret, attachment{
 				url:  href,
-				name: generateFilename(e, href),
+				name: name,
 			})
 		}
 	}
@@ -153,8 +158,12 @@ const maxFileLength = 250
 
 var dropRegex = regexp.MustCompile(`([/?:]|%|( \(Slides Attached\)))`)
 
-func generateFilename(e event, href string) string {
-	filename := fmt.Sprintf("%s-%s", e.name, path.Base(href))
+func generateFilename(e event, href string) (string, error) {
+	hrefUnescaped, err := url.QueryUnescape(path.Base(href))
+	if err != nil {
+		return "", err
+	}
+	filename := fmt.Sprintf("%s-%s", e.name, hrefUnescaped)
 	filename = strings.ReplaceAll(filename, "%20", " ")
 	filename = dropRegex.ReplaceAllString(filename, "")
 
@@ -162,7 +171,7 @@ func generateFilename(e event, href string) string {
 		ext := filepath.Ext(filename)
 		filename = filename[0:maxFileLength-len(ext)] + ext
 	}
-	return filename
+	return filename, nil
 }
 
 type event struct {
