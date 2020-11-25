@@ -1,0 +1,306 @@
+﻿In Search Of A `kubectl blame` Command: BDYA-2350 - events@cncf.io - Friday, November 20, 2020 5:07 PM - 39 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi, my name is Nick. This talk is called in search of a cube cuddle Bland command.
+00:00:07 [W] Now there's no Cube gotta blame Command right now.
+00:00:11 [W] It's hard to build and why you should care about it.
+00:00:16 [W] Let me start with why I care about it.
+00:00:19 [W] I work on tilt them.
+00:00:22 [W] We want to make developing on kubenetes a pleasant experience.
+00:00:27 [W] You edit your source code tilt updates your cluster.
+00:00:30 [W] We want to you to help you understand the progress.
+00:00:34 [W] It's making and how that change is affecting your app.
+00:00:37 [W] Lots of tools have this problem and they all solve it in a different way.
+00:00:44 [W] What does this mean exactly?
+00:00:46 [W] Let me give you an example.
+00:00:49 [W] You apply a deployment.
+00:00:50 [W] You want to check if it worked one approach to a cube coddled line command would Trace each cause to its effect and tell you how far along the deployment is.
+00:01:04 [W] Developers often want this tracking in the reverse direction as well, you know a pod is crashing.
+00:01:12 [W] Is that pod from the deployment you just created or is it from an older revision of that deployment?
+00:01:18 [W] Where do the different containers inside cars of the Pod come from?
+00:01:24 [W] When we tell Tim started down this path, we thought this would be easy.
+00:01:29 [W] It turned out not to be so easy.
+00:01:32 [W] We tried a lot of approaches many of them failed. It was pretty frustrating.
+00:01:37 [W] I want to explain the problem to you in the way that I wish someone had explained the problem to us.
+00:01:30 [W] Because this problem has old theoretical Roots.
+00:01:33 [W] We're going to talk about those roots.
+00:01:36 [W] We're going to take a tour of some of the tools that try to solve this problem and how they solve it and I'm going to talk about some ways future devtools might make this easier if anyone here works on kubenetes.
+00:01:52 [W] Now I don't want this to be just the talk about how to write kubeflow blame if I wanted kubeflow blame. I wouldn't have given this talk. I would have used that time to build my own Cube cuddle plug.
+00:02:09 [W] I'm more interested in the abstract problem and its history because if you understand the history, you can make sense of the different approaches.
+00:02:19 [W] You can reach for non kubernative stools even non computers for inspiration on Solutions, and we might just see better kubernative logging tools in the future.
+00:02:32 [W] So let's talk about why this is hard.
+00:02:35 [W] In the desired State and the current state.
+00:02:28 [W] I tried to describe kubernative to a friend. She researches History of Science.
+00:02:34 [W] She says uh Nick I I know what you're talking about.
+00:02:38 [W] We've been talking about that for decades.
+00:02:40 [W] Let me send you a paper.
+00:02:42 [W] She sent you this paper origins of feedback control by Auto mayor great paper old control Loop papers typically have a ton of calculus because they're really about functions on differences.
+00:02:56 [W] This paper is about history.
+00:02:57 [W] It's tons of fun. Very readable. Not much math.
+00:03:02 [W] You probably don't interact with water clocks and windmills day-to-day, but you do probably interact with thermostats and they have this property that demonstrates the cyclic relationship between cause and effect that were describing.
+00:03:16 [W] Let's say the current temperature of 60 degrees Fahrenheit you turn the thermostat to 70 degrees Fahrenheit you wait a bit then turn it to 90 degrees Fahrenheit.
+00:03:28 [W] The heat is on did the first setting make the heat turn on or did the second setting make it turn on.
+00:03:35 [W] What does it even mean for one change the cause that hate to turn on the other important part of the control Loop is that it's a declarative system it inherits a lot of the same problems that
+00:03:50 [W] You might be familiar with CSS is pretty widespread.
+00:03:54 [W] You may be scared of CSS.
+00:03:57 [W] I was a UI engineer for many years and I think CSS is great. I think it is. One of the great declarative programming languages is of all time.
+00:04:08 [W] When you look at the initial CSS proposal the inventors of CSS noted that it paid it has this nice property.
+00:04:16 [W] It makes Styles vary pluggable.
+00:04:18 [W] It gives you a lot of room to change the implementation and four different contributors to contribute to the soil and to optimize the implementation later.
+00:04:27 [W] The trade-off is that CSS? Like other declarative systems can be very hard to debug unless you have a good mental model about what the underlying
+00:04:37 [W] System is doing I remember an old story from the Gmail UI team where someone added a bad selector that looked innocent and that selector killed the performance of the entire page. It took them weeks to figure
+00:04:52 [W] Even the figure out which selector cause the problem.
+00:04:44 [W] Modern the CSS luggers have come a long way this plane calls. And in fact, you can see the order the rules are applied and where they're declared. You can see rules canceling each other help and you can edit them in place.
+00:04:56 [W] This is frankly what we should aspire to in kubernative slant.
+00:05:02 [W] But now we're going to take a look at what exists today in the graves ecosystem.
+00:05:09 [W] The sample app we're going to look at is a stripped down version of tilt we build and push an image.
+00:05:17 [W] We apply a deployment. We track the deployments progress and wait for the first pod to become ready.
+00:05:24 [W] Quick review of the life cycle of a deployment.
+00:05:27 [W] So you understand what's going on in these examples of the ployment creates a replica set and the replica set creates a pod then the Pod is the bit that runs your containers that runs your code.
+00:05:43 [W] We're going to look at how these tools differ the pros and cons and where they fall down if you want to follow along.
+00:05:51 [W] There's a repo where you can run these examples. It's at the bottom of your screen there.
+00:05:57 [W] The first example I'm going to show you is what the Tilt team did first again. We thought this would be easy.
+00:06:05 [W] For example, we might apply the label deployed at 10 a.m. January 10th.
+00:06:00 [W] If you see a pot of that label, you know, it belongs to this deployment.
+00:06:07 [W] Here's what the code looks like.
+00:06:10 [W] This is the kubernative go client Library client. Go client go gives you an object called an Informer an Informer handles watching for kubernative objects retrying when there is an error and notifying your code about
+00:06:25 [W] We can configure it to only watch pods with the label we care about which is what you see in bold here.
+00:06:22 [W] Let's watch what this looks like.
+00:06:24 [W] This is an ASCII Cinema video of the tool running. Our code is going to print an update every time the Pod status changes.
+00:06:35 [W] And we see the deployment was a success.
+00:06:39 [W] All of our examples have a crash flag that lets us see how it behaves when the Pod crashes - - crash so we can watch this deployment come out and eventually we're going to see it hit an error.
+00:06:54 [W] Great, perfect.
+00:06:55 [W] We sought so at this point.
+00:06:57 [W] We thought we had solved the problem.
+00:06:59 [W] We were pretty happy now.
+00:07:02 [W] This is very efficient. It only watches the pods that pattern we need to inject labels, but that's okay.
+00:07:09 [W] We can do that for the kind of tool.
+00:07:10 [W] We're building then we launched it and everybody hated this and they complain all the time.
+00:07:19 [W] Because we had made a mistake.
+00:07:22 [W] We assume that kubernative would see the label on the Pod template and would see that that was the only thing that had changed so it would update the existing poddisruptionbudgets.
+00:07:35 [W] That is not what happens.
+00:07:37 [W] I mean controller will notice that the Pod template spec has changed and replace the pod in tireli.
+00:07:39 [W] It was very important to people we learned that if nothing changes the Pod should say as it shouldn't we start?
+00:07:50 [W] And people hated the behavior where it started every time.
+00:07:55 [W] So we looked for alternatives.
+00:07:58 [W] The first alternative we will look at is Cube cuddle rollout it ships with cute couple.
+00:08:06 [W] The example code that we're going to look at uses Cube cuddle rollout is a library.
+00:08:13 [W] Let's watch.
+00:08:15 [W] So it's going to wake the deployment or I'll have to finish.
+00:08:19 [W] And it's a little bit repetitive but good success. It deployment successfully rolled out.
+00:08:26 [W] Now let's look at what happens when odd crashes. We start the command with - - crash we build and push the image deploy the deployment wait for the deployment to finish.
+00:08:38 [W] and wait
+00:08:42 [W] And it times out. Okay. What happens when you dig in the how Cube cuddle rods implanted? It's very simple.
+00:08:53 [W] It watches for changes for the deployment.
+00:08:55 [W] Here is the code the full function has a few more if branches but it's not substantially more complicated than the checks that you see here the checks and Bolt.
+00:09:00 [W] They check that the number of updated pods is what we expected it to be.
+00:09:09 [W] What Cube cuddle rot is really good at is understanding the plants any information about a pot that's propagated up to the deployment.
+00:09:18 [W] It can find that out.
+00:09:19 [W] But because of the information we care about isn't in the deployment status. It can't tell us why things are failing.
+00:09:30 [W] Let's look at a different tool.
+00:09:32 [W] Let's look at how Helm also has the ability to try to progress. It has two flags - - tube of and - - watch that let you track the progress of the helm upgrade.
+00:09:44 [W] Just as an aside Helm is pretty awesome. If you want tips on how to use the go client for kubenetes.
+00:09:52 [W] I highly recommend you look at how Helm uses it.
+00:09:54 [W] The code is very readable.
+00:09:56 [W] The code is very well organized of the examples that I wrote for this talk.
+00:10:00 [W] This was the easiest to write. It uses Helm as a library to watch progress in its a couple of lines.
+00:10:07 [W] Helm also has the ability to try and progress it has two flags - - develop and - - watch that let you track the progress of the helm upgrade
+00:10:08 [W] Just as an aside Helm is pretty awesome. If you want tips on how to use the go client for kubenetes.
+00:10:16 [W] I highly recommend you look at how Helm uses it.
+00:10:18 [W] The code is very readable.
+00:10:20 [W] The code is very well organized of the examples that I wrote for this talk.
+00:10:25 [W] This was the easiest to write. It uses Helm as a library to watch progress in its a couple of lines.
+00:10:34 [W] Let's watch a video what it does again.
+00:10:38 [W] We're going to build and push an event. You should deploy a deployment and wait on the planet to come up.
+00:10:44 [W] Deployment is not ready deployed successfully great.
+00:10:48 [W] That is exactly what we wanted.
+00:10:50 [W] Let's try again with a crashing poddisruptionbudgets.
+00:10:55 [W] We're going to apply the new deployment with the crashing poddisruptionbudgets.
+00:11:05 [W] The pot is still not ready.
+00:11:12 [W] And it times out.
+00:11:17 [W] Okay, let's let's try to figure out what's happening when you unpack the helm code.
+00:11:22 [W] What does it do?
+00:11:24 [W] The helm code pulls the status of the resource. It just apply them.
+00:11:29 [W] It has a big switch statement of all the different resource types.
+00:11:32 [W] It knows about it checks their status and it checks their children status in it does of type-specific check to see if it succeeded.
+00:11:42 [W] Here's what the code looks like.
+00:11:44 [W] It's a bit more sophisticated than the Cucumber roll out command. The important bit is the get new replica set Colin bol.com.
+00:12:04 [W] Going to show the implementation. But what it does is it makes a best guess of what the current replica set is based on the creation time stamp and whether the fields match the deployment finish those a similar check to what Cube Colorado does to see if
+00:12:19 [W] That are finished.
+00:12:23 [W] This is a fine approach.
+00:12:24 [W] It's easy to understand and easy to reason about the downside is that there is no Universal definition of done each new resource type has its own definition in that big switch block that home team maintains those definitions
+00:12:39 [W] and and easy to reason about the downside is that there is no Universal definition of done each new resource type has its own definition in that big switch block that home team maintains those definitions are easy to add but
+00:13:28 [W] But still you have to add them.
+00:13:33 [W] The third alternative we're going to look at is tube spite race. Now, we're not going to look at too much of the code. I will warn you the code is very dense.
+00:13:42 [W] It does a lot but it's very comprehensive and you can learn a lot by reading.
+00:13:50 [W] Let's take a look at a video of a didn't action unlike the other ones.
+00:13:54 [W] We're going to pause in the middle of this video. Just just to understand it a little bit better because there's a lot Q spies trays starts to hint net blame isn't a straight line.
+00:14:05 [W] It doesn't go straight from deployment to running poddisruptionbudgets current poddisruptionbudgets.
+00:14:15 [W] Let's unpause the video and watch it roll out. Now what's going to happen is that we can see the new pain has become ready and it is replaced the old pie great.
+00:14:28 [W] Now, let's look at what it means to crash again.
+00:14:32 [W] We're going to watch it roll out and we're going to pause at an opportune time right here.
+00:14:41 [W] Now you can see that the current role at is crashing and it's crashing with the error message containerd completed with exit code 1 and you can see that because the current role is crashing.
+00:14:50 [W] The previous rollout is still a revision tenant has not yet replaced revision 9
+00:14:57 [W] Is what we wanted let's dig into how Cube spite race works.
+00:15:01 [W] Now the other tools we have up that trap resources top down. They started with a deployment and look to its children Cube spite race doesn't do that.
+00:15:11 [W] If you look at the Bold of its watching every pot in the namespace.
+00:15:17 [W] Why?
+00:15:20 [W] So cute Spire Trace those both a top-down and bottom-up Analysis.
+00:15:26 [W] First it creates tables of every type it knows about.
+00:15:31 [W] It looks on an annotation of the plummet to find the current replica set.
+00:15:37 [W] Then it looks at all the pods in the namespace and at the owner ref at each pod to figure out which block pods belong to that replica set.
+00:15:50 [W] This seems like a lot of work but Cube spies Insight is that you need to do both the owner references tell you definitively these pods come from this replica set.
+00:16:04 [W] But the planet is mutable. It has revisions and the owner of it says can't tell you which revision of the deployment created which poddisruptionbudgets have information.
+00:16:16 [W] So this is great. We have to build tables of resources up front.
+00:16:10 [W] We still have to do a lot of custom analysis for each resource type. This approach isn't easily portable to other types or to custom resources.
+00:16:21 [W] I want to briefly talk about what tilt us today and it's not that much different than what Cuba spy does. It's less comprehensive than cubes by which does a lot of different checks tilt does use on a references heavily.
+00:16:36 [W] Every time Tilt deploys a resource it grabs the uid that Cube cuddle apply returns.
+00:16:38 [W] It watches all pods and everytime tilts. He's a pod it climbs the only references to see if that pod belongs to the thing that we just deployed.
+00:16:48 [W] Now we still need to do the top-down action, but we wanted this to work for any type not just for deployments.
+00:16:56 [W] So we use a label approach.
+00:16:58 [W] It's a little bit technical, but I'll try to walk you through it.
+00:17:02 [W] We inject a label into the Pod template spec. They are not random labels they are and they are also not Auto incrementing revision labels, like deployment controller adds their content based labels.
+00:17:15 [W] There are hash of the Pod template spec.
+00:17:18 [W] this ensures that the label changes if and only if the contents of the pot change and this gives us the semantics we want where kubernative will restart the Pod and only if the contents change
+00:17:30 [W] Now the planets are special and that they can guarantee that this label will make it down to all the pots.
+00:17:37 [W] This isn't true for all resource types.
+00:17:40 [W] So till will check if the label made it down to the pot and if it did we will only pay attention to pods that match the current template hash-table.
+00:17:54 [W] Here's what it looks like.
+00:17:56 [W] Just applied.
+00:17:53 [W] Now we still need to do the top-down action, but we wanted this to work for any type not just for deployments.
+00:18:00 [W] So we use a label approach.
+00:18:02 [W] It's a little bit technical, but I'll try to walk you through it.
+00:18:07 [W] We inject a label into the Pod template spec. They are not random labels.
+00:18:12 [W] they are and they're also not Auto incrementing revision labels, like deployment controller adds their content based levels. There are hash of the Pod template spec.
+00:18:23 [W] this ensures that the label changes if and only if the contents of the Pod change and this gives us the semantics we want where kubernative will restart the Pod and only if the contents change
+00:18:35 [W] now the planets are special and that they can guarantee that this label will make it down to all the pots this isn't true for all resource types so till will check if the label made it down to the pot and if it did we
+00:24:51 [W] pause briefly
+00:24:54 [W] Now when we applied the deployment, we got the uid of that deployments and we also looked at the content based label on each pod that we're watching and we saw that we actually saw three pots to of
+00:25:14 [W] That we actually saw three parts to of the pods had a Content label from a previous revision of the deployment.
+00:25:24 [W] So we're going to ignore those but we are going to keep track of the new pod.
+00:25:30 [W] Let's wait for succeed and we're good.
+00:25:34 [W] Now for completeness, let's look at what this looks like when it's crashing again.
+00:25:40 [W] We're going to build the image. Push the image apply the plummet ignore the posit don't match the current revision and we can see the error of the Pod that corresponds to this relation.
+00:25:55 [W] So this gives us what we need.
+00:25:57 [W] I am not super happy with the solution and I'll tell you why all the index in and owner of traversing means. This is very complicated and it's hard to make this perform. Well the depth the upside is that it
+00:26:12 [W] Well with any resource types, it allows us to track the process of custom research track the progress of custom resources. It allows us to properly display events and events are super helpful for the volume.
+00:26:27 [W] So I want to close this talk with a small ranch if you'll indulge me.
+00:26:32 [W] I don't want you to come away from this.
+00:26:36 [W] Talk saying, oh Cube Colour Allah is bad. Keep the Spy traces better tilt is the best all of these approaches have trade-offs some are simple and fast and efficient.
+00:26:46 [W] Some are more complex and give you more information but are slower.
+00:26:52 [W] When I was looking at examples for this talk I looked at Cube cuddle tree a cube cuddle plug-in that visualizes the owner reference graph.
+00:27:02 [W] I laughed out loud. When I read this comment directly from the code cute cold tree just grabs all the resources in a namespace.
+00:27:11 [W] It sets the QPS to a thousand so that it doesn't get throttled.
+00:27:14 [W] And this is not me shaming Cube cuddle tree because this is what it needs to do.
+00:27:23 [W] And I hope you see how much that stinks and it's not because anyone did a bad job.
+00:27:30 [W] It's because these are inherently hard problems to solve in a declarative system and the solve it we need to do some more work.
+00:27:38 [W] Loud, I wrote this comment directly from the color Cube Beltre just grabs all the resources in a namespace.
+00:27:39 [W] It sets the QPS to a thousand so that it doesn't get throttled.
+00:27:42 [W] And this is not me shaming Cube cuddle tree because this is what it needs to do.
+00:27:51 [W] And I hope you see how much that stinks and it's not because anyone did a bad job.
+00:27:58 [W] It's because these are inherently hard problems to solve and a declarative system and the solve it we need to do some more work.
+00:28:07 [W] But if the underlying infrastructure gave us a little bit of help and did some things automatically for us.
+00:28:14 [W] That would make it a lot easier.
+00:28:18 [W] So what might that look like, let's start with the bottom-up analysis.
+00:28:22 [W] What can you figure out when you look at a pub right now kubernative gives you on a references which are good, but there is no API to easily traversed them.
+00:28:34 [W] The kubernative API is very much optimized for querying pipes not proclaiming grass objects, which is good. If you're trying to build a controller like a deployment roller, but not so good if you're trying to attribute.
+00:28:48 [W] Blame the other thing about the other references is they don't really tell you which revision did what they only tell you which resource that came from
+00:29:03 [W] Which is good if you're trying to build a controller like a deployment roller, but not so good if you're trying to attribute blame.
+00:29:10 [W] The other thing about the owner references is they don't really tell you which revision did what they only tell you which resource it came from.
+00:29:24 [W] Then there's the other side.
+00:29:25 [W] What can you figure out if you're just looking at a deployment?
+00:29:29 [W] what's weird is that there are a lot of common patterns that you see in different resource types.
+00:29:39 [W] most controllers have a way to propagate information from the parent to the child to see which revision calls which child change.
+00:29:47 [W] And lots of controllers have ways to propagate status from the child to the parent.
+00:29:53 [W] But they all do it in consistently, they all reinvent the wheel every time even though we've kind of established the patterns by this point and we're getting to the point where it might be worth thinking about.
+00:30:06 [W] What would a generic API look like, what are the common idioms that all control is should be using for this.
+00:30:14 [W] Lastly I want to tease you that.
+00:30:18 [W] The kubernative ecosystem is only going to get more complicated.
+00:30:21 [W] We're seeing more custom resources.
+00:30:25 [W] We're starting to see mutated Mission controllers, which are really cool, but they modify pause and add side cars and add volumes and other things.
+00:30:36 [W] But we can't tell they came from those eat a mission controllers.
+00:30:42 [W] Lastly I want to tease you a bit.
+00:30:45 [W] The kubernative ecosystem is only going to get more complicated.
+00:30:49 [W] We're seeing more custom resources.
+00:30:52 [W] We're starting to see mutated Mission controllers, which are really cool, but they modify pause and add side cars and add volumes and other things.
+00:31:04 [W] But we can't tell they came from those eat a mission controllers.
+00:31:08 [W] What would it be bugging experience look like that was as nice as the CSS the buggers of today that lets you see a hierarchy of roles that lets you see what change each one made and that lets you attribute blame.
+00:31:25 [W] So thank you very much for listening to my talk.
+00:31:28 [W] Again.
+00:31:30 [W] My name is Nick.
+00:31:30 [W] I want to give a big shout-out to Ellen coredns. Who's and Sasha.
+00:31:34 [W] Mom bards who helped me put together this deck and gave a lot of feedback on this talk help to make it a lot better than what it was at the beginning. I also want to thank all the projects. I featured in this talk client go to cuddle Helm and keeps by.
+00:31:51 [W] So thank you very much for listening to my talk.
+00:31:54 [W] Again.
+00:31:56 [W] My name is Nick.
+00:31:57 [W] I want to give a big shout-out to Ellen corbs and Sasha.
+00:32:01 [W] Mom bards who helped me put together this deck and gave a lot of feedback on this talk that helped make it a lot better than what it was at the beginning.
+00:32:09 [W] I also want to thank all the projects. I featured in this talk client Go cube cuddle Helm and keeps by I hope none of them think I was criticizing them because I'm not.
+00:32:20 [W] I think these are all awesome projects.
+00:32:24 [W] And now we have some time for questions. So let's go to the questions.
+00:32:35 [W] Hello, this is Nick Live From Brooklyn here to answer some questions.
+00:32:43 [W] Thank you for everyone just for ending, by the way.
+00:32:46 [W] This is just really flattering that how many people showed up.
+00:32:48 [W] Let's start from the first place to so Joel Gerber asked will you be posting a link to the code presented?
+00:32:57 [W] I'm going to post I posted the link in the chat window also post any also posted it to the slack, please if you have questions about the code or how it works. It should be runnable the telepresence.
+00:33:12 [W] Right called asks, I wonder if there is a solution which in addition to status of the payment will also print out details events log from the crashing app.
+00:33:22 [W] Yes.
+00:33:23 [W] That is this. This is perfect.
+00:33:24 [W] This this is exactly the experience that I would like Mall Michaels just like any sort of event that affected this chain of this graph of objects being able to visualize them to be able to understand the priority between them.
+00:33:37 [W] There's a little bit of a difficulty in trying to trace, you know.
+00:33:42 [W] Lang between them.
+00:33:43 [W] Do what tilt with some mixed success because kind of pine a lot of different types of objects together, but I think that's exactly right Peter. Davis asks a different missing type of
+00:33:58 [W] up Peter Davis asks
+00:33:50 [W] a different missing type of blame which admin bypass Source control and manually did Coop cuddle apply broken pain diagram on production at 2:00 a.m. Last night.
+00:34:01 [W] This this actually speaks right to my heart.
+00:34:04 [W] just kind of fascinated with once you have like declarative data models even start to do it algebra on those declarative data models. You can start the find the Deltas between the fair data models and then Trace
+00:34:19 [W] Kind of the history of those models.
+00:34:21 [W] If you were a nerd out about the buggers. There is a lot of interesting work in kind of reclaim time-traveling the buggers and I would love that for kubernative objects. If you could just be like, okay, let's look time travel the
+00:34:37 [W] This term this appointment and see what happened.
+00:34:39 [W] I think it was a great great area research. I actually hope this seasons of bugger is on that in the future if we can record the right data.
+00:34:50 [W] Mark - have you seen the manage Fields?
+00:34:53 [W] Mayadata object. And what is your thoughts?
+00:34:55 [W] I haven't delved that deeply into manage Fields.
+00:35:01 [W] I think my understanding is it's related to server side apply if I could be totally mistaken about this.
+00:35:09 [W] Maybe I shouldn't even answer this question.
+00:35:11 [W] Let's talk offices in slap bass. I'm sure someone can tell me more about manage Fields tell me more than I actually know about it.
+00:35:19 [W] Mark goujon ass great cop.
+00:35:23 [W] What do you think needs to happen to have a pi to Traverse objects in all their relationships.
+00:35:28 [W] Is this something that could be easily implemented? Sounds very useful.
+00:35:33 [W] I'm not super so kubernative is as I understand the API.
+00:35:38 [W] I am not a person who works on geun-hye has internalized.
+00:35:42 [W] I am just edit person who builds tooling on top of the API. The API to me is just very tight.
+00:35:49 [W] Patrick like request all the objects of this particular pipe, which is makes it really good for implementing say controllers where you need to have your controller. Listen on a changes to some object pipe and
+00:36:04 [W] Just happened. I'm not sure what it would take to have some sort of graphql is islet pi.
+00:36:10 [W] Certainly the pointers are there the object references are there and maybe there could be some add on top of that that keeps track of that in an easy queryable way.
+00:36:21 [W] way. I think it's a really good question and it's actually something I don't most for this talk just kind of wrote a cube cuddle plug-in that was like a CSS selector where you could say, okay. Give me all the descendants.
+00:36:32 [W] It's of this element and see how that if the how that felt.
+00:36:37 [W] I look forward to more tools that think of objects as a trap.
+00:36:45 [W] Are there any other questions that I missed?
+00:36:59 [W] Now, I think that's all the questions.
+00:37:02 [W] Um, yeah, I also want to trip should probably get a shout-out to yeah 60 alive.
+00:37:09 [W] Oh someone just a Content. We are Eddie's an SP just commented.
+00:37:14 [W] Will you please join us in working on kubeflow Upstream join six a lie.
+00:37:18 [W] I probably should join the Sig CLI.
+00:37:21 [W] feel like when writing this talk, I was like, oh, yeah. I have a lot of opinions about how this API works.
+00:37:29 [W] No, I think that's all the questions.
+00:37:15 [W] Um, yeah, I also want to strip should probably get a shout-out to yeah, six CLI.
+00:37:22 [W] Oh someone just a constantly are Eddie's an SP just commented.
+00:37:27 [W] Will you please join us in working on kubeflow Upstream join six a lie.
+00:37:31 [W] I probably should join Sig CLI.
+00:37:34 [W] I feel like when writing this talk.
+00:37:38 [W] I was like, oh, yeah. I have a lot of opinions about how this API works.
+00:37:43 [W] I even filed some bugs against something that I kind of found while trying to write the code for this talk.
+00:37:49 [W] There is some interesting things that have happened.
+00:37:53 [W] How much do I want to say?
+00:37:56 [W] Oh, maybe they didn't farmers are great.
+00:37:58 [W] I will say that that mitad informers which are in kubernative 1.14 lets you watch just the metadata of an object and see those graphical ation ships made some this a lot easier though and a lot
+00:38:13 [W] Performance. We definitely had a lot of problems trying to make this performance.
+00:38:25 [W] Any other questions?
+00:38:44 [W] Okay.
+00:38:45 [W] Well, yeah, thank you again for coming. I'll be hanging out in the slack app Dev Channel after this if you want to discuss more or how to say have a question that comes up afterwards and yeah.
+00:39:00 [W] thanks again for joining me for this and letting me kind of figure it out about everything I learned while trying to write this kind of kubernative school and
+00:39:12 [W] in the slack app Dev Channel after this if you want to discuss more or how to have a question that comes up afterwards and yeah, thanks again for joining me for this and letting me kind of figure it out about everything

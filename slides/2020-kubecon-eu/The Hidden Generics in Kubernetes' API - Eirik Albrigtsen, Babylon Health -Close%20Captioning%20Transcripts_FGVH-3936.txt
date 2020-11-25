@@ -1,0 +1,314 @@
+﻿The Hidden Generics in Kubernetes' API: FGVH-3936 - events@cncf.io - Wednesday, August 19, 2020 8:18 AM - 127 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:08:48 [W] Hello everyone. My name is Eric and I'm one of them.
+00:08:53 [W] Maintainer Zone Q Bar s right?
+00:11:36 [W] Hello everyone.
+00:11:42 [W] clocks on GitHub or listing here on Twitter
+00:11:51 [W] but today I am primarily here to talk about the compromise API some other generic assumptions and invariance that kubernative wants to maintain look at how these invariants are put in place how they are enforced and how reliable are we're also going to talk about
+00:12:07 [W] some of the generic assumptions and invariants that kubernative wants to maintain look at how these invariants are put in place how they are enforced and how reliable are
+00:12:08 [W] we're also going to talk about how to model the kubernative API in Rust using generics and see what that gives us in terms of consistency.
+00:12:18 [W] And finally we're going to talk about some abstractions about this rest API that ultimately lets you write lightweight controllers.
+00:12:22 [W] So we're going to look at what communities actually provides these are going to be our main sources and we're going to start by digging into the arguably most important file of all API Machinery is Method types.
+00:12:34 [W] Because this file it really has everything that you associate with a kubernative subject.
+00:12:42 [W] Like every object has a kind of diversion from plate method that is flattened into the root object.
+00:12:45 [W] Every object has object matter.
+00:12:50 [W] This is the core metadata. Everyone thinks about this is a simplified view of hitting all the read only properties.
+00:12:52 [W] I've hidden All The annotation because everything is optional, but every object must have metadata and it must look like this.
+00:12:59 [W] So all these great things in here like owner references labels annotations finalized others also manage fields that can go in
+00:13:07 [W] are and if they are then they are standardized.
+00:13:08 [W] There's also list of all types list for when you want a collection of items.
+00:13:14 [W] This actually returns a different metadata, which is not relevant right now and but more importantly there's a dynamic collection item there for items so that you can use put whatever inside of here at runtime.
+00:13:24 [W] Simplified view of hidden older read-only properties of hidden All The annotation because everything is optional, but every object must have metadata and it must look like this.
+00:13:39 [W] this. So all these great things in here like owner references labels annotations finalized others also manage fields that can go in there and if they are then they are standardized.
+00:13:40 [W] There's also list of all types list for when you want a collection of items.
+00:13:41 [W] This actually returns a different metadata, which is not relevant right now and but more importantly there's a dynamic collection item.
+00:13:43 [W] There are four items so that you can use put whatever inside of here at runtime.
+00:13:44 [W] Then we got all the stuff for API parameters get options list options shown delete options patch options.
+00:13:51 [W] Basically all the parameters that the API except are encapsulated into calm instructs in this root file.
+00:13:51 [W] You also got all the error responses for the API.
+00:13:52 [W] You got label selectors that sit inside the list option. So there's a generic way of doing filtering and there's also API resource struct for standardizing all the meta information about a resource and how people can use it.
+00:13:55 [W] And so that all of this and More in basically three hundred lines of code, so I'm being very positive about this file, but it's really because of this file and and the complete can see the consistency and complete adoption of everything in this file that kubernative feel so consistent
+00:14:08 [W] Filtering and there's also a pi resource struct for standardizing all the meta information about a resource and how people can use it.
+00:14:09 [W] And so that all of this and More in basically three hundred lines of code, so I'm being very positive about this file, but it's really because of this file and and the complete can see the consistency and complete adoption of everything in this file that kubernative
+00:14:10 [W] shoes on other languages
+00:14:13 [W] now writing structure is one thing how do we ensure that these structure consistently reused across all the kubenetes. Let's look at client code for contrast.
+00:14:23 [W] So here are the type to API methods in clinical.
+00:14:28 [W] This is just interface.
+00:14:32 [W] You can see this all together subtitles patchers replacers, etc for deployment.
+00:14:40 [W] And so all the actual implementation here ends up being about a 200 line file. You can go look at any other object like bol.com
+00:14:50 [W] So let's say 200 line file for every object and there's a lot of object in communities.
+00:14:56 [W] So how could this possibly be?
+00:14:56 [W] consistent?
+00:14:58 [W] The answer is in the header. All of this is generated.
+00:15:01 [W] And this might seem obvious to you. Like you are you'd have to enforce some of these assumptions for them to stick but it still kind of crazy like you got all this you got all this glue to basically generate this code manually to you basically doing manual generics. It is consistent.
+00:15:14 [W] sure you for each kind the specific structure are specialized via external code generation and the generated Source has to be present somewhere and it's just this repo but you got a lot of code that crucial code that's in here like this. The client API is in
+00:15:29 [W] Also, not only is it a client avi file for each type.
+00:15:34 [W] There's also informers for every object this client setup for each group.
+00:15:40 [W] And as a result, my client go is more than a hundred thousand lines of code. And that's without rendering and I'm not here to really try and pass judgment that this this is clinco still great like the fact that everything looks the same in here
+00:15:51 [W] Vantage of 8pa Machinery consistently is what enables gives you Delta provide such a consistent interface, even if the language makes it hard for you to do so amusingly there.
+00:16:03 [W] Is this five minute clip from Keep Calm Barcelona and the keynote that's actually talks about this particular thing and also matches my motivations for writing some of the stuff that's coming up here later.
+00:16:13 [W] for now we have time for that. So I'm going to go on to the documented API concept since that.
+00:16:19 [W] So here so there is meant to be a consistency between API endpoints and objects.
+00:16:30 [W] So this is how that would look it's prominently displayed on the APA Concepts under the governor's website though here is where things start to break down a little bit because this URL scheme does not hold for pods nodes namespaces Services PVCs,
+00:16:40 [W] Or any other type in the core V1 list because all of those types have a different URL presumably for legacy reasons and that URL starts with API rather Navy is and the group is missing.
+00:16:57 [W] So this is a relatively minor inconsistency because we can just a special case this one empty group work or but it is still kind of awkward.
+00:17:02 [W] The second concept API concept is watch events.
+00:17:13 [W] So that's what you get. When you perform a watch call on any list and point.
+00:17:14 [W] This is how that looks.
+00:17:17 [W] Basically this is a two-line response.
+00:17:18 [W] I have split it for the presentation.
+00:17:22 [W] You'll get a chunked response. Typically one line per trunk, but you'll have the buffer yourself because each of the objects are embedded here can exceed the MTU and frequently does so, but when you have a complete line then you can
+00:17:35 [W] The inner object as a type, you actually wants and all apis use this concept and it is consistent the source for it looks like this and you'll find more of this runtime Dynamic object in Ireland handles different types.
+00:17:47 [W] So that's how kubenetes does some of these core things and I've actually covered all the concepts and mean API consistencies that I want to be talking about.
+00:17:58 [W] A lot of it was only cogeneration. A lot of it was done with Dynamic types. So I'm going to be moving on to things from rust point of view now.
+00:18:02 [W] I aren't of Singh AKA are not even because that project k8s open API is really the linchpin that makes an engineer responsible. Not only does it generates the raw structures from openfaas schemas.
+00:18:26 [W] It also factors out some of the consistency into a few traits that is then implemented for all these structures.
+00:18:35 [W] So a huge shout-out to him like for what I believe is just a side project.
+00:18:37 [W] I really can't thank him enough. So his first rate is basically
+00:18:40 [W] Resource and I run straight is as tldr the behavior that you can Implement for a type and then later you can use the trait as a constraint in function signatures and I say Behavior because you can't put
+00:18:56 [W] So his first rate is basically resource and arrest rates is a tldr the behavior that you can Implement for a type and then later you can use the trait as a constraint in function signatures and I say Behavior.
+00:18:58 [W] Allowed to put static Associated constant, which is what this is so we can use this to map an API to wear on the API it lives.
+00:19:06 [W] the second trade I want to cover is metadata, which really is just a getter or a generic way to grab meta data is consistent across all objects because even if kubernative always put metadata on the same key, we can't really guarantee that
+00:19:23 [W] So we need some interaction and treats are the way for that.
+00:19:28 [W] This is how that would look at slightly simplified because communities open API distinguishes between list of all types and list method that uses less matter, but everything else uses subject matter and we from Q Bar has point of view only really do stuff on top of
+00:19:41 [W] Object that object matter so we're hiding a few details here.
+00:19:45 [W] But with these two root traits, we can start and build a dynamic API.
+00:19:53 [W] So you get a kind of how it's going to work.
+00:20:06 [W] So this structure here is got all the same information as the research straight, but it also has got a dynamic namespace property as well as all of these being string so you can instantiate this at runtime an arbitrary object.
+00:20:08 [W] So while you can fill it in completely manually, there's this nice thing now about the existing openfaas direct we can actually just provide a blanket Constructor with 1 trade constraints.
+00:20:20 [W] That would look like this for a namespace resource.
+00:20:24 [W] So we have all the data. So if this thing implements the trade, so we just copy all of that when constraining by it and as a result the resource type is not generic.
+00:20:39 [W] We just use the trade constraint in the in the Constructor.
+00:20:41 [W] So with this information and this easy way to create a resources we can now start thinking about how to hit every objects API endpoint.
+00:20:49 [W] So I'm going to make a very simplified URL mapper something that let us hit basically every
+00:20:54 [W] your eleven point in kubenetes
+00:20:56 [W] Right a blanket Constructor with 1 trade constraints.
+00:21:12 [W] That would look like this for a namespace resource.
+00:21:13 [W] So we have all the data. So if this thing implements the trade, so we just copy all of that when constraining by it and as a result the resource type is not generic.
+00:21:14 [W] We just use the trade constraint in the in the Constructor.
+00:21:15 [W] So with this information and this easy way to create a resources we can now start thinking about how to hit every objects API endpoint.
+00:21:17 [W] So I'm going to make a very simplified URL mapper something that let us hit basically every
+00:21:19 [W] Your 11-point in communities?
+00:21:26 [W] So this is this is that it's going to handle it's going to match the API convention for for resources, and it's going to handle that awkward empty group case that I talked about earlier.
+00:21:27 [W] About earlier. However, it is slightly awkward.
+00:21:28 [W] We haven't got all the information.
+00:21:29 [W] I really would like in the in the trade at the moment.
+00:21:29 [W] So you can see the resource line actually got loodse bearing pluralization in there because we only have the kind.
+00:21:35 [W] So yeah, that's not really a great phrase to use about software architecture. But let alone things that I'm designing but here we are ultimately whether you're on my parole in place. We can hit pretty much anything and this
+00:21:42 [W] so we can start making a dynamic API.
+00:21:45 [W] So we're going to focus on create four basic crud.
+00:21:54 [W] So this is how great would look it takes a post parameters struct which is analogous to the type in types of go.
+00:22:02 [W] It also takes a binary data makes query parameters from post parameters and prepares the request you must and execute the request yourself.
+00:22:09 [W] So this will be pretty similar to how another language client would do it. You get some bites go through your own mapper make an HTTP call response you get response by it and you have to deal.
+00:22:15 [W] Cyril ization yourself, but that's not really what we want to be doing. Like we don't want to be manually keeping track and mapping resources to serialization formats. We want what we really want is an automatic serialization deserialization
+00:22:30 [W] Get response by it and you have to deal with serialization yourself, but that's not really what we want to be doing.
+00:22:31 [W] Like we don't want to be manually keeping track in mapping resources to serialization formats. We want what we really want is an automatic serialization deserialization system some kind of mechanism that is generic over K.
+00:22:34 [W] That is aware of the underlying structural resource.
+00:22:42 [W] So for that we're going to make our first truly generic type the API and
+00:22:43 [W] this is a wrapper around resource with an HTTP client handle inside of it along with an empty marker of what type is for because we don't actually store any data for K in here.
+00:22:58 [W] So this is just a marker for the type system.
+00:23:01 [W] We need to specify what type this API is for anyway, so it may as well be when we instantiate an API so we can make an API namespace here by referencing resource names based on going to show that but this Constructor would not take any.
+00:23:16 [W] Anything ready to queso?
+00:23:17 [W] It's really when we construct we have to tell the type system.
+00:23:21 [W] That's it's really for pot what this magic syntax on the left of the equality sign.
+00:23:25 [W] it stipend?
+00:23:29 [W] So now that we have an API, we can't do anything with it.
+00:23:34 [W] So let's generalize create.
+00:23:35 [W] And this is where all the funky residents like start coming in.
+00:23:40 [W] This is what a generic implementation over a type K for a type.
+00:23:45 [W] That is also generic over K comes in.
+00:23:51 [W] We need to specify what type this API is for anyway, so it may as well be when we instantiate an API so we can make an API name space here by referencing resource names based on going to show that but this Constructor would not take any anything ready to K. So
+00:24:01 [W] Straits turning that data into Json passing it to a client that is done executing the request and the result is this realized into the type K.
+00:24:11 [W] Because create actually takes an object at the same object.
+00:24:18 [W] That is it will return so by using generics and constraints on K. We have actually implemented this client go like API method across all types with just a blanket implementation.
+00:24:32 [W] So that's really great to give success story. But unfortunately, this is not going to help us for absolutely everything. I mean, it's gonna let us populate the API but
+00:24:41 [W] I'm going to I would be lying if I said we didn't need cogeneration.
+00:24:44 [W] So yeah code generation does happen in Rust but contrast it is a required part of cargo build to execute and the system that does this is called procedural macros or Prague macros for short.
+00:24:59 [W] like to describe them as compile-time decorators because they're just these cute little things you put inside of in front of your struts or your functions or as ways to customize your drives.
+00:25:09 [W] So the interface of them end up being super compelling, although they can be slightly tricky to write the first time around but the benefit is really like this because of the first class support for cogeneration this whole class of Errors where you are
+00:25:24 [W] The system that does this is called procedural macros appraoch macros for short.
+00:25:25 [W] I like to describe them as compile-time decorators because they're just these cute little things you put inside of in front of your struts or your functions or as ways to customize your drives.
+00:25:26 [W] So the interface of them end up being super compelling, although they can be slightly tricky to write the first time around but the benefit is really like this.
+00:25:29 [W] Because of the first class support for cogeneration this whole class of Errors where you are operating on a stale version of generated code is now eliminated the compiler. This allows the possibility. You don't have to write a half-game make file with all your stuff inside of it
+00:25:34 [W] Version of generated code is now eliminated the compiler disallows that possibility.
+00:25:35 [W] You don't have to write a cop game make file with all your stuff inside of it the glue sticks together.
+00:25:35 [W] And so this is the example that's pretty much everyone season was the first time 30 fantastic serialization Library it if you slap these two things in front of a struct then your instructor will now Implement serialize and deserialize and you can convert between various serialization formats
+00:25:50 [W] - it further with struct level or field level attributes in practice you end up writing much of the same Gunk / annotations as you would with goes Json encoding to like distinguished casings of your code and
+00:26:06 [W] there's there's a lot of safety and having this be top-level code like this actually goes through proper up source code to transform it interest code and there's real good error handling telling you where I think I'm came from at least if the program is written well,
+00:26:21 [W] So we can actually make our own Rivals as well.
+00:26:26 [W] And so I'm going to be showcasing cubes custom resource broad macro here.
+00:26:35 [W] We are telling rust to derive custom resource on Whose back and we're telling Cube.
+00:26:39 [W] Cube. That's the various attributes that this derived types going to have like do we telling it the resource parameters group version and kind and it's then going to go and the proc Microsoft going to create all the code around the custom resource that we going to need.
+00:26:54 [W] And there's a show two lines of attributes here, but there's really a tons more available.
+00:27:02 [W] We've actually tried to mimic a bunch of the cube Builder set up for driving a custom resources.
+00:27:06 [W] So there's a whole slew of things there for customizing hires cri-o looks but what this actually ends up doing it creates a food type. It attaches the suspect that you have here on to the food type interactions a status type onto the food have if you have one I have
+00:27:17 [W] It's such as meta data type matter.
+00:27:26 [W] It also makes a convenience Constructor and I see our D method to grab a to generate a theory.
+00:27:36 [W] So if you wanted to start using through now is a custom resource and query the kubernative say Pi against it. You really can just post the CRT up the kubernetes with an API of custom research definition type and grab the ci/cd from
+00:27:40 [W] Strap and then you can make another API of type Foo and basically make new instances with your convenience Constructor and start posting those ideally you would want to are handle a new server side apply here
+00:27:56 [W] And start posting those ideally you would want to are handle a new server side apply here.
+00:28:01 [W] Maybe wait for the API server to understand this new type typically takes a few seconds. But once you've done that, yeah, that's this is meant to be an illustrative example.
+00:28:06 [W] We've only really covered API created here as well.
+00:28:16 [W] So I'm gonna dig a little deeper into some of the more advanced methods in particular watch because watch will need to talk about watch Events first and that's the type that map's nicely onto the one in a p.m.
+00:28:25 [W] Machinery that contained in that Dynamic runtime object in Rust watch events can be packed into a fully generic enum for a fully type 1, which is great.
+00:28:36 [W] We also got some sort annotation.
+00:28:37 [W] Here's to tell that story that the values in the invariance go on the object key and the invariant name go into a tanky.
+00:28:47 [W] So this and the tank he is also sent Andrews and received as upper case that is to match the convention in go for constants.
+00:28:57 [W] So you'd expect that a watch on point on API would return some form of watermelons.
+00:29:05 [W] Signature and indeed. It does line for an hour and a signature.
+00:29:10 [W] Unfortunately. It's perhaps more intimidating than at first you would have thought you see the word simple stream in there, which is a rose constraint that says that a return type must implement the stream trade the stream trade being something that's basically in
+00:29:23 [W] Iterator, so you are able to iterator over iterate over a stream, but you have to await each new element the element being the item here as in the watch event that can fail.
+00:29:36 [W] So you got a stream of watch event results.
+00:29:40 [W] But on top of that the stream is also wrapped in a result because the HTTP result can request can fail.
+00:29:50 [W] So that is the succeed before you can even start streaming.
+00:29:53 [W] and so that's why you got this fairly chunky type it. It kind of looks hard to use immediately and I'm not even talked about the corner cases here.
+00:30:01 [W] And boy order Corner cases, so we got a not only the document the thing is like you gotta track resource version.
+00:30:09 [W] That's the first thing these are these integers that get passed on Via a CD and you must pass these on for every watch call to Telco bananas where you left off.
+00:30:20 [W] I kind of hid them from you either actually part of the signature of watch here, but obviously key and use the to character variable name.
+00:30:25 [W] But it's there.
+00:30:27 [W] It's required and the annoying thing about these resource versions.
+00:30:35 [W] You got to treat them as this opaque things and sometimes they're just stale. If you are sometimes you'll just get 410 gone as a response back on a watch in kubenetes. And if you're building a state cash like a reflector then what you have to do is
+00:30:46 [W] Get the entire State back for every object in the system for that type if you get this in Christ and before watch bookmarks, this was super likely to happen particularly on slow-moving namespaces.
+00:31:00 [W] And a partly as a consequence of this if you are relying on remove the vent.
+00:31:15 [W] Well, that's now purely a best-effort thing because what happens if you have crashes what happens if you get desynchronized in between an event being deleted like that event is lost if you've tried to initialize a watch from a zero resource version, which is
+00:31:22 [W] best efforts thing because what happens if you have crashes what happens if you get these synchronized in between an event being deleted like that event is lost if you've tried to initialize a watch from a zero resource version, which is what you do on a
+00:31:23 [W] What you can do that at least you'll get an event for every existing item, but for deleted items, you'll never get out of and again.
+00:31:30 [W] So that's not great watch calls also cannot stay open for more than five minutes.
+00:31:41 [W] So you have to keep issuing this watch golf or at least that frequently clay or you'll get more errors and finally just a sheer data use that you can get out of watch like on every change including the status object if you
+00:31:52 [W] last I checked in node status contained struct inside and for conditions and each of the conditions would have a last updated timestamp and every few seconds this one of these conduct
+00:32:07 [W] Even though like the Boolean never changed they would the time stamp would still be there.
+00:32:23 [W] So if you're subscribing to nodes you get this whole hike an object every every few seconds a huge amount of I/O and you can you can hide some of this from the user of course, but this is still not worked.
+00:32:28 [W] So anyone who's writing a controller type Solution on top of watch. It's going to need some heavy attractions.
+00:32:31 [W] So what would such an attraction do?
+00:32:35 [W] Well, we first got a list and from that point.
+00:32:44 [W] We got a watch continuously but no longer than four five minutes. We got a propagate all the user errors.
+00:32:48 [W] We got a realist on these thinkers possibly losing events.
+00:32:52 [W] Keep track of resource versions and still somehow encapsulated all in one nice Stream So this absolutely not trivial and that's why I'm so happy about Cuban time.
+00:33:02 [W] So a huge thank you to my other maintainer Tio. He basically wrote this entire.
+00:33:09 [W] He figured out an entirely stream based solution for not only Watchers, but also reflectors and controllers and because these objects are just as rust knative concept of the stream.
+00:33:21 [W] They end up being possible to manipulate in very standard ways.
+00:33:24 [W] I can store them easily pass them around extend integrate instrument test.
+00:33:30 [W] Like we've not even gotten fully around to Showcase nor proof of concept of this properly and so caveat that this does have rough edges, but it's definitely the best evolution portworx.
+00:33:36 [W] Tanner Tio, he basically wrote this entire crazy figure out an entirely stream based solution for not only Watchers, but also reflectors and controllers and because these objects are just as rust knative concept of the stream they end up
+00:33:39 [W] So I'm going to be covering quickly how these three objects work. I'm going to start with Watchers.
+00:33:47 [W] And funnily enough Watchers actually end up being one of the more advanced other three and that's entirely due to all the corner cases in which the Nats book about internally.
+00:34:01 [W] We actually model it with a finite State machine and we are using something akin to a state Transformer. If you're familiar with that term to pass around the state which is the in I'm shown above and the actual watch events, which is the ultimate thing that we want to return.
+00:34:14 [W] So sometimes the water is actually going to be giving you a whole chunk of items, which is what happens during a realist.
+00:34:29 [W] Generally you want to be working with a flattened version of the stream that water without putting so we have some helpers for that.
+00:34:32 [W] But this is the internal Machinery if you want to use it suppose you want to subscribe to added or modified events for contact maps in some name space. Then this is how that would look line for here being The crucial one you create a watcher on the contact map API.
+00:34:44 [W] And then you apply our helper to flatten and filter for only the applied events.
+00:34:50 [W] And this is now going to handle all the watch complexity for you. This Loop should run forever and the fact that there's also a nun flattened stream that we can work with means that any state store that we build on top of a watcher
+00:35:06 [W] Means that any state store that we build on top of Watcher will always have some data even during a realist.
+00:35:08 [W] And that's why that's there.
+00:35:11 [W] So let's talk about a state store because that is what a reflector is meant to be like it's a it's something that builds on top of the Watcher by recording objects in a store as events pass through so
+00:35:25 [W] Japan's happened we either insert replace or remove objects from a store and then we pass these events unmodified just straight through so it's a slightly complicated signature here for all this you need a store which I'm not defined but it's really just a
+00:35:41 [W] Object reference to kubernative subjects you would also going to need the on flattened stream from The Watcher which is W, but ultimately this ends up just being this one line intercept on the water stream.
+00:35:56 [W] So it's a really nice conceptual thing.
+00:35:58 [W] To use a reflector. You just make a writer and a watcher combine the two and then you can you can use the reflector just as a watcher in the last three lines.
+00:36:11 [W] In fact, those three lines are identical to the first example, but the more important part is the three lines in the center.
+00:36:23 [W] So you not only do you have to create a writer, but you can also create a reader from this writer and this reader you can pass along to as state to a web framework like to expose it.
+00:36:29 [W] This thing can be cloned because what's not cloneable is the writer.
+00:36:34 [W] Because it's kind of unsound have multiple things running into the same store.
+00:36:42 [W] So this is illegal and by illegal and it's just clarify.
+00:36:44 [W] I don't mean it's a documentation convention.
+00:36:45 [W] I mean, it's actually a compiler rusts move semantics makes the writer effectively disappear into the reflector and because it's not cloneable that's nothing else you have to do for this you can only have one writer and that's one of those great guarantees you get you get from this language that I'm
+00:36:59 [W] Because what's not cloneable is the writer.
+00:37:00 [W] Because it is kind of unsound have multiple things running into the same store.
+00:37:01 [W] So this is illegal and by illegal and it's just clarify.
+00:37:01 [W] I don't mean it's a documentation convention.
+00:37:01 [W] I mean, it's actually a compiler rusts move semantics makes the writer effectively disappear into the reflector and because it's not cloneable that's nothing else you have to do for this you can only have one writer.
+00:37:04 [W] And that's one of those great guarantees you get that you get from this language that I'm super happy with.
+00:37:06 [W] So I'm going to moving on to the final object that builds on top of these two and that is the controller and the controller is a system that reconciles a root object or a custom resource along with a child.
+00:37:15 [W] So I'm going to moving on to the final object that builds on top of these two and that is the controller.
+00:37:16 [W] And a controller is a system that reconciles a root object or a custom resource along with a child objects that it may own or many child objects. And then it's going to call a reconcile function when anything related changes.
+00:37:24 [W] So the control controller's job is just combining input streams from these various objects debouncing reconcile requests scheduling retries, and it's up to you as the application developer to make sure that the world is in the correct State when you
+00:37:37 [W] Got to reconcile request. You have to reconcile the root object and anything related to it that you own.
+00:37:43 [W] So there's a builder pattern to create a controller here and that should remind you quite a bit of controller runtime. It's in fact heavily inspired by it and we even got some help from some of the maintainers on it.
+00:37:57 [W] So this here actually ends up being a completely sufficient main for running a controller this example tries to make a controller for a config map generator, which is a custom resource that is meant to control a Content map
+00:38:13 [W] generator State matches a Content map state
+00:38:17 [W] and I showed you earlier how to derive a custom resource from a struct earlier.
+00:38:30 [W] So the only remaining bits here is how to provide an error handling policy and the reconciler function that will be called with a context that you define.
+00:38:34 [W] So I'm going to dig into the reconciler here because that's this is the signature of the reconciler. You have to Define this.
+00:38:40 [W] has to be an async function that returns a reconciler object if it succeeds and in the interest of not obscuring the slide this function is where you would
+00:38:50 [W] Click grab the client or an API from the context and start making API calls to communities to ensure that the corresponding content map is up to date with the content map generator.
+00:39:01 [W] Maybe you also want to write something to the state are subject to indicate what happened or like how far along you got maybe a last modified time timestamp something that is not extremely noisy.
+00:39:09 [W] And yeah, maybe I'm being behind wave.
+00:39:11 [W] Is this cheating?
+00:39:13 [W] Like how do you build controllers just build controllers?
+00:39:21 [W] But this is we are designing you reconcile here. And this is really where all your business logic resigns.
+00:39:24 [W] I just want to emphasize that and all of the advice on controller building from controller runtime or kublr generally implies here and there's tons of good talks on getting this stuff, right?
+00:39:32 [W] Last modified time timestamp something at this not extremely noisy.
+00:39:45 [W] And yeah, maybe I'm being behind wave. Is this treating like how do you build controllers just build controllers?
+00:39:47 [W] But this is we are designing you reconcile here. And this is really where all your business logic resigns.
+00:39:47 [W] I just want to emphasize that and all of the advice from controller building from controller runtime or kublr generally implies there and there's tons of good talks on getting this stuff, right?
+00:39:50 [W] In general the tldr is that reconcile need to be idempotent needs to be able to resume in the places fail as if parts of it that succeed and then it should just keep going and follow on the next iteration.
+00:39:54 [W] You should use server side apply to have lesser cases.
+00:39:58 [W] You should use final lasers or owner reference to garbage collect because as I said, you cannot rely on removed events reliably, so
+00:40:00 [W] That's the general gist but we do have some complete examples here.
+00:40:10 [W] There's two repos controller RS, which is a controller for a custom resources through and that lives inside of a context.
+00:40:11 [W] got tracing. It's got custom metrics Street Files about 250 to 300 lines and then there's a version RS which is a more lightweight deployment reflector that exposes its Reader through a context and that's a single line file.
+00:40:25 [W] A hundred lines.
+00:40:29 [W] So ultimately we don't really want to be doing a bunch of scaffolding here. Like what kublr is doing?
+00:40:31 [W] We want you to just choose your own dependencies.
+00:40:32 [W] Do you need a web framework?
+00:40:34 [W] Yeah pick one.
+00:40:36 [W] It's pretty it's pretty good practice to expose Matrix.
+00:40:39 [W] So at least the simple web server will be useful here.
+00:40:43 [W] You probably won't so observability tooling tracing ecosystem in particular is really solid for this. You can just slap on a hashicorp meant proc macro and add your favorite tracing subscriber.
+00:40:51 [W] Centre is great for error reporting Prometheus greatest great for customer tricks so I can highly recommend all of these but beyond that.
+00:41:04 [W] Yeah, you just have to investigate this is really all that. I'm going to be talking about for Kube so I have been talking for some time.
+00:41:08 [W] Published in great style slides are available. The API create that I'm talking about has is has been reasonably stable but kublr and time is still very new. So anyone who's willing to get their hands dirty help is appreciated.
+00:41:26 [W] If you are using it changes are documented in our changelog, so please check that and then your versions.
+00:41:31 [W] Also I want to thank Babylon Health who I worked for.
+00:41:33 [W] They do great things for kubernative is in the healthcare space and they're also great in their commitment to open source and have been particularly encouraging with respect to this dog. So big thank you to those guys as well.
+00:41:41 [W] But that's really it. So, thank you very much for listening to this and goodbye.
+00:41:47 [W] Hello room.
+00:41:56 [W] Let's see if there are any talks around our trending questions.
+00:42:01 [W] I think I've answered some already in here.
+00:42:07 [W] So it's please keep posting questions.
+00:42:10 [W] already in here
+00:42:44 [W] So it's please keep posting questions.
+00:42:44 [W] Just like channel is going to be the two Q Khan custom extendable k8s.
+00:42:51 [W] Why rust over golang has like that's keep getting that question. It's almost philosophical at this point like whenever I use go.
+00:43:03 [W] I feel like I have to fight it even if it's like the build system the type system or all the assumptions they make and I kind of like come on Final the following piece of advice of only if you want to have a lifelong career anything in something
+00:43:17 [W] We like to keep calm custom extendable k8s.
+00:43:18 [W] Why rust over golang as like that's keep getting that question.
+00:43:18 [W] It's almost philosophical at this point like whenever I use go. I feel like I have to fight it even if it's like the the build system the type system or all the assumptions they make and I kind of like come on Final the following piece of
+00:43:21 [W] Does that make you feel happy and safe go line?
+00:43:22 [W] Kind of just the opposite in many many ways QRS agenda.
+00:43:35 [W] We are trying to make the derive micro a lot better so that we can do a lot of the same things that you could do in queue Builder.
+00:43:40 [W] Ideally, you can specify all the open API schema is a big thing there currently. We only support the on scheme at one which only works with even be two one.
+00:43:48 [W] And the cube runtime itself will does have a lot of debts that there's a lot of things on the road map if you look at Q Bar has issues but these are kind of the main things making the runtime better making the drive micro better.
+00:44:02 [W] The liberating on watch versus reconcile SO watches the ultimate API call that you make to kubernative and that's going to be the thing that returns you to the data directly and it's going to have a lot of you're gonna have to deal with all the error handling of that yourself in and there are
+00:44:29 [W] the liberating on the watch versus reconcile SO watches the ultimate API call that you make to kubernative and that's going to be the thing that returns you to the data directly and it's going to have a lot of you're gonna have to deal with all the error handling of that yourself in and there are
+00:44:31 [W] And so I reconcile is just going to be a function that you own that is going to be triggered when certain watch event come in and it's not just watch events from necessarily one type.
+00:44:41 [W] It could be the root object.
+00:44:44 [W] It could be objects that you own as part of as part of your controller.
+00:44:51 [W] So that's kind of how reconciles just meant to be able to get a reference to an object. You're meant to deal with reconciling that
+00:44:53 [W] Is there any framework for operators and rust? So this would be it QRS has composed of three crates. The cube runtime is the thing that provides a controller runtime.
+00:45:09 [W] so check that out.
+00:45:12 [W] But as I said it is still a little rough.
+00:45:13 [W] I don't know if there's any more questions I anymore but if not, then I hope this has at least been somewhat interesting.
+00:45:56 [W] We had some of the cxs things you have functionality and lost already. So I set out on this thing to try and implement this system because we had a system that kind of replaced tiller before Helm 3 came out and I wouldn't recommend that but
+00:46:17 [W] Yeah, effectively.
+00:46:21 [W] I thought it was going to be very easy to do in to deal with the watch API directly turns out there's a lot of work, but now that's kind of we've taken care of those. There are cases suppose a lot of effort by a lot of people but on the positive side, there is now a pretty useful kubernative ecosystem in Rust
+00:46:37 [W] How quick is developing an operator and go versus rust its kind of slightly different methodology like do you end up writing much of the same stuff?
+00:46:52 [W] But the key thing I like about writing it in Rust is that you don't have any of the generated file as part of your source code generation is just a hidden part.
+00:47:01 [W] hidden part. The only part you can have a single single file in a repository and I could be controller but probably won't have something to the package manager so that two lines.
+00:47:09 [W] Probably the minimum that you would need but you don't need any of the other things that go typically provides. Like if you see a cute Builder based based operator you will you will have to know exactly how to navigate navigate this stuff
+00:47:21 [W] Like about writing it in rosters that you don't have any of the generated file as part of your source code generation is just a hidden part.
+00:47:23 [W] The only part you can have a single single file in a repository and I could be controller but probably won't have something to the package manager so that two lines are probably the minimum that you would need but you don't need any of the other things
+00:47:24 [W] So it ends up being easier conceptually to navigate but you end up writing like the same stuff you needed reconcile function.
+00:47:31 [W] You need a way to glue together things.
+00:47:32 [W] What do you own?
+00:47:33 [W] What do you watch?
+00:47:35 [W] you watch? So yeah, conceptually the same thing.
+00:47:37 [W] All right, so, I don't know that it's any more questions.
+00:47:53 [W] So I'll take further questions on the on the extent k8s channel on cncf, like other than that. I hope to be able to continue to further develop and maintain this speed of software, but
+00:48:04 [W] Last week a problem.
+00:48:07 [W] So I thank you all stand once again, but if you're a company using my stuff, please consider sponsoring.
+00:48:13 [W] But otherwise, thanks for tuning in.

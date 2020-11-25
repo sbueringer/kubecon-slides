@@ -1,0 +1,227 @@
+﻿Speeding Up Analysis Pipelines with Remote Container Images: YNVQ-4188 - events@cncf.io - Thursday, November 19, 2020 4:52 PM - 32 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello everyone. Welcome to our cooking talk today.
+00:00:25 [W] Hello everyone. Welcome to our cooking talk today.
+00:00:31 [W] We'll be talking about how in working at CERN for speeding up analysis pipelines using remote container images. My name is Ricardo Russia.
+00:00:43 [W] I work at CERN in sin the Sun Cloud team.
+00:00:48 [W] I'm a computer engineer.
+00:00:50 [W] And I'm Spirits three guys.
+00:00:52 [W] is say working on the second floor the module as a computer engineer focusing on containers.
+00:00:57 [W] So today we'll be covering this topic.
+00:01:00 [W] I will start by giving a very brief introduction to CERN and what we do here.
+00:01:05 [W] So CERN is the European Organization for nuclear research.
+00:01:10 [W] We focus on doing fundamental research and trying to answer questions about the origins of the universe and how matter how mature
+00:01:26 [W] How matter is constituted so foot to answer all these questions. We basically built very large machines. The largest machine that we have today is the Large Hadron Collider, which is here in the map.
+00:01:40 [W] map. It's a particle accelerator that is 27 kilometers in circumference where we inject proton beams one clockwise the other one counterclockwise, and we accelerate them to very close to the speed of light sand to very high Energies.
+00:01:55 [W] We tried them to make them Collide at very specific points where we built this massive detectors that allows us to get a sneak peek into the collisions to have an idea of the size.
+00:02:09 [W] You have the Geneva airport on the bottom, right?
+00:02:12 [W] CERN is actually split or the accelerator is split between the Swiss and French border close to the European Alps if we look a bit down into the what the actual
+00:02:26 [W] Accelerator looks like it's a hundred meters on the ground in the in a tunnel.
+00:02:30 [W] We see here the magnets and the in the middle.
+00:02:33 [W] We have the beams circulating and to achieve this High energies.
+00:02:37 [W] We actually have to cool them down to very close to absolute zero then we have this big experiments that I mentioned.
+00:02:45 [W] These are in large Caverns also on the ground.
+00:02:47 [W] This is the compact muon solenoid solenoid or CMS.
+00:02:51 [W] cavern is 14 meters by 40 meters. It's a
+00:02:55 [W] Looks like it's a hundred meters in the ground in the in a tunnel.
+00:02:59 [W] We see here the magnets and the in the middle. We have the beams circulating and to achieve this High energies.
+00:03:06 [W] We actually have to cool them down to very close to absolute zero then we have this big experiments that I mentioned.
+00:03:14 [W] These are in large Caverns also on the ground.
+00:03:16 [W] This is the compact muon solenoid solenoid or CMS.
+00:03:20 [W] The cavern is 40 meters by 40 meters. It's a fully filled with
+00:03:25 [W] Detector the detector weighs 14 tons, and you can see the size of the person for an idea of the scale it acts like a gigantic camera taking 40 million pictures a second and then the result of this
+00:03:43 [W] See the size of the person for an idea of the scale it acts like a gigantic camera taking 40 million pictures of second and then the result of this
+00:03:58 [W] very large amount of data that we have to store and eventually MLS this analysis has many steps, but the final step will be the end user analysis where we generate plots like the one we see here which showed the peak that
+00:04:14 [W] Gave us the Higgs Discovery back in 2012, and that led to the Nobel Prize in 2013.
+00:04:22 [W] So here to process all this data, we need a large amount of computing resources.
+00:04:26 [W] We have our own data center on premises that gives us something like 300,000 course, but we actually need more capacity so over the last 20 years or so, we built this very large grid Computing infrastructure
+00:04:41 [W] More than 200 sites around the world and this acts like a giant supercomputer for physicists at any moment.
+00:04:45 [W] You will see something like 400,000 jobs running in this infrastructure and we have we more than double the capacity we have on premises to close very close to 1 million course these days.
+00:04:58 [W] This is a one crucial part of our system to analyze the data and this shows also how important
+00:05:07 [W] it is to optimize the software distribution, which is why we are doing this talk today and how to describe to you how we used to do it and how we are now doing it using containerized interested infrastructures.
+00:05:23 [W] If we look a bit that what we used to do and we still do actually this is the main way of Distributing software in the in the grid.
+00:05:26 [W] We use this system called CERN vmfs.
+00:05:29 [W] It's a very scalable system to distribute software in the grid and across all the sites it acts like a hierarchical read only file system where CERN is the what we call the stratum
+00:05:44 [W] Our CERN is the what we call the stratum 0 or the top of the hierarchy where we push all the software. The experiments will do their releases and push software here. And then at each site we run this caches which are exposed to the users as a
+00:05:53 [W] caches, which are exposed to the users as a read-only posix file systems in user space and we do very aggressive caching at these sites to optimize both the network usage to towards this sites, but also to speed
+00:06:09 [W] To speed up the start of the jobs making sure that only the data that is actually needed is pushed to the the different sites on request.
+00:06:18 [W] This has been a very successful system and we use it intensively.
+00:06:24 [W] So when we start looking at containers, it's kind of very important to make sure that we achieve the same efficiency. So this was the big question when people started containerization their workloads and thinking about using containers,
+00:06:38 [W] We started thinking how can we rely on something similar to do the same for containers?
+00:06:46 [W] So there's a couple more questions with come more detailed questions that come with this.
+00:06:51 [W] So if we think at software packaging in container images, it's pretty important to speed up containerd creation. If you think that to start a continued need to pull the image and you consider that some of our users have
+00:07:06 [W] A several gigabytes or even tens of gigabytes this can take a quite a while specially if you have a large clusters where we might you might need to pull this images in many different instances at the same
+00:07:21 [W] Not only slows down to jumpstart, but also puts a lot of loading in our system.
+00:07:15 [W] So, how can we reduce an optimize Network usage?
+00:07:19 [W] We knew how to do this already with something like caching which again FS?
+00:07:24 [W] And then if you think of cluster auto-scaling which is something that we try to explore as much as possible. We have to think if if we are handling huge images and we are constantly dropping and creating new nodes, then we'll
+00:07:39 [W] This cycle of having to pull mirror images constantly because the nodes are just fresh.
+00:07:45 [W] So all of this is quite important and this is what triggered all of the work that we are describing today.
+00:07:51 [W] So there's some history on on before what we will present here.
+00:07:57 [W] So back in 2016 16 at fast system called slacker was presented that allowed fast distribution of Docker containers and introduce this idea.
+00:08:09 [W] idea of lazy loading of Docker container images the cvma fasting took this idea and implemented Docker zebrium first graph Tyra that this worked very well while we were using Docker but when the component started being
+00:08:24 [W] We couldn't use the graph that I've any longer and we had to look at other one X that were appearing.
+00:08:30 [W] So with this I will pass the spirits that will focus on describing how lazy lazy pulling is working.
+00:08:49 [W] Thank you Ricardo.
+00:08:50 [W] I think I managed to share my screen.
+00:08:52 [W] So yeah, I will be talking now about the lazy pulling and building on the the history that Ricardo already mentioned. There is some ongoing work work already the city of Memphis
+00:09:07 [W] Ricardo I think I managed to share my screen as so yeah, I will be talking now about lazy pulling and building on the the history that regard already mentioned. There is some ongoing work
+00:09:15 [W] Hmmm already started the implementing containerd emotions that are based on zebrium FS and this is still a work in progress.
+00:09:24 [W] But in this presentation, we will focus on another implementation that started by the containerd the author's based on start dessert and we will also be a demo with distributed the
+00:09:39 [W] So what is it a remote snapshot there? And what is start design back in 2019 and the cgroup of the containerd the author's had
+00:09:54 [W] Some sessions so temperament remote snapshotting and we came up with with an API based on grpc API for a pluggable remote snapchatters and the
+00:10:09 [W] Based on them grpc API for a pluggable remote snyk shutters and the fact limitation came from entity and cojito.
+00:10:19 [W] Cannot Grant a hero student that was based on a sturdy easy extra digit stands for C cable third digit and it's extending the properties of turbos that make up containerd images.
+00:10:34 [W] And it's extending the properties of our bones that make up containerd images.
+00:10:42 [W] So a very interesting property that turbos have is that if you concatenate or up and many troubles and one after the other they're still a very vulnerable
+00:10:58 [W] Dia some developers at Google to improve their performance of the golden golang build system proposed the CFS and implemented a proposed
+00:11:12 [W] - protocol and so what this says natural does it indexes all the files in all the layers and it creates a CCC something similar to the Manifest for containerd image to wear all this.
+00:11:23 [W] Exists in every layer and then it mounts a diffused mount for every every layer from the container registry to the host leveraging remote leveraging range queries
+00:11:38 [W] Equated the registry and as I mentioned that this is a grpc plugin.
+00:11:41 [W] I configured and in Evernote and containerd E communicate State via socket.
+00:11:47 [W] So this is more like a visual representation of it. And so on the left side, we have the container registry on the right side and note that pulls images.
+00:11:57 [W] So on the left, you can see the to have the here key that under V2 in the registry path will have every layer as a blob and on the
+00:12:11 [W] side we can see that we have containerd the communicating with the computer and there's some sort of creates a huge amount for every for every layer and then it creates an an overlay file system where the root of s of the
+00:12:26 [W] And every layer as a blob and on the right side, we can see that we have containerd D communicating with the snapshot there and there's some sort of creates a huge amount for every for every layer and then it creates an
+00:12:56 [W] Thanks, and to demonstrate how this works we run some experiments with a very big image produced by the atlas experiment called Athena and Athena is
+00:13:12 [W] Image Athena is a full release that is made up of 70 17.2 gigabytes and compressed and 5.4 yugabyte seccomp. Rest and Below you
+00:13:25 [W] An optimized image for study said that turns into file terms every file into another terrible.
+00:13:34 [W] So as you can see the size increases a bit because we have the additional size of the header of every Turbo.
+00:13:44 [W] So for the for this experiment run a simple workloads.
+00:14:14 [W] flat day 15 to 17 seconds
+00:14:18 [W] And then you can also see that most more importantly for networking dress in the case of the knative implementation of containerd D.
+00:14:29 [W] We pull almost 60 gigabytes of data.
+00:14:31 [W] Why is that decide we exactly the size that we need and we have less than 1 Gigabyte and very big benefit of that. Is that of the implementation of the snapshot there? Is that
+00:14:46 [W] We're all the files that are on the time that we need.
+00:14:46 [W] I wouldn't lose a lot of performance.
+00:14:49 [W] So the execution time of the workload with started said this just one minute slower than the knative one.
+00:14:59 [W] So if we add up the pulling time executing with a strategy said it's faster.
+00:15:05 [W] So to summarize we have like fur very faster to Time Low Network traffic at the memory consumption for the stackrox.
+00:15:13 [W] Instructor is a little concerning but something we can investigate and the drawback is that to build this optimized image? You need a lot of time. In this case. It was 45 minutes and to demonstrate this
+00:15:28 [W] Practice. I will do a quick demo.
+00:15:17 [W] And so here I have one container that runs the containerd D and there's some soldering the next year is and the setting the inner so we see.
+00:15:30 [W] an example image that I have
+00:15:38 [W] so this is a Docker file that pull that basis on Python 3 .9 and that's a simple hello pie file that this prints hello, and we'll just go and build it but I have it already built and then I
+00:15:54 [W] Assume that I can push at the registry and what I will show you in the other screen is that I can just optimize it and then try to lay the bullet.
+00:15:51 [W] So in this case, I have already optimized it. But so now I'll just try to put the image but not the full image. I just do the film on Saturday subscribe.
+00:16:07 [W] And here you can see that it downloads the Manifest of the image and the index of all the files and in just in a flat time of six seconds.
+00:16:17 [W] Sometimes it's five but it's much faster than a normal image and then they will also go ahead and download the massive amount of the described and you will see that the cooling time it just a little more.
+00:16:33 [W] Then the standard the nesting pole python image.
+00:16:32 [W] I was downloading I will also show that they have the car starts running to monitor the traffic of containerd D.
+00:16:42 [W] So here you can see that the I/O of them the containerd E demo container was only 30 megabytes and here you can see but in 60 seconds it managed
+00:16:57 [W] That the I/O of them the containerd E demo container was only 30 megabytes and here you can see that in 60 seconds it managed to download the image.
+00:17:01 [W] Finally.
+00:17:02 [W] I would like to show you that this is the original image built from Atlas and it has 14 layers.
+00:17:10 [W] And this is the optimized image data created again comprised by 14 layers, but now you can see that the
+00:17:17 [W] hours of the layers are different.
+00:17:22 [W] back to regard the to talk to you about
+00:17:26 [W] the dam of the described about here article registries
+00:17:36 [W] experience.
+00:17:38 [W] I'll just hide here my bar.
+00:17:39 [W] So Spiros explained all the point.
+00:17:44 [W] Can you hear me Spears explained all the all the points of why we are doing this lazy pulling by showing a an example with a with a couple of images while the world will try to explain now is how
+00:17:59 [W] Is as in our infrastructure, so coming back to coming back to the initial slide that I showed which was how we are doing today the software distribution.
+00:18:14 [W] Instant emfs. So this is a system that we are very happy with it works very well.
+00:18:17 [W] So one option is to rely on on the implementation of a remote snapshot of relying on this system. And this is something that is happening as we mentioned earlier and something that can work very well.
+00:18:32 [W] Something that can work very well.
+00:18:31 [W] What will try also to demo today is something that could be more generic which is to rely on the a couple of Registries distributed registry.
+00:18:43 [W] So instead of just relying on the file system and the HTTP cache has really relying on the implementation of the container registries.
+00:18:50 [W] The implementation is it is up to you.
+00:18:55 [W] which one to choose in the demo today. I will be using Harbor which is
+00:18:59 [W] also something with the play here at CERN and the the way it works is very similar to what we saw for severe effects, which is a hierarchical model which CERN being at the top of the hierarchy where we push the images and then add
+00:19:15 [W] We can run another registry that can be configured as a proxy cash so that if people pull the image it will first cache it and the second poll will be much faster or just configured with replication by using some pattern to decide which
+00:19:30 [W] Syntax should be pushed along to the sides.
+00:19:25 [W] It's very important that it has proper authorities are the support and yesterday he said as spiritual for performance and also won benefit of using this is that any oci artifact if if you have a non CI registry
+00:19:40 [W] We got cream cheese, you can use to push some charts or mlperf facts to containing model data or wait. So in the in the picture on the right, you see what we'll try to do it the devil, which is we have
+00:19:51 [W] And then we have two regions deploy the in this case in the Google Cloud.
+00:19:52 [W] We have a cluster running on us Central see and cluster running in the Netherlands.
+00:19:58 [W] So we have two clusters in different continents.
+00:20:00 [W] and then each one has its own register. So this is the harbor registry running on the US Central. This is the harbor registration and the Netherlands and each one has a cluster running with five nodes that will try to run some some user analysis
+00:20:15 [W] Local registry is that then can point to the top so I will jump to the demo and here is the deployment of my to Harbor instances. The one on the left is the one we have in the Netherlands this one
+00:20:28 [W] The one we have in the US central region, so I'll just browse through you can see here.
+00:20:31 [W] They are very they are exactly the same configuration.
+00:20:35 [W] And this is the way we would deploy so that all the sides feel kind of the same and then you can have multiple projects. In this case. I have a certain cache which is a proxy cash and it's linked to the sun registry.
+00:20:47 [W] So whenever you pull from from this prefix is it will just pull the image from the from the send cash and then you have docker iot
+00:20:54 [W] So just for convenience as another cache and then we have this F star G said that is configured as a replicated instance.
+00:21:02 [W] So we have a configure that it should replicate everything that is in this in this prefix at Sun including the attend a image.
+00:21:10 [W] So the way this works for the proxy caches is that you define to Registries and it controls the health and then for the replicated one. We just deployed defined replication rules, and you can see here that we just had.
+00:21:24 [W] A successful reputation of previous one was not successful. You can decide to trigger this manually or you can decide to make it schedule bike every hour or every couple minutes.
+00:21:35 [W] This this is the way we structure. So after this this overview, I will try to submit a workloads.
+00:21:46 [W] So the workload is is a very similar to what our
+00:21:51 [W] Just in this case.
+00:21:51 [W] I will be using Argo workloads which is kind of a new tool that most users are not using but what this will do is it will submit the same workload to 2 different clusters to the two different clusters, but on the left one in the Netherlands, I'm using
+00:22:06 [W] Two different clusters to the two different clusters, but on the left one in the Netherlands, I'm using a estar gz departments so you can see here the workloads really starting and on the right.
+00:22:07 [W] I'm doing the same in US Central but using normal non starchy that image and you can see that on the left. We already started workflow while on the right is still in the first step of preparing it because it has to download every
+00:22:22 [W] Much of the same thing a message and it takes quite a bit longer so we can see that when the in the Netherlands we are were workflow is already going pretty fast and executing some steps each each. What we do here is we
+00:22:37 [W] so 20 different parallel jobs and each job has three steps one for staging in went for processing and eventually we'll have staging out when the processing stops while we see this this job
+00:22:51 [W] Our dessert going really fast and some of the jobs even already pushing data out the Netherlands the one in US Central which is using the normal images.
+00:23:00 [W] It's just starting to launched its job.
+00:23:04 [W] So it's way behind and we can see here that in just a couple of seconds or so.
+00:23:09 [W] We'll be using will will be having this workflow completed.
+00:23:14 [W] So this is this is a kind of critical for us. You can see the benefit when you start paralyzed.
+00:23:19 [W] Using the job and specially as I mentioned when you have like enabled cluster Auto scaling and some notes might come and go it's really really important that you don't have to pull them at the full image every time
+00:23:35 [W] Using a small fraction of the image, which is the case here.
+00:23:34 [W] The images are 18. Giga bytes per each job has its just linger a very small fraction so we can see here that our us Central The Nostalgia set is still behind but moving this one is
+00:23:49 [W] This so if we do it leave it a couple more seconds. We might even be able to see it finishing.
+00:23:47 [W] So I'll just give it a couple seconds.
+00:23:54 [W] One thing that I will also want to show you is that in this case for every note.
+00:24:00 [W] It's pulling the image once so it's putting a lot of stress on the on the storage where the container images are being put so in this in our case, we have our Harbor instance that is backed by a GCSE bucket.
+00:24:14 [W] So we are actually putting load on the GCS bucket. So are optimized storageos at based workflow is already finished. This one is
+00:24:24 [W] Like halfway, let's say so it's a significant Advantage if if you start scaling out so the last bit I would like to show you is this this graphic that I mentioned. So again on the left you have the
+00:24:40 [W] Lenses West for European region.
+00:24:40 [W] I'll just refresh here the data, but I'll try to show you hopefully we'll see some data about.
+00:24:48 [W] The traffic being pushed put or the load being put on the GCS pocket.
+00:24:55 [W] There we go.
+00:24:56 [W] So in this case we see here. The pocket is US Central.
+00:25:01 [W] It's loading here.
+00:25:04 [W] And we can see the network traffic sent because it's serving the data and we see here the equivalent on the on the Netherlands region so you can see here that we picked that several tens of megabytes
+00:25:19 [W] Like 80 megabytes while here this hardly has a peak because we basically download the very little data in this case for this end user. Now. This was a very very small fraction of the image being used.
+00:25:23 [W] So that's it for the demo.
+00:25:26 [W] And I will pass back to Spiros for for the rest of the talk.
+00:25:40 [W] Okay.
+00:25:41 [W] thanks to cardo. And so the state is the current status of the snapshot there. Is that although it's saying its first stages is very much very much functional and
+00:25:56 [W] Superfast containerd startup times we can dramatically reduce then a total usage as regards the showed and also the constituted suggest that you use a public cloud and as we saw,
+00:26:03 [W] In the example that we did with Athena the CPU overhead is very little and overall.
+00:26:09 [W] There is a big gain is CP wise and also Network wise and just limitation that we found in our own gitlab registry that we
+00:26:24 [W] For starting a leveraging harbor is that there is a strong requirement for studies that support experience increase and in our case. It's not supported.
+00:26:34 [W] Improvements that they would like to see we would like to see first digit is the speed up of image optimization and in case of Athena I took 45 minutes in other images it might take even longer
+00:26:49 [W] Need what do to be very important for us is to be able to create optimized images that are based on already optimized images.
+00:26:54 [W] So just optimizing insert desert the the additional layers and finally what we would like to see also is that being able to optimize images with some existing data,
+00:27:09 [W] Inside the image.
+00:27:05 [W] Maybe we can just Mount them and if we have workloads that we expect to have and we have some workloads. We can optimize the image with some workloads and then have an image which is very much well prepared
+00:27:21 [W] actually workloads some supposedly issues that we found is that containerd D doesn't gracefully fall back to the standard as I'm sorting if emotions there is down whichever's not souter that is and we'd also
+00:27:32 [W] I think if their emotions their is down whichever snapchatter that is and we'd also like to do some further investigations in the harbor Inner Harbor configuration because we had some limitations with Flats layers and that's not something was not behaving
+00:27:44 [W] Comes with Flats layers and that's not so true was not behaving in the way we would like.
+00:27:51 [W] And also would like to thank the team from entity egg here and cozy similar effects team for the second routing and all the participants that made this possible
+00:28:06 [W] A some closing remarks as well.
+00:28:08 [W] No again.
+00:28:10 [W] Yeah.
+00:28:11 [W] Thanks everyone also for watching and thanks for everyone to has been working on this.
+00:28:16 [W] This is a one of the key points that will help us making the best use of containers also on the grid not just at the local sites.
+00:28:26 [W] So yeah, I would also highlight that this is the work of a lot of people we had a workshop in May last year that
+00:28:36 [W] kind of triggered a lot of this here at CERN with people from from different companies around the world.
+00:28:42 [W] So yeah, we look forward to continue improving the system.
+00:28:46 [W] Thank you very much.
+00:28:56 [W] Okay, I can start the with the question to and from the heat of the tasks like compression takes 45 minutes with might be the bottleneck.
+00:29:07 [W] So what I have noticed while help mising the image is that in the system One Core was busy at 100% So we made a few proposals to
+00:29:22 [W] For the optimization part, there's no shortage of stream and we have already fixed an improvement murmurs and so will rerun
+00:29:32 [W] I will report back as a districts paralyzes to the by default to them number, of course this system. So I hopefully will be much faster.
+00:29:32 [W] I think that's it.
+00:29:34 [W] We also I wanted to mention too for all these improvements that will mention that the entity would like to set the time of recording and most of them are already implemented.
+00:29:44 [W] So I would put those remarks are back in GitHub personally have a chance to run the test again.
+00:29:53 [W] I see another question asking.
+00:29:56 [W] why do we use harbor with the Google cloud storage route rather than the fully managed GCR.
+00:30:04 [W] So it depends we also use DCR. It's just that the advantage here is that we want to experiment further with this idea of proxy caches and replication which are two features that Harbor
+00:30:19 [W] In the latest version supports very well.
+00:30:20 [W] So we have this two two modes configured where we have some representers which are just a pull-through cash for the sites and we have another mode where we push the the images
+00:30:35 [W] Using replication and we are still experimenting on the on the best ways to do this.
+00:30:31 [W] We have deployment in above the clouds as well where we just used the knative Registries at the clubs.
+00:30:47 [W] Let's see any other question?
+00:31:05 [W] And just add that all these systems are evolving pretty fast as I guess everyone is aware. So this is this is something we pretty much researchers.
+00:31:40 [W] Think that it is a few seconds in length.
+00:31:42 [W] Thank you. Thanks for attending and talking the slack channel in a bit.
+00:32:01 [W] And just add that all these systems are evolving pretty fast as I guess everyone is aware. So this is this is something we pretty much research first.

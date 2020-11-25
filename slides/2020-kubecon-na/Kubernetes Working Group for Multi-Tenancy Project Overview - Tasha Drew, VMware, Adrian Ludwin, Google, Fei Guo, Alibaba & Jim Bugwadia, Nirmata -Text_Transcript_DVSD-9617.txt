@@ -1,0 +1,240 @@
+﻿Kubernetes Working Group for Multi-Tenancy Project Overview: DVSD-9617 - events@cncf.io - Friday, November 20, 2020 5:07 PM - 33 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello and welcome to the kubernative working group for multi-tenancy.
+00:00:04 [W] Today.
+00:00:05 [W] Jack's that the working group has been working on information about how you can use them how you can get involved in contributing to them just to quickly kickoff for the working group the chairs.
+00:00:17 [W] are me and Tasha Drew. I am the director product incubation at the EM where I also work on Project. I used to work on Project Pacific.
+00:00:25 [W] I was responsible for launching the tons of kubernative grid service for vsphere.
+00:00:29 [W] My co-chair is sanjiv Ron Paul.
+00:00:32 [W] He's a principal engineer at Cisco and then we have the
+00:00:34 [W] it leads on this on this presentation today.
+00:00:38 [W] We have Adrian lead win from Google who works on the hierarchical namespace controller.
+00:00:43 [W] We have fake.
+00:00:43 [W] whoa from the virtual clusters and tenant controller project.
+00:00:48 [W] He's at Ali Baba and then we have gin bug wadia who works on the multi-tenancy benchmarks and he is the founder and CEO at numata and each of those project leads will be giving a more detailed introduction about themselves in the projects later in this presentation.
+00:01:03 [W] Who works on the hierarchical namespace controller? We have fake.
+00:01:01 [W] whoa from the virtual clusters and tenant controller project.
+00:01:06 [W] He's at Ali Baba and then we have gin bug wadia who works on the multi-tenancy benchmarks and he is the founder and CEO at numata. And each of those project leads will be giving a more detailed introduction about themselves in the projects later in this presentation.
+00:01:40 [W] So you may be wondering how you can get involved in the multi-tenancy working group.
+00:01:45 [W] So for new contributors or people who are interested in getting started with open source.
+00:01:49 [W] What I would know, my number one recommendation is join our Google group. So that's the second link on this slide can go to groups that google.com and just search for us for working group multi-tenancy kubernative use when you join the Google group that will
+00:02:04 [W] That google.com and just search for us for working group multi-tenancy kubernative use when you joined the Google group that will give you access to our documents are meeting agendas.
+00:02:15 [W] You'll see links to go and watch our meetings that we've posted to YouTube will post a link to this presentation on in that same YouTube channel as well, but you will also get a calendar invitation to all of our meetings and so
+00:02:31 [W] Presentation on in that same YouTube channel as well, but you will also get a calendar invitation to all of our meetings and so a lot of times people get really confused about how to join our meetings. We have bi-weekly meetings where we go over
+00:02:48 [W] People get really confused about how to join our meetings. We have bi-weekly meetings where we go over project status.
+00:02:53 [W] You can come and present anything you're working on by adding it to the agenda or suggesting on the on the mailing list that you'd like to talk about something but that calendar invitation to that meeting in the zoom link will all come to you if you just join our Google group, so if you're not going to do
+00:03:08 [W] The join that definitely join the Google group. It may take a few days for that calendar invitation to show up.
+00:03:14 [W] There's some latency in the system Adrian's working on it.
+00:03:18 [W] Google will solve it any day now, but yeah just be patient. I promise you if you join the Google group, you will get that invitation.
+00:03:25 [W] We're also in the kubernative slack in our multi-tenancy channel can join that by going to slack dot k8s dot IO and yeah, we also have a GitHub repo where all of this code is available yugabyte.
+00:03:38 [W] You see that link at the bottom of this slide suggests kubernative - slit cigs / multi-tenancy.
+00:03:45 [W] So, yep, that's that's how you can find us.
+00:03:49 [W] that's you can talked with us more. We are part of the open source Community super happy to have more people involved more interest and new ideas and new projects as well.
+00:03:59 [W] So yeah join us and now over to Adrian to do a deep dive into hnc.
+00:04:06 [W] Thanks Tasha with so I major and I work at Google Waterloo up here in sunny and warm Canada come visit next year and I'll be talking a little bit about the hierarchical namespace controller, which is our project to add a concept of hierarchy to the kubernative namespaces that you
+00:04:21 [W] So why would you want to do this?
+00:04:20 [W] Well, the reason is that namespaces are the foundations for all policies in kubernative.
+00:04:26 [W] So our back Network policies quota 11 ranges and also most of the CRT is that you create will have namespace scope as well and less there unless they're accustomed ride operator.
+00:04:37 [W] So everything really centers around namespaces. And yeah, sometimes you can subdivide things at a sub namespace let that like within any space I should say.
+00:04:48 [W] But by and large most of these features either work the best or only work at the namespace level and you can see my talk from you Connie you for earlier this Summer that goes into this in more detail.
+00:04:58 [W] So names faces are great.
+00:05:00 [W] But sometimes you want policies across name spaces such as to represent a tenant who has access to multiple name spaces in your cluster.
+00:05:08 [W] So fighting hierarchy a chain spaces is a great way to enforce this idea of ownership and expressed NC and also allows you to create self service.
+00:05:17 [W] We call some name spaces which give you permission to create a new space. Even if you don't have cluster-level privileges all while adding as little as possible to coredns kubenetes. So agency, it's a great solution of lots of teens want to share a single cluster and if you combine with
+00:05:32 [W] Features either work the best or only work at the namespace level and you can see my talk from you Connie you for earlier this Summer that goes into this in more detail.
+00:05:30 [W] So names faces are great.
+00:05:32 [W] But sometimes you want policies across name spaces such as to represent a tenant who has access to multiple name spaces in your cluster.
+00:05:39 [W] So adding hierarchy 18 spaces is a great way to enforce this idea of ownership and expressed NC and also allows you to create self-service what we call some name spaces which give you
+00:05:52 [W] Mission to create a new space even if you don't have cluster-level privileges all while adding as little as possible to coredns kubenetes. So agency, it's a great solution of lots of teens want to share a single cluster and if you combine with a gitops solution to to spread
+00:07:00 [W] Shinto to spread policies across multiple clusters, that's when it works well in a multi cluster environment as well.
+00:07:07 [W] So how does this work?
+00:07:09 [W] Well, what it does is it creates a little agency gives you this little custom resource that you can use to take existing namespaces and arrange them into parent-child relationships and we call these floating spaces because you can you can modify the hierarchy or
+00:07:24 [W] About you can modify the hierarchy or as I mentioned you can create these cell service what we call sub name spaces where if you just have permission to Greater something space underneath this particular existing namespace and then that one's locked in place.
+00:07:37 [W] You can't move it around and so that's really good for those sort of self-serve contexts.
+00:07:42 [W] And then once you have that you can create policies in the ancestor needs faces and they will just get copied Into The Descendants you can pick which one's get copied in a cluster of white config things like our back limit range.
+00:07:53 [W] the network policies any chance he also put some guaranteed labels onto the namespaces that mirrors the hierarchy and you can use those as label selectors and things like Network policies to get that kind of hierarchical enforcement as
+00:08:08 [W] sister names faces and they will just get copied Into The Descendants you can pick which one's get copied in a cluster of white config things like are back limit range is Network policies any chance he also put some guaranteed labels onto the namespaces that
+00:09:04 [W] Talk to the went into each of the inductor Q Connie you it's on YouTube.
+00:09:08 [W] It's fantastic if I miss it so much. Also, please go look at it, but we are not sitting still and we've been working pretty hard ever since then. So the big changes since that talk have been well, the agency has been increasing instability as we get more users
+00:09:24 [W] Trying to break it and poke it in weird ways, which is great.
+00:09:26 [W] We're finding some Corner cases and getting rid of some of the gotchas that made it harder to use.
+00:09:31 [W] We are adding exceptions and selectors with this means is that remember how I just said you put a an object in an ancestor named space.
+00:09:41 [W] It gets copied to all of The Descendants.
+00:09:42 [W] Well, sometimes you don't want it to go to all the descendants because hot strict hierarchies are too restricted. So with exceptions you can basically put a label selector on objects and that will solve it from bof.
+00:09:53 [W] Being propagated everywhere in the hierarchy or even to know at all if you don't want if for some reason the last thing that we're adding is an improved API, so we did an API review after the API grown in a sort of ad hoc way for about a year.
+00:10:09 [W] will selector on objects and that will stop it from being propagated everywhere in the hierarchy or even to know at all if you don't want if for some reason the last thing that we're adding is an improved API, so we did an API review after the
+00:10:34 [W] I'm pretty well, but there were a couple of nice changes that we made of things to make it more kubernative compliant.
+00:10:40 [W] so we're introducing this in the next version which is 0.6 not going to be we don't think there will be many changes before we go to a beta and if you already have each and see installed we're going to upgrade all of your objects for you automatically.
+00:10:54 [W] So if you want to get this you do not need to get a new version of kubernative.
+00:10:57 [W] It's just an add-on. So it's pretty easy.
+00:10:59 [W] You can add it to any kubermatic 15 cluster.
+00:11:02 [W] They get some points in will be switching that to 116 for if you want to on open source, you can go to that multi-tenancy great both that Tasha mentioned and just click through to hnc or go to the releases page and grab a promoter releases
+00:11:18 [W] to be using chi chi or anthos then then you can get it as a product called hierarchy controller in config sing coredns, 'this config management and it comes with a really nice plug-in that you can install using
+00:11:32 [W] And it's available for Linux and Mac OS.
+00:11:27 [W] If you want to learn more about this as I mentioned, I have the video from Cube Connie you just after that I wrote a blog post on kubernative dot IO, so please go check that out and read through and learn more about the thinking behind each and see in the
+00:11:42 [W] and if you would like to contribute we are looking for contributors who want to work on features that we like the idea of but we haven't quite been able to get to yet things like setting us person pre-configuration if you only want secrets to be propagated in once of true and not another
+00:11:57 [W] In certain spaces with default policies that are not inherited hierarchical resource for lots of people talk about that one and just generally improving production ization support.
+00:12:04 [W] I was actually working on Prometheus today, but more eyes are always welcome plus more to help with testing more help with documentation any patches that you want to provide we are always looking for people who want to help out with that kind of stuff.
+00:12:18 [W] And so please stick around and I hope to hear your questions afterwards. And with that I will pass it over to Fay to talk about virtual clusters.
+00:12:37 [W] It's quick Jack think I see the swing.
+00:12:40 [W] Okay.
+00:12:40 [W] So what I want, my name is Faye I come from Mario Bava in the past one and a half year.
+00:12:48 [W] I was working closely with the Ahmadi, Tennessee working group or project coverture Custer.
+00:12:58 [W] As entering mention the in previous presentation. The kubernetes namespace is the primary abstraction to support multi-tenancy, but by sharing vote for for many tenants
+00:13:13 [W] The self-clean some harm from that cannot easily handle the by name space with ample.
+00:13:17 [W] They may have a performance interference between among each other and once my you when we really use namespace you organize other resources and owning give Helena users to access your name space. It is harder for them to create a class called resource such
+00:13:32 [W] CID or web hookah Center, which give some trouble for management for the for their management stackrox?
+00:13:50 [W] So compare though people may do this by just creating individual, you know classical propellant. But in that is the Lucian there is a problem that if each people has individual node cluster by managing their individual
+00:14:05 [W] You the global optimization for the node?
+00:14:03 [W] No degradation.
+00:14:05 [W] So ideally we'd like to have kind of complete control preservation solution.
+00:14:10 [W] Well, we can share in the node resource or more autocannons. As I said before we should have solution has almost zero integration efforts for the easiest system, which means we'd like to have a solution that it
+00:14:25 [W] Before we should a solution has almost zero integration efforts for the easiest system, which means we'd like to have a solution that it which which is fully compatible with the existing communities our apis
+00:14:31 [W] Hannibal these the easiest in communities our apis in this project.
+00:14:37 [W] So we introduced a new kind of architect for the virtual cluster in short the idea.
+00:14:42 [W] Is that the via the media have a tenant operator which we are assigned a dedicated control plan for each individual talent and the tenant at the week, which we call the parent a master the
+00:14:58 [W] control plan for each individual talent and the tenant at the week, which we call the parent of Master the Telemark the door, but her mother is to do to maintain the other objects that are created by the Tenley users and there are there
+00:15:12 [W] to maintain oughta objects that are created by the Tenley users and there are there is a single controller which synchronize all the you know, tenanted greater objects from the tenant of muscular to or super master, which is the community's Customs which
+00:15:27 [W] Which is the kuma knative caster which manages the actual node resource?
+00:15:31 [W] So in order for the you know different hand to Kata kubelet complete API to access all monitor depositor do that logging or exe C API call to the to the canonical
+00:15:46 [W] Yeah, I to access all monitor depositor do that logging or exe C API call to the to the Canon of heart.
+00:15:55 [W] We introduced the componentconfig reagent which proxy or that no cannons request to depart kublr apis from a high level perspective.
+00:16:05 [W] We look at this architecture. Ideally the 10 and the master is the object State maintainer and they're super master is can be as abstract as a weaveworks.
+00:16:15 [W] Resource provider owning it owning provided a part of resource to each tenant users needs this solution.
+00:16:23 [W] It is clear that in this solution each tenant.
+00:16:28 [W] The user has enough complete the you isolation.
+00:16:31 [W] It won't be aware of all the objects that are created by other tenants since they don't have direct access to the CMS that on with this solution.
+00:16:39 [W] limited the velocity Raiders if any tenants he the anynines security vulnerability.
+00:16:46 [W] In that 10 is getting affected the other kind in the world won't be get affected also with this approach since you know, each tenant user has a dedicated control plan either will it will have access to the all the
+00:17:01 [W] Present here in the town of the master including all the ci/cd custom scope of resource our Backcountry Center since you know, super messy holding, you know treat only works as a part of resource provider.
+00:17:14 [W] It doesn't evolves in there.
+00:17:16 [W] No control plan management is Step.
+00:17:20 [W] So this is what we do in the virtual cluster the what were the virtual currency really does?
+00:17:30 [W] From the high level architecture perspective next time give a brief status about how this project is goes that in this moment the in the this amount or the three major components,
+00:17:45 [W] - incorporate nov 8 2013 controller and ovhcloud Lon your and as of now they are kind of production ready.
+00:17:49 [W] We are actively working on Switching the canonical greater to a new class the API based the design development and implementation.
+00:17:57 [W] The idea is that we we are trying to have a more provide a more formal way to do the tenant tenant a master provisionally measurement by leveraging the or existing.
+00:18:09 [W] Cross the API offering that caused a pi Sig groups has been has been done in the past where I have years. They have very good the tooling around it and they have the we want to follow their no specification
+00:18:24 [W] and most of the component this project was starting as a working model tekton working group incubator project and now we already get a Sig see cross the API
+00:18:31 [W] And now we already get a SQL see cross the API the support and the we are moving.
+00:18:31 [W] We are working on moving the Intel code to a new repo clot class API provided nested.
+00:18:38 [W] So the all the future development and enhancement of we have been dying that will be Po and this is a open source project and this is a community effort.
+00:18:48 [W] are very welcome. Anybody who are interested in this project the join the project.
+00:18:54 [W] Bye-bye by varying the issue by giving VC virtual class that why so and I'm happy to help people to use it and making this project a better so next. I'm going to hand over to Jim for
+00:19:10 [W] Thank you Faye.
+00:19:13 [W] Yes, I everyone I'm Jim by Guardia and I lead the multi-tenancy benchmarking effort within this group and so both Adrienne and Faye showed us, you know different ways of implementing multi-tenancy and as everyone probably knows
+00:19:29 [W] Construction could be knative use that you can use for security for multi-tenancy for segmentation isolation. But one of the common challenges that we heard from folks in the community from customers is how do I know that my cluster is properly
+00:19:41 [W] Then and see are there ways to measure this testis and report this right?
+00:19:43 [W] So the benchmarking effort our focus is to create a set of guidelines for first off, of course configuring multi-tenancy. And then to also create tools to easily be able to validate and test whether multi-tenancy is properly implemented.
+00:19:58 [W] So in terms of what are some of the definitions we've come up with and these are of course things that are evolving in the community. But right now we have two profile levels defined where the first profile level the idea.
+00:20:09 [W] is that given any namespace independently of how this namespace was configured.
+00:20:14 [W] How do you make sure that that namespace has the right constructs as all of the right again the isolation the segmentation required for in a multi-tenancy different teams use
+00:20:26 [W] Seeing that same cluster and then with the profile level to the idea is to extend the first profile level and also add self-service for that.
+00:20:36 [W] So not only do we allow in that profile level teams to be able to you know to isolate and segment their workloads, but also to be able to then do self service operations, like maybe defining custom Network policies for their
+00:20:51 [W] Custom roles things like that that would be required across the you know, different multi-tenancy constructs also in terms of the categories of the benchmarks and test we identified seven different categories.
+00:20:58 [W] So everything from isolating the control plane from workloads isolating in a tenant workloads from each other network isolation storage is Elation making sure host resources are not accessed from pods.
+00:21:11 [W] pods. So these are following like pot security best practices ensuring fairness to
+00:21:15 [W] configuring resource quotas, and then finally Self Service, which is profile level two as I was discussing earlier and then in terms of in terms of the test, what we saw is just checking configuration is not always enough
+00:21:31 [W] Recently in a number of different ways just take for example Network segmentation.
+00:21:28 [W] There's a number of different ways.
+00:21:29 [W] You could configure Network segmentation or implemented.
+00:21:32 [W] So instead of just checking for configuration.
+00:21:35 [W] What we also do is run some behavioral tests in terms of how multi-tenancy is configured within the cluster.
+00:21:42 [W] So today, you know, the tests are mostly focused on namespace base isolation, but as the virtual cluster project involves will also be looking at adding behavioral tests.
+00:21:52 [W] As to be able to check on that so with that, you know, and the you know, I also mentioned that part of the effort of this track was to also come up with validation tool.
+00:22:04 [W] So we have a good cuddle plug-in which you can run on any cluster.
+00:22:08 [W] cluster. It just requires a namespace and a roll and I'll give a quick demo of this and what it will do is it will allow us to check and it will run about 15 or so different tests to ensure that multi-tenancy is properly configure and this list of tests.
+00:22:22 [W] And all of this is done our repo. So feel free to browse through look at the details provide feedback and comments there, but let me just show what this looks like in action and then we'll come back and you know talk a little bit about the road map Etc.
+00:22:38 [W] I've already a cluster configured and what I'm going to do just in sake of time as I'm going to show what this looks like when running so here I'm using a particular user role.
+00:22:41 [W] This is a tenant admin alley and the namespace here is test so there's it's going to go the are empty be plug-in is going to run through a number of tests. And as you can see what happened initially was it's, you know a few of the best paths
+00:22:56 [W] Have you no quota configured? I have some limits configured but a lot of the tests are failing at the moment, right?
+00:22:50 [W] So what I can do and all of this by the way is documented on our web page. So if you browse into the project and if you look at you know, the empty be web page you will see instructions for going
+00:23:05 [W] Demo, but I'm going to apply, you know some policies now to for segmentation isolation within my cluster.
+00:23:08 [W] I'm using cover no policies as also, you know Opa gatekeeper policies so you can choose which policies you apply and as you can see what these are doing is they're providing host isolation.
+00:23:19 [W] There's different policies for also, you know, disallowing things like adding capabilities to your product cetera. So with that let's run these tests again and what you know, we would expect to happen.
+00:23:30 [W] It is we would get much better results this time around as we are running the tool and since we have the policy engine in place, which is, you know, guaranteeing some isolation segmentation. So
+00:23:45 [W] Expected we went through all of these 15 tests.
+00:23:42 [W] We're seeing a path. So this gives a very easy way for us to now validate that the namespace is properly configured.
+00:23:51 [W] So few other things that were working on and this is where again we're looking, you know for folks to join in and help and extend some of this or even just contribute by giving feedback is we want to add more behavioral tests for storage and networking.
+00:24:07 [W] some pending requests for also converting this tool to run inside of the cluster and produce periodic reports using some, you know, custom resource for reporting and then also, you know, there's interest from other working groups to be able to reuse
+00:24:12 [W] And then also, you know, there's interest from other working groups to be able to reuse these the benchmarking tool for auditing and benchmarking across different other types of security standards like the Pod security levels things to that
+00:24:25 [W] Like the Pod security levels things to that nature.
+00:24:29 [W] So that's a quick, you know overview of the multi-tenancy benchmarking project and I think upfront Tasha gave some links.
+00:24:37 [W] I'm just showing the repo links and other things again, but we're here and we're open to take your questions and chat. So feel free to jump in and ask questions there.
+00:25:02 [W] I see one question for Faith and to get started.
+00:25:11 [W] You can see that I cannot kind of see that question.
+00:25:13 [W] Well, why don't I read the question out.
+00:25:16 [W] Its what are the benefits of virtual clusters over simply creating separate kubernative clusters?
+00:25:23 [W] Okay, the idea is what to crossed or is pretty much designed for serverless, you know environments.
+00:25:32 [W] Well, we want to share an aligned nodes resourceful multiple users we have which across turkey will wait you have a control planes Elation, but for the actual known resources are shared by the by the all the tenants so
+00:25:47 [W] Is compared with Muddy classes solution this approach can improve their overall overall?
+00:25:52 [W] No resource utilization.
+00:25:53 [W] So that's one of the goals of this project.
+00:26:00 [W] I think for anybody who is watching the the Apple keynote yesterday.
+00:26:04 [W] They mentioned that they are using virtual clusters in at Apple's further solution. So I thought that was pretty cool.
+00:26:12 [W] Thank you for shedding those two-phase project. So that's pretty neat.
+00:26:19 [W] Yeah, no, I think that Christians.
+00:26:25 [W] Tenants are able to do.
+00:26:28 [W] Let's see how to Sig multi-tenancy or working group multi-tenancy feel about ranchers approach to multi-tenancy.
+00:26:35 [W] We're tenants are able to create their own main spaces within projects.
+00:26:39 [W] So I think I can answer that from the hierarchical namespace has perspective and then Fay maybe if you want to talk to that about the Tenon controller perspective.
+00:26:50 [W] So hierarchical namespaces are at a lower level than this concept of project and Rancher is not the first storageos.
+00:26:58 [W] Well, it might be the first I'm not sure but they're certainly not the only other implementation of this idea openshift his projects Loft and kiosk and this concept of space.
+00:27:10 [W] a grouping of being spaces what we tried to do with hierarchical namespace has is provide a kind of common way to reason about all of those together and say so we're not going to impose any one kind of
+00:27:03 [W] Follow, we're going to take a very simple sort of basic kubernative construct, which is the namespace and we're going to expand it.
+00:27:04 [W] So we actually have the folks from Loft and kiosk coming to join our meeting next week as Tasha said we need every second Tuesday.
+00:27:15 [W] So please do come and join us if you're interested in these topics, and so they'll be talking about it. And we do want to talk about how some of these things can can join forces.
+00:27:24 [W] I haven't spoken to anyone from Rancher, but I would imagine that
+00:27:28 [W] There are as I said, there are there are a variety of similarities now that is completely I would say non. Overlapping with what Jim was talking about. Jim's tool could be like the the benchmarking tool
+00:27:43 [W] To verify that their the namespaces from to tenants or projects and Rancher are sufficiently secure gated and I don't know enough about rancher to know if that would happen by default or non if
+00:27:56 [W] What happened by default and some would not say anything you want to add to that?
+00:27:58 [W] Yeah, I think I think the Rangers approach is used.
+00:28:04 [W] So username says to build a solution as I said before we see we want to address it in a different perspective is that we try to avoid all the performer possible for humans have some interference or security problem when we share one control plan though. That's a way we see how to address.
+00:28:19 [W] The different perspective is that we try to avoid all the perform for possible for humans have some interference or security program one.
+00:28:25 [W] We share one control plant.
+00:28:26 [W] That's a way we see try to address again.
+00:28:29 [W] It is not as knative as a knative kubernative namespace.
+00:28:33 [W] They have problems that are caused. I think injury has mentioned, but I think that a couple more questions, maybe let me see.
+00:28:46 [W] Yeah, Renee asked either the timeline is spectra visible to users on so I'm not sure exactly which project I referee in queue. But if you are talking about a virtual cluster now, we are moving to the cgroup.
+00:29:02 [W] Now we are moving to the Sig repo and the y in the incubator project is is definitely working.
+00:29:09 [W] I think the demo works you have give a try and leave a message. If you want to further information about this tactical wise there is one question asking does would you cross the handle
+00:29:25 [W] From attending the perspective in general.
+00:29:28 [W] No because our model Yamamoto is more like simplest model. So the tenant user who is actually user or encouraged about the parts.
+00:29:36 [W] They created they shouldn't care about the nodes underneath which provide a rich providing the actually rejected around the pods in general the malays like in here organization when the company you have a custom
+00:29:52 [W] Administrator who managed ER super master and managing all the nodes now tenants just go through these weird little concert. You consume The Party Source from this evil master.
+00:30:03 [W] Yeah, Jim, there is one.
+00:30:07 [W] And also I don't see is that question for the benchmarking and I saw the comment I think on the benchmarking tool so Polly I definitely would love to get feedback and let us know how you find the tool and what we can do to improve.
+00:30:24 [W] What was the answer that earlier question of when you think of available the tool the benchmarking tools available today?
+00:30:30 [W] Yes, it is. Yeah, so it's on the repo. So if you go to the benchmarks link off the main repo you will see there's an empty be plug in the multi-tenancy benchmarks. You can try that out with group cuddle, or just as a standalone
+00:30:45 [W] And likewise token or namespaces are available or it version 0.6 right now so you can download it can get the plug-in for Kube cuddle off of crew or you can download it directly.
+00:30:54 [W] and you can install it. It's all linked to from our GitHub repo.
+00:31:01 [W] Yeah, there was one question asking which case issue will be somebody cause Terror or which way they should all these little Khan starrer as I said before if you don't really care about it the node resource utilization.
+00:31:13 [W] You're okay with each tenant.
+00:31:15 [W] They give dedicated nose for them though.
+00:31:17 [W] He's Marty Krofft Stir It is Stan Standalone approach.
+00:31:21 [W] no additional working with you handle, but you do care about the over resource utilization. You want to efficiently manage your large resource pool to you know.
+00:31:30 [W] You to improve the notary care utilization can consider go weasel Jocasta.
+00:31:36 [W] You have this type of model Hennessy We There are some downside.
+00:31:42 [W] Of course the you need to consume some resource for the virtual cluster control plan, but for the kubernetes currently designed the mask components is not a heavy because it go with
+00:31:57 [W] Then the heavy logic come along with your own controller stuff solid Telco against serverless should be okay and that is our perspective. If your on-prem virtual clusters are basically your only option, right?
+00:32:05 [W] Can we have multi-tenancy isolation at the level of having two different see a swords or each complaint will each control playing come with its own Ingress?
+00:32:11 [W] I'm guessing that's a question for virtual clusters as well.
+00:32:14 [W] Yeah in theory.
+00:32:17 [W] I think there's no problem of having that because it's all about how you generate.
+00:32:23 [W] Okay, the Upstream version the table student introversion doesn't do that because we cannot have two CS available. It only just use one.
+00:32:33 [W] But in reality, I don't think he'd ever lot of changes the support the different see a switch tenant.
+00:32:40 [W] It's just to make sure you have you have to I think the change should be not that significant of this or that
+00:32:55 [W] I think that is it for questions.
+00:32:58 [W] Are there any more questions you only have about 30 seconds left, I think.
+00:33:19 [W] That's it. Tasha anything you wanted to add close up?
+00:33:26 [W] Figure on mute can't hear you.
+00:33:32 [W] Okay.
+00:33:33 [W] Well, I'll just put in a plug we need to tan. I believe our next meeting is Tuesday December the 3rd at and all of the information is on our website and on the GitHub repo, so please come join us.
+00:33:46 [W] We hope to see you there soon.
+00:33:46 [W] Thanks everybody.
+00:33:50 [W] Thanks.
+00:33:51 [W] Bye. Bye.

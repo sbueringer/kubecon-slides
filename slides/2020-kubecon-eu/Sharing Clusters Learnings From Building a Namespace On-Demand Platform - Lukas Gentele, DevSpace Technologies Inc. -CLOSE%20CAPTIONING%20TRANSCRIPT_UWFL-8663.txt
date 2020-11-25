@@ -1,0 +1,235 @@
+﻿Sharing Clusters: Learnings From Building a Namespace On-Demand Platform: UWFL-8663 - events@cncf.io - Wednesday, August 19, 2020 10:54 AM - 1180 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:01:04 [W] Hi, this is Lucas and on welcoming you to the session sharing clusters learnings of from building a namespace on-demand platform.
+00:01:14 [W] As I said, my name is Lucas.
+00:01:21 [W] I'm the CEO of deaf space Technologies Inc.
+00:01:27 [W] And I'm currently working on Loft that is H which is essentially a multi-tenancy solution for kubenetes.
+00:01:34 [W] I'm also in open-source maintainer for several communities related projects like deaf space and kiosk project which you will hear about in a couple minutes. I just recently relocated to San
+00:01:47 [W] Name is Lucas.
+00:01:47 [W] I'm the CEO of deaf space Technologies Inc.
+00:01:48 [W] And I'm currently working on lost that is H which is essentially a multi-tenancy solution for kubenetes. I'm also in open-source maintainer for several communities related projects like deaf space
+00:01:49 [W] One of the few people that actually moves that way and not out of the Bay Area you might hear the funny accent because I'm originally from Germany. So excusing for that right up front.
+00:02:02 [W] So who is this talk for this talk is essentially for it teams admins and S res at companies that are already managing kubernative.
+00:02:18 [W] Koster's might be for production ci/cd staging environments or whatever.
+00:02:21 [W] And who now want to make kubernative available for engineering teams?
+00:02:26 [W] That means you plan to host multiple Engineers or engineering teams in a shared development clusters.
+00:02:36 [W] So we're talking about the pre-production stage in this talk.
+00:02:37 [W] And the challenge here is really about kubernative multi-tenancy and getting the experience straight for your tenants in large shared kubernative clusters.
+00:02:48 [W] When we talk about multi-tenancy, well, we first have to understand what that means.
+00:02:57 [W] So essentially single tenant kubernative clusters are clusters, which you hand over to a single team, which you're running single, you know, singular workloads in and multi-tenant kubenetes clusters,
+00:03:09 [W] And shared kubernative clusters which hosts a variety of you know engineer's engineering teams and their workloads.
+00:03:17 [W] So once we compare those two approaches, we can very quickly understand that single tenant kubernative clusters can be very expensive because you creating a bunch of kubernative casters
+00:03:33 [W] Someone's got to manage them.
+00:03:40 [W] You have to have you know, you have to essentially paid a cloud computing resources of all these clusters is really hard to scale things to really this 0 so single tenant kubernative clusters tend to be pretty expensive whereas multi-tenant
+00:03:50 [W] Some cheaper but very difficult to get right and that's what this talk is about and to be more specifically this talk is about soft multi-tenancy.
+00:04:03 [W] What does that mean?
+00:04:12 [W] So essentially if you are using if you are kind of looking for heart multi-tenancy, you're looking at systems where there's zero trust between tenants that means for example, if you are running like a platform as a service offering
+00:04:18 [W] You know multiple users from different organizations who you don't even know about potentially. Then you're talking about a hard tenancy that you might need for your platform.
+00:04:31 [W] We're talking about soft Tendencies.
+00:04:35 [W] So typically your tenants are users all from the same organization and there's a small chance of malicious actors from the outside organization outside of the organization.
+00:04:42 [W] So it's mainly really about preventing accidents and ensuring the stability of the underlying platform rather than hardening against outside the text.
+00:04:52 [W] So let's get to the first learning that I discovered while implementing multi-tenant kubernative clusters at a variety of companies over the past two or three years.
+00:05:08 [W] The first learning is essentially centralized user management and Authentication.
+00:05:09 [W] You probably already have users in a third party system like active directory Google or Microsoft if using a Office 365 GitHub gitlab for sure our systems that are aware of your engineering teams,
+00:05:24 [W] We hook up an open source project called Dex to your platform. It actually recently became a cncf Sandbox project and with text you can achieve single sign-on for kubenetes.
+00:05:40 [W] Dex is an open ID connect in orth to provider and it supports various identity providers including ldap Samuel and obviously, you know, Google Microsoft gitops gitlab ecetera.
+00:05:52 [W] So it's a very powerful tool to get authentication, right?
+00:05:55 [W] So for example, you could provide a cube config, you know, right after user authenticates through the text authentication workflow and let the user in the simplest case just downloaded Cube config file, right?
+00:06:11 [W] Lot more fancy, you know if you have your own CLI tool which sets which creates keep config files on the user's machine and Dusty authentication workflow for the user automatically right?
+00:06:27 [W] Just pop up the browser and have them redirect to a local host Port that the CLI opens.
+00:06:32 [W] There are different levels which you can do, but the most easiest one is just, you know, redirect users to Dex and let them download the cube config file at the end.
+00:06:41 [W] The second learning is essentially you want to restrict users.
+00:06:48 [W] Obviously you want to ensure the security of a platform. So you need you know, things like pot security policies for sure because you don't want any privilege pods being created or there.
+00:06:59 [W] But at the same time you really need to make sure that you use Smart defaults for your platform because ux really matters because if you're providing a kubenetes offering to Engineers you really care about the adoption of your platform with in-toto.
+00:07:10 [W] Organization we want users to actually have a pleasure in using kubenetes.
+00:07:17 [W] So let me give you an example definitely want to start resource quotas and you want to limit users, you know regarding CPU and memory Etc.
+00:07:27 [W] But if you do that then use as must specify CPU and memory limits are within, you know, all the pots and containers, but they might not want to do that in the early stages of development right and it
+00:07:39 [W] To too much to be honest because it's development state is pre-production.
+00:07:45 [W] Obviously, you want to have all these, you know limits configured in production and staging for sure might not want to want the engineers to very, you know, the first thing they worry about shouldn't be this so set the defaults
+00:07:58 [W] Implement them via limit range is a standard kubenetes construct which you can use here. And essentially it's a mutating admission controller, which is going to apply these defaults to All Parts who do not specify CPU
+00:08:14 [W] Test it out with various workloads of your engineers and you know find a small defaults for your organization.
+00:08:21 [W] Network policies you definitely want to have a place as well because you don't want some you know Network traffic go all across your cluster here, so probably you want to apply like the default deny all policy, but then you want to open up certain things.
+00:08:37 [W] Definitely you want the user to be able to communicate within their name space right certain ports within a namespace service should be able to interact with each other.
+00:08:51 [W] You want to probably for a lot of containers or a lot of namespaces you can do this with labels. For example
+00:08:52 [W] Allow them to you know, connect with the internet and don't forget about DNS as well.
+00:09:05 [W] Usually want them to connect to your cluster internal DNS, but you can also, you know, let them use any roadside DNS service as well.
+00:09:08 [W] The third learning is essentially automate as much as possible and it applies to everything.
+00:09:14 [W] I was just talking about and additionally to you know are baked and everything related to that create templates essentially for anything.
+00:09:28 [W] You might want to use open policy agent, which is also a cncf project for dynamic admission control because there are certain things you can enforce with standard kubernative through words, but oh Park can do them for you very easily. So for example,
+00:09:38 [W] Hostname validation for your Ingress resource.
+00:09:44 [W] Congress controlled are kind of like, you know to some kind of load balancing between different tenant applications one each tenant or each namespace or whatever you define a single unit here to have a certain set of you know
+00:10:00 [W] Whatever that they can use and they should follow a certain pattern. Right so you could have like a suffix or subdomain of that includes right the tenants name or the namespace name or things like that right and all Park and really
+00:10:16 [W] and you know essentially reject anything that doesn't follow this pattern when someone's creating an Ingress is pretty easy to implement that Additionally you can use the same host name validation for the certificate resource
+00:10:31 [W] Additionally, you can use the same host name validation for the certificate resource if you're using things like cert manager so that you know, you are let's encrypt account doesn't you know provisioning a lot of names a lot of host names which
+00:10:42 [W] And a lot of names a lot of host names which aren't actually being used in your system. And then you might want to strict certain storage and network related configurations.
+00:10:53 [W] You might not want, you know every user to provision load balancers in your AWS account.
+00:10:59 [W] might want to you know set some restrictions there because you may want to provide some certain, you know cost of white services so that not everybody needs to install their own Ingress control of certain manager etcetera provide these services and
+00:11:11 [W] them as much as possible for yourself. If you're setting up new clusters, you can use terraform for that or you know, just a simple, you know Helm chart which you have, you know, Helm dependencies to nginx English controller
+00:11:23 [W] As much as possible for yourself, if you're setting up new clusters, you can use tariff room for that or you know, just a simple, you know hand chart which you have, you know, Helm dependencies to nginx English controller
+00:11:25 [W] Things like that and really bundle your configuration there.
+00:11:27 [W] And related to that I would really recommend to store everything in kubenetes.
+00:11:35 [W] So I would have no State outside of communities so know like database where you keep track of certain relationships etcetera and potentially you want to also store things and get so use kubernetes related kubernative knative
+00:11:48 [W] notations labeled Secrets all these constructs are really great to store information about owners and tenants are what they can do within the system and the great part about this is you can also use gitops now to kind of manage the
+00:12:04 [W] Form that means I get a free audit log. We had a commits you can roll back very very easily.
+00:12:14 [W] You have an automated approval process, right?
+00:12:16 [W] That's really great.
+00:12:23 [W] So let's say you set up a very easy system for provisioning namespaces. And the easiest system is to have something like flux, you know running in your kubernative cluster and it essentially pulls the state of your git repository and applies it to your
+00:12:31 [W] That means you could for example tells you that hey, if you need a new name space create a pull request and we're going to prove that for you and you know certain limits for your for this namespace or whatever
+00:12:47 [W] you know annotated or they could be labeled so that could be in a conflict map that the user also needs to add to this pull request and then you can use August good best teachers for very easy approval process with all the power that you know, gitlab GitHub etcetera provide for you
+00:13:03 [W] Approval process with all the power that you know gitlab GitHub etcetera provide for you.
+00:13:07 [W] This is great for you know, keeping track of your platform state, but it's not so great to keep track of your user workloads, right? I would argue that engineering teams should have direct access to kubernative rather than having to go through
+00:13:17 [W] Rather than having to go through, you know ci/cd, you know gitops system or whatever to deploy something to kubernative if they see some tutorial out there to install hem chart that they might need for the, you know, day-to-day work and
+00:13:30 [W] It there should be able to follow the tutorial and not have to you know adapt to a different workflow etcetera, which makes it just more complicated.
+00:13:43 [W] So keep your platform State and get ups but that doesn't necessarily mean you also need to keep your user workflows and everything that's related, you know to their work in to integrate as well and if you want even
+00:13:53 [W] Workflows and everything that's related, you know to their work in to integrate as well.
+00:13:54 [W] And if you want even more control over what's happening in your cluster. You can always write a controller introduce crd is custom resource definitions can extend kubenetes Telco Burnett is you know, this is a tenant for us for example, right
+00:14:06 [W] Kind of extend kubenetes Telco Burnett is you know, this is a tenant for us for example, right?
+00:14:08 [W] And those are the tenant limits that could be objects in your platform that you're creating.
+00:14:19 [W] And if you go an extra fancy, you can even write an APA server extensions to solve the list problem this problem essentially means you can set our bag to get users to perform Cube CTL get on
+00:14:27 [W] Right, but they have to provide the name of the namespace if they want to run you TTL list namespaces.
+00:14:39 [W] It's either all or nothing, right? They can either get access to all namespaces and list all of them or none of them.
+00:14:40 [W] All right, you can solve that by an API server extension essentially filter the namespaces that the tenant has and one project. I was mentioning earlier that I've been working on for a couple months now and I think we open sourced it in
+00:14:55 [W] Is kiosk years is about extension for kubenetes provides an API server extension in several cri-o S4 multi-tenant kubernative clusters.
+00:15:11 [W] If you go to a kiosk at sh, you'll be redirected to the GitHub repository and the readme contains a lot of you know, walkthroughs and explanations about how to configure cures and how to set it up and your cluster is essentially
+00:15:21 [W] Help chart, and then you have like a tiny controller running in your system as well as this API cervix tension, and then you have resources available that users can work with or that you can use to start building multi-tenant communities
+00:15:37 [W] So one of these resources that solves the list problem is space for example, right spaces entirely virtual.
+00:15:46 [W] It's not a CRT is not persisted in that way.
+00:15:51 [W] It's an extension of the kubenetes API server.
+00:15:59 [W] And if the user runs keep CTL get spaces, right? They essentially only get those names list spaces.
+00:16:00 [W] Sorry, they essentially only see those namespaces that actually have access to the our back right? So where the essentially have the
+00:16:08 [W] Asian to read pots or whatever you configure in Kiosk, here's also knows templates you can use those templates essentially to Telco s.
+00:16:23 [W] Hey when someone when one of our tenants creates a space groups you to you know, create space essentially apply certain templates to it and that can be you know, a break rules Network policies limit ranges, whatever you may need for your
+00:16:33 [W] Here's also knows templates.
+00:16:35 [W] You can use those templates essentially to Telco s.
+00:16:36 [W] Hey when someone when one of our tenants creates a space groups you to you know, create space essentially apply certain templates to it and that can be you know, a break rules Network policies limit ranges, whatever you may need for your
+00:16:36 [W] This cluster is great because chios does it automatically for you.
+00:16:42 [W] Obviously, if you're going with the gitops approach, you might not want to have templates and step rather Force the user to include that in the pull request. But either way it's going to achieve the same state and then
+00:16:54 [W] request but either way it's going to achieve the same state and then there's essentially the definition of a tenant which key was called account and you can set certain account photos, which
+00:17:02 [W] Is called account and you can set certain account quotas, which essentially limit an account on if you want to learn more about kiosk reach out to this guy Fabien is kiosk maintainer and really the brain
+00:17:13 [W] We launched the project together, but if you really want to, you know dig into the details, you should definitely talk to him.
+00:17:21 [W] And if we're looking at the workflow and chios, there's essentially two Persona right? There is you as a cluster admin and then there is the count users which can be regular kubernative user or kubenetes group or a service account right
+00:17:38 [W] You essentially Define and manage accounts and accounts folders as well as the templates, right and then users are used the account to create spaces and when they create a space on the essentially, you know defined in the spec
+00:17:55 [W] To this account and then when they do that the admission control that will essentially check you know, hey are they the API server extensions are able to actually check, you know, is this subject or service account holders have her doing the cube CTL request.
+00:18:11 [W] Is that person actually let user actually part of this account will allow this. Right and if the space is being created it will create the underlying namespace and force the templates that you would have enforced for this account, right?
+00:18:26 [W] So now we got like kind of the basic setup regarding authentication.
+00:18:35 [W] We automated a lot of things we restricted our users and we might even use kiosks, you know, kind of to get this, you know kind of structure for for our multi-tenant kubenetes platform.
+00:18:47 [W] The next part is really about how users interact with the system. I would argue do not hide kubenetes, but try to make it as easy as possible for users to use. So Engineers actually need
+00:18:58 [W] Us to community so they need to run Cube CDL commands etcetera because they want to you know, verify a new features very very fast.
+00:19:05 [W] They don't want to have to go through the full ci/cd cycle. Just you know, when they see something that they might need some chart somehow short they want to install what if they want to just test a new feature will quickly they want to do those things pre-commit right
+00:19:19 [W] Deepak the container startup inspect the state of the applications attach the barkers and Trace requests between several Microsoft step. They might be working on.
+00:19:29 [W] But I would also argue Cube CTL is not it's just an API client is not really a developer tool, right? So you should tell your engineers.
+00:19:44 [W] Hey use Cube C tell you have the full power right? You can also use Helm or any other kubernative tooling and leave up the workflow and to link to them, but I would definitely recommend as you're more of a kubernative expert than most of you Engineers will be
+00:19:54 [W] Really awareness for open source tools which I which are out there. You can let them with your engineers and essentially, you know, give them a list and say OK here. I found all these tools that work really great.
+00:20:09 [W] I would recommend you take a look at them.
+00:20:11 [W] I'm just going to name a couple down here scaffold espa still telepresence.
+00:20:18 [W] They all pretty similar but there are two distinct differences. So telepresence is the bit older tool, which essentially, you know assumes you want to work on a couple of
+00:20:24 [W] Services, and the one that you actually want to work on should run on your local machine.
+00:20:32 [W] Everything else is being deployed to your kubenetes cluster and what they do then is they start like a two-way proxy between the local CLI and telepresence part that runs inside your cluster then you can with the CLI
+00:20:44 [W] Actually want to work on should run on your local machine.
+00:20:45 [W] Everything else is being deployed to your kubenetes cluster. And what they do then is they start like a two-way proxy between the local CLI and telepresence part that runs inside your cluster then you can with the CLI
+00:20:46 [W] You know this network this network proxy and you know volumes even from the cluster and things like that so that your local service kind of feels like it's running inside kubernative.
+00:20:56 [W] Although it's running on your local machine that has certain drawbacks but has a big advantage that it feels from a developer perspective.
+00:21:08 [W] I mean, everything's running locally that you're working on that feels weird great, but it's kind of bad on Windows still the network can get pretty slow.
+00:21:14 [W] Whoa, if you're always doing this proxy Network really depends on your internet connection and you might have issues of all the moms, but generally I would really recommend to check out telepresence.
+00:21:29 [W] The other tool is pretty much follow this workflow on that means the developer uses a CLI tool to run a local kind of ci/cd pipeline that you know builds images text and push them to registry starts port forwarding
+00:21:39 [W] You know to the to everything that has been deployed to the cluster and hear everything gets deployed to the cluster.
+00:21:50 [W] So unlike telepresence where one service once vocally everything once and kubenetes now and to get this hot reloading experience so that the developer can still code with the IDE and you know save a file and see the changes.
+00:22:01 [W] They typically tend to have failed sink which synchronizes files from the local file system to The Container file system. And then you the only thing you have to do is you know install for development.
+00:22:10 [W] I shall talk of file for example with which adds hot reloading tool inside the container and maybe remote debugger things like that might be with you know, might take a while to get used to this, you know, and then you need to play around if this
+00:22:25 [W] But it's definitely easier in the long run then maybe the network complexity of telepresence.
+00:22:36 [W] Let's get to learning number six when your platform is actually up and running you should really care about cost as well as for the sake of the organization and really shut down I'll workloads. So the first thing you want to do is enable auto scaling whenever
+00:22:47 [W] Let's get to learning number six when your platform is actually up and running.
+00:22:48 [W] should really care about cost as well as for the sake of the organization and really shut down I'll workloads. So the first thing you want to do is enable auto scaling whenever possible if your pop Cloud that should be pretty easy.
+00:22:50 [W] If you've done a great job with your platform and you access grade and Engineers are actually using it.
+00:23:00 [W] They'll be really quick to spin up and deploy a lot of things right, but they'll be terrible at turning things off.
+00:23:08 [W] So you should really try to automate the shutdown of idle namespace. So either workloads in general
+00:23:11 [W] So I'm just going to recommend a couple of tools.
+00:23:17 [W] There's a fairly new tool called cluster turned down by a startup called Cube cost which you can use to set up a fixed schedule when to turn down your EK e KS or gke clusters so you can essentially say hey at
+00:23:29 [W] Been up and deploy a lot of things right, but they'll be terrible at turning things off.
+00:23:31 [W] So you should really try to automate the shutdown of idle namespace either workloads in general.
+00:23:31 [W] So I'm just going to recommend a couple of tools.
+00:23:31 [W] There's a fairly new tool called cluster turned down by a startup called Cube cost which you can use to set up a fixed schedule when to turn down your e ke ke s or gke clusters so you can essentially say
+00:23:33 [W] say hey at you know 8 p.m.
+00:23:35 [W] Turn everything off right scale. It down is zero kill all the notes, right?
+00:23:37 [W] That's pretty pretty hard.
+00:23:45 [W] But obviously it's doing the job in terms of saving cost right and then in the morning spin up everything again, obviously, you have to kind of adapt to the schedule of your engineers here.
+00:23:50 [W] Um, if you're based on openshift, you can use idling and openshift which is essentially network-based shut down. So if opentracing doesn't detect any network request for a while it can you know, scaled-down replica
+00:24:06 [W] Zero and then engineer's could just you know, turn up the replica sets again and then in Loft, which I'm currently working on.
+00:24:19 [W] you have a feature called sleep mode where you can essentially make that decision not on pure Network traffic but on a pi server requests so you can tell of tape if the engineer hasn't done any
+00:24:32 [W] space in the past 20 minutes shut it down right shut down all the replica sets or turn the replica sets to 0 and as soon as the first API server request comes in reset the replica sets to whatever they were beforehand
+00:24:49 [W] Request comes in reset the replica sets to whatever they were beforehand.
+00:24:49 [W] And then last but not least learning number seven is sometimes uses just need more than a name space right?
+00:24:58 [W] I was talking earlier about single tenant clusters versus multi-tenant clusters. If you have a Singleton Custer's it's great. You essentially become the admin of the cluster as a user. You can do anything set up our bag, you know, a lot of Helm charts need you to
+00:25:11 [W] You know set up certain are back rules. You might not want your users to do that in a multi-tenant kubernative cluster.
+00:25:16 [W] So namespaces have certain limitations.
+00:25:23 [W] What's with you know, custom resource definitions. Will you be able to let you use this installed?
+00:25:26 [W] See your DS?
+00:25:28 [W] Probably you don't want to do that, right?
+00:25:30 [W] Yeah Helm charts use certain our big permissions.
+00:25:35 [W] What if you use this one to enable certain kubernative Alpha better features or on a different kubenetes version?
+00:25:40 [W] You know, you can't do that with namespaces, but you can with a construct called virtual clusters and virtual clusters are really kind of kubenetes classes as run inside another kubenetes called stir within a namespace, right?
+00:25:56 [W] If you let users provision dose, we really unlock access to Cluster wide settings for those users that can do whatever they want with their virtual cluster.
+00:26:06 [W] They provide better isolation than namespaces because they host a separate kubernative are controlled by in right there's a separate API server, which is also great from isolation security and stability perspective and then additionally
+00:26:21 [W] True isolated single tenant kubernative clusters their virtual clusters running in the same host cluster.
+00:26:32 [W] You can also do kind of like a sharing of resources that run in the host cluster for example services like nginx certain manager, right?
+00:26:43 [W] just need to run them once and you can kind of hook up the virtual cluster to those host Services as well which provides similar efficiency as a namespaces if you want to learn more about virt.
+00:26:52 [W] Virtual clusters. You can either check out what the multi-tenancy Sig is working on or you check out what we've released our just a couple of weeks ago on github.com left.
+00:27:07 [W] Sh were chewing - Koster which is essentially an implementation of a virtual cluster.
+00:27:16 [W] That means we're starting like a k3s cluster within one of your name spaces and then have like a sinker which sinks certain resources to the host cluster right to actually, you know, start pots and containers etcetera, but we have like
+00:27:28 [W] Logic, I'll bake this at Aurora encapsulated into one namespace.
+00:27:35 [W] that is hosting the k3s costal. So I encourage you to check that out. If you are kind of hitting the limitations of namespaces, but that's pretty far down the road and I'm sure you'll be busy with you know, the first six learnings are so far
+00:27:50 [W] Cap here are all the learnings that you know kind of I took from creating, you know, several implementations of different sizes of companies that wanted to host multi-tenant kubernative clusters.
+00:28:06 [W] And if you want to dig into one of these topics that can more detail just head over to one of these links.
+00:28:16 [W] I'm attaching to the presentation.
+00:28:17 [W] That was a really great talk of James when an engineer at Spotify at last Cube Khan, and there's a lot of great articles out there and I really urge you to also check out what the Sig multi-tenancy is working on and if you have any particular questions,
+00:28:31 [W] You know to kiosk whatever I'm working on or to any of these learnings don't hesitate to reach out to me and I'm also going to be available for Q&A and I think we have about like another five or six minutes
+00:28:48 [W] Questions of if we'd ask them right now.
+00:28:52 [W] Thanks for your time.
+00:28:53 [W] Alright, so that was the main presentation.
+00:29:02 [W] I'm happy to answer questions.
+00:29:09 [W] So if you have any questions, feel free to open the QA bottom button on the bottom.
+00:29:11 [W] I'm just type in your question.
+00:29:16 [W] We already have a couple of questions that came in a few minutes ago.
+00:29:19 [W] I'm just going to read them out loud and try to answer them in the remaining five or six minutes that we have left.
+00:29:27 [W] The first one is what do you think about using opa?
+00:29:29 [W] And check conflict maps of that. You see some potting mix here. So a lot of companies that my team and I have been working with actually using Opa.
+00:29:42 [W] It's a really great project really allows you to add additional, you know, Billy flexible security rules your multi-tenant Koster.
+00:29:53 [W] So I definitely recommend to check out Opa are super super useful for multi-tenant coasters.
+00:29:56 [W] Thus kiosk have a graphical user interface kiosk as an open source project is kind of like a basic building block to create soft multi-tenancy and kubenetes. So teachers kubernative certain, you know CRTs that are required. Like what is a tenant, you know, what
+00:30:13 [W] And for the space of things like that, but it doesn't have a GUI.
+00:30:21 [W] So if you need something on top of that you can obviously build that just using Cube context if you're using Loft the project that I'm working on right now.
+00:30:33 [W] using heels internally. So whenever you connect the costal installs, kiosk and love chips with a graphical user interface, so if you're interested in that,
+00:30:45 [W] Just install the helm chart and try it out.
+00:30:50 [W] What is your experience suggestions regarding the usage of CRTs in a platform as a service based on manage kubernative casters
+00:31:01 [W] The person asking these questions is referred to issues are with the cost of its scope of crpd is yeah. That's what I mentioned at the end of the talk essentially. So namespaces are kind of like a basic unit of
+00:31:17 [W] Cheering multi-tenant clusters and namespace have certain limitations because obviously you don't want users to install ci/cd is on the cost of wide level after you set up, you know our baby cetera to restrict them to a certain name space.
+00:31:34 [W] Acosta's it's really something you should look into if you want to use us to actually work with see you at ease because in Virtual clusters users can essentially create costal wide Custom Custom scope resources, which can be
+00:31:49 [W] For four months off multi-tenancy requires, you know so users to to deal with orbit rules install things like controllers and cri-o is even if your users are developing controllers, right?
+00:32:06 [W] is definitely something to look into.
+00:32:07 [W] The next question Solutions like virtual Kosta and kiosks seem like a very nice approach towards multi-tenancy, which you calcify these under soft or hard multi-tenancy.
+00:32:24 [W] And what is the roadmap towards version one production-ready version?
+00:32:35 [W] definitely soft multi-tenancy. If you want heart multi-tenancy, you need to look into you know, like really making sure that users are not share the same kernel.
+00:32:39 [W] Things like that or that they you know, there's like a virtual kubeflow things like that where essentially your containers and up on different VMS right things like things like that are definitely more towards heart multi-tenancy pressure
+00:32:52 [W] Especially for soft multi-tenancy. If you are engineering teams are supposed to share the same kubernative customers regarding production Readiness both heels as well as virtual cluster
+00:33:09 [W] Both heels as well as virtual cluster have been used by a variety of companies of different sizes from small companies of just like, you know, ten engineer's sharing a Costco up to a hundred Engineers, you know sharing a coaster.
+00:33:20 [W] The use of just like, you know, ten engineer's sharing a Costco up to a hundred Engineers, you know sharing and Koster obviously a deputy young Technologies. So that is not companies out there using it with like 10,000 engineer's working in the same cluster,
+00:33:28 [W] Deputy young Technologies, so there's not companies out there using it with like 10,000 engineer's working in the same cluster, but I actually think that would probably not make a lot of sense for companies because you might want to you know, split up things on
+00:33:37 [W] Companies because you might wanna split up things on in different geographical locations is sort of I don't think you want your European Engineers working the same culture as the ones in North America for example, right?
+00:33:48 [W] So you're going to have several cost curves that you share and then you know fifty a hundred engineer's maybe 220 years may share cost over probably not 10,000.
+00:34:01 [W] However, as I said, both projects have been used in production if
+00:34:02 [W] If I may call it that way for the development use case.
+00:34:09 [W] We also evaluating both Technologies for actually production workloads.
+00:34:13 [W] But if that's something we can you know talk about in this lecture on allow. So free free to ask any questions. They are as well might not be able to answer all the questions here.
+00:34:23 [W] Maybe one last question. Sometimes I feel the need for nest of namespaces are grouping multiple namespaces into one logical bigger namespace into one block.
+00:34:35 [W] The bigger name space. Is that something you consider useful form of vitamin C.
+00:34:42 [W] Definitely, I mean the multi-tenancy groups working on something and I also believe that Google has shipped something similar for what UK a right now where you can you know, essentially built these hierarchical namespace has however, I
+00:34:53 [W] Virtual Costco's offers more possibilities than just nesting namespaces essentially, but in the end it does the same thing. So in the end everything you do creating, you know name space in your virtual cluster actually going to
+00:35:09 [W] But in the end it does the same thing. So in the end everything you do creating, you know name space in your virtual cluster actually going to end up in the same namespace on your on your host costume. Right?
+00:35:16 [W] So you're achieving a similar goal, but with a different layer of abstraction and maybe more, you know, freedom and flexibility for users.
+00:35:25 [W] And as we only have like a couple of seconds left to end the session, I just want to take the time to thank you all for listening and watching the video online and the slides will be online.
+00:35:39 [W] Online I think all the scheduling website. I can also post them in a select Channel again.
+00:35:46 [W] And if you have any questions, feel free to reach out anytime have fun and enjoy the rest of the conference and thank you for tuning in.

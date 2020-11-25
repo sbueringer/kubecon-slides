@@ -1,0 +1,258 @@
+﻿Anatomy of a Kubernetes Release: Success Through Team and Tools: STCE-9765 - events@cncf.io - Tuesday, August 18, 2020 7:00 AM - 86 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Alright, hello folks and welcome to anatomy of a kubenetes release Success Through team and tools as you can see. This is part two. We actually gave the part one section of this talk at the open source Summit China virtual event.
+00:00:19 [W] So if you miss that, I'm sure you can go back and check that out this time.
+00:00:29 [W] We talked about in that talk a little bit about kind of the overall structure of Sig release for kubernative. I'm today, we're going to dive a little bit deeper into the technical side of things.
+00:00:33 [W] If Glee in the release engineering sub-project, my name is Daniel Mangum.
+00:00:40 [W] I am the ci/cd gonna lead for the kubernative 1.19 release also part of the release engineering sub-project and a branch manager, which we can talk about what that is in a little bit and I'm joined today by Sasha Gunner. Who is the tech lead?
+00:00:52 [W] For Sig release and is also a branch manager and part of the release engineering sub-project.
+00:01:05 [W] So we're excited to tell you a little bit about what we kind of do on a daily basis. And also hopefully how you can get involved and understand a little bit of the areas where we are looking for new contributors and that sort of thing.
+00:01:14 [W] So without any further Ado, I'll go ahead and jump into our content here.
+00:01:18 [W] So a brief overview of what we're talking about today. We're going to look at how we actually technically make kubernative releases. So,
+00:01:23 [W] As a lot of team and process that goes into things a lot of different roles roles that folks play.
+00:01:37 [W] But today we're going to talk exactly about you know, the commands we run the tools we use and what actually happens to make that binary available for you to download.
+00:01:42 [W] We're going to give a overview of the release engineering sub-project.
+00:01:47 [W] So this is a sub-project of Sig release specifically around building the tooling and running the actual releases as well as making sure branches for different releases are up to
+00:01:56 [W] Eight and running patch releases and that sort of thing and then Sasha is going to take over and do a bit more of a deep dive into the tooling where the tooling lives how its developed how its version and how it's used to do different parts of their release process.
+00:02:08 [W] We're continuing to make that more seamless in a more robust tool to be able to use for kubernative and and also increasingly for other projects as well as I mentioned before this is the second part of this talk.
+00:02:24 [W] So if you'd like a more broad overview of Sig release, please go check out the previous talk that we gave and there's a link for that below. All right, so giving you kind of just an overview of the different roles of folks in the release engineering
+00:02:37 [W] Changed pretty recently.
+00:02:40 [W] So you're getting very up-to-date information.
+00:02:45 [W] So so we used to have a branch management team and a patch release team. So you can imagine in kubernative. There are release branches for every release and in kubernative. We support the last three releases.
+00:02:55 [W] So it's a rolling cycle when a new release comes out we drop support for the third oldest in that cycle.
+00:03:04 [W] And there's so there's two main roles here. One of them is Branch management, which is basically making sure we're
+00:03:07 [W] R getting the release Branch ready for the next release then there's the patch release team which is making sure necessary fixes and improvements are made on those older versions of kubernative and patching those over and then making those patch
+00:03:22 [W] As you can see there branch managers usually cut minor releases and follow the release cycle and the patch released team takes care of cherry picking some of those fixes that need to be included in previous releases, especially if their security vulnerabilities are bugs or things like
+00:03:38 [W] Previous releases especially if their security vulnerabilities are bugs or things like that recently the patch release team and Branch management team has actually been Consolidated into one as you've kind of heard me talk about some of the different responsibilities you can imagine how there's a
+00:03:49 [W] A lot of overlap there. So a lot of expertise you gain and using the tooling and running some of these releases is really applicable to both roles.
+00:04:00 [W] So having more folks around that are able to help out with both of these responsibilities.
+00:04:04 [W] It's just more advantageous to the project.
+00:04:07 [W] So those have Consolidated recently. So folks like Sachin myself help out on both of those sides of things.
+00:04:11 [W] Alright, so looking at the actual tooling that we use to run this release.
+00:04:20 [W] So the commands We Run The what actually happens behind the scenes all of that sort of thing all of this tooling lives in the kubernative released repo. So I'm you can see the link to the GitHub repo right there.
+00:04:32 [W] anything that happens there any of the issues that are tracking improvements we want to make any of the PRS are opening or happening against that repo and it contains tooling for interacting with GitHub interacting with Google Cloud build.
+00:04:42 [W] All the different services that we use increasingly.
+00:04:51 [W] It's becoming a little more generic so that those libraries that we write to be able to interact with those Services can rapidly be used to iterate on new commands and new functionality.
+00:05:01 [W] So that's one of the things that's going right now and you'll see there that it's a big transition from Bosch to go.
+00:05:10 [W] So there's a number of advantages for this. But before I get into that one thing to mention is, you know, why was all of this written in bash. Well like your typical project that you've probably
+00:05:15 [W] More production ready and you know since the 1.0 release where it's really increased in adoption.
+00:05:29 [W] There's a desire to have a more testable release tool and a more robust release tool as it does more things and the kind of complexity of releases increases.
+00:05:40 [W] Also, there's just a lot of folks who are familiar with how to write goats very approachable language. So transitioning to a go based tool is a little bit easier to get new contributors in and make more rapid progress. So that that process
+00:05:52 [W] Is still ongoing honestly, it's something that will probably last for quite some time because a lot of these scripts touch a lot of different parts of the kubernative code base, but it's a very easy and approachable way for new folks to get involved personally how I
+00:06:04 [W] Release engineering at first is just transition transitioning some of that functionality from The Bash scripts over to go.
+00:06:15 [W] We do follow a workflow based approach for the tooling.
+00:06:22 [W] So as I mentioned before the functionality is is attempted to be abstracted into general-purpose libraries. So what that looks like is if we need to transition A bash script that goes and generates release notes from all the PRS.
+00:06:31 [W] And merged into the master branch.
+00:06:43 [W] There are some generic tooling that we can use are so y equal e what we're doing is interacting with GitHub pulling down some of those PRS inspecting some of their content that sort of thing a lot of that functionality can be abstracted and to General things that we can use to interact with GitHub
+00:06:48 [W] Thing a lot of that functionality can be abstracted and to General things that we can use to interact with GitHub. And then if we later on what to do, you know more sophisticated things like inspect the labels or do something like that.
+00:06:57 [W] We already have some of that library and shared knowledge built out and we can add new new functionality really quickly.
+00:07:09 [W] tooling also helps facilitate that merging of the two roles that I talked about before of the patch released team in the branch management team. I'm obviously if you're using a consistent sysdig,
+00:07:12 [W] Single tool to be able to execute all of these different steps that are required for both patch releases and Alpha Beta RC and official releases.
+00:07:27 [W] If you're using the same tool for that, it's just a little bit easier to context which you also get things like helpful tooling that, you know tells you what you need to provide for a command and helpful messages and usage messages for the different commands
+00:07:36 [W] So now let's actually take a look at what the tool is the main the main Heart Of release engineering is Corral.
+00:07:47 [W] So you'll see that short for kubernative release toolbox.
+00:07:55 [W] So basically what this is is a single command line interface that does all of these different things that are required for these different roles and release engineering so you'll see an example of some of the commands below by generating the changelog
+00:08:04 [W] Into mailing list that sort of thing. So having the single command number one gives us a single binary that we can version and release so just behind the scenes. We usually open an issue before we make any release and we kind of
+00:08:20 [W] Just behind the scenes.
+00:08:20 [W] We usually open an issue before we make any release and we kind of detail the steps there as we go through the release process and so we can have generic things. Like you always run, you know chromevox stage here in this process and so we
+00:08:30 [W] Eric things like you always run, you know chromevox stage here in this process. And so we can use those generic commands as opposed to just kind of doing like one off bash scripts or running things in you eyes.
+00:08:38 [W] So so this is really useful as well.
+00:08:44 [W] This this chrome and line tool can also be used by processes. So if you want to use it as part of a job that runs and prowl or something like that, it can also be automated and use for facilitating those types of
+00:08:56 [W] Of workflows so really flexible tool and we're continuing to build out some of the functionality there.
+00:09:02 [W] So if you're interested in getting involved definitely check that out now, I'm going to hand it off to Sasha who's going to talk a little bit more about these specific commands and what happens in a release and what kind of the sequence of commands that you may
+00:09:14 [W] Manager would look like so Sasha feel free to take it away.
+00:09:19 [W] Thanks, then great overview So Far So before we dive actually into how to cut a kubernative release I have prepared a short demo for you.
+00:09:34 [W] I would like to talk a little bit about the theoretical aspects and how it works in general.
+00:09:38 [W] So if we look at the release cycle, then we usually have to cut off a releases better releases or some pre-releases. Then at some later point in the release cycle. We will create a release candidate and from that release candidate on we will
+00:09:50 [W] Also create the release branch which got management managed afterwards by Branch management and at some later point at the end of the release cycle usually cut the final release.
+00:10:02 [W] Otherwise, it would not make much sense at all.
+00:10:08 [W] And in between we also have some patch releases. So usually they come on the monthly basis and the since we were able to unify our tooling we were also able to unify our participants.
+00:10:17 [W] So we have in the green boxes yet the branch management and the patch release team, which is
+00:10:20 [W] it but in general we right now they use the same tooling and they also can rely on the same.
+00:10:28 [W] Yeah on the same environment.
+00:10:32 [W] So from a tool in perspective, we can see that we have the Corral release toolbox and insightiq released two books as then already mentioned we have for example Corral gcp manager and Croce's if you manager is yeah stands for Google Cloud
+00:10:43 [W] And this has been completely Rewritten in goal to be actually testable, but then grilled cheese EP manager get executed locally on your local machine.
+00:10:57 [W] This will call a trigger at Google Cloud build build actually which uses an echo and and ago is part of our technical depth.
+00:11:10 [W] So it's a huge batch script, which actually yeah for example birds are the facts and puts them into release buckets.
+00:11:14 [W] And I will also call in to Corral changelog. So this is also pretty new and creative changelog takes care of.
+00:11:21 [W] Yeah, modifying the kubernetes release repository generating to change looks and then putting back those data in for another go and then we'll go we'll take those outputs like markdown and yeah and also but if occations want to get
+00:11:35 [W] And we'll put it into the repository at all.
+00:11:41 [W] So that sounds a little bit complicated.
+00:11:44 [W] But what how do we actually cut a release and as then already mentioned we have to create an issue to copy release and kubernative Sig release so that everyone from zika releases aware of that. We are going to plan to cut the release
+00:11:57 [W] We do that later on and then we just have to run four steps.
+00:12:03 [W] So we have to go to mock stage a mock release stage and release so mock stage and Stage are usually the same steps, but the mopping is just executed in a non-disruptive way so we don't actually
+00:12:16 [W] Those artifacts for example, but we don't put them into production and all everything else will be done automatically.
+00:12:32 [W] So for example cutting really creating release branches building the artifacts putting them into the right directories will be all done. Automatically. The release manager just has to take care of that. It is executed in the right order.
+00:12:40 [W] And what does stage do so stage just verifies that the built environment is correctly set up.
+00:12:49 [W] It sets the right build were Asians.
+00:12:50 [W] I will show you that later on and it will also build the releases via Cube cross, which is a container image and this produces binary artifacts container images and we will also create some release notes and then we put all those data into
+00:13:05 [W] pocket and a Google Cloud packet and the release step will later on takes those data and yeah, the push the git repository changes like the text the actual change logs to GitHub and it will also update the could have release page and
+00:13:20 [W] Also, push the container images into the GC r dot IO registry for consuming from end users.
+00:13:28 [W] Then we have also to create create a release announcement and this is a separate step and the released stage will recreate the to release announcement for us and will archive and the release on the Google Cloud Storage.
+00:13:44 [W] So why do we have to do it in a separate step?
+00:13:49 [W] And usually we do it at the announcement in a separate command like called Corral announced and this is also has been written from informing New Perspective and we have to do it because we also want to
+00:14:01 [W] Great some depth and RPM packages and those packages are currently built by Google build admins, and we usually have to reach out to them that they helped us to build the packages and then we can send out the announcement. So there's a slight delay and we are going to automate it away
+00:14:14 [W] Written from inform A New Perspective and we have to do it because we also want to create some depth and RPM packages and those packages are currently built by Google build admins, and we usually have to reach out to them that they helped us to build the
+00:14:15 [W] Being one year we can also have directly sent announcement right after the release or directly in the release would be really really cool and I reuse we stick to then create which stands the mail to the right mailing
+00:14:30 [W] This highly workflow Thrift mess then already mentioned. So there is no need to do any other act interaction than just exporting as ad creative API key and then the announcement will be put into the right place.
+00:14:42 [W] So this whole release cutting process will be done for each Alpha Beta and release candidate during the whole cycle.
+00:14:51 [W] So we do it multiple times and the same process applies to patch releases as well.
+00:15:01 [W] But now we can have a look at a real life example, and I can just share my screen for you.
+00:15:10 [W] And if we now look into kubernative snyk release and the repository then we can see that right now somebody cuts 119 RC 2, which is pretty exciting.
+00:15:12 [W] I would like to say okay if I want to cut and you release then I just can create a new issue and then we have our template for cutting a new release.
+00:15:24 [W] So it's pretty handy already.
+00:15:26 [W] We just have to fill out some basic information when it will happen and we have to screenshot unhealthy release Branch test grid boards.
+00:15:36 [W] And then we have a checklist which guides us through the overall release. So we have all four release steps mock stage mock release stage and release.
+00:15:44 [W] And after that we can cut the packages and send announcement.
+00:15:47 [W] The table is already filled out. So some reduced manager colors in that case and run amok stage.
+00:16:10 [W] We are credit gcp manager - - stage and then some command line Flex.
+00:16:21 [W] How do they these command line flags look like if we just look at the help page of Krell GCB manager, then we can see that there are some Flex which are necessary and the most important Flex our for example stage and release so
+00:16:29 [W] If you want to Stage or to release and also the no mock flag as can be used in combination of that and the branch is necessary. If we want to cut a release not against the master Branch for example release candidates would be cut
+00:16:44 [W] The release not against the master Branch for example release candidates would be cut against the release branch.
+00:16:46 [W] And that's the basic command execution and usually how does it look like, so if we just create a mock stage release, then we can go into Google cloud.
+00:17:02 [W] and this looks like this so we are here on Google Cloud built and and it executes the whole bit shop so we can see the build get started then it's cloning the release repository. Let me just skip that it's not
+00:17:16 [W] exciting
+00:17:18 [W] it will build Krell locally.
+00:17:23 [W] And then it will check the prerequisites.
+00:17:31 [W] So we just check out what yeah, what credit version do we have in at hand right here.
+00:17:38 [W] So this is all executed directly in and I go then ago will set the boot version which is kind of a chhanchhan spiffe version.
+00:17:44 [W] This is dead one and then it will already find out which release is going to build so we can see OK and ago found out that we want to build 119 RC 1 and it will
+00:17:55 [W] Also point us to some open PRS at the release for the release branch which are not necessary at that point and and then with Will couldn't start to prepare the workspace and preparing the workspace is nothing more than just
+00:18:09 [W] His communities and yeah checking if the if this space is available and then we'll create a tag.
+00:18:21 [W] tag. So that's the first the first thing it will check out the release branch and it will create the tekton on that release branch and then it starts to call into Cube cross which actually builds the art effects.
+00:18:29 [W] So those are the facts as already mentioned are.
+00:18:34 [W] In the first place the binary artifacts for sure.
+00:18:46 [W] So we have to build kubernative for Linux amd64 and different and I farted architectures as well.
+00:18:50 [W] And then if that is done, let me just scroll down a little bit.
+00:18:52 [W] We also have to create container images.
+00:18:54 [W] So here we can see that it's starting to build the container images for the qpi server for amd64 and also some other architectures as well.
+00:19:05 [W] This will happen all on that bill chop after that.
+00:19:10 [W] We just generate the release notes Here. We can see the output from generating the release notes for the release candidate.
+00:19:18 [W] It will also create an HTML which will be later on used for the release announcement and it will commit there.
+00:19:25 [W] These nodes intuitive release Branch as well as the master branch.
+00:19:27 [W] Buckets for mocking and non-marking and this is the job for the for the actual release and we can see that the artifacts will land on kubernative to release and if we now look into that bucket, so this is the kuma latest release bucket.
+00:19:55 [W] We can see that we have different directories here.
+00:20:00 [W] And for example, we have this staging directory.
+00:20:06 [W] So now I just can check for 119.
+00:20:09 [W] So it's 0 R CU 0. This is the mood version which the created by integral automatically and then we can see that it will put the source tarball in here and also their artifacts.
+00:20:23 [W] So if we browse a little bit down here, then we can see that we have some images.
+00:20:27 [W] AMD 64 for example, and then we can see that we have 2 cubed ice / & Q proxy and all other container images which has been built during the release the same applies to the binary artifacts.
+00:20:40 [W] artifacts. So if we look to gcp Stage or see one
+00:20:43 [W] Then we can see that we also have for example kubernative client for 368 here and everything is in and looks pretty good. And I already downloaded it for us the
+00:20:58 [W] And if we look at this table all and we can see though. It's that that power and I extracted it here, but there's the release announced release HTML in there and we have a full kubernative repository in so
+00:21:16 [W] If we look at the current state of the this repository, then we can see that we are on the release branch and that we have a comment on top of that which just updates the changelog to 119 or c 1 so we have all those changelog
+00:21:32 [W] And it's basically the state for and state for the staging for the staging step.
+00:21:44 [W] And now we can go ahead and have a look into the release execution. So let's assume we this has been finished and was successful then we would have to run the release stage.
+00:22:00 [W] Just requires the boot version and we won Croce CP manager - - release - - no Mark and then specified there are sea and the build version and this is how the output looks like.
+00:22:16 [W] We just have this same steps like preparing the workspace compiling Corral running and ago and after that we can just push the get up checked.
+00:22:30 [W] Actually, push the RC 1 tag into the official kubernative Repository.
+00:22:45 [W] And we also update the release Branch. So then we just print out a div which shows us. Now that change log has been modified and will point to the binary artifacts which
+00:22:50 [W] Kate's Idol but those are not actually available at this point.
+00:23:01 [W] They have to be promoted to the actual release inside this release bucket. So we have to push the final release artifacts from the release candidate and this means we push the container images like
+00:23:11 [W] and we also have to move the
+00:23:14 [W] binary artifacts into the right place to be down to be able to download them directly. We had a change look.
+00:23:22 [W] After that, we update the GitHub release page and then we have our usual GitHub release page which points to the change log and then we archive the release on on Google Cloud.
+00:23:35 [W] So if we now look into the release bucket, so this is the same the same kubernative release back if we don't go to Stage, we just have a look into release.
+00:23:45 [W] And then we can check for 119.
+00:23:52 [W] See one down here.
+00:23:56 [W] And there we can see that all those artifacts are now available here and we can download them.
+00:24:06 [W] And so they are ready to be consumed from end users from that point on.
+00:24:08 [W] And we also have any kubernative release some updated version markers. For example latest 1 1960 shot should show us something like the latest available release, which
+00:24:23 [W] I'll see one in that case.
+00:24:27 [W] Yeah, so from that point on we can consume this the changelog they change knock on effects like all those.
+00:24:37 [W] Yeah.
+00:24:38 [W] And then we usually have to build that epsagon RP ends. And after that has been done we can use crellin nouns I can just
+00:24:50 [W] Show you the help page to that as well.
+00:25:07 [W] We have to export it as an Kudo API key and then we chose you have to run Krill announce and Gretel tries to find out the right email and checks the right and correspondence in this email. And then after that it will push
+00:25:09 [W] Which is based on that HTML?
+00:25:13 [W] I recently showed to you and this looks like this for example Beyond kubernative announced and then we have the announcement the kubernative 119 or c 1 is now live and yeah, that's basically the content from the
+00:25:26 [W] The thumb math short hints to the actual change look fire and who created this mail?
+00:25:34 [W] Okay.
+00:25:37 [W] Let me check that out.
+00:25:45 [W] So what are our future plans?
+00:25:51 [W] So one of our biggest plan is to transform all those pages into a golden based version.
+00:25:52 [W] It's not that easy.
+00:25:53 [W] I must admit.
+00:26:08 [W] We have a lot of technical depth and for example finding out the right release version and yeah looking up the right remote locations to find the set of information to create a release is not as easy as it may look like and everything should be tested. This is the Raw.
+00:26:09 [W] Huge drawback we have right now.
+00:26:15 [W] We are not that able to actually test changes on our bash scripts, but we try to improve on that on that part for sure and then we would like to further automate the release process.
+00:26:22 [W] For example.
+00:26:23 [W] Yeah the release cut the really scar tissue usually could be automated. This is really would be really really nice that we just use a command line tool which automatically updates the issue for us.
+00:26:37 [W] us. And yeah for sure also cutting the depths and RPMs is something we have in our mind. We also working on.
+00:26:41 [W] On a tool like it's called qpk Chi and this should take care of cutting depths and RPMs for us in promoting them to the right locations.
+00:26:47 [W] We also have some new features in mind for example, like yeah adding containerd image artifacts to the change log file.
+00:26:55 [W] Sambal also adding cve information to the change look could be also pretty pretty nice feature.
+00:27:09 [W] Yeah, and as already mentioned make you PKG able to cut and published keptn RPM packages automatically and I think that's it. I hope you'll get got a good overview about how we cut releases and how the technical part looks like and now I would like
+00:27:18 [W] And I think that's it. I hope you'll get it. Got it good overview about how we cut releases and how the technical part looks like and now I would like to hand over to Dan for a wrap-up.
+00:27:21 [W] I think we jump too far away.
+00:27:28 [W] There we go.
+00:27:29 [W] Thanks for that really informative demo and for walking through all of that Sasha. I imagine this is going to be a nice resource for folks as they come back and watch the recording of this talk.
+00:27:43 [W] So I'm excited that we now have this out there for anyone who has stayed along this whole way.
+00:27:48 [W] We definitely are looking for more folks to jump in and contribute.
+00:27:54 [W] you are interested in that, please feel free to go and look at the issues in the kubernative release repo.
+00:27:55 [W] And you know say that you're open to working on one of them or reach out to me or Sasha directly.
+00:28:05 [W] We're in kubernative slack and on Twitter and that sort of thing. So definitely feel free to reach out and I think with that we can go ahead and move into a Q&A session for anyone who has questions about what we just talked about or questions in general about
+00:28:15 [W] organized release process
+00:28:17 [W] Hey, unfortunately, then can't join today to answer any questions, but I'm here to answer all of yours. The first of all the first part of the talk was recorded at Cloud native virtual Summit in China and will be
+00:28:38 [W] August and I will post a link to the schedule and then we can you can watch the first part if you missed it.
+00:28:49 [W] So let's go over to the first question the which branches branches are used for what purpose I like ask this.
+00:28:58 [W] Yeah, we have two types of releases.
+00:29:08 [W] So first of all, we have new minor releases, which is for example, 119 the 0 and then we have patch releases, which is for example, yeah 118 lat
+00:29:11 [W] six with 147 which has been released last week and for the purpose of petrol uses. We usually stick to the release branches.
+00:29:24 [W] So release 118 is for 118 Petra leases and release 117 is for 117 that releases and then we during decree the release cycle which takes around about three to four months.
+00:29:34 [W] We usually create release branches new release branches for the actual release. So first of all, we
+00:29:39 [W] Create releases from the master branch and then we create a release Branch where we just continue cutting our releases during the cycle.
+00:29:48 [W] Next question also from all like how is released cutting happening and our features going to be cherry-picked into new release into to release Branch.
+00:30:01 [W] Yeah, exactly.
+00:30:03 [W] That's how it works.
+00:30:04 [W] We during the cycle.
+00:30:05 [W] And so it doesn't mean that we could if we create a new release branch that you will feature won't land into the release.
+00:30:21 [W] So we sink then up and this is our quality gate that we can decide when we want to have a new Fast Forward of the release Branch for example, and then we add some certain point we decided to only allow cherry-picks into the release branch.
+00:30:31 [W] From that point on some other quality measurement test have to be already in place.
+00:30:37 [W] for example documentation and stuff like that.
+00:30:39 [W] Next question.
+00:30:43 [W] How do you manage dependencies between features?
+00:30:50 [W] Yeah, usually the developer of the feature has to take care of this but we get a lot of help from others weeks as well for example from z/architecture or from the dedicated code owners or from API review who helps us to
+00:31:00 [W] And when it's usually sensible to mulch what and in which order so yeah, usually it works pretty well. And for that we also have something like the release milestone for 119 is the 119 Milestone and then we can decide
+00:31:17 [W] Also have something like release milestone for 119 is the 119 Milestone and then we can decide.
+00:31:17 [W] Okay, we have to merge though 3p ours for example to actually land land the whole feature Tableau. Ask all features in the master Branch are all features from the master page automatically in the release.
+00:31:32 [W] Mayadata Som that something is going to be removed in a in the release for example due to stability reasons.
+00:31:39 [W] reasons. Usually we don't remove anything we have the Deep.
+00:31:40 [W] Allocation policy and kubernative in place.
+00:31:47 [W] So if something already was inside of a released and we are not able to remove it up to the next release if we encounter something like re-creations then we yeah, then we have to cherry pick those into the release branches and in general.
+00:31:58 [W] Yes every feature which is tracked.
+00:32:06 [W] So the enhancements sub-team of Securities takes care of that. So every track feature will also lend in the master and this will go and go into the
+00:32:10 [W] So there's always a little bit room for exceptions.
+00:32:15 [W] For example, we can say okay some pull request is absolutely necessary, but they missed the deadline from one or two days and then we can say OK.
+00:32:28 [W] Let's just raise an exception request and then approve it afterwards.
+00:32:29 [W] That's also possible.
+00:32:33 [W] Next question is testing the main reason for going to go.
+00:32:38 [W] So did you consider using that? Yes, so testing Zone?
+00:32:40 [W] The CIF health status of the release branches and also on the actually Master branch and then we decide if Master for example, we have multiple categories of tests. We have master and forming and master
+00:33:02 [W] Both and if a test is failing in master blocking and we usually will not have a chance to cut the release. So we have to stabilize through the CI before we have a chance to do do the actual release country yet.
+00:33:18 [W] Okay. We have three minutes left.
+00:33:21 [W] I think I can answer all those questions next question.
+00:33:26 [W] Can you please show how to generate release notes again?
+00:33:30 [W] Oh, oh and there is an and follow-up talk in one and a half hour about the next generation of
+00:33:33 [W] Release notes it's from me and you will have a chance to see the generation of the release notes.
+00:33:43 [W] They're definitely and then if that's not enough then I'm happy to show you in person.
+00:33:44 [W] How how we generate the release notes.
+00:33:45 [W] for sure.
+00:33:46 [W] How do you handle multi-core architectures in the release and there are two types of multiple architectures?
+00:33:56 [W] So the first type is the container images so for container images we use the multi pre-build Muti Arc binaries and use something like Taco Bell takes to build Moody
+00:34:08 [W] Which works pretty well and the binaries are built by cross-compilation that we have a dedicated containerd image called Cube cross and Cube cos can take care of cross compiling the release artifacts as binary artifacts for us.
+00:34:24 [W] Next question.
+00:34:26 [W] Oh, very interesting cocks. Thank you.
+00:34:26 [W] Thank you for the nice feedback. And do you feel like this pattern of releasing could apply to some other artifact based release as well?
+00:34:35 [W] I'm not sure.
+00:34:41 [W] I mean our current strategy of building releases is highly bound to Google Cloud resources.
+00:34:50 [W] We also don't use something like Doc aha pork way. We just stick to the Google container registry and promote our images there.
+00:34:57 [W] This is pretty new. For example, we decided to use the community infrastructure to regulary push our container images to a staging repository and from that staging repository. We promote the images into
+00:35:04 [W] She cri-o / kubenetes - AKA so 1.18 something like this and though it's highly customized from my perspective. But I think the pattern behind the technical aspects of cutting
+00:35:19 [W] You can be reused as well.
+00:35:22 [W] Alright, I think that's it from the questions.
+00:35:33 [W] I'm in the cube can maintain a subchannel and there's a threat for this talk and if you have any other questions, and I'm happy to answer them as well there. Thanks. See you.

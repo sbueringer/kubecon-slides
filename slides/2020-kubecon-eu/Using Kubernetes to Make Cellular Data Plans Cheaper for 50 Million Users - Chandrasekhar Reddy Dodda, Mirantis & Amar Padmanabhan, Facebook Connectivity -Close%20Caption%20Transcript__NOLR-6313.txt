@@ -1,0 +1,223 @@
+﻿Using Kubernetes to Make Cellular Data Plans Cheaper for 50 Million Users: NOLR-6313 - events@cncf.io - Tuesday, August 18, 2020 12:29 PM - 44 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:26 [W] Hi everybody.
+00:00:29 [W] Well, thanks for attending the talk.
+00:00:30 [W] Today. We're going to be talking about an interesting topic using kubernative to make cellular data plans cheaper for 50 million users the key takeaway that we want to have folks who are listening to this talk. Is that a lot of cellular
+00:00:44 [W] Losers the key takeaway that we want to have folks who are listening to this talk. Is that a lot of cellular infrastructure which has been traditionally monolithic and running on custome sick and hardware-based appliances.
+00:00:51 [W] It's sort of now migrating to an x86 based infrastructure.
+00:00:58 [W] so there's significant Synergy between these new type of nfv workloads that are coming up and having a consistent underlay that is basically offered by kubernative So today, we're going to cover
+00:01:06 [W] / - a deep dive on a project called magma and then Chandra who I'm co-presenting with will also do a demo on a Wi-Fi use case, which is one of the manifestations of the converge core project called magma
+00:01:22 [W] On myself.
+00:01:25 [W] I'm a pardonable.
+00:01:27 [W] I'm an engineer on the magma project.
+00:01:28 [W] I work on in the Facebook connectivity team. And then with me co-presenting is Chandra is a senior devops engineer and we closely work together on a bunch of our deployments and Chandra is with mirantis.
+00:01:42 [W] So at a high level, what does it mean to offer connectivity to the next 15 million?
+00:01:49 [W] Models have what actually saturated the way that connectivity is being offered and so the problem of connecting the next 50 million on to a faster internet is a problem of heterogeneity.
+00:02:05 [W] This is heterogeneity in Access.
+00:02:07 [W] This means like people are getting on the Internet over Wi-Fi getting on to the internet or LTE and now, you know are getting onto the internet over 5 G as well the zettabytes unity in backhaul in certain rural cases.
+00:02:19 [W] It may be satellite in more urban cases. You have fiber and then in you know carrier
+00:02:22 [W] Cases that can be more interesting things like microwave and then there's also a lot of differences in terms of scale and business models for example today. If you look at a traditional carriers Network whether you're looking at downtown New York or you know, rural
+00:02:36 [W] The network looks exactly the same but the business models and the amount of money that a person sort of can afford to come onto the internet is actually very different.
+00:02:51 [W] So instead of having everyone adapt to our Network architecture.
+00:02:52 [W] that is static. We think that offering the flexibility to offer more heterogeneity in terms of network architectures is the way forward and that is what will sort of bring the next level of innovation in you know, connecting the next 50 million users on to a faster in
+00:03:06 [W] So a couple of things that we want to talk about here.
+00:03:17 [W] So the first trend is about the decomposition of a network into an engine of fabric and how this played out in the data center.
+00:03:21 [W] We heavily borrow from our experiences both in the Facebook data center as well. As you know, watching the industry evolved and then the second one is now that this decomposition as or has happened the importance of orchestration.
+00:03:33 [W] The importance that kubernative has in sort of affording a uniform platform for sort of enabling this orchestration.
+00:03:41 [W] So the Edge vs.
+00:03:45 [W] Fabric decomposition it so historically what the data center is look like and even if you go like five six years ago in the Facebook data center, we sort of had hierarchical networks what this meant was that you know, the network had these high like, you know,
+00:03:58 [W] Appliances that were dedicated and offering, you know specific services that were in the network and these were chokepoint devices.
+00:04:14 [W] So any traffic that you know user was kind of access Facebook is is is generating is having to get routed through these sort of the stroke Point devices.
+00:04:23 [W] So this naturally forces are topology. The equivalent is like, you know, if you're in San Francisco and you have to direct all traffic like, you know car traffic through a you know a traffic
+00:04:31 [W] Light right.
+00:04:32 [W] So this is suboptimal from a topological standpoint. The other thing is given that the data demons are increasing the the the nature of traffic that these middle box devices need to support has to become much faster and they need to do so
+00:04:45 [W] Policies so this naturally resulted in you know, these artists is becoming really expensive fast forward a few years and this picture is from our data center a couple of years ago.
+00:05:01 [W] We sort of moved into a sort of a decomposed model of the network, but there is a fabric which is only responsible for moving packets really fast, and then there is an edge which is typically x86-based where all your services like a load balancers and
+00:05:10 [W] minute
+00:05:12 [W] So what is in each service good for it's fundamentally distributed.
+00:05:19 [W] So it makes a good candidate for x86.
+00:05:22 [W] And this is where a lot of the containerization has happened in terms of networking workloads software only policy enforcement points allow for Rapid iteration.
+00:05:32 [W] And that's why all the web scale companies are sort of, you know fully on board with this model. Also this resulted in like, you know, having more programmable interfaces, like open Flow and EPF that allowed to push through Innovation, right and distributed services are futurewei.
+00:05:42 [W] mentally harder to manage and so a lot of the problem became about like operationalizing the solution as opposed to actually building the solution which was where the traditional like sort of networking problem space was so if you draw the parallel in today's
+00:05:57 [W] Picture that are these chokepoint devices some of you are not familiar with these acronyms but you know, they're typically like packet gateways and mes these are all like large boxes that are pretty centralized. So they suffer from the same exact problem that the data center
+00:06:13 [W] Our argument or a thesis here is that you know given the learnings that we've had from the data center and the industry as a whole on the networking site.
+00:06:29 [W] We think that modularizing the cellular network is actually the the way forward for enabling the heterogeneity that we need.
+00:06:34 [W] first and key point is distribute policy enforcement point this lets you build the ideal Network topology that is required for your network. Say you have like, you know, if you have if you are deploying in like rural Peru or
+00:06:46 [W] Thing you may need a different network topology from that of like a very dense like stadium and so being able to adapt for either of them is pretty critical moving policy enforcement to software has a strategic advantage in this sort of can spur Innovation and keeping
+00:06:58 [W] Simple and just purely about moving IP packets makes it much cheaper to sort of achieve.
+00:07:06 [W] So, you know Bringing Down the cost enabling the right topology and Innovation is sort of the central thesis of what we're proposing now given this framing focusing on operationalizing. This distributed network is the key key sort of computer science
+00:07:20 [W] And this is where you know, we think that kubernative and the so the vnfs that we're sort of building have like a natural amount of synergy.
+00:07:33 [W] So it's a distributed Services problem across multiple Edge locations at the end of the day and having a consistent runtime for achieving that is actually pretty critical.
+00:07:40 [W] So looking at the architecture, we have something called a converge cord that supports Wi-Fi LTE or Phi G. And this can be deployed at any point whether it's at the ultra rural edge of the cell or into a public Cloud on into a private cloud and into
+00:07:57 [W] So finally what the problem has not translated to is the high level problem that we're trying to build with. The orchestrator is managing a fleet of heterogeneous Edge deployed servicemeshcon core convergence.
+00:08:12 [W] What does this actually mean? Like an orchestrator is a sort of an abstraction that tries to declaratively configure an edge Fleet from a centralized management.
+00:08:26 [W] What was historically like a single device like a network device like a packet Gateway is now lenses.
+00:08:29 [W] Fifty or a hundred packet gateways that are distributed across like geographically disparate locations and so being able to orchestrate all of these things from a central location is a key concept that we think is going to keep the opposite still manageable regardless of
+00:08:44 [W] I meant the second principle that we really believe in a lot of it came from you know, the way that kubernative itself is designed is that you sort of build on level triggers.
+00:08:57 [W] So you always push State and not procedures. So you declare the desired topology for your Fleet at the edge and rely on the edge to actually enforce the services and the bring up and the you know, the lifecycle management of it and by delegation of the
+00:09:09 [W] for your Fleet at the edge and rely on the edge to actually enforce the services and the bring up and the you know, the lifecycle management of it and by delegation of the procedural control to the edge, you're sort of making yourself fairly
+00:09:14 [W] Which you're sort of making yourself fairly are tolerant to you know van type outages and you know being able to centralize the orchestrator. So operationally having the HB independent is
+00:09:25 [W] Be independent is actually a pretty nice characteristic of like like a cellular network or a or a connectivity Network.
+00:09:37 [W] So the orchestrator has to sort of large components.
+00:09:41 [W] There is an edge control plane. This one is one instance per managed device.
+00:09:47 [W] So this is the most front form factor where we run the edge control plane on a single node, which is like a to you box and it applies configuration updates based on the local meshmark.
+00:09:53 [W] All managers the services it ships local state and operational history on to the central controller.
+00:10:06 [W] And so the central controller has sort of global awareness of what is happening across a lot of the edges what we've sort of embarked on from as we moving from the ultra durable to like the petty ruler peri-urban sort of scenarios is where
+00:10:15 [W] Clusters and this is where we think.
+00:10:19 [W] you know, there's a lot of synergy between us moving into a like a k8s base model where you know, there's kubernative operators where we leverage and still go with our declarative approach of pushing State and having the edge kubernetes cluster sort of
+00:10:33 [W] and the management of these IT services
+00:10:38 [W] the central management plane, which is typically running in a cloud is a Singleton multi-tenant Cloud application.
+00:10:48 [W] that is natively built on kubernative.
+00:11:02 [W] It's it Aggregates that and his stats in histories from The Edge Fleet. The idea is that we want to make sure that we're not adding a significant level of complexity just because we started Distributing these services and it also exposes endpoints to
+00:11:05 [W] Um information from these distributed services.
+00:11:16 [W] So this allows operators to integrate in through the existing OSS and you know network monitoring systems in order to like, you know, continue to manage the code elements just the way they would have managed it today with these chokepoint devices
+00:11:25 [W] Other thing worth noting is that it comes with a bunch of batteries included.
+00:11:37 [W] So there are multi tenant wrappers around graph on the and then we use Prometheus as our time series.
+00:11:40 [W] We also use elastic for for log export and then there's a wrist basic rest authorization framework that allows you to access apis as well as a as a UI for interacting with the system
+00:11:53 [W] Clearly we are not an isolated as a core.
+00:12:03 [W] So when we need to operate with other systems in the network, and so there are integration points offered for time series and even data sinks that Chandra will sort of briefly also cover in his set of slides.
+00:12:14 [W] So Chandra is now going to talk to you about the magma integration with the mirantis cloud platform the the focus of this part of the presentation as well as the demo that is to follow is around.
+00:12:29 [W] Wi-Fi mobile data offload use case, which is a sliver of the access technologies that we support on the on the magma converge core along with LTE as well over to you Chandra.
+00:12:45 [W] Thank you.
+00:12:46 [W] Thank you.
+00:12:46 [W] Thank you. Thank you so much. So here I will be talking about radish Sprout platform and H cloud and how we integrate magma on top of ovhcloud.
+00:12:56 [W] So I want to talk overview of mCP which we call as mirantis Cloud platform.
+00:13:04 [W] It is Enterprise great open Cloud software.
+00:13:06 [W] So which consists of three components on the right side? You can see it's a stack pipe, which is our LM a tool on the left side is a dry brine, which is our LCM, which is used for your de Jero day one day two operations and the
+00:13:19 [W] So the in parsec to stack which comes with a lot of tunes tax, like openstack kubenetes SEF.
+00:13:25 [W] So now I want to discuss a little bit more about mCP a chart types.
+00:13:35 [W] So here we have a minimum footprint of four nodes where you have your kubenetes monsters on har and on the worker node where you run your existing magma for so I want to talk more about mCP Edge where we use only
+00:13:48 [W] For managing both the VMS and the docker containers for flux.
+00:13:57 [W] So all kubenetes services are haproxy footprint with only 4 nodes here.
+00:14:01 [W] So here we run a mixture of workloads, which I was talking previously both like a VM workloads and the docker based containerd workloads.
+00:14:20 [W] So what led so this is most important component on MC pH which which I will be talking now.
+00:14:35 [W] So in cabinets, I stabbed you love supporting the container runtime interfaces like a dog / containerd ERT T.
+00:14:47 [W] what Leticia cri-o plugin for kubenetes that can do two important things that most cri-o scant so it can run VMS as a ports and also it can run with other CRS in peril
+00:14:53 [W] That is it enables kublr to run multiple cri-o Z at the same time.
+00:15:02 [W] It's completely transparent way and also it can run both containerd E workloads & Q cow to based VMS on the same computer load our cannot
+00:15:11 [W] I think for kubenetes that can do two important things that most cri-o scant so it can run VMS as a ports and also it can run with other CRS in parallel.
+00:15:22 [W] That is it enables kublr to run multiple.
+00:15:22 [W] cri-o Z at the same time.
+00:15:22 [W] It's completely transparent way and also it can run both containerd e workloads + Q cow to based VMS on the same computer load our cannot
+00:15:24 [W] so here is the workloads cartridge or the flow of it is top of how it is connected and talks between the components and when you differentiate the vertex with existing kubenetes manifest the both
+00:15:29 [W] How it is connected and talks between the components and when you differentiate the vertex with existing kubenetes manifest the both manifest the same kubenetes supports all standard kubenetes objects such as
+00:15:33 [W] Humidity suppose all standard kubenetes objects such as the deployment replica set German set and so on.
+00:15:36 [W] So now I will be talking more about magma integration with MC pH.
+00:15:44 [W] In this demo, we will be seeing the carrier Wi-Fi offloading.
+00:15:50 [W] So why we are going with that on a on I'm cph and with Magma so to get seamless user experience optimize the business platform and Wi-Fi ecosystem.
+00:16:00 [W] And here is the high level integration part with the mobile phone you can see there is an intelligent connections taking happens between your mobile packet core and the carrier wave packet core which is build on magma and
+00:16:17 [W] High level integration part with the mobile code you can see there is an intelligent connection string happens between your mobile packet core on the carrier wave packet core, which is built on magma and runs on top of em cph.
+00:16:19 [W] So the mCP a chart that's looks like this. So you where you have a 3 control pain nodes where you have a try try and stack height and given its Master on top of that on haproxy.
+00:16:41 [W] In this demo what we are going to cover so I will be deploying my SQL ports in hatch a will be deploying or magma orchestrator on HM verges on so I will be deploying the Federation Gateway as a VM
+00:16:58 [W] This is also a nature like active stand by I will be deploying Wi-Fi access Gateway as a VM using Wordly it on kubenetes next.
+00:17:10 [W] I will be connecting to the hotspot and the access the internet from mobile.
+00:17:13 [W] So and then which is not covered here.
+00:17:20 [W] So we deployed access point for this demo, but I am not going to show you how we deploy it and how how we are going to configure it.
+00:17:34 [W] And also we are not going to see how the user provisioning has happening at HSBC are up and goes yes side. So when we go into the demo part, I just wanted to talk about what is the magma orchestrator very high level.
+00:17:42 [W] So it is a cloud service that provides a simple and
+00:17:47 [W] Some way to configure and maintain the wireless network securely and welcome to the Federation Gateway it acts as a proxy between the magma and your existing em and work or Network.
+00:17:55 [W] And comes to the access Gateway.
+00:18:02 [W] It's access has a radius server or the it accesses a meat metering. And also it has ovhcloud be doing all this Matrix tough on also we have a AAA server, which access Gateway between the user on the internet so next.
+00:18:13 [W] It was a very very high level how we are deploying all the components here on MC pH.
+00:18:21 [W] So initially, this will be the flow.
+00:18:26 [W] I have a three node where Metals right now. So initially, I will be deploying MySQL pots on three notes on a haproxy.
+00:18:34 [W] I will be deploying a magma orchestrator with the Animus which we call as a network monitoring system, which will be the UI to access your Orchestra meshmark Etc. So once that is done, I will be deploying Federation
+00:18:46 [W] With help of what light and I do have a cni-genie here and I have two plugins attached to the VM one is connected to your existing a manual core and the third node, which I am going to deploy
+00:19:03 [W] Here we have the CNF plugins one plug-in is connector one interface is connected to the Wi-Fi access point and the other one is connected to the internet gateway.
+00:19:16 [W] Yeah, so I will be playing the video now so which will see the all this.
+00:19:25 [W] So here you can see the video right now.
+00:19:31 [W] I am deploying I have automation script which will be deploying all the flow which we discussed earlier.
+00:19:37 [W] So now we are deploying very adibi and hm.
+00:19:40 [W] So we use the helm charts to deploy all the components here and we automate everything.
+00:19:48 [W] So it takes a couple of minutes to bring up the mariadb.
+00:19:52 [W] So once that is up, there will be a bootstrapping process to create a bunch of users here the what's our rap and now the bootstrapping process is happening where it creates bunch of users, which will be used to
+00:20:09 [W] Mind the problem it so once that is done. We are going to deploy here orchestrator.
+00:20:15 [W] Which is again will be on a chair. Like we have two replica sets for each service.
+00:20:24 [W] So once the orchestrate is app it will take a couple of minutes to bootstrap. Now. Let's move to the Federation Gateway.
+00:20:34 [W] So we will be deploying to gateways here to maintain haproxy will be active on other one will be the standby. So now you can see we have going to the second Federation get paid informant.
+00:20:42 [W] So once that is up, I takes a bunch of minutes to do the bootstrapping process within the VMware virtual Mission.
+00:20:56 [W] Meanwhile, our automation scripts will continue going forward installing the carrier Wi-Fi Gateway.
+00:20:59 [W] So this will be our carrier vitess Gateway deployment.
+00:21:05 [W] So once this is done, it will do a final bootstrapping process where it will create the user account the admin user account to get into the nms dashboard.
+00:21:16 [W] So we are in the final stages of bootstrapping process.
+00:21:27 [W] So now the automation script will do the user creation.
+00:21:30 [W] So this will be our carrier Wi-Fi Gateway deployment.
+00:21:40 [W] So once this is done, it will do a final bootstrapping process where it will create the user account the admin user account to get into the nms dashboard.
+00:21:41 [W] So we are in the final stages of bootstrapping process.
+00:21:42 [W] So now the automation script will do the user creation.
+00:21:42 [W] Yep, we are done with the bootstrapping. So now let's get into the Animas the dashboard where we will be creating the Network's for isolating to get best different gateways.
+00:21:45 [W] And then we will register the gateways which he just created and then we will proceed with the final part of the demo.
+00:21:50 [W] So I'm going to access the nms dashboard which is magma orchestrator, which will be used to control your all the notes and even to do the day-to-day D1 and D2 work.
+00:22:07 [W] Even you can do the upgrades from the cinemas dashboard remotely.
+00:22:10 [W] So I am into the dashboard here. So initially I will be creating the networks.
+00:22:17 [W] So first, I will be creating the Federation Gateway Network, which will be used to register and manage your Federation gateways.
+00:22:27 [W] So here the Federation get is acts like a proxy between your magma core and your MMO existing code.
+00:22:35 [W] So I'm going to register the second gate bed.
+00:22:40 [W] So once the Gateway is created.
+00:22:49 [W] We need to get back to the particular Network, and then we need to register the gateways.
+00:22:58 [W] So once the Gateway is created.
+00:23:10 [W] We need to get back to the particular Network, and then we need to register the gateways.
+00:23:11 [W] Okay, so now I created two networks. One is Network one which is used for petition and I am Data Network to which will be used for Carrier Wi-Fi. Now I am into the network one where I am going to register my petition gateways.
+00:23:15 [W] So I am going to name it as fact 0 1 and the description.
+00:23:22 [W] And I will be getting the hardware you are you a unique ID from the VM, which I just created so I got it already. So I'm just going to paste it here the same thing the challenging he also I will be getting from the VM, which I just
+00:23:38 [W] So I had to give some unique Caper ID to differentiate the gateways and the updater as a default.
+00:23:47 [W] The similar way I will be creating the second Gateway.
+00:23:52 [W] So I have named it as a fact 0 1 for the demo purpose and the same way. I already got the hardware you a ID from my from the VM, which I've just spent up previously.
+00:24:08 [W] The same challenge the key. I got already from the VM. So I will use the update trailer of the default here also.
+00:24:17 [W] Now put k8s up theater. So we will take out around 30 seconds to get the status here. So we'll get this are active now.
+00:24:33 [W] So now I think we can switch back to the mobile and see whether we are able to browse the internet on Mars.
+00:24:39 [W] So we'll be moving to the second video. Yep.
+00:24:40 [W] So now I connect it to my mobile so you can see there is no Wi-Fi right now, but latched so what I will do I will try to configure it using the
+00:24:53 [W] And there is no user name and password asked so directly your sim will be doing the uppercut indication with your existing mno core why I'm at work.
+00:25:19 [W] So now the Wi-Fi is black and now I'm going to see if I can browse the internet.
+00:25:25 [W] Yeah, so that is so we are able to get into the internet. So
+00:25:43 [W] so next we will move to the next side where we will be talking about reference links and
+00:25:57 [W] the final part
+00:25:59 [W] Okay, so let us switch to the next friend slide.
+00:26:08 [W] Okay, so to summarize here's what we are trying to do. We are solving for heterogeneity.
+00:26:24 [W] The first thing is like flexibility. So moralizing the networking of fast Fabric and policy which Edge to maximize the deployment and business models.
+00:26:25 [W] That's what we are trying to solve here.
+00:26:28 [W] The next is heretical orchestration.
+00:26:33 [W] the final part
+00:26:38 [W] Okay, so let us switch to the next friend slide.
+00:26:39 [W] Okay, so to summarize here, so what we are trying to do we are solving for heterogeneity.
+00:26:41 [W] The first thing is like flexibility. So moralizing the networking of fast Fabric and policy which Edge to maximize the deployment and business models.
+00:26:42 [W] That's what we are trying to solve here.
+00:26:42 [W] The next is heretical orchestration.
+00:26:43 [W] So Distributing the ad service requires higher education organization so that we are achieving here and next will be the consistent runtime where we are using kubernative base as clusters. Which offer second chance.
+00:26:47 [W] They provide service.
+00:26:51 [W] So if you want to get involved here is the length get into the github.com / magma where you can get collaborate with us.
+00:26:52 [W] So before moving to the QA, so here are the few more groups, which you want to get involved. So you can just join the Google Groups which are part of magma.
+00:27:05 [W] And before moving to the equation, I just want to talk about containerless.
+00:27:16 [W] So so lenses acuminate is Heidi that simplifies kubenetes for application developers. So mirantis is highlighting lenses coupon. You can view a demo at our boot or download it from k8s lenses dot them.
+00:27:28 [W] Thank you. We'll move on to the QA part.
+00:27:31 [W] Thanks everybody.
+00:27:44 [W] So I think we have one question that I think I know the answer to the other two will probably have to sync up offline on slack.
+00:27:53 [W] So the first one is around.
+00:27:59 [W] I haven't seen any new comments in the virt let project since December 4th. 2019 is the project still alive.
+00:28:02 [W] Telepathy so mirantis is highlighting lenses coupon. You can view a demo at our boot or download it from k8s lenses. Them.
+00:28:09 [W] Thank you. We'll move on to the QA part.
+00:28:10 [W] Thanks everybody.
+00:28:10 [W] So I think we have one question that I think I know the answer to the other two will probably have to sync up offline on slack.
+00:28:11 [W] So the first one is around.
+00:28:12 [W] I haven't seen any new comments in the virt let project since December 4th. 2019 is the project still alive.
+00:28:13 [W] I believe it's still alive, but for the integration that were exercising here with Magma.
+00:28:15 [W] And certain components that require a custom kernel in a VM mostly for Nick offloads.
+00:28:19 [W] We're switching to cube work.
+00:28:27 [W] And so that's mostly for both performance as well. As you know driver support for certain use cases, but going forward we're hoping that you know, we can natively express all of those things through the kubernative
+00:28:34 [W] Start require a custom kernel in a VM mostly for Nick offloads.
+00:28:35 [W] We're switching to cube work.
+00:28:36 [W] And so that's mostly for both performance as well. As you know driver support for certain use cases, but going forward we're hoping that you know, we can natively express all of those things through the kubernative
+00:28:37 [W] Any other questions?
+00:28:41 [W] Cool, we'll hang around on the slack Channel as well.
+00:29:06 [W] So if folks want to understand how better to engage with Magma or the kubenetes integration with Magma, we can follow up on slack as well.
+00:29:09 [W] Yeah, I think we're almost out of time.
+00:29:31 [W] Thanks everybody, and we'll be on slack in case in case folks have any questions.
+00:29:40 [W] Actually we just gotten a question.
+00:29:44 [W] is the LCM of the application is managed by magma. So that's the hierarchical orchestrator part of the equation. So yeah, so we
+00:29:56 [W] Give you a more detailed answer on the slack as well.
+00:30:00 [W] Thanks, everyone.

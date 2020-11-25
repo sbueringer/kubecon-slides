@@ -1,0 +1,255 @@
+﻿ComponentConfig Technical Challenges: USMO-4896 - events@cncf.io - Thursday, August 20, 2020 8:18 AM - 379 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:04:25 [W] Welcome everyone to our session for working group components standard.
+00:11:26 [W] My name is Mike coffin.
+00:11:28 [W] This is my co-presenter.
+00:11:29 [W] Alex kidnapping today.
+00:11:35 [W] We'll be presenting on some of the technical challenges that Alex encountered while trying to implement various pieces of componentconfig.
+00:11:42 [W] So just quickly before we get started a little bit about the working group. We formed this working group a couple years ago.
+00:11:47 [W] With the idea of trying to develop a standard foundation for core kubernetes components to build on top of we have many core components such as the API server the scheduler the cubelet cube proxy and many common
+00:12:02 [W] Welcome everyone to our session for working group components standard.
+00:12:03 [W] My name is Mike coffin.
+00:12:03 [W] This is my co-presenter Alex committing today.
+00:12:04 [W] We'll be presenting on some of the technical challenges that Alex encountered while trying to implement various pieces of componentconfig.
+00:12:04 [W] So just quickly before we get started a little bit about the working group.
+00:12:05 [W] We formed this working group a couple years ago with the idea.
+00:12:06 [W] of trying to develop a standard foundation for core kubernetes components to build on top of we have many core components such as the API server the scheduler the qubit cube proxy and many common functionalities
+00:12:08 [W] Of these functions across the project and so that's the idea behind the working group on this do provide a place where we can talk about and design and standardize these Solutions.
+00:12:20 [W] So these are a few examples how components are configured how they sort of report their status various integration points and sort of logging and metrics are the main areas.
+00:12:30 [W] So I'm going to turn it over to Alex and let him talk about sort of how he was introduced to the working group and some of the projects that he's worked on.
+00:12:39 [W] Thanks, Mike.
+00:12:42 [W] Yeah, before we get started just a quick overview of the agenda today.
+00:12:44 [W] So we already heard the introduction from Mike.
+00:12:49 [W] I'll be talking about points to and free basically two of the problems I encountered or I dealt with when working with the working group and then we'll close up of some shout outs over works for doing and of course Q&A.
+00:13:01 [W] All right. So, this is me.
+00:13:04 [W] My name is Alex.
+00:13:05 [W] I'm a site reliability engineer a texturing in Munich.
+00:13:10 [W] We are building a German IPTV platform and it was around mid-may or I met last year that I got interested in contributing to the kubernative project think it was for Kube corn in Europe around May.
+00:13:23 [W] When I went to a couple stalks and you know, I saw a couple of like working groups or special interest groups and themselves.
+00:13:39 [W] I think one of them was C-Class life cycle and it was really a nice and open environment and a very like welcoming community and it was around that time where I was trying to get into the project so I
+00:13:50 [W] The started with some gold and gold in tissues other decorative pouring off the while so I was kind of looking for a new challenge, but I was a bit daunting like kubernative being such a big project.
+00:14:05 [W] It can be quite tough or like at least at the beginning to really get a grip on this if you want to start are contributing.
+00:14:16 [W] the guys from Seacoast life cycle. They pointed me actually to the working group and I didn't have any prior experience that I've had little go.
+00:14:20 [W] instana
+00:14:50 [W] With the fuel technical skills, but they walk me through the code base regardless and you know, we talked a little bit about the projects I could be working on.
+00:15:05 [W] Why am I telling you this? Well, I want to structure the story little bit like this to take you on a journey come.
+00:15:15 [W] Step by step and hopefully, you know if you're looking to contribute or if you're thinking about it, but you're also a little bit scared as I was maybe I can take away some of that and show, you know, it's really not that not that of an issue and there are loads of friendly people can
+00:15:35 [W] Alright so back when I started coming to the meetings of the working group.
+00:15:45 [W] There was just this PR was just merge basically codec factory options, which allowed some options to pass through codec Factory mainly like the treaty encoders and a strict decoders what those are will expand detail, but basically
+00:15:58 [W] there was just this PR was just merge basically codec factory options which allowed some options to pass to Cody Factory mainly like the pretty encoders and a strict decoders what those are will expand detail, but basically the
+00:16:01 [W] One was that when you load a componentconfig, which is the mo file which configures a component like the API server or kublr those yellow files can be malformed so they couldn't have a duplicate fields or
+00:16:14 [W] And field names in the ammo and those arrows would be ignored right and this could lead to undefined Behavior.
+00:16:26 [W] So we can't really assume like which of those fields are intended or not and back then, you know, there wasn't really happening like anything straight forward.
+00:16:36 [W] I think it was just like the first field encountered it took but you know, as I said, it could lead to unexpected behaviors and with this PR merged. Basically, it was creating the prerequisite to deal with this.
+00:16:47 [W] Oblem to actually load the content file an error out on those, you know, like now form Fields.
+00:17:00 [W] So this was like the first challenge to guys suggested to me, so I can't know. Why don't you give up this is a good it's a good point to, you know, get familiar with the code base and learn a bit about API Machinery.
+00:17:05 [W] So this is what I did.
+00:17:13 [W] This is what I you know, told him I will take on so, you know sounds quite straightforward, you know, we have Alpha demo files and
+00:17:17 [W] Three loud done. It should draw an arrow, right? So sounds crazy. Right? Well at that time, you know, I didn't really know anything.
+00:17:26 [W] You know, what was the componentconfig?
+00:17:28 [W] Well, obviously it was the mo file.
+00:17:31 [W] He passed to be component. But you know, how does it work?
+00:17:33 [W] Like what are the concepts behind it?
+00:17:35 [W] Also works the codec.
+00:17:36 [W] What's the codec Factory?
+00:17:39 [W] All right. So this is the configuration is called kublr configuration. And this is a componentconfig and it's for the cube lip.
+00:18:00 [W] All right, and when if you're if you install the cluster before if you did Kelsey hightower's communities to Hawaii probably seen this before created yourself this config file.
+00:18:07 [W] file. You pass the kublr as I said when you started now this goes alongside to right now the CLI Flex as well now to see how Flex configure the kubelet to
+00:18:15 [W] But like in the future we want to like phase out the CLI Flex completely.
+00:18:23 [W] Why is that? Well, there are loads of problems with flags.
+00:18:29 [W] One of the bigger ones is that you conversion them right? It's really tough to deprecate Flags in a way that it doesn't break, you know older clusters or things like that.
+00:18:37 [W] that. So this is just one of the problems I won't go into detail here if you're interested in that and they're still lots of work around this section like that briquetting CLI Flags. I recommend you to
+00:18:47 [W] Out from the working group last year at coupon San Diego, I think and those concentrated on to them. So this all happens on a node, right?
+00:18:55 [W] All right, so and this is the problem basically we're trying to solve. So if you have you know a configure and you have a duplicate field, like ones cluster local yawns my cluster local language of those fields, you know, do you actually want to load, you know, it's not really clear
+00:19:11 [W] As a dis area is this like a field which doesn't really exist in the interview on beta 1 API.
+00:19:19 [W] what do you do with it? Right and as I said, you know the idea is to allow these contacts and if you know through the process bloating it if you encounter any of these errors like you around,
+00:19:32 [W] Alright, so the first thing I did basically I loaded up the the editor jump right into the code and take the little bit through the kublr code base. And basically I found this function right you have a
+00:19:47 [W] Takes a file system and kublr file as a string.
+00:19:54 [W] So the file system is just an abstraction basically if your for testing whereas the kublr file is the path to DTD actually cubed and many yellow and what does it do it the first line here in 148
+00:20:06 [W] The file is the path to the to the actually kubenetes ya know and what does it do?
+00:20:08 [W] It's the first line here and 148 a returns a kubelet scheme or like basically new scheme and codecs like here right didn't really know what that was.
+00:20:16 [W] So I know follow the function and in scheme that go You See It Returns the scheme and the coda Factory and an arrow, so there are a couple points here which you know
+00:20:26 [W] Obviously, I didn't know exactly what they were.
+00:20:30 [W] So we have a scheme which gets returned from from the runtime package. Then some things are added to the scheme and then we take the scheme and then return some codex right? So obviously the
+00:20:44 [W] And then return some codex, right? So obviously the question were here. Like what's the scheme, you know and you know, what's added and looking up like digging into these questions. We let me down Phi Machinery Rabbit Hole.
+00:20:54 [W] And looking up like digging into these questions.
+00:20:55 [W] We let me down Phi machine a rabbit hole.
+00:20:56 [W] I won't go into too much detail here.
+00:20:58 [W] I'll just try to give you the overview but these are like Corbin at these Concepts really good to know about them, especially when you want to start out.
+00:21:07 [W] So let's start with the scheme.
+00:21:11 [W] All right, let's say you're like you control and you fire up a get pods and it's like, you know, ask the okay server and the idea API server responds like here.
+00:21:20 [W] Instructs, you know, here you go.
+00:21:22 [W] Now, how does Cube control figure out if those were actually pods which are stand over here, right?
+00:21:33 [W] These are just like well intents and purposes just you know, some some ghost drugs it's received and this job actually from translating it from like some structure to an unknown type.
+00:21:41 [W] This is what the scheme does one of the things that does actually as I said like the scheme is one of the Core Concepts and kubenetes and a bit of a legacy.
+00:21:48 [W] Was army knife for API machinery for one thing. It does it provides a mapping between an object so I can go struck for the Pod.
+00:21:57 [W] for example to specific code Type which is called group version kind or TV came ashore and you will find this a lot around the codebase this terminology. Now in order for it to do it, you know, we need to tell the scheme
+00:22:12 [W] You're out if those were actually pods with her stand over here, right?
+00:22:13 [W] These are just like for all intents and purposes just you know, some some ghosts trucks. It's received and this job actually from translating it from like some structure to an unknown type.
+00:22:14 [W] This is what the scheme does one of the things that does actually as I said like the scheme is one of the Core Concepts in kubenetes and a bit of a like a Swiss army knife for API machinery for one thing it does it.
+00:22:16 [W] provides a mapping between an object so I can go struck for pot for example to specific outside which is called group version kind or GVK in short and you will find this a lot around the codebase this terminology
+00:22:19 [W] And of go types, it knows basically we have to tell us, you know, okay here.
+00:22:29 [W] This is what a party looks like with version b 1 and as soon as we have registered into that we can pass in an object and we'll turn the cgroup version kind if it knows about so it's really an elemental process which happens all the time
+00:22:32 [W] Time was kind of conversion.
+00:22:41 [W] And if you go dig through the code base, let me look after skin. You'll find you know, a comment that says it's the foundation of a version of the API and configuration over time. And as you might know, you know every API in kubernative
+00:22:49 [W] much everything is very and the scheme basically provides us the tools to I know like work with these versions convert between them and to do ya conversions basically and this can easily happen, you know, if for example
+00:23:05 [W] Bicycling and this can easily happen to know if for example the like the client is has a different version any I Pi server, like I think with the version school policy will allow like two major versions to differ if I remember correctly.
+00:23:16 [W] So, you know, we definitely need to have some tools to convert between these two converters.
+00:23:21 [W] Alright, so this is what the scheme does, you know gives us some some tools to convert between versions and speaking of version. This is exactly what we do here.
+00:23:33 [W] You know, we tell the scheme which versions are available and we can see here is an even better one.
+00:23:41 [W] It's the one we know the the a PSP version we see here so we can better one. This is the basically the external API. It's called.
+00:23:47 [W] And then we also register another thing in here and it's just called cubic conflict without aversion.
+00:23:55 [W] Now, this is what is called the internal API and this was very confusing to me at the beginning like internal issues me internal and external versions.
+00:24:05 [W] You know, what does it mean? Like, why do we need this and it's basically like the internet version is like a hub type right and it's used to convert between any different versions. You can obviously you convert between external version.
+00:24:17 [W] Tenènte internal version, but you can also convert between two external versions going through this subtype called the internal version.
+00:24:26 [W] The a PSP version we see here so we can better one.
+00:24:36 [W] This is the basically the external API.
+00:24:36 [W] It's called.
+00:24:36 [W] And then we also register another thing in here and it's just called cubic conflict with our diversion.
+00:24:38 [W] Now, this is what is called the internal API and this was very confusing to me at the beginning like internal issues me internal and external versions.
+00:24:39 [W] You know, what does it mean? Like, why do we need this and it's basically like the internet version is like a hub type right and it's used to convert between any different versions. You can obviously you convert between external version nginx.
+00:24:43 [W] Another version, but you can also convert between two external versions going through this subtype called the internal version. So let's say V 1 Alpha 1 has, you know Fields A and B and even better one has
+00:24:55 [W] It is so and it would provide you with some tools to deep convert between those versions to some defaults all kinds of things, you know, so in the end, you know, you don't lose any information when you do these conversions.
+00:24:57 [W] All right, so we have a scheme, you know, we register some versions into it and then we pass it to a codec Factory.
+00:25:01 [W] We get some code expect.
+00:25:02 [W] All right, what's the cortex? Actually let's have a look. Now if you look through the code you see that for Co exactly it says it provides methods for treating codecs and serializes for specific versions of content types.
+00:25:16 [W] Now you can see here the codec Factory has a scheme it has serialized.
+00:25:22 [W] Has decoder if University quarter now there are a lot of things to it. But on a high level basically a Serial iser or DC realizing what we do in our case is we converted from a wire
+00:25:36 [W] File into a memory representation which is to go struct then we take the decoder and take the gold struct and map it to an internal or any external version doesn't doesn't really matter.
+00:25:52 [W] And basically this is where the actual conversion happens between the between the actual versions.
+00:25:56 [W] Yeah, and if we look down here we can see it also has some options right? So in this case we have strict and we have pretty
+00:26:06 [W] And strictest what we want, right? So configures all serializes in strict mode and this is exactly the behavior we need in this case.
+00:26:22 [W] So if you know the serialized item counts any errors or like any any unknown Fields, you know, those know about, you know will throw an error.
+00:26:26 [W] All right. So we have everything covered. We have the scheme you have some versions which we which we need to know the internal version and the external version.
+00:26:37 [W] We've on better one in this case and we have the Codex, you know, which you know, we can use to actually convert and upload the file.
+00:26:49 [W] All right, so the ideas just has a strict option here, you know behind the scheme and should be fine, right?
+00:26:53 [W] Well, you know, technically yes, it's it's just how it works.
+00:26:57 [W] We you know, we got some ideas that you know, we actually might break some clusters some other clusters.
+00:27:14 [W] How does it work?
+00:27:15 [W] You know what happens?
+00:27:24 [W] So let's say, you know, we introduce this change for let's say 119 is the current current version.
+00:27:27 [W] Let's say we introduces for 119, but the thing is when 119 gets released.
+00:27:35 [W] This doesn't actually increase this version here so, you know the version
+00:27:38 [W] None of the API of the cubic configuration doesn't go in lockstep with the kubernative release cycle.
+00:27:44 [W] So what will happen, you know, people would upgrade let's say someone has has this config here and has duplicate field the change would get into the tree and the user would upgrade his kublr and what would
+00:27:58 [W] In lockstep with the kubernative release cycle.
+00:27:58 [W] So what will happen, you know, people would upgrade let's say someone has has this configure and has duplicate field the change would get into the tree and the user would upgrade his kublr and what would happen if
+00:27:59 [W] Tail, you know, which would break the cluster in the worst case and this is not something I as a user would expect right? So because this version didn't change know why is my cluster networking basically this version kind of especially like better and upwards implies some
+00:28:13 [W] The T in this case. So, you know, we don't want to break any user clusters.
+00:28:22 [W] So we need to figure out a way to you know, only strengthen this when this version changes.
+00:28:26 [W] And at this is exactly what we did, you know, we strengthen it or developed Nation only version boundary and basically 124 V 1 Theta 1. We want to decode with some context but en Vivo en better to and upwards, you know,
+00:28:42 [W] And basically 124 V 1 Theta 1.
+00:28:43 [W] we want to decode person cortex, but en Vivo en better to and upwards, you know, we want to have the expected behavior that it will throw an error when the ammos malformed and what we introduced here is called the individual Indian
+00:28:51 [W] We introduced here is called the new Libyan scheme and codecs like a helper function. And this is used to you know, return aquatic Factory with disabled strict.
+00:29:03 [W] So like the strict cri-o disabled just for a single version and this gets called with the scheme of diversion for V 1 Theta 1 and just for this version. It returns make some codex which you know have
+00:29:17 [W] Everyone on upwards I be worse than upwards will have districts serializes in Italy.
+00:29:24 [W] All right, and we basically did this for every component. So for like the queue proxy keep scheduling kublr as you see here the first list we implemented these first and then we can you know upon the issue
+00:29:40 [W] And then afterwards we ship basically minions paths as well.
+00:29:49 [W] So we called so, you know, this was all in the same release cycle.
+00:29:55 [W] And so the user didn't really, you know, recognize any of the of the issues, you know, unless they were running from a strip club.
+00:30:03 [W] Yeah. So this only like all these changes got into the next version.
+00:30:04 [W] I think it was 117 118.
+00:30:06 [W] I'm not sure anymore.
+00:30:07 [W] All right.
+00:30:11 [W] Yeah, so we did this for these components now as you can see here, the Q controller manager is strikethrough, right so actually and I didn't I didn't notice before so the cube controller manual doesn't use a componentconfig.
+00:30:23 [W] I think it's one of the only components which does.
+00:30:28 [W] Why is that because that's what I asked myself?
+00:30:32 [W] Why doesn't the controller manager user componentconfig and acid guy to the guys and they told me well, it's difficult.
+00:30:49 [W] They keep controller manager is like Works a little bit different than the other components in the new kubenetes cluster or ecosystem and let's do it as we did earlier.
+00:30:57 [W] let's start from the beginning, you know, first of all, what's controlling manager and this is from the official documentation. Basically the controller magalix.
+00:31:04 [W] Enter and bad score control loops ship with kubernetes and the control Loop watches the shared state of a cluster through the API server and makes changes attempting to move the current state towards the desired State.
+00:31:18 [W] It looks like 2D API server and it checks, you know is is my cluster in the state.
+00:31:32 [W] It should be right if someone starts a deployment and the pot isn't rolled out on on a on any node yet.
+00:31:37 [W] You know, the there would actually be a controller making sure that what happened right?
+00:31:47 [W] And it's like this this basically infinite Loop just always checking if a certain condition is true or conditions, and if not, it will try to reconcile that. So this is a controlled
+00:31:49 [W] Roller, and the controller manager is is a binary host.
+00:31:53 [W] Basically. It is also like a hub or a host which holds all the controllers basically almost every controller and start make sure they're configured and provides a home for them more or less now the
+00:32:08 [W] Three controllers are interchangeable in our users should be able to build their own controllers of their own controller managers for disregard.
+00:32:20 [W] And so this is what we have to keep in mind, you know while probably not many doing it but you know, it should be possible. It's one of the core principles of communities that you can exchange things and build your own stuff.
+00:32:32 [W] all right, and you know if you look into the code, you know, you can see you know, what the controller manager does one of the things it does it has this function called you control and visualizers and it has you know, a map of
+00:32:46 [W] Old, you know, you can see you know, what the controller manager does one of the things it does it has this function called you control and visualizers and it has you know, a map of basically if two key of the name of the controller.
+00:32:50 [W] Leave the key of the name of the controller and the value is a function which starts the controller.
+00:32:56 [W] All right. So we have a think over 30 here and this is this looks quite daunting.
+00:33:01 [W] You know, it's quite a bit of complexity in here. But you know in the end, you know that we're just starting individual controllers and this can be configured from the command line.
+00:33:10 [W] Of course, you know, we don't have componentconfig and it takes a list I think I'm not sure what the flag is called, but it takes a list.
+00:33:17 [W] And you can turn on or turn off specific controllers and by default it has it has star. So basically it turns on all the controllers.
+00:33:27 [W] Alright, so next question would be okay, so it starts to controllers. But how are they configured right?
+00:33:37 [W] I said Control Management deals also with configuration of the controller's or provides Primitives for that and basically the control manager configuration exists, and it's also it's a vision API, right and it is
+00:33:50 [W] Like yeah aversion API holding all the configuration necessary to start the controller manager and the individual controllers.
+00:34:03 [W] All right. So in this case, it's what we call a container conflict. So we see here it has a type meta which basically means it is it is version, you know, it has like an external version but then we have the individual controllers
+00:34:11 [W] In the structure and each of these controllers basically holds the all like sorry, each of these configurations holds the configuration for the individual controllers.
+00:34:27 [W] Now, we do have something curious here is called Cube Cloud shared and holds configuration for shared related features both and controller manager and coupons roller manager.
+00:34:39 [W] actually the cloud controller manager used to be part of the controller manager, but
+00:34:43 [W] I moved out of tree because it was just too much complexity and the individual Cloud controllers with differing, you know, too much after a while.
+00:34:57 [W] So, you know, the maintainers decided to take it out of tree and maintain it as an individual controller basically, which is not maintained by the controller manager.
+00:35:03 [W] So this is the first, you know, the first example you see of everything should be should be plug and play in a way. So the controller
+00:35:12 [W] It doesn't really start or care anymore that much about the cloud controller manager, but there are still some configuration fields, which I needed by both parties, right?
+00:35:25 [W] So this is why we have this configuration select substract, basically.
+00:35:34 [W] And the first thing that gives that away is if you look to the import apps and if you see that these are coming from like entry so the kubenetes / package basically directory.
+00:35:56 [W] It's where the internal apis are like when you go to / can take in the end and this is what it looks like right conceptually. So we have one containerd child and this is from this version by loads all the all it like embeds all the
+00:36:07 [W] Configurations of all controllers. So if anything changes here, you know, it goes into the same version of this. So we basically version it more or less and lockstep. Although these are all internal right. These are not really extremely dirty.
+00:36:23 [W] And if we go into our any controller or like specific controller configuration, we can see we don't see a type meta here indicating.
+00:36:34 [W] This is just the and internal API, right?
+00:36:41 [W] All right, so, you know, actually there is no real argument against not having, you know, a configuration or like componentconfig at least not technically, you know, we can easily
+00:36:50 [W] I'll give it a GDK a kind maybe I version an API Group and then we just list all the fields and now we can we can load this and we get a conflict from that so it's not really a problem technically, right?
+00:37:06 [W] So easy.
+00:37:08 [W] Why don't we have it yet?
+00:37:09 [W] You know, that was my question basically and well, you know, it's difficult.
+00:37:15 [W] It's it's not you know, it is a technical challenge still but it's also an organizational challenge. So we need to think about couple of things, you know.
+00:37:28 [W] So for example what happens if the controller moves out of tree so we saw this with the cloud controller, you know, we had to introduce a shared configuration field. Now if we have to do this for every controller which we move out, you know,
+00:37:36 [W] No, it gets a bit busy in the code base and it's not really, you know a nice solution probably and then again, you know what happens if control the sheer quantity feels actually, I think I looked at it there about 10:00. So like offered little
+00:37:51 [W] Roller, which we move out, you know, it gets a bit busy in the code base and it's not really, you know a nice solution probably and then again, you know what happens if control the share content Fields, actually, I think I looked at it there about
+00:37:53 [W] The controller's we have in the controller manager actually share some configuration field. So we need to deal with this.
+00:38:03 [W] You know, what if you know, if we have a single controller, which we don't want to get start from the control manager.
+00:38:07 [W] How do we you know build and build a componentconfig around that or what does it mean for our Mo file? Then what happens if a competitive owner of controller cgroup owning a specific controller, you know doesn't want
+00:38:19 [W] They're sending you know, they're kind of bound to it. As soon as we learned from a file.
+00:38:31 [W] Well what happens if user wants to implement their own controller manager now, how do they like and they write their own componentconfig like what kind of primitive still be provide for that?
+00:38:38 [W] And these are all like the kind of tough questions, you know, it's very much an architectural problem and also like a community, you know organizational problem.
+00:38:49 [W] would say and I know there's a lot of you know lot of targets
+00:38:50 [W] And and brainstorming which has to go into that and it's quite difficult. Now one option would be for example to you know, just give each controller its own external version.
+00:39:05 [W] So we still have you know yet same API Group, maybe we can share we still have a container type which is version. But then we also have individual versions no photo controller and you know, they can move as quickly or as slow as the as that one.
+00:39:19 [W] You know this could work but the problem is like we have a lot of controllers. So if you think about having external apis, maybe several external apis for each controller. This can get quite messy now.
+00:39:33 [W] Now. There's a lot of lot of code lot of duplicate code probably which has to be written it just you know quickly blows up in proportion. So it's it's a possibility but it comes with some serious trade-offs as well as everything basically and it's just something you know,
+00:39:49 [W] So if you think about having external apis, maybe several external apis for each controller. This can get quite messy. Now. There's a lot of lot of code lot of duplicate code probably which has to be written it just you know
+00:39:51 [W] Does so actually like the community has been trying to figure out this problem, you know, since I think 2018 it was first stewards who tried to, you know, merge PR which introduced
+00:40:05 [W] Full control the manager this one got close because it was missing a cap communities enhancement proposal so shortly afterwards.
+00:40:19 [W] So shortly afterwards.
+00:41:36 [W] It was Lucas who started the discussion around the componentconfig 40 control manager start with some brainstorming and the design document have it linked here if you're interested, by the way, I'm just on slides you can you can go to all the links and
+00:41:37 [W] No big contributor driving in it can get really really hard.
+00:41:42 [W] Okay.
+00:41:48 [W] So what's the plan? Well, I thought you know, the current plan is let's pick up where Stewart left and you know, try to get the conversation going again, you know take his cab may be extended a little bit and try to get
+00:41:57 [W] And you know, you might think now so okay. So what what's the plan now? Like how should it end differently than what still did you know? Honestly, I don't have a I don't have an answer for that. You know, I'm definitely not
+00:42:14 [W] other than Steward walls, but you know, at least you know, I think we have to try this is really an important issue and you know, we just have to get the conversation going again and I'll just try to you know stick with it or like we as a
+00:42:29 [W] We should try it too really, you know stick our heads together and try to come up with solutions to this problem.
+00:42:40 [W] Yeah, so that's the current situation right now, of course, you know always looking for some help or we are always looking for some help on this.
+00:42:51 [W] I just mentioned two issues are working on their loads more. You know, he working group could use help us. So if you're interested in any of that, I think it's a really good way to learn about the culture.
+00:43:00 [W] Place to learn about some Core Concepts and kubernative use an API Machinery, you know, please don't hesitate to just join all slack or you know, come to come to the working group meetings. And you know, we'll be happy to onboard you and help you become contribute.
+00:43:15 [W] All right.
+00:43:18 [W] All right.
+00:43:21 [W] Thanks Alex for the presentation and thanks for all of your work in the working group as we wrap up here.
+00:43:29 [W] I just wanted to quickly highlight a few things.
+00:43:31 [W] So these are some of the other projects in areas of work in our working group.
+00:43:36 [W] Some are being worked on actively some are not so we have a lot of componentconfig stuff as Alex talked about in the presentation. There's some work that overlaps with that around command building as far as sort of dealing with flags and that migration to
+00:43:49 [W] There's a bunch of work going on contributor who's handle is Sir a theist is leading that around standardized in the logging subsystem in kubernative.
+00:44:02 [W] He's and kind of re doing a lot of that and finally there's there's some potential work around standardizing components servers and some of the common and points like healthy and configs even between them.
+00:44:15 [W] So if folks are interested in that, please feel free to reach out to us will have some information.
+00:44:19 [W] Out that right at the end of the presentation and then the next thing if you go to the next slide, I just wanted to give a shout outs to all of the folks. You have contributed in some form or another maybe just a couple lines of code.
+00:44:33 [W] And finally, this is how you can get involved with our working group.
+00:44:53 [W] We have weekly meetings on Tuesdays at 8:30 a.m.
+00:44:56 [W] Pacific time.
+00:45:00 [W] There's also a weekly office hours for folks who are working on things and have questions or need help.
+00:45:02 [W] That's the same Tuesday, but at 10 a.m.
+00:45:10 [W] Please feel free to reach out to his the best way to reach us is typically on our select channels.
+00:45:16 [W] Thank you.
+00:45:20 [W] We have our mailing list our slack and our GitHub label as well. So
+00:45:21 [W] Okay.
+00:45:25 [W] - slow
+00:45:27 [W] Yeah, thanks everyone.
+00:45:34 [W] We're here to answer questions.
+00:45:39 [W] You can either ask it in the text window.
+00:45:41 [W] Unfortunately, I only have I think one minute left. So if you guys have any, you know, more in-depth questions, feel free to join our slack which is on the kublr dislike WT -
+00:46:00 [W] My Fit to provide a bit more detail

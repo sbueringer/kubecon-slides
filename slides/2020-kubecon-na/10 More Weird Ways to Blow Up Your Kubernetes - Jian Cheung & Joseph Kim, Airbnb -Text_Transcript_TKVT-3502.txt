@@ -1,0 +1,279 @@
+﻿10 More Weird Ways to Blow Up Your Kubernetes: TKVT-3502 - events@cncf.io - Thursday, November 19, 2020 5:41 PM - 33 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, everyone.
+00:00:00 [W] This talk is titled.
+00:00:02 [W] 10 more ways to blow up your career in that. He's by Airbnb.
+00:00:06 [W] And this talk is titled.
+00:00:08 [W] So, who are we my name is Jen.
+00:00:12 [W] I'm a software engineer at Airbnb on the computer infrastructure team.
+00:00:16 [W] This is a team that manages our kubernative clusters and manages the abstraction of we have over it to make developing Services easier.
+00:00:27 [W] Hi, my name is Joseph and I'm on the computer and for team with gin I've been on this team and an Airbnb for about eight months now.
+00:00:34 [W] So the outline of this talk will be one we're gonna give a brief intro of kubernative.
+00:00:39 [W] He's at Airbnb to we're going to dive into 10 cases of how we actually messed things up and three we're going to go over and do a recap.
+00:00:53 [W] All right, kubernative and containers F Airbnb.
+00:00:57 [W] So everybody started our migration to kubernative.
+00:01:00 [W] He's found a beginning of 2018 and system has really taken off kubernative. He's is actually running and production and we be lie on it is a critical part of our of running Airbnb.
+00:01:14 [W] Our environment is mostly Amazon Linux to for the actual host.
+00:01:20 [W] We use Ubuntu images we use Canal for cni-genie.
+00:01:34 [W] The first case we're going to talk about is called replicating and like assets.
+00:01:18 [W] So for context we have a job that regularly scripts are clusters and it runs a command something like cutesy tail get pods on namespaces this job starts getting out of memory errors and one specific cluster.
+00:01:32 [W] So let's check it out.
+00:01:34 [W] And what do we see?
+00:01:36 [W] see that in most of our normal clusters we have maybe on the order of a thousand to two thousand replica sets any guesses to how many this problematic
+00:01:48 [W] So had it was 56,000.
+00:01:52 [W] So, let's see.
+00:01:53 [W] What else is up with this cluster when we dive into all these replicas sets. We notice that all of these are actually under one deployment when namespace.
+00:02:01 [W] And when we dive deeper into it, we also noticed that the deployment object when we checked its Collision count. It was up to a hundred thousand.
+00:02:11 [W] And so right now our theory is likely that the deployment object is created replica sets that aren't getting adopted by it.
+00:02:17 [W] So it keeps on creating more as we dive more into this incident.
+00:02:21 [W] We realize that something different about the deployment of this job on this specific cluster that was different from its deployment other clusters was this one we were actually testing this new feature called topology spread constraints.
+00:02:36 [W] Deployment object when we check its Collision count. It was up to a hundred thousand.
+00:02:39 [W] And so right now our theory is likely that the deployment object is creating replica sets that aren't getting adopted by so it keeps on creating more as we dive more into this incident.
+00:02:49 [W] We realized that something different about the deployment of this job on this specific cluster that was different from its deployment other clusters was this one we were actually testing this new feature called topology spread constraints.
+00:03:06 [W] And what we notice that were that these specs were actually not getting picked up by different cassettes and the theory here is because the replica sets being created by the deployment didn't have these specs the deployment didn't know that it had already created
+00:03:36 [W] Theory here is because the replica sets being created by the deployment that I have these specs the deployment didn't know that it had already created these replicas two sets it that I know that these replicas belong to it.
+00:03:49 [W] And so it would just keep on creating more and more replicas sets a good thing.
+00:03:54 [W] We have so many we had so many Tesla sir. So casually like diff the specific deployment to see what was going on and this specific incident after a fix was simply just deleting the whole namespace.
+00:04:06 [W] Which is fine because this was just a test Puzzler and good thing.
+00:04:10 [W] We were just testing this feature out in our test cluster.
+00:04:13 [W] And so to take away here is do Test new features and test clusters because for us that's what they're for.
+00:04:19 [W] We were testing this new feature and what we noticed was it kind of blew up our cluster and just kept creating if in it replica sets but not a problem. We know to investigate more before we roll this out to production.
+00:04:32 [W] Our second incident is called mutating time bomb.
+00:04:37 [W] And what we see here is we have the service experience a high error rate and the service cannot deploy and we get this cryptic kubernative error saying unable to ask us in ballot and x 5 so we dive deeper into it
+00:04:52 [W] And what do we see?
+00:04:53 [W] We see that to two pods are running at full HP.
+00:04:57 [W] thinks.
+00:04:58 [W] There should be nine replicas of running and the service is panicking because well, we only have two pots left digging more into it.
+00:05:05 [W] We notice there's only one deployment object but three replica sets which is really weird and the replica sets. The actually have pods are 16 days old.
+00:05:18 [W] As we dug more into it we notice.
+00:05:20 [W] Yeah, there's something really wrong going on with the HPA here and the replica sets and one hour later.
+00:05:26 [W] What are we tried?
+00:05:27 [W] Well, we try deleting the HPA and manually scaling it up because theory was perhaps it was something wrong with the HPA that did not work.
+00:05:36 [W] We try deleting those old bad replica sets thinking perhaps it was those old replica sets that were blocking you to pose from happening, but that was not the problem. We also made sure not to
+00:05:47 [W] Delete the replica set that had our last two pods are running.
+00:05:51 [W] We also try to create a new deployment object just to update it just to kick it and see what happens that did not solve our problems and we thought about perhaps just recreating the name space, but that would definitely delete the last two pods running which
+00:06:06 [W] Has this service is production.
+00:05:58 [W] So what do we do now?
+00:05:59 [W] We page at a teammate.
+00:06:01 [W] We call a friend one hour later.
+00:06:03 [W] And so when we started digging more into a come back to the first page where someone had called out this cryptic error message and we should have done this earlier where it should have done more into it because we realized
+00:06:18 [W] The the exact problem when we Google for the problem we notice it was actually a problem with Json patching and related to our view taking a mission controller, which was recently rolled out in the last month.
+00:06:18 [W] Specifically the bug was this with our meeting a mission controller.
+00:06:23 [W] Imagine that on the top left is our input and this is our spec and our desired output is the spec at the bottom left here.
+00:06:35 [W] We see we are deleting two items from and and array what the bug was the generator output is this we generate stew operations. It removes index 2 and removes index 3
+00:06:49 [W] First-class glance of this patch looks reasonable but a problem is after the first operation to array doesn't have it indexed three anymore.
+00:06:58 [W] So the correct patch is you actually remove index 3 then index 2 and luckily. This issue was already.
+00:07:06 [W] Well known bugs. We Google for it and we can actually apply it and so once we realize it was a mutating emission controller to stop the bleed. We did actually delete it the mutant Mission controller from the specific cluster.
+00:07:19 [W] But Cindy really resulted in successful pots coming up and so are these you need a fire is resolved.
+00:07:25 [W] So we're done, right?
+00:07:26 [W] The array doesn't have it indexed three anymore.
+00:07:26 [W] So to correct patch is you actually remove index 3 then index 2 and luckily this issue was already. Well known bugs. We Google for it and we can actually apply it and so once we realized it was a mutating a mission controller.
+00:08:28 [W] It's over the last seven days new code actually wasn't even being deployed Services were being kept Alive by their old replica sets. But over time as part of the over epic has set slowly died off Services were slowly getting degraded.
+00:08:44 [W] Yeah, so this problem was way more Insidious than we had realized.
+00:08:49 [W] The takeaway here is a be aware of the existence of mutating a mission controller.
+00:08:54 [W] This was something we had recently wrote out. And so for many of us when we see an incident. It doesn't immediately come to mind to think.
+00:09:01 [W] Hey, it could be the Mutiny a mission controller be willing to ask for help because paging are additional team member to help us definitely got us moving do Google the error messages and a do create alerts when we dug more into it
+00:09:17 [W] What time we realized we actually do have metrics that could have detected this problem earlier.
+00:09:22 [W] All right. Our next incident is called one to Auto scaling.
+00:09:26 [W] So we're going to begin with this kubernative issue the still an open issue.
+00:09:32 [W] The just about is let's say you have the situation where you have a deployment with three replica later. You set up an HPA or horizontal poddisruptionbudgets.
+00:09:52 [W] the number of replicas resets down to three
+00:09:56 [W] and so the suggest a solution outlined by a comment was removed from because from the last deployment and remove replicas from the current and future deployment to let the HPA do its thing.
+00:10:10 [W] And that's not a good to us. And so we ship it.
+00:10:14 [W] Great. So our fix right now is if there's a deployment and HPA we followed the advice of the comment by that it seemed elastic limit and deleting the replica count from it removing the replicas from our current deployment and
+00:10:29 [W] But that was not the end of our auto-scaling woes. So this next case it's called zero to auto-scaling.
+00:10:35 [W] So if you actually look at the HP algorithm, this is algorithm where desired replicas is a function of your current replicas.
+00:10:46 [W] Some of you might already see the problem if current replica zero desire replicas will always be 0 so this is a sounds like a quick and easy fix and we shift it right and so now our fixed looks like if deployment and HPA and
+00:11:01 [W] Not 0 then we apply that fix. Otherwise if replica was Zero we can actually just leave it alone and the HPA will do the correct thing.
+00:10:58 [W] Zero to auto-scaling again, but that that will that was not our final problem with the HPA.
+00:11:04 [W] In this incident someone alerted us when they did when they did a deploy their number of replicas actually dropped to zero.
+00:11:12 [W] So let's see what happened here. Someone followed up and realize yes, this is actually a known issue which we had already fixed, but we were actually migrating our deployment services to Spinnaker and
+00:11:27 [W] Have this standard of work around implemented yet.
+00:11:23 [W] And so the lesson here is my Creations are hard and so now to fix is oh and remember to copy this logic to Spinnaker.
+00:11:32 [W] And once more we have more Auto scaling issues.
+00:11:37 [W] So what do you think happens in this scenario?
+00:11:40 [W] You have a service that just migrated to kubernative.
+00:11:42 [W] He's and still has old ec2 boxes running. We deploy this to service to kubernetes replicas equals 0.
+00:11:50 [W] We then scale the service in Corbin that he's using Q Cube cuddle scale deployment and nice.
+00:11:57 [W] We we realize I could win that he's is now taking traffic successfully.
+00:11:59 [W] and so we delete all of ROTC two boxes.
+00:12:02 [W] so now the service has fully migrated to kubernative he's and now we deploy again with HPA.
+00:12:10 [W] That's right and incident happen in this and the actual bug here is we had manderley scale this deployment with Q cuddle scale deployment.
+00:12:21 [W] But this means the last the most recent proper deployment was actually still zero replica.
+00:12:30 [W] We did it go through a proper deployment or what but our infrastructure teams consider a proper deployment because they had used the mat the cube cuddle tools directly to scale up the replicas.
+00:12:41 [W] still go through our normal deploy process and to actually check with the current replica count is
+00:12:43 [W] and our takeaway here is a turning on horizontal poddisruptionbudgets is not trivial.
+00:12:49 [W] You should test their kids education such as 0 1 Etc and remember no non-paid pads because in the we had fixes issue in our normal deploy tool Spinnaker was a new A New Path that was still being paved.
+00:13:04 [W] And our next case is called did we really delete all our Master nodes?
+00:13:08 [W] Yes.
+00:13:09 [W] Yes. We did and what happens when you delete all the masternodes on a cluster is it means there's no API server kubeflow commands do not work. There's no new deploys in a cluster is just broken.
+00:13:24 [W] But luckily for us this was just a test cluster and so as we try to figure out, how can we bring this cluster back up our options were one completely delete the cluster and bring it up
+00:13:39 [W] Or to actually try to fix it in place.
+00:13:33 [W] So these are pretty bad situations to be in but luckily this was still a test. This was just a test closer.
+00:13:40 [W] And one of our Engineers realized actually the situation was already documented in our run book where the suggestion was one delete our mutation controller as an immediate action via the Kudo command and to terminate the
+00:13:56 [W] Schedule the problem with trying to bring up your Masters. Once they have all gone down as the order in terms of how you bring things back up really matters in this specific case following the Run book aloud the necessary services
+00:14:00 [W] Get unblocked for the masses to actually come up successfully.
+00:14:00 [W] And the takeaway here is don't drain your masternodes. If you do check your run books.
+00:14:08 [W] Our next scenario. Our next case is called Masters out of memory.
+00:14:13 [W] So for this specific incident, we notice our masters CPU usage going up.
+00:14:20 [W] We noticed that the cube API server is going wild and using a lot of CPU and memory rsed resource counts are shooting up and we're getting out of memory errors on our API server.
+00:14:36 [W] And our alerts are firing more alerts are firing and more layers of hiring. So this is a this is a real incident.
+00:14:44 [W] We also realize at least as we dug more into it is that we actually had no assets either when we try to SSH into debug. We noticed a you know, a set of nodes were having real issues and we actually couldn't get in.
+00:15:00 [W] So what is happening here?
+00:15:02 [W] So our API server is a booming and crashing a control plane.
+00:15:07 [W] Those are severely degraded.
+00:15:08 [W] We don't have a SSH access to them.
+00:15:11 [W] We wonder is this a ci/cd problem as a city have an issue because at city is having issues of things would be really bad.
+00:15:17 [W] Parsec also still fine.
+00:15:18 [W] So our response here was to spit up bigger instances for the control plane for the Masters and and this was done just in time because our old is this is actually just completely died and we notice that memory was still getting eaten up super
+00:15:33 [W] At least new instances are much bigger.
+00:15:25 [W] And so for post-mortem we realized this was actually one of our largest clusters that was happening that was having this issue.
+00:15:33 [W] So we were wondering is this a new scaling limitation that we just hit we also realized that incident lined up with a deploy that had dramatically increased their masters value and that deployed was having crashed loops
+00:15:48 [W] That deployed with a high Mark Master Chi value.
+00:15:50 [W] While it was crash leaving, it was actually overwhelming our API server and the takeaway here is restricting Max our church would help protect a cluster and it's a good idea to be ready to scale. Vertically.
+00:16:04 [W] We were lucky that we were able to spin up bigger instances for our Patrol plane to make sure that they skilled.
+00:16:12 [W] But for this incident, we actually still have some ongoing unknowns such as what exactly is a Breaking Point in terms of a pods or Max our church.
+00:16:20 [W] We also had larger clusters in the past before and but we didn't run into this issue. So the question is what is different now.
+00:16:30 [W] And three, why did memory usage actually jump suddenly if you remember from our graphs the API servers were actually using up to a 50 90 gigs of memory, which is odd because SCD, you know can only
+00:16:45 [W] Is a gigs of memory, so what was actually using it all up?
+00:16:48 [W] Authentication in the world that containerization at Airbnb we rely on AWS.
+00:16:54 [W] I am roles as a primary way to authenticate our services.
+00:16:58 [W] This is simple enough in the traditional non containerized world where each ec2 instance can have their own.
+00:17:04 [W] am roll and they can assume that role and make requests the easy to metadata API to receive temporary credentials.
+00:17:12 [W] What happens when you have multiple Parts and Services running within a single instance we could let each pod as you many of the other parts rules or make one big.
+00:17:21 [W] I am rule to encapsulate all of the pause.
+00:17:26 [W] I'll be running on it, but we don't want to give each pod more authentication or permissions than it needs.
+00:17:33 [W] To address this issue. We use an open source project called Cube to IM q 2i m provides.
+00:17:39 [W] I am credentials to Containers running inside a kubernative cluster based on annotations.
+00:17:43 [W] But what does this really mean?
+00:17:46 [W] Well cute William works by running as a Daemon set within the cluster when the Pod makes a request to the ec2 API.
+00:17:54 [W] Keep trying of intercepts the request then using a special.
+00:17:58 [W] I'm role of its own.
+00:17:59 [W] It assumes the pods. I am roll.
+00:18:02 [W] Now kubeflow IM did wasn't perfect. It came with some race conditions.
+00:17:59 [W] So the expect of course of events are as follows with Q2. I am first the notion startup then the cube to iron pot startup then we add an IP table rule to forward requests to the ec2 apis IP address to the cube to I am poddisruptionbudgets.
+00:18:15 [W] Then keep to I am starts watching for new pots after which.
+00:18:21 [W] An application spok and startup then Cube to I notice is a new pod cash is the pause IP address to its AWS IMO mapping then finally the container in the Pod can make requests the easy to API.
+00:18:36 [W] What we were seeing was that containers would make requests to the ec2 API before Cube 2 IM have even noticed the Pod come up.
+00:18:39 [W] And because so when kubeflow and receives a request, it would not be able to find the Polish IP address within its own cache and it would just reject the request.
+00:18:51 [W] This was especially problematic with in it containers which would run before all of the other containers so our solution
+00:19:00 [W] Another in it container.
+00:19:03 [W] That's right.
+00:19:04 [W] We made a new and it container called kubeflow.
+00:19:06 [W] weight that would basically just keep pinging the ec2 API until they received a successful response back this works because we hadn't already set the IP table rule before to for request to keep
+00:19:21 [W] We made a new net container called kubeflow.
+00:19:16 [W] I'm wait that would basically just keep pinging the ec2 API until it received a successful response back this works because we hadn't already set the IP table row before to for request to keep to I am
+00:19:40 [W] If you got a successful response back, that means Cube to I am responded successfully meaning it had already noticed the pot come up.
+00:19:49 [W] Now this is only a temporary solution.
+00:19:52 [W] We're currently working on a new authentication scheme by which we have the API server.
+00:19:59 [W] Use its own private key to sign a token and injected into a pot on Startup. Then when the Pod needs to get authenticated. It uses a different API to get credentials for the parts. I am roll using the sign token.
+00:20:13 [W] Then the STS verifies the token signature is valid with the public.
+00:20:18 [W] He's after which after the validation was is complete STS Returns the temporary credentials back to the pod.
+00:20:25 [W] Our main takeaways here is that in the containers are very versatile despite their Simplicity and they're good Solutions, even if they're only temporary
+00:20:37 [W] CPU limit equals number of CPU cores in the note still has throttling.
+00:20:44 [W] So one day we got a message from an engineer asking us.
+00:20:48 [W] Can you explain why we still see throttling when limited set of 36 with only 36 course, how can we exceed 36?
+00:20:56 [W] So it's kind of context on this.
+00:20:58 [W] Let's first talk about how CPU limits work on kubernative.
+00:21:02 [W] Kubernative limit spot CPU usage using Linux has cgroup sand the CFS the completely Fair scheduler.
+00:21:09 [W] With a default scheduling period of a hundred milliseconds and let's say we have in our communities manifest limit set to CPU of a thousand twenty-four million cores that's equivalent to one CPU core.
+00:21:22 [W] This gets translated into lenses CPU that CFS underscore quota of a hundred because we have the hundred millisecond default scheduling period times one core, which gives us a hundred now, let's take a few different scenarios
+00:21:37 [W] a bunch of different scheduling periods
+00:21:28 [W] And then our first scenario, we have one container running one thread and it can run the full hundred milliseconds without any throttling.
+00:21:37 [W] Now let's say the container actually a two threads then thread one and two can run simultaneously 450 milliseconds after which it will get throttled because the combined usage within that container would have reached a hundred milliseconds.
+00:21:51 [W] Now in our final scenario, we have thread 1 2 and 3 running simultaneously and then thread 1 and 2 either terminates or gets the scheduled after 25 milliseconds.
+00:22:03 [W] Then thread 3 can run for an additional 25 milliseconds until it would have reached a full hundred milliseconds of his quota after which the threads from the container will get throttle.
+00:22:14 [W] So in our previous scenario we had in our limits a sepia limit of 36 times 1,024 MillerCoors, which gets translated into a CFS
+00:22:29 [W] So in that case we should be able to run we should be able to run.
+00:22:32 [W] Our threads on all 36 corns for a full hundred milliseconds within that period or within any CFS period and not get throttled at all.
+00:22:43 [W] So to figure out what was going on, we ran a bunch of tests.
+00:22:47 [W] We made one app with a limit of 36 EP You & Me another app with no limits at all.
+00:22:53 [W] And we ran them on different nodes swap nodes and we found that on average they all ran pretty much with the same performance.
+00:23:04 [W] But what was surprising was that despite the similar performance, we actually did see throttling on the app with CPU limits that the 36.
+00:23:15 [W] So our main takeaways here where that some throttling is inherent and is okay.
+00:23:21 [W] And that we should be be more careful of our metrics Docker built-in CPU usage information may not actually be granular enough to capture fully what's going on.
+00:23:31 [W] We also learned that percentage of throttle periods is a better metric than absolute value of periods. Since the latter is very heavily affected by the number of threads running within the container CPU limits. Cause out of memory fails
+00:23:45 [W] CP limits would cause throttling and they do but we are also seeing that CPU limits were causing out of memory kills.
+00:23:42 [W] So here's an example we have in the top left are poddisruptionbudgets.
+00:23:50 [W] After which it was immediately followed by a huge spike in memory usage and eventually an out of memory kill.
+00:23:58 [W] So what's going on here?
+00:23:59 [W] Well, the first reason was that these were Java processes and the jvm garbage collector is intensive and spawns a lot of threats and the more threads there are running concurrently the faster each.
+00:24:14 [W] It's rotted.
+00:24:08 [W] There's too many flags to be concerned with you Carol logdna and can currently see threads with in Java. And these two parameters are used for different stages of the garbage collection, but the
+00:24:23 [W] With in Java and these two parameters are used for different stages of the garbage collection. But the number of threads used for garbage collection for either of these flags can easily exceed the number of threads in the main application.
+00:24:35 [W] and when both you mean application
+00:24:39 [W] And the garbage collector is being throttled. We can have a situation where data isn't being processed and any data that is processed is not able to be freed.
+00:24:54 [W] Our second and third problem was that only certain containers get throttled and the back pressure. We had in place to kind of mitigate. This wasn't working properly.
+00:25:04 [W] So since kubernative he relies on Linux cgroup, s' to implement throttling.
+00:25:12 [W] This meant that certain containers in the Pod can get throttled whilst some other containers aren't in our case.
+00:25:18 [W] We had the main container processing the data get throttled while another container Envoy accepting requests was not
+00:25:27 [W] this meant that we kept this meant that we were continuously accepting requests while we were unable to process them and we were unable to again because the garbage collector for the main container was also in
+00:25:42 [W] In throttle we can free the memory properly either.
+00:25:47 [W] We have back pressure in place to mitigate this to tell the clients to stop sending requests in the event something like this happened, but it wasn't working properly at the time.
+00:26:00 [W] So our main takeaways here be wary of what other processes may be running on the Pod and adjust limits accordingly tune jvm garbage collector threads if necessary and to make sure to have proper back pressure to avoid overloading our services.
+00:26:17 [W] rogge CR cleaner
+00:26:20 [W] at Airbnb we make a lot of Docker images. This data is from 2019.
+00:26:26 [W] And at the time we were making over two million Docker images per day and obviously we can't keep them all but we also can't do something that you've like deleting all the old images because we don't know which images might be in use.
+00:26:40 [W] So we build a service called PCR cleaner that runs as a Cron job every hour and basically all it does is it finds all the images and use
+00:26:50 [W] In the loops through each of our ECR Repose and deletes all the old images except for the ones in use fairly simple.
+00:26:58 [W] And those working great until it wasn't you see our cleaner started deleting images in production.
+00:27:06 [W] And to figure out what's going on.
+00:27:08 [W] Find all images and use function.
+00:27:11 [W] Basically, it would find all the Clusters then keep a list of active images then Loop through each cluster figure out what images are being used by all the pods add to that list and return the list of active images.
+00:27:25 [W] Well the recent change there was an error case and on error it would just return an empty list and you can guess what happens afterwards since our list of clusters is empty.
+00:27:36 [W] It finds no images and returns an empty list of images and
+00:27:41 [W] Back up.
+00:27:44 [W] It would Loop through each repository and delete all the old images except for nothing. So it would just start arbitrarily deleting all the old images.
+00:27:57 [W] And our second mistake was a lack of proper learning Easter cleaner was failing, but we weren't getting a list for that.
+00:28:06 [W] And we also weren't getting alerts for image pull back off errors and production across multiple pots. But once we figured out that this was happening are fixed was to First shut down easier cleaner to prevent
+00:28:21 [W] More images then look for crash looking containers look through ECR cleaner logs and kind of cross reference them to figure out what images were missing and manually rebuild them all on the right. You can see a
+00:28:25 [W] Rebuilding all these images and keeping track and this is only a short snippet of all the images that we had to rebuild and it was very tedious. So, thank you kind teammate.
+00:28:25 [W] and our takeaways here where that the more critical the services the more crucial and through testing and review should be
+00:28:31 [W] and we should have proper error handling and alerts were infrastructural issues.
+00:28:36 [W] And we should also try to make sure that our fixes aren't causing problems elsewhere in this case because we were rebuilding so many images we were causing other people's builds to slow down a lot and we should have
+00:28:51 [W] combat
+00:28:53 [W] Be careful what you break?
+00:28:56 [W] As part of our uncle Readiness goals. We started doing fire drills.
+00:29:00 [W] So this is what they look like.
+00:29:02 [W] Someone would set something up and so the message and our slack channel. So for example, fire drill see is broken and we cannot do a build for ECR cleaner.
+00:29:11 [W] We need to ship a new version to production that displays a new law by not start up without relying on see I Evan who is on call disclaimer CIA is not really broken do not panic.
+00:29:19 [W] This is a drill.
+00:29:20 [W] This is only a drill and we did a lot of these we found a lot of bugs a lot of places to improve our
+00:29:27 [W] And our documentation and it was great, but there was one particular fibril.
+00:29:32 [W] pretty interesting, but also pretty insightful.
+00:29:35 [W] And it had to do with the admission controller.
+00:29:38 [W] This was actually one of the first fire drills that I did as a new member of the team.
+00:29:42 [W] So it was meant to be simple basically a change was made in the mission controller to block any creations of a replica set. And it looks something like this. It's a new rule that said if the resource being applied is a replica said
+00:29:57 [W] And the fix is supposed to be simple just finding all working commit and deploy that back onto the test cluster that we were using and that's exactly what I did and that was that and it was all going fine until
+00:30:07 [W] The same person who had made the fire drill synthesis in our team Chad.
+00:29:58 [W] I deployed onto the test cluster but it's as if that mission controller didn't get deployed even though the deployment through has anyone seen that before. Well, I didn't know the time but as it turned out I had seen it before when I went back to
+00:30:13 [W] old commit I thought the deployed gone through but a mission controller didn't actually get the ployed what happened was that there was a bug and our deploy process reporting success for failed employees specifically
+00:30:26 [W] Controller in this case, but why was a mission controller failing the first place?
+00:30:30 [W] Well, it was because the mission controller was not white listed by the mission controller this meant that since the emission controller was blocking all replicas sets.
+00:30:41 [W] It was also blocking itself from being deployed.
+00:30:44 [W] So we were locked out.
+00:30:46 [W] So our solution just delete the validating web configuration for the initial controller.
+00:30:51 [W] And that way we should be able to bypass the mission controller step but this didn't work either and that's because when a request is sent to the API server, it goes through a bunch of steps eventually lands on
+00:31:06 [W] up at which point it takes a look at the validating webcam figuration resource, which is why we have deleted to figure out what what books they should get confirmation from
+00:31:15 [W] but as it turns out on our in Mission controllers deploys, the evaluating web configuration is applied before the web of the web hook this meant that by the time it got its for us to update our web hook which is where the bad
+00:31:30 [W] The validating webassembly Corporation has had already been replaced.
+00:31:28 [W] So the actual solution just nuke the whole thing.
+00:31:32 [W] Delete the mutating a mission controller webiconnnn, you lead the deployment and then redeploy the entire thing from scratch.
+00:31:40 [W] So our takeaways here double-check that your deploys actually went through make sure that the thing that controls your deploys can actually fix itself with another deploy be aware of kubernative apply ordering and that even the symbol fire drill can reveal a lot of
+00:31:55 [W] And tldr never never write a rule that blocks all replicas sets.
+00:31:53 [W] All right to recap some of our top 10 Tech ways are what do Test new features and test clusters to be aware of the existence of mutating mission controller three.
+00:32:06 [W] Remember to non pays paths or whatever new pads. You might be Paving.
+00:32:12 [W] For don't drain your masternodes 5 be ready to scale vertically.
+00:32:19 [W] and it containers are versatile despite the Simplicity and on good Solutions, even if they're only temporary some throttling is inherent and is okay be wary of what other processes may be running on the pot and then just limits accordingly have proper error handling and alerts for infrastructural issues
+00:32:34 [W] You aware of communities apply ordering.
+00:32:33 [W] Right.
+00:32:34 [W] Thank you everyone.
+00:32:35 [W] This is the end of our presentation. If you would like to learn more check out our engineering blog.
+00:32:40 [W] Airbnb is also still hiring and a lot of the work we share today.
+00:32:47 [W] We're not done by just me or me or Joseph.
+00:32:50 [W] Joseph. It was all done by our wonderful team. So if you would like if you would like to work with us reach out apply.
+00:32:59 [W] And if you have any more questions, feel free to contact us to follow up. Thank you.

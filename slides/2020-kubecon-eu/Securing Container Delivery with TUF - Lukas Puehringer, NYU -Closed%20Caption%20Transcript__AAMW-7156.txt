@@ -1,0 +1,146 @@
+﻿Securing Container Delivery with TUF: AAMW-7156 - events@cncf.io - Tuesday, August 18, 2020 6:54 AM - 90 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:10 [W] Hello, and thanks for tuning in to my talk securing containerd delivery with tough.
+00:06:33 [W] My name is Lucas prodyna and I'm a software engineer and researcher at New York University's secure systems lab, which is led by Professor just in Cabos.
+00:06:39 [W] I'm recording this talk today in my hometown Vienna in Austria and although I would really like to give the talk in Amsterdam and meet some of my colleagues from New York and from the rest of the world.
+00:06:55 [W] That I can still present today remote key and given that I work from Austria for it United States University.
+00:07:06 [W] I'm somewhat used to working remotely and sometimes I even get help from my newborn son my work deals with software supply chain security the past four years professor kapos and Santiago Torres
+00:07:19 [W] He received his PhD degree for our work. We created a software splicing security framework in-toto.
+00:07:28 [W] In-toto is just as tough hosted within the cncf and just stuff in-toto. Make sure that the software you install is the software you actually want to install and not a tempered version of it.
+00:07:44 [W] In-toto does so by creating a verifiable trays from the first lines of code until deployment or installation and tough takes care of the delivery. So the real difference between those two Frameworks
+00:07:59 [W] supply chain where they operate on
+00:08:02 [W] Today we're going to look at tough. As I said tough six care of delivery so that the software comes to the client. The client may be a person who installs the plenary package from
+00:08:20 [W] Comes to the client the client may be a person who installs the primary package from his or her programming language package manager, but it can also be a serverless.
+00:08:27 [W] his or her programming language package manager, but it can also be a server that deploys a containerized image for production,
+00:08:36 [W] deploys a containerized image for production
+00:08:37 [W] But let's so tough really works with any existing infrastructure.
+00:08:43 [W] It's really to put it very in a very simplified way.
+00:08:50 [W] It's really just a bunch of metadata files and cryptographic keys and the knowledge how to modify those files and sign them on the server and how to interpret verify them on the client,
+00:09:02 [W] Chef metadata files and cryptographic keys and the knowledge how to modify those files and sign them on the server and how to interpret verify them on the client, but we'll talk more about this
+00:09:04 [W] About this later.
+00:09:06 [W] I want to take a step back first because the story usually doesn't end with installing software once on the client.
+00:09:14 [W] You also want to keep it up to date and as the name of tough suggests, this is what we're interested in but why do we care about updates updates?
+00:09:27 [W] not only allow us to roll out new features and use new nice Hardware its it also
+00:09:34 [W] Updates it also fixes security issues and bucks.
+00:09:43 [W] So updates by itself is very important for security.
+00:09:45 [W] I have an example here.
+00:09:47 [W] where a recent iOS update fixes quite scary privilege escalation vulnerability.
+00:09:54 [W] and this is also by Security Experts agree that one of the most important things that you can do to keep your infrastructure safe is to always keep software and systems up to date
+00:10:10 [W] And the update infrastructure is also very attractive Target for attackers because a single successful compromise can have impact and affect thousands and millions.
+00:10:25 [W] And users yet users to install apps and smartphones on their desktop computers, or as I said earlier on a production server.
+00:10:38 [W] So these things not only happen in theory.
+00:10:46 [W] Here's a little list of platforms and products who all had their publishing infrastructure compromise, the effects were varying, but I just
+00:11:00 [W] And it's these things do happen.
+00:11:03 [W] So we do need to have a plan p at Langley for when a compromise happens a very natural approach for many would be to just sign it.
+00:11:16 [W] There are a couple of common approaches one would be to sign the communication Channel using transport layer security, which is really great for protecting against man in the middle attacks, but the problem
+00:11:32 [W] One would be to assign the communication family using transport layer security, which is really great for protecting against man in the middle attacks.
+00:11:34 [W] But the problem is that TLS heavily relies on a single key.
+00:11:45 [W] So if a if an attacker breaks into the server, then they can serve you whatever they want.
+00:11:48 [W] I'll buy it over a secure Channel.
+00:11:50 [W] Another approach that does involve offline Keys is GPT.
+00:12:00 [W] Typically has the problem of distribution and revocation of keys.
+00:12:13 [W] So even if you regularly go to key signing parties, which I'm sure you all do then how do you know which key is authorized to provide signatures for which package and how do
+00:12:22 [W] Things as signature threshold where you want multiple signatures from different keys to provide to provide guarantee for a package.
+00:12:36 [W] So gpg has a couple of usability problems.
+00:12:39 [W] There's even research about this.
+00:12:43 [W] So now we can just sign it.
+00:12:46 [W] We need a little bit more than cryptographic signatures.
+00:12:47 [W] And tough offers to make more tough does not only protect against wide-range of attacks.
+00:13:00 [W] It also reduces the impact for when it come from compromise happens and the allows you to recover from it.
+00:13:08 [W] And this is really what distinguishes stuff from other protective measures the compromise resilience.
+00:13:11 [W] Let's take a quick look at how tough that's this.
+00:13:18 [W] So it follows a couple of principles. For instance. It separates responsibilities. You have different keys for different responsibilities. So one key is compromised then
+00:13:33 [W] Operation is chapter diced.
+00:13:37 [W] Separating responsibilities also allows us to to give different weights to different responsibilities for instance high-impact responsibilities.
+00:13:52 [W] Get very secure offline keys on the other hand. If we need online keys for instance due to availability concerns, then we give them low-impact responsibilities.
+00:14:04 [W] Another mitigation technique to reduce the impact of a compromise our signature threshold.
+00:14:15 [W] So I mentioned this earlier when I talked about GPT.
+00:14:19 [W] It's a little bit like having different keys for different responsibilities, even within one responsibility. We can encode thresholds in tough to say for this responsibilities.
+00:14:30 [W] I want and different signatures from different keys.
+00:14:32 [W] So these are all techniques to mitigate the impact of a compromise. And another thing that stuff has built-in in its Core Design is the way to recover from a compromise when a key is lost or stolen.
+00:14:49 [W] We need a way to tell our clients to not use the key anymore and instead use a different one and tough as ways to do explicit and implicit here occasion.
+00:15:04 [W] We'll talk about that in a minute.
+00:15:09 [W] Let's first talk a little bit more about those responsibilities imagining all the time.
+00:15:11 [W] So tough responsibilities or roles as we call them.
+00:15:17 [W] There are four of them.
+00:15:23 [W] There is the targets role which takes care of the Integrity of Target files in tough Dragon. We call Target files that application binaries or container images or
+00:15:36 [W] You're interested in that we want to have faith and there is a specific role for that.
+00:15:42 [W] It's dedicated to guarantee their their integrity.
+00:15:48 [W] Then there is the snapshot role taking care of consistency of the overall repository the timestamp role taking care of freshness and a route role that the takes care
+00:16:00 [W] It serves as the root of trust for all of these roles these roles all probably look nice and reasonable but also quite abstract. At least when I first started to work on tough.
+00:16:16 [W] it was hard for me to extrapolate to to how this really looks in code and an implementation in I already said this earlier that it's just a bunch of metadata files and
+00:16:31 [W] very over simplified way.
+00:16:35 [W] This is true.
+00:16:38 [W] So for each of these roles and tough you have a specific metadata file for a targets file. You have pockets metadata for the targets role. You have targets metadata for the snapshot
+00:16:50 [W] And in a very over simplified way, this is true.
+00:16:51 [W] So for each of these roles and tough you have a specific metadata file for a Target file. You have pockets metadata for the targets role. You have targets metadata for the snapshot rolling
+00:16:52 [W] And so on in the case of targets and targets role they can be more than one metadata files, but for the others, there's usually only one let's look at each of those files and see what they
+00:17:07 [W] Only one let's look at each of those files and see what they contain and how they protect the software update infrastructure.
+00:17:13 [W] First let's take the targets metadata.
+00:17:17 [W] Target's metadata is responsible for the Integrity of Target files.
+00:17:24 [W] I said this earlier it does so by listing each of the target files on the repository for instance here in this example.
+00:17:33 [W] We have the python package beautiful soon, which helps you to parse HTML pages and to protect its Integrity. It lists its hash.
+00:17:46 [W] So when you download the package you can compare it to the hashicorp.
+00:17:47 [W] Data and know if it's the nine package work and proportion of it.
+00:17:53 [W] This protects you against or this is called an arbitrary software where an attacker just replaces the package with a malicious one.
+00:18:05 [W] This is probably the most scary attack.
+00:18:06 [W] The targets metadata had also has a length field for each of the Targets target files.
+00:18:21 [W] This protects against endless data attacks where where an attacker breaks into the repository and serves the client really huge file to crash their artist for instance.
+00:18:32 [W] Responsible for consistently consistency of targets metadata and thus for Target files here.
+00:18:52 [W] We only have or it does so by list listing the latest version of the targets meta data in the repository in this example. We only have one targets metadata file listed here, but usually
+00:19:03 [W] Real world.
+00:19:07 [W] There are often more targets metadata files to encode complex trust delegations, which are out of scope for this talk but having all these targets metadata files and attacker.
+00:19:20 [W] Channels, which are out of scope for this talk but having all these targets metadata files and attacker won't be able to serve an inconsistent State even with
+00:19:25 [W] able to serve an inconsistent State even with may be benign different versions of
+00:19:28 [W] of packages that together break the client so that's an exact match attack.
+00:19:39 [W] Then we have the timestamp metadata times. The metadata is responsible for the freshness of snapshot metadata, and thus targets metadata and does Targets target files.
+00:19:51 [W] it does so by always listing the latest version of Snapchat metadata on the repository and also having a very short expiration period This is called implicit rotation because the client will
+00:20:07 [W] Regularly regularly discard old times the metadata and request request new one.
+00:20:23 [W] So a client won't be able to launch a freeze attack where an attacker won't be able to launch a freezer tape where they quick the client or make the client belief that there are no more
+00:20:33 [W] We saw earlier in this.
+00:20:37 [W] In this slide about the iOS update all software is often vulnerable software.
+00:20:46 [W] So it's important to always keep our client.
+00:20:47 [W] to always inform our client about new updates as similarly a similar attack is the role but back attack times them uses a version number for itself
+00:21:03 [W] It's when an attacker serves older metadata file than the current one.
+00:21:15 [W] It might not have yet been expired and to protect against that we have a strictly incrementing version number and times them and also in the other metadata files for redundancy.
+00:21:24 [W] I left this out to keep it brief and simple here, but the idea is to only allow higher version numbers whenever
+00:21:34 [W] we update a metadata file.
+00:21:35 [W] And last but not least we have the root metadata file.
+00:21:41 [W] It serves as root of trust. It has a built in public key store.
+00:21:50 [W] That means it lists all the keys that are used for signing metadata in TUF TUF enabled system.
+00:22:02 [W] Only the public portions of those a symmetric keys, of course and the client can use the
+00:22:06 [W] He is to verify the metadata furthermore lists.
+00:22:13 [W] It has an entry for each of the roles here.
+00:22:18 [W] I only showed targets role but it also has an entry for snapshot times then stamp and root itself where it Maps the keys from the key store to the role and by an ID.
+00:22:28 [W] Stroller. So for for instance in this example, we require at least two valid signatures for targets metadata using any of the key ideas defined here.
+00:22:49 [W] So if the key is compromised and we talked about this earlier it's happens if the key is compromised then we just need to update the metadata.
+00:23:05 [W] Add a new key to it to the key store and replace the assignment in the role entry.
+00:23:21 [W] So here we just remove the old key ID for that's authorized to provide signatures for the targets role and at the idea of the new key.
+00:23:26 [W] This is called explicit rotation. This even works for the route metadata itself.
+00:23:31 [W] It's a little bit more complicated, but you can also just rotate the
+00:23:35 [W] Is the root defines for itself?
+00:23:38 [W] So this is basically that's the Core Concepts of tough. If this all sounds very complicated.
+00:23:53 [W] Theta Dot and then there are plenty of other implementations in other languages that are used for other tough adoptions there is a implemented and implementation rusts.
+00:24:19 [W] There is an implementation in go.
+00:24:28 [W] I think there's also one in oh camel and yeah, there are used by a very various organizations to secure the updates AWS for instance just released their bottle rocket OS earlier this
+00:24:34 [W] This year which is based on tough.
+00:24:38 [W] Notary be too that's protecting container images.
+00:25:34 [W] Well, there is notary and notary to is currently being signed.
+00:25:35 [W] There is also a fork of tough which is called obtained and it's used widely in automotive industry to protect updates computer components and cars
+00:25:36 [W] Receive funds to make this happen and we invite you are helping to update our reference implementation, which somehow forces us to revise some of our Concepts.
+00:25:49 [W] And at a couple of usability enhancements and also performance optimizations, which is really great.
+00:26:01 [W] And we're also adding new exciting features to our reference implementation such as the ability to sign with Hardware security modules or using cloud storage for metadata and so on.
+00:26:11 [W] If you want to learn more about tough, feel free to visit our website, the update framework dot IO there are links to the specification. There are also links to the software source code
+00:26:30 [W] It's all open source. What we do, please also sign up to our mailing list. It's very low traffic, but we announced our
+00:26:42 [W] Our monthly community community meetings there where everyone was interested in tough or things that tough might be a good addition to their infrastructure is welcome to join.
+00:26:58 [W] To thank you for tuning in again.
+00:27:04 [W] I'd also like to thank my colleagues for working with me on this in particular.
+00:27:11 [W] I'd like to thank Josh a lock from VMware who has been a lot of help lately in making enhancements to the reference implementation of tough.
+00:27:22 [W] I'd also like to make a quick announcement that Santiago Torres will be giving a talk about in-toto in-toto.
+00:27:28 [W] In an hour here in Virtual coupon, so make sure to check that out too.
+00:27:37 [W] And yeah stick around for the virtual Q&A and talk to you in a bit.
+00:27:42 [W] Thank you.

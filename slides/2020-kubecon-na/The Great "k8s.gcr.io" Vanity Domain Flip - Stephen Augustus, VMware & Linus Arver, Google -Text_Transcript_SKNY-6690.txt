@@ -1,0 +1,265 @@
+﻿The Great "k8s.gcr.io" Vanity Domain Flip: SKNY-6690 - events@cncf.io - Thursday, November 19, 2020 5:42 PM - 34 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello.
+00:00:00 [W] Hello Cube Khan and welcome to the great Kate statue. Cri-o. Vanity domain flip.
+00:00:08 [W] My name is Steven Augustus.
+00:00:09 [W] I am a senior open source engineer at VMware.
+00:00:23 [W] Hello.
+00:00:24 [W] hello team kind and welcome to the great Kate statue.
+00:00:29 [W] Cri-o. Vanity domain flip.
+00:00:32 [W] My name is Steven Augustus.
+00:00:33 [W] I am a senior open source engineer at VMware.
+00:00:37 [W] I'm also one of the Sig release co-chairs and a kubernative release manager. So we're generally responsible for maintaining all of the infrastructure as well as pushing all of the kubernative that you consume day to day.
+00:00:54 [W] And hello, my name is Linus Harbor. I'm a software engineer at Google I/O and the main author of the containerd membership of water, which will be getting into more later today.
+00:01:05 [W] And I also contributed the working group for kids infra we do lots of different things.
+00:01:10 [W] The image promoter will is probably one of the biggest project that happened recently in this group.
+00:01:17 [W] So a quick overview of what we're going to be covering today. We're going to be talking about
+00:01:23 [W] At the historical context and the rationale for image promotion and the vanity domain flip over all the infrastructure changes that are required.
+00:01:33 [W] So walking you through how the container image promoter works as well as how its tested and then finally some lessons that we learned along the way.
+00:01:45 [W] So what is Kate's not GC r dot IO Kate's touchy cri-o is a vanity domain or human friendly name that essentially points to a folder within a Google container registry,
+00:02:00 [W] In our case in the before times, we're looking at TC r dot IO / Google containers.
+00:02:07 [W] And today we're pointing to Kate's - artifacts - prod, right?
+00:02:14 [W] So the so why why a vanity domain name, right? This allows us to make infrastructural changes behind the scenes with minimal and hopefully no downtime to operations that depend on these images.
+00:02:29 [W] Is something that hopefully you didn't notice it happened in July and and yeah, that's what we're going to talk all about today.
+00:02:35 [W] So here is a highly scientific diagram of how we've done the container.
+00:02:42 [W] Which flip if you imagine changing a DNS record, you kind of stand up the old thing, you know stand up the new thing and slowly move traffic away from the old thing and you know that culminated in essentially
+00:02:58 [W] the backing of the backing Registries for that that vanity domain name, but is that it there were some infrastructure improvements that we had to do that were absolutely not trivial but
+00:03:08 [W] Improvements that we had to do that were absolutely not trivial, but fortunately I gave us an opportunity to improve the the way we do production images the way we test these images
+00:03:18 [W] Images improve the overall security posture of the project including things like essentially business continuity right knowing that we can we can create backups we can recover from
+00:03:33 [W] We can we can create backups. We can recover from those States and we're able to audit all of the changes that are happening in that system.
+00:03:42 [W] so - is going to jump into more details on the historical context from the Google side.
+00:03:51 [W] They save and so yeah, the entire process probably took around two years.
+00:03:57 [W] So the initial idea of promoting images based on the configuration internally at Google while we're still in the old pleasing the old Google containers folder that happened in 2018.
+00:04:13 [W] And then between 2018 2020 we basically did a career right of the internal promoter for the open source Community.
+00:04:23 [W] It's basically the same idea.
+00:04:24 [W] Although it's implemented entirely differently.
+00:04:27 [W] There's also auditing and back us involved which were separate infrastructural pieces and these changes basically led up to the change for the flip which happened in July.
+00:04:40 [W] So why did Google needs an internal promoter to begin with so Stevens kind of hinted at the some of the reasons and it's basically to it was basically to make it more secure for
+00:04:55 [W] All these things basically to give you a little back story at the beginning before the internal promoter existed. We had gruffly 6070 googlers who had production access to modify have write access to
+00:05:06 [W] 60 70 googlers who had production access to modify have write access to production and that was considered a you know, not a good security of practice. So there was basically a mandate saying we to lock
+00:05:14 [W] So there was basically a mandate saying we need to lock this down to you know, very few people.
+00:05:19 [W] Meanwhile, we don't want to you know, make these 60 70 people like unable to push images on their own.
+00:05:26 [W] Let's do something about it.
+00:05:28 [W] So we created a internal bot. Basically that does the pushing of images from staging to production for the googlers.
+00:05:40 [W] So this also made it better in that it was lenses.
+00:05:43 [W] Less human error involved and also made the changes, you know who push which image that auditable into history the source code.
+00:05:52 [W] So this is just basically an illustration of what was happening, you know circuit 2018 before the internal promoters.
+00:06:01 [W] The people were manually copying images related to production that's cool containers at this time.
+00:06:07 [W] And obviously, you know, this was not a great idea.
+00:06:11 [W] I won't spend too much time this slide, but basically we need a change and this is what we did internally.
+00:06:19 [W] So we basically had a production like acts of the bought that has production access of it held the key to production so humans weren't allowed to individually change make changes to production and
+00:06:35 [W] Because of that it made things more secure the history of the changes to production was audible because all the changes to production were done in source code.
+00:06:45 [W] This is kind of like, you know configuration as code that concept and we also had presubmit checks.
+00:06:53 [W] For any new changes going in into the promoter manifest, which the green box you see then that list raishin just to guard against human error and to check that the images are okay and all this other good stuff.
+00:07:07 [W] So fast forward like a year and he's like, you know, like 2019 and basically we decided to do an open source version of the promoter. But you know, we couldn't just copy paste the code from Google's code
+00:07:22 [W] You know get her to donate it because I mean we could have technically but it wouldn't have worked anyway, because we needed performance guarantees that really weren't there because yeah,
+00:07:22 [W] Completely different if you would call the Platinum earlier. Basically, it's an image copy, but for the internal ex-google case, we were talking about a handful maybe a couple hundred images, but for the open source case
+00:07:29 [W] A handful maybe a couple hundred images but for the open source case, we're talking about like everything and also where the open source version tracks a lot more images roughly 30,000
+00:07:43 [W] Roughly 30,000 unique ones to be exact.
+00:07:46 [W] So the Manifest is like, you know, basically that much bigger.
+00:07:52 [W] there's a lot more steaks at the or intent that is track. So to do that we have to be writing a go. It takes roughly 30 seconds or a little bit less than that to read all of these images from
+00:08:08 [W] It takes roughly 30 seconds or a little bit less than that to read all of these images from TCR, which is a reproduction repository and to kind of reference that against the Manifest to do the promotion. So that's pretty
+00:08:23 [W] Pause Tory and to kind of reference it against the Manifest to do the promotion.
+00:08:28 [W] That's pretty cool.
+00:08:29 [W] Go like makes that a little bit easier because we can use concurrency know it's very easy to do there in that language.
+00:08:37 [W] I'll be also talking a little bit about the edge data structure which we use for basically encapsulating the idea of promotions to make it a little bit more easier to reason about because when you're talking about 90,000 like edges or
+00:08:53 [W] Basically, you do need to simplify the problem a little bit to basically make debugging easier.
+00:09:01 [W] So as for the performance optimization, these are the four steps basically so the promoter when it first starts up it reads in images in the programmatic. That's that's the you know stuff
+00:09:16 [W] To four steps basically, so the promoter when it first starts up it reads in images into prodyna manifest.
+00:09:19 [W] That's the you know stuff checked into GitHub by humans currently.
+00:09:23 [W] It's just described the intent of what we need to promote.
+00:09:27 [W] That's the blue circle there.
+00:09:29 [W] It's then reads all the stuff already in production.
+00:09:32 [W] That's the stuff that takes 90 serve 30 seconds roughly and then it does a delta so it removes all the stuff that's already been promoted.
+00:09:40 [W] Voted that's what's in purple and then we only promote what's left.
+00:09:44 [W] That's the blue circle for the eagle-eyed the people in the audience the red stuff here.
+00:09:53 [W] You might ask.
+00:09:55 [W] What's that?
+00:09:55 [W] You know, what do we do there?
+00:09:56 [W] Those are images that are not tracked yet. Basically in the Manifest that used to be a pretty big chunk but we actually added a what's called like a legacy or a backfill manifest to track all those
+00:10:10 [W] As well. So in actuality that's red circle or this red part is pretty much non-existent today.
+00:10:20 [W] So the edges so this is like a pretty simple concept. Basically we treat each Edge as like a Timeless encapsulation of an image copy.
+00:10:33 [W] So the edge has three parts. We have the staging name the production name which are vertices and then we have like a connection between the vertices that connection is populated by the data
+00:10:49 [W] That's pretty simple, but it does make it easier to reason about I'll give you an example.
+00:10:54 [W] So let's say somebody wants to promote from staging to production for this particular image called Foo you might notice that the staging name staging /foo.
+00:11:08 [W] It's a little bit different than the production language that's production past to facilitate the destination and point just slightly different. You might also notice that the tag.
+00:11:19 [W] 1.0 and production is not the same in staging.
+00:11:24 [W] This is kind of by Design like we don't care about the staging tag because we only care about images by their content and every image with unique content are well
+00:11:39 [W] Digest and a digest is unique because it's the you know secure hash.
+00:11:33 [W] So it really doesn't matter what it's named in staging as long as it can find the hash the The Blob so these are the cases that the edge helps
+00:11:49 [W] The Edge helps detect so we check against over rights We're All rights means putting a different image into the same production name or any point.
+00:11:51 [W] That's bad.
+00:11:52 [W] That's the first example on the bottom left there. Like we don't want to promote two different things to the same end point that that's basically, you know a disaster right?
+00:12:03 [W] I mean, you don't want one totally different image to somehow magically replace another one. That would be really really bad. So
+00:12:09 [W] so that's definite. No, however, we don't mind having multiple copies of the same thing promoting to the same end point.
+00:12:19 [W] So that's the bottom right if you have two different staging projects.
+00:12:26 [W] Let's say R and S.
+00:12:27 [W] They both have the exact same image and they both want to promote to the same exact end point of production.
+00:12:32 [W] That's fine.
+00:12:33 [W] In reality. We actually do call these out as well just to reduce the performance.
+00:12:40 [W] Although that is negligible, but it's strictly speaking.
+00:12:44 [W] It's not a bad thing and the middle of the picture there is like a normal case where you know, you have different images from different staging areas going into different promotion or production and points.
+00:12:58 [W] So this is how it really works as an overview. So it gets all the prodyna manifests then creates these edges.
+00:13:07 [W] Well after it reads, you know all the data from production.
+00:13:09 [W] So once we have these edges then we check for illegality ETC.
+00:13:13 [W] That's like the simplifications that where we go from 90,000 like edges possible. And then we just reduce it down to like it's just a handful maybe the 10 or 20 that we need to promote in one's one step or in one.
+00:13:26 [W] Sorry pull request from GitHub. And then we just actually each promotion that's also done in parallel as well because why not?
+00:13:35 [W] There are also two other pieces that I alluded to earlier which is auditing and backups.
+00:13:40 [W] I'll just cover those briefly. So for auditing actually this is an interesting five. So there's a lot of different pieces involved here.
+00:13:51 [W] We use a lot of different Cloud components.
+00:13:53 [W] So the Auditors job before before I get into how it works. The point of the auditor is detect any changes in production that happen outside of the normal system.
+00:14:04 [W] Ocean process. So, you know, you can have a team of people using the promoter like, you know, day-to-day, that's fine.
+00:14:12 [W] But what if somebody has access to production and does something, you know on their own could be you know, and it's a mistake to be a hacker anything any change of you know that happens in production.
+00:14:25 [W] Change so the production registry where all our images are stored it stored in gcp or PCR.
+00:14:18 [W] CR J CI has a feature where you can have any change that happens in GCR, you know get notified pops up.
+00:14:26 [W] So anytime an image gets pushed there any time gets deleted or any time your tag is created.
+00:14:33 [W] All of those things are individual events that pub/sub basically generates if you listen to it,
+00:14:39 [W] It so that's what's happening in Step 1.
+00:14:42 [W] So in this example, there's like a bad image.
+00:14:45 [W] That's a red Docker image there and then because the Auditors listening to pops up.
+00:14:52 [W] It spins up and as soon as it spins up, this is in Cloud run. It pulls GitHub.
+00:14:59 [W] So it says okay. I got this these promoter manifest here. That's the official, you know, everything in the master branch.
+00:15:06 [W] Does this sucker image that I see does it match stuff in this, you know manifest.
+00:15:13 [W] If not, then it's alerts are reporting which is another Cloud component.
+00:15:19 [W] If it does match the nothing happen the error reporting then gets fed into the slack datastax channel for this but you know, I didn't I kind of ran out of room.
+00:15:28 [W] don't want to add in too many things in this slide. So so that's how that works.
+00:15:34 [W] This these promoter manifest here. That's the official, you know, everything in the master Branch. Does this sucker image that I see does it match stuff in this, you know manifest.
+00:15:38 [W] If not, then it's alerts are reporting which is another Cloud component. If it does match the nothing happens the error reporting then gets fed into the slack datastax channel for this but you know, I didn't
+00:16:30 [W] Send this is pretty simple.
+00:16:31 [W] We would run it every 12 hours.
+00:16:34 [W] There's a full copy of production in a production started in of backup registry.
+00:16:40 [W] That's I guess there are a couple things here to know.
+00:16:44 [W] Well the main thing is that due to quota constraints.
+00:16:50 [W] initial implementation of the backups was actually a bit naive so we try to do a full snapshot snapshot of all 30,000 images.
+00:17:00 [W] Every time and that's basically ate up all of the quota for GCR read like The GCR API only allows you to read, you know certain number of or phone has a lot of to make a certain number of API calls
+00:17:15 [W] Unlike per day.
+00:17:16 [W] there's different limits.
+00:17:17 [W] So when we first did our version of this the backup job was eating up all of the quotas. So we actually brought down like the prow jobs and stuff that was running. So sorry about that crapine, but we've since fixed it. We just do incremental
+00:17:32 [W] Today the I guess the other thing to note here is that production only grows. We never delete images because deleting images in production would be a very bad thing because kubernative as you know is used worldwide.
+00:17:43 [W] So you never know who is using which image at which time so by that reason we always add never subtract or you know change or modify.
+00:17:49 [W] So that kind of makes the backups easy because you know, you only get more stuff in production and only grow so every time you do a snapshot you really only need to snapshot new images and just about it.
+00:18:03 [W] You don't need to think about deletions or changes to existing data like all of that is kind of unnecessary.
+00:18:10 [W] Terry but this is pretty simple.
+00:18:13 [W] So that's the overview of the three I guess major pieces and Steve is going to talk about some of the tests that we do here.
+00:18:22 [W] Yeah, so, you know, I think you know, the the natural next step is to ask.
+00:18:27 [W] how do we test all of this? Right?
+00:18:31 [W] And it's pretty simple, right?
+00:18:34 [W] We tested as you would test any go program standard unit tests.
+00:18:39 [W] There is no extra sauce. Just kind of yugabyte
+00:18:42 [W] In the standard go testing Frameworks now the what's a little special about what we do and maybe it's less special if you if you like testing in Prague is there is a custom end-to-end
+00:18:57 [W] Which is built around being able to replicate the actions that we would do moving from staging to Prague.
+00:19:04 [W] What becomes a little trickier about these systems is that when you're operating with a system whose idea is to handle promotion from a essentially non prod bucket to a prod
+00:19:19 [W] But you have to consider as we have to test against endpoints that would look very similarly to prod have the same sort of restrictions that we would place on a prod registry so
+00:19:20 [W] In kind of an ear prod environment where there is there are TCR and point set up pub/sub Cloud run are reporting everything that line is mentioned before as well as a fully replicated backup stackrox.
+00:19:31 [W] And here we're going to see a pretty diagram of what that looks like.
+00:19:33 [W] So again, very very similar to what we saw in the previous slides around and around end-to-end testing instead, right so that promoter, you know that promoters and play.
+00:19:47 [W] there's a staging and a near prod bucket as well as verifications against GitHub cloud cloud run and error reporting to handle the auditing pieces as well as that production.
+00:19:59 [W] backup component or that near prod backup component
+00:20:07 [W] So I'll talk actually about the actual flip. So we just talked about the infrastructure, you know, all the different pieces that were necessary to make this happen to make it more robust more secure all this good stuff.
+00:20:19 [W] But what I want to actual flip the change for that, you know, it's a DNS change basically wasn't rocket science, but that has kind of its own history.
+00:20:29 [W] So I kind of go briefly over what actually happened. So the very first attempt happened on April
+00:20:35 [W] No joke, but unfortunately, this was rolled back.
+00:20:40 [W] It was on a Friday.
+00:20:42 [W] So it was a typical like, you know, it was nice fried after that. We started on Monday and then April 1st, you know, and then Friday it's like oh gosh, you know, what is this weird signal that I see and basically we
+00:20:57 [W] Three short there was a hard work. Sorry hard-coded configuration in our code base. It basically resulted in you know an incident.
+00:21:09 [W] That's where I'll leave it but the good news is that because of that incident.
+00:21:16 [W] We had a lot more eyes on this whole project. So we had a lot more people come in just from the Google side. And also maybe I think we had more people interested in it after this like attempts have been that we catch new undo it. So more people
+00:21:31 [W] More eyes on this whole project.
+00:21:19 [W] So we had a lot more people come in just from the Google side. And also maybe I think we had more people interested in it after this like attempt happened that we cut at the undo it. So more people in the community were like, hey what's wrong, you know anything can do to help so that was a
+00:21:42 [W] Hey what's wrong? You know anything can do to help so that was a cool little cool cool cool event as well call it and then the second event happen or attempt. Sorry happened in June,
+00:21:57 [W] We're kind of cursed or something right because reasons so this was a purely non technical issue. So basically if you recall the new production backing store is a different naming. Well, it's called case on tax fraud.
+00:22:14 [W] It's in a different project different project means it's built differently.
+00:22:18 [W] Basically, it's different credit card.
+00:22:21 [W] So the issue here really is we kind of forgot, you know, the lightness of the change the domain flip is a very simple like, you know pointer flip like that's very easy,
+00:22:36 [W] It kind of forgot was that that little pointer Point millions and millions of API requests like every day.
+00:22:42 [W] It's something on the order of like hundreds of billions by per week or something like that.
+00:22:47 [W] It's huge the huge amount of traffic.
+00:22:50 [W] So what we realize if the last moment there was you know, hey, if we flip this can the new project can that, you know new, you know owner or whatever, you know Community basically, can they
+00:23:03 [W] I paid for it and if they don't have a criminal credits or something set up already beforehand to take all this traffic, you know, what if we automatically shut it down or something because that's how you know, it needs to be worked or something.
+00:23:15 [W] No, that's how most Cloud providers I imagine would work right if you use Amazon and you've just been up, you know, 30,000 be under so easy to you know, and you don't have the money to pay for it. I'm sure they will shut you down. But so in order to avoid that scenario, we just kind of
+00:23:30 [W] But I think we rolled it back immediately.
+00:23:26 [W] I think we spent a few hours a day one.
+00:23:29 [W] It's actually afford a rollout.
+00:23:30 [W] So anyway, yeah, we kind of realized this a few hours in and just you know, preemptively undid it there was no issue there in terms of like technical what we didn't care about any issue and the third attempt
+00:23:46 [W] There was no issue there in terms of a technical like we didn't care about any issue and the third attempt finally happened on July 2 3 4 or X.
+00:23:46 [W] I think it wrapped up in the fourth book. I think that was a Friday.
+00:23:49 [W] But yeah, it took four days.
+00:23:53 [W] four-day roll out so we had to wait but I think yeah true to our intentions at the beginning no systems noticed this so it was a nice like, you know.
+00:24:05 [W] Under the radar chain, that's how it's supposed to work.
+00:24:08 [W] That's what the bad guy domain name is 4 so that was a nice moment when we finally realize that it did work, you know on the third attempt.
+00:24:21 [W] So yeah, go ahead.
+00:24:23 [W] Yeah. So again with a summary of a incredibly simple process wouldn't you say Linus from from one registry to another but it again begs the question.
+00:24:42 [W] So yeah, go ahead.
+00:24:44 [W] Yeah. So again with a summary of a incredibly simple process wouldn't you say Linus from from one registry to another but it again begs the question.
+00:25:12 [W] it
+00:25:16 [W] and no it's not it's not so for us to be successful in this endeavor.
+00:25:21 [W] Lots of work had to happen in the community kind of adjacent to the build out of the container image promoter.
+00:25:29 [W] So some of that working included developing tooling for staging projects, right staging projects are fundamentally a newer Concept in the community rate given given the given the background of minuses is told you about
+00:25:45 [W] The pushing artifacts to pushing artifacts to Google containers kind of involved finding the right person who had access to do it at any point in time.
+00:25:57 [W] The release process is a little different because the release process has the keys that it needs right into the Google containers registry, but for everyone else for every repo across the multiple kubernative
+00:26:12 [W] Kubenetes client so on and so forth all of these organs need a way of being able to produce images and and have those promoted within within GitHub and within GCR, right? So
+00:26:28 [W] To our trusty friend bash. I think, you know some a lot of clever bash was written to enable us to generate generate new staging projects as well as delegate I am to
+00:26:36 [W] Component of the the various owners of code Sig Sig chairs and Technical leads as well as some project owners to have that to grant them access to write to the staging projects.
+00:26:49 [W] To wire automation to write to these station projects.
+00:26:51 [W] So the second component of that is well now that I have access to push to one of these projects, how can I do it in a safe way?
+00:26:59 [W] How can I ensure that?
+00:27:01 [W] What I'm doing is it's not looking backwards.
+00:27:05 [W] not doing something similar to what would have happened prior to the image promoter existing. Right? And the way we solve that problem is a combination of prowl.
+00:27:17 [W] Nation of prowl and which is the kubernative and several other projects in the ecosystems ci/cd solution as well as Google Cloud build, right?
+00:27:30 [W] So Google Cloud build and a cloud build a camel file in your repos a common way to maybe that's hooked into a make Target or a bash script that you've written that essentially tells us our tells
+00:27:46 [W] Other projects in the ecosystems ci/cd solution as well as Google Cloud built, right?
+00:27:51 [W] So Google Cloud build and a cloud build a camel file in your repos a common way to maybe that's hooked into a make Target or a bash script that you've written that essentially tells us our tells
+00:28:23 [W] GCB how to build your image and how to push it to your staging repository what we get out of this is an opportunity to again be able to audit some of these changes that are happening right?
+00:28:37 [W] These changes are no longer happening on a developer's laptop.
+00:28:40 [W] They're happening as a result of a PR being improved and merged within a component area and subsequently a proud job kicking off a post submit after that PR has emerged.
+00:28:52 [W] And which kicks off a GCB our Google Cloud build job that eventually pushes this image, right?
+00:29:00 [W] Finally you bring the human into the process and you have you have them generate a it manifest for promotion or an update to a manifest for promotion.
+00:29:10 [W] Lots of bash script clean up bash is pretty popular and our release process runs on about 5,000 lines of Bosch, which is kind of changing every day.
+00:29:23 [W] So in addition to that we had to make sure that the components that we had already built out.
+00:29:28 [W] We're able to support pushing into a new registry again lots of Hard coded references to consider. So maybe a few quarters of work and testing across across the release
+00:29:43 [W] To wire some of that stuff up.
+00:29:48 [W] So what's next right lots of exciting discussion around tooling and how we how we get all of this done?
+00:29:57 [W] It's always good to look into the future get a idea of what we want to accomplish next with this tool.
+00:30:05 [W] Right? And I think ultimately we want consolidation. Right? We have we have a promo box tool that was also written for file promotion, right? So very similar.
+00:30:18 [W] Concepts you'll see some of the some of the same Concepts happening within file promotion that happen on the image promotion side and they're similar enough that they should be Consolidated, right? So we are we have started work on building one tool
+00:30:33 [W] Offer promotion for file and image promotion.
+00:30:24 [W] We're working on D duplicating the release engineering libraries.
+00:30:28 [W] So lots of great work has happened on the image promotion side on the file promotion side.
+00:30:33 [W] And as well as the kind of elimination of bash scripts to run the release Engineering Process, so bringing all of that knowledge together in common libraries for all of us to reuse now.
+00:30:47 [W] Google has recently announced the artifact registry.
+00:30:50 [W] Three which is going to be the next generation of the Google container registry.
+00:30:55 [W] So we need to make sure that the tools that we use support any new apis and and that we're present around any potential deprecation cycles that we need to consider, right?
+00:31:09 [W] We want to make sure that when if we need to do this again, we do it in a safe way.
+00:31:14 [W] it in a way that minimizes downtime for the community and for the consumers and then image
+00:31:21 [W] Inch vulnerability scanning coming soon.
+00:31:24 [W] We have active work on that and finally, you know Finding finding people who are interested in this kind of work and and, you know, welcoming them into the community to do release engineering work to do work around this these
+00:31:39 [W] And then image image vulnerability scanning coming soon.
+00:31:36 [W] We have active work on that and finally, you know Finding finding people who are interested in this kind of work and and and, you know, welcoming them into the community to do release engineering work to do work around this these
+00:31:59 [W] All town over the last few years.
+00:32:04 [W] So I'll talk a little bit about the Lessons Learned here.
+00:32:07 [W] So, you know, it's a big project.
+00:32:09 [W] What did we learn?
+00:32:11 [W] So basically infrastructural changes or Legacy code?
+00:32:16 [W] I mean, I don't call don't think the existing, you know release engineering baskets and whatever the Legacy code. Well it works but tweaking the small bit of that that's even said just little references and stuff that takes time because you have to
+00:32:31 [W] Got it, right so that was really hard but the reward I think are worth it because it's so much simpler. Now anybody who has an interest in contributing New Image and stuff that can just come in and make a PR get a stage of cup project and get their images in
+00:32:46 [W] Forward I will also repeat a quote from Tim hakan our principal engineer for kubernative at Google.
+00:32:49 [W] He said to me as I was writing some of this stuff if it is not tested it is broken.
+00:32:55 [W] You can actually find that in that GitHub like discussion comments somewhere.
+00:33:00 [W] So yeah, that was really eye-opening when he said that you know, and really all of the tests that we have today.
+00:33:09 [W] They really help bring some
+00:33:11 [W] sanity into this kind of chaos of you know, all these images flying around everywhere basically every day and also it takes a village because you know, none of this happened from just one person's
+00:33:26 [W] The other day was other googlers. It was behind the scenes kublr security helping out all of these people like stre GK developers.
+00:33:33 [W] There are so many people that I should actually name here, but I didn't have the time to add them to the slides. But yeah, it really does take a village.
+00:33:42 [W] Sorry for all the people.
+00:33:44 [W] I didn't think I'm gonna forget your name son. I'm going to try well let you live in QA, right we can talk about that on slack with you all later.
+00:33:52 [W] So how you know to wrap we wanted to you know, just give you an idea of how to get involved, right? So again, the container image promoter and the the other artifact promotion tools are tools that are maintained both by
+00:34:08 [W] Release engineering projects release engineering sub-project as well as the working group Kate's info, right?
+00:34:08 [W] So the promotion tooling can be found kubernative Sig image promoter. Some of that tooling has already started to be migrated into affectionately called K release.
+00:34:20 [W] So that's get that Kate's dot IO / release and then there are some of the links and how to contact us, right. So the Sig release the working group Kate's.
+00:34:31 [W] Sarah the Sig release repo as well as where you can find all of the promo promoter manifest that we've been talking about today.
+00:34:37 [W] So thank you again for taking the time to hang out with us at Cube con. It has been it's always a thrilling journey and it's been really exciting to work on this project with all the community.
+00:34:52 [W] the guy

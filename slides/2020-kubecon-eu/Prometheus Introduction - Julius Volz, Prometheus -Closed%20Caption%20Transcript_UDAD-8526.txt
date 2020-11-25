@@ -1,0 +1,314 @@
+﻿Prometheus Introduction: UDAD-8526 - events@cncf.io - Tuesday, August 18, 2020 7:44 AM - 81 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:20 [W] All right.
+00:00:30 [W] Hi, I'm Julius.
+00:00:35 [W] I'm the co-founder of the Prometheus monitoring system. And I also recently created a company around Prometheus called prom labs. And in this session, I'm going to just give an introductory talk about what Prometheus is.
+00:00:39 [W] What are some of the main features and why you might want to use it.
+00:00:42 [W] So first of all, Prometheus is a monitoring system that is based on Purely numeric metrics.
+00:00:54 [W] It cares about the entire chain of monitoring meaning from getting metrics out of things.
+00:00:59 [W] you care about instrumentation, then collecting those metrics storing them and making them useful, you know for dashboarding for alerting and so on and it really doesn't focus on any single part of the stack, but as
+00:01:13 [W] Little from networking devices up to the application layer anything that can expose metrics. Basically, it also works especially well for dynamic Cloud environments, you know, especially in the kubernative
+00:01:28 [W] Oven because both kubernative and Prometheus have mutually good support for each other.
+00:01:35 [W] We also explicitly try not to do everything so we don't do logging or tracing which are important in their own rights, but Prometheus only focuses on numeric values that change over time.
+00:01:52 [W] We allow you to Define alerting rules that might be complex potentially, but they have to be explicit. So Prometheus also doesn't do automatic machine learning style anomaly detection.
+00:02:02 [W] And while Prometheus is local storage is pretty efficient in good.
+00:02:12 [W] It's still tied to a single node. So it's not a horizontally clustered complex durable system.
+00:02:17 [W] It's really geared towards live monitoring.
+00:02:19 [W] So Prometheus started at in 2012 at SoundCloud when Matt proud and myself came from Google to SoundCloud and we found already a cluster scheduler at the company there that was in-house built and this was
+00:02:35 [W] For kubernative very early on and there were no proper OSS monitoring tools that could deal with that situation.
+00:02:48 [W] Well, so we started building Prometheus first in our free time and then more and more on Soundcloud time and we're really inspired by Google's Bachmann when we did that so, you know once
+00:02:59 [W] Somewhat successful at SoundCloud we fully published it in 2015 and then a bit more than a year later.
+00:03:12 [W] We actually joined the cloud native Computing Foundation just after kubernative the first project and you know by now Prometheus is an independent project where many companies are working on it. Basically, you know,
+00:03:21 [W] These are using it all kinds of small startups to huge corporations and you can find Prometheus the project itself at Prometheus I owe you.
+00:03:32 [W] So let's look at the overall architecture of Prometheus for a second.
+00:03:48 [W] So imagine you have some, you know web applications or API servers where you can control the code yourself and you want to monitor these with Prometheus somehow you need to expose metrics to
+00:03:53 [W] Heat so Prometheus actually wants to actively go to the different things you care about and pull metrics over a format that that Prometheus to find.
+00:04:09 [W] So the things that you care about that you want to monitor we call Targets in Prometheus and the best case is when you can actually modify the code of these things include a Prometheus client Library into the code that
+00:04:20 [W] Metrics like counters gauges histograms summaries and then exposes those metrics every time that Prometheus comes by over HTTP now there are some other things where you can't actually do that necessarily.
+00:04:36 [W] Sample, you know you might have an actual Linux virtual machine or the MySQL demon C code base or so things where you can't easily just add a direct Prometheus metric server to so we have another pattern for that.
+00:04:52 [W] That's the exporter pattern where the you run an extra process next to the thing you actually care about that does the translation from whatever the backend Matrix format is to the Prometheus metrics format.
+00:05:07 [W] So in the end then Prometheus knows about all these targets and scrapes these Targets in a regular interval and you might be wondering what does the actual format get looks like
+00:05:25 [W] Over the wire here.
+00:05:29 [W] So let's have a brief interlude about that.
+00:05:32 [W] It's a simple text-based format where every sample of a Time series is on one single line giving you a metric name and then labels that further specify the sub-dimension of what you're measuring and then the actual current
+00:05:45 [W] value so this only always transfers the current sample value that is either being counted or tract or whatever and as you can see this format is pretty easy to produce and we'll talk about the data model in the second more
+00:06:02 [W] Now another question is how does Prometheus know where all these targets are and this is where service Discovery comes in where Prometheus knows how to talk to different sources of truth that tell Prometheus what is supposed to be where and how to gather data
+00:06:19 [W] Once it has gathered the data in a local time series data base. You can then point tools like Griffon are the dashboard Builder or added to create dashboards, or you can use Prometheus has built-in web UI or you could also build automation
+00:06:34 [W] Against Prometheus has query apis to actually do things like Auto remediation or so.
+00:06:40 [W] Finally, you can also use Prometheus to calculate alerts based on the collected data for you and then send those alerts to actual humans or machines via a separate service called a lot manager and
+00:06:57 [W] Late alerts based on the collected data for you and then send those alerts to actual humans or machines via a separate service called a lot manager and typically you would have maybe many Prometheus servers in your
+00:07:00 [W] Have may be many Prometheus service in your organization's but just one alert manager and all the different alerts in your organization come together in a lab manager and get grouped over time across dimensions and so on and then get routed to the right teams
+00:07:13 [W] Mentions and so on and then get routed to the right teams and the right notification mechanisms.
+00:07:15 [W] So I would say the move the 4 main selling points of Prometheus are these for the data model of Prometheus allows you to collect data in pretty good detail about all
+00:07:32 [W] Are in pretty good detail about all the different moving infrastructure and Service Parts in your org. And then we offer you a query language to work usefully with that language to actually ask interesting questions
+00:07:44 [W] Picture off Prometheus is also relatively simple and the single server is also, you know, it can store it can process and store a lot of samples and then the service Discovery integration is the part that makes it work
+00:08:00 [W] It can store it can process and store a lot of samples. And then the service Discovery integration is the part that makes it work. Well in Dynamic environments.
+00:08:06 [W] I will know Joe dive a bit deeper into each of these four parts to flesh them out a bit more. So first the data model.
+00:08:12 [W] Prometheus fundamentally tracks numeric time series so numb numeric values that change over time and you know, they have some kind of identifier and then they we just once we have indexed those
+00:08:28 [W] Prometheus fundamentally tracks numeric time series so numb numeric values that change over time and you know, they have some kind of identifier and then they we just once we have index those identifiers
+00:08:29 [W] We just track timestamp value pairs on an ongoing basis for this identifier. So for example how the temperature in a given room develops over time and all the time stamps in Prometheus are millisecond in
+00:08:45 [W] And all the sample values are float64.
+00:08:55 [W] Even if you just tracking integers this actually compresses really well under the hood and distract nicely.
+00:08:57 [W] So a big difference to other monitoring systems or time series data bases that came before Prometheus is how time series get identified so that we can better query and filter them in the query language.
+00:09:12 [W] This look like the identifier of a Time series.
+00:09:16 [W] Rather than going for a flat single metric name or just a hierarchical data model in Prometheus?
+00:09:29 [W] We identify each time series first by its metric name in this case HTTP requests total and then the you know, this would be the total number of HTTP requests handled in a given type of web server for example,
+00:09:39 [W] And we sup differentiate the different dimensions in which specific process this happened on which specific path in HTTP requests got handled and so on in things we call labels.
+00:09:55 [W] So we have these key value pairs called labels that help us create the sub dimensions and the metric name that tells us the central aspect of a system. We are monitoring.
+00:10:04 [W] Now this data model has the benefit that it's pretty flexible, you know in a hierarchy you hierarchical data model is a bit harder to change after the fact if you add a new dimension for example, and you have to know
+00:10:20 [W] Opponent in a hierarchy actually is for example the path or the status or the instance.
+00:10:29 [W] And in this case, it's completely not order based not hierarchical and you see very explicitly which dimension actually means what
+00:10:38 [W] So now that we know this data model, we also have a query language that goes on top of the data model called prom ql the Prometheus query language and you know, this is a completely new query language.
+00:10:53 [W] It's explicitly not a SQL style language which sometimes irritates people but we still think that the way prom CalWORKs is better for numeric time series computations that you
+00:11:06 [W] systems monitoring then SQL style language
+00:11:11 [W] So let's just look at a couple of examples without diving in too deeply imagine. You have a node exporter running on all the different nodes in your infrastructure giving you file system metrics, for example, the total size of all
+00:11:28 [W] mounted petitions in your infrastructure, and now you would want might want to know give me all the give me all the petitions in my infrastructure that are not mounted on Route and that a larger than a hundred gigabytes of capacity
+00:11:44 [W] Ask these kinds of questions against Prometheus which might not directly be relevant for a lot. But just help you look into your infrastructure.
+00:11:59 [W] So, you know, in this case you would just start by the metric name that gives you the size of all partitions then filter it down with a negative matcher to all all petitions that are not mounted on Route.
+00:12:09 [W] These are still in bytes.
+00:12:13 [W] So now we're dividing by a billion to get to a gigabyte and then filtering in-toto.
+00:12:14 [W] A down to the ones that are actually larger than 100 gigabytes and what you get out of this is an actual labeled list of all the different partitions with their Dimension, so you actually know all the metadata
+00:12:29 [W] Another example, that's pretty common is that you might want to know the ratio of Errors to the total requests.
+00:12:39 [W] So your error rate basically, in this case, you could just select all the 500 status codes requests from a per second rate over them and then you know some some all these requests over all
+00:12:52 [W] Engines path method and so on to get a single number and divide that by all the requests so not only 500 ones.
+00:13:03 [W] This would give you a single output number for the ratio of errors, but often you might want to preserve some dimensionality.
+00:13:11 [W] For example, you might want to see this whole result for every path in your infrastructure or in your service.
+00:13:16 [W] So in this case, you could just take the same expression and add a by-path modifier to the sum which preserves the path dimension in the some on the left hand side and on the right-hand side and
+00:13:32 [W] Prometheus knows how to automatically join the left hand side with the right hand side based on identical labels sets. So they will have the same path label and give you the ratio for every path now and you know, there's more
+00:13:48 [W] Customizability rounds as possible, but this is just a simple example.
+00:13:52 [W] You can also do things impromptu L like without diving too deeply into it like collecting Layton sees request latency Xin histogram and then estimating for example, the 99th percentile latency based on that
+00:14:09 [W] Aggregated over all instances, but still preserving other labels like the path and the method.
+00:14:15 [W] So, you know once you actually learn this language, what can you do with it?
+00:14:26 [W] So you might just start using the expression browser in Prometheus that is built in to kind of introspect.
+00:14:31 [W] what's currently happening in your Prometheus server, so you can show in your infrastructure. You can show things in the table, by the way, excuse me for some of the funds that are bit off. This happened while converting to PowerPoint from Google Slides.
+00:14:48 [W] You can also graph the Expressions that you that you learned and then once you want to build a bit more like serious dashboards, you would typically go to grow fauna and no create dashboards with all the bells and whistles that
+00:15:01 [W] that you learned and then once you want to build a bit more like serious dashboards, you would typically go to grow fauna and no create dashboards with all the bells and whistles that you can save and you can share with your colleagues
+00:15:06 [W] Colleagues in other thing though that Prometheus allows you to do is actually base alerting on the collected data.
+00:15:18 [W] So, you know, whereas previously might have had a separate system for alerting from your time series data base Prometheus integrates all that with each other.
+00:15:27 [W] So first collect everything is time series, and then you can use prompt UL to formulate alerting conditions.
+00:15:30 [W] In this example, we want to alert when there's a path in our service that has a larger than 5 percent error rate.
+00:15:40 [W] So we take the expression that we saw earlier that gives us this ratio of Errors for every path and we multiply it by a hundred to get 2% And then we filter it down by only the ones that are larger than 5 percent and then
+00:15:53 [W] The condition here to say only paths that are in a bad error rate for at least five minutes should alert us and in the end for the paths for which this is true.
+00:16:08 [W] will then get a single alert output element for each of these paths and then an alert manager later on we can actually choose how to group these into single notifications or multiple.
+00:16:18 [W] Now Prometheus itself is operationally pretty simple at least to start out with so it only writes into local storage directly on the file system.
+00:16:31 [W] You don't need a special database or so.
+00:16:33 [W] It's all integrated.
+00:16:35 [W] It doesn't have clustering features. And you know, if you want to have high availability for alerting you just run two of the same Prometheus has that are configured in exactly the same way and they will calculate
+00:16:49 [W] The same alerts sent the same alerts to alert manager and alert manager, then we'll actually duplicate them on their level set. So you will only get one notification in the end.
+00:17:02 [W] It's also written in go which makes it easy to deploy in case you're not anyway using something like darker nowadays with it doesn't matter so much anymore, but it's a nice language to run in the cloud.
+00:17:10 [W] People's ingested per second. And I typically see big promises servers with many millions of series and the local storage also compresses these samples that it collects very well.
+00:17:35 [W] So every numerical sample that actually collects ends up on this typically using maybe one to two bites with all the over head around it.
+00:17:46 [W] So the local storage is good for keeping maybe a couple of weeks or months of data and I do have to mention that you know, some people actually use it.
+00:17:51 [W] It for keeping years of data, but they had then if you want to do that, you have to be really careful not to overload your Prometheus to back up your data regularly, you can create consistent snapshots that you can back up and so on
+00:18:04 [W] At least initially was more designed as a live monitoring system worth, you know couple of weeks or months of data.
+00:18:11 [W] so for people who do want to keep data more durably and long term, there are Prometheus gives you an integration called the remote read and write protocol where Prometheus can send any sample or a subset thereof that it collects
+00:18:29 [W] A gration called the remote read and write protocol where Prometheus can send any sample or a subset thereof that it collects to a remote and point to some kind of bigger clustered durable database
+00:18:36 [W] bigger clustered durable database either through an adapter or nowadays, there's more and more products and projects that actually support this protocol out of the box and then you know on the remote
+00:18:47 [W] And then, you know on the remote end could really be anything and Prometheus can also read back the data from the remote end and to prom ql on it again, and so we have many many different Integrations
+00:19:00 [W] Kind of protocol already for example cortex is an Open Source One or in flux DB or time scale and many others.
+00:19:10 [W] There's also a long-term storage solution that integrates in a quite different way, which is called panels.
+00:19:25 [W] This is pretty close to the Prometheus project as well large overlap with developers and pretty popular in the community.
+00:19:29 [W] This works not using the remote right protocol nowadays.
+00:19:32 [W] it actually starts to support that as well. But the original idea is that you don't use that protocol, but you add a sonosite car to all of your existing Prometheus servers.
+00:19:41 [W] And then the son of sidecar ships any older persistent data on these Prometheus refers to an object storage like S3 GCS or mineral or so, and then you have other Thanos components like the store
+00:19:57 [W] which allow you to get an integrated view over all the recent data in multiple different Prometheus servers all in one query and the object storage which has potentially very very long term data and can be durably replicated
+00:20:13 [W] storage which has potentially very very long term data and can be durably replicated and the Thunders Courier also implements Prometheus has query API so you can just point grow finer added as if you're pointing
+00:20:22 [W] So you can just point Refinery edit as if you're pointing at a Prometheus server and run the same kind of queries.
+00:20:26 [W] Alright, so the last point is about Dynamic environments and making a monitoring system.
+00:20:35 [W] that works well with them.
+00:20:36 [W] So nowadays, you know, we have more stuff happening in the cloud with dynamically created the ends and then on top of that we put cluster schedulers like kubernative and then on top of that we put rapidly moving microservices that I
+00:20:50 [W] Rolled out and taking down again and so on so many many processes that are just moving around a lot and living on different hosts and parts all the time.
+00:21:06 [W] How do you still make sense of this kind of environment as a monitoring system.
+00:21:11 [W] So this again is where service Discovery comes in Prometheus support talking to many different kinds of services Calabrese whether there are more particular to cloud provider or clusters.
+00:21:21 [W] Scheduler or more generic ones, but in all cases Prometheus uses service Discovery for three distinct purposes. The first one is I'm a monitoring system and I want to know what should be there.
+00:21:36 [W] So I can even tell you that something is broken, right?
+00:21:43 [W] The other thing is technically okay. Now, I know something should be there.
+00:21:46 [W] How do I actually go out actively in pull data from it? This information typically comes from the service Discovery in the form of a host and the port for example and sometimes more options and then the third thing if it's a good
+00:21:59 [W] in the form of a host and depart for example, and sometimes more options and then the third thing if it's a good service Discovery like the kubernative one, it will know certain details about the target object that you discovered so it can tell you
+00:22:05 [W] Details about the target object that you discovered so it can tell you, you know, a particular part is in environment equals production part for example, and then it allows you to map that metadata into the actual
+00:22:16 [W] That you collect so you can use it later on in the query language.
+00:22:21 [W] So Prometheus has built-in support for over 10 different Services covery mechanisms by now.
+00:22:31 [W] Yeah, some are 4 BM providers AWS Edge were Google and so on to actually discover instances others are you know for cluster managers for example in kubenetes, you can say stuff like give me every endpoint.
+00:22:43 [W] To actually discover instances others are you know for cluster managers for example in kubernative you can say stuff like give me every endpoint.
+00:22:45 [W] give me every service give me a part give me ingresses and so on and then you have more generic ones like DNS and so on and even a custom plugin where you can build your own service Discovery, if it's not one that is built into Prometheus yet
+00:22:58 [W] If it's not one that is built into Prometheus yet and this works over a file-based watcher mechanism.
+00:23:02 [W] So in conclusion Prometheus is a monitoring system that works well with these Dynamic environments and can tell you what's broken and also allows you to make nice the dashboards and with a data model in the query language.
+00:23:19 [W] It allows you to get really good detailed insight into your infrastructure while being able to use that both for dashboards and alerting and you know, it's implemented in a pretty simple architecture with good efficiency.
+00:23:36 [W] And the service Discovery integration really makes it work well together with Dynamic environments.
+00:23:42 [W] All right.
+00:23:44 [W] Thank you.
+00:23:45 [W] All right.
+00:23:51 [W] Hi now we get to the live Q&A part.
+00:23:56 [W] Some people have submitted questions via the built-in chat in the platform.
+00:24:07 [W] So let's start with the first one. So someone asked can it also be used for SNMP monitoring and also monitoring the devices via.
+00:24:14 [W] Sorry. We are rest API interfaces.
+00:24:16 [W] Is it fully open source, or also Enterprise?
+00:24:18 [W] Of the official exporters that we have in the Prometheus GitHub org, and yeah, you basically provided with a configuration of the network devices that you want to scrape and then Prometheus basically scrapes those
+00:24:44 [W] Through the SNMP exporter. The SNMP exporter is the thing that then actually runs as an MP against your network devices and translates metrics back into Prometheus format.
+00:25:00 [W] rest API interfaces. So generally Prometheus itself can only scrape the format that I showed earlier in the talk this text-based format,
+00:25:11 [W] It's usually easy to convert any rest based interface into this format.
+00:25:20 [W] So you will need to use some kind of exporter. The first thing that I would recommend is going to Prometheus dot IO and in the search bar search for exporters and Integrations very often. You will already find
+00:25:33 [W] Order integration to scrape exactly the type of system that you want to get metrics out of if it doesn't exist yet. There is also something called the Jason exporter if you search on Google for
+00:25:48 [W] Roger this allows you to Define to use like it's basically a generic exporter which you can configure to look at any Jason and point which might be part of a rest API and then
+00:26:04 [W] Holden's in there into Prometheus metrics and of course, you can always build your own custom exporter and then there's a fully open source. Also Enterprise Prometheus. The main project is fully open source, there is no company
+00:26:20 [W] The Source also Enterprise Prometheus the main project is fully open source, there is no company behind it it belongs to the cncf but there are many companies offering different, you know hosted monitoring services
+00:26:29 [W] Bring different, you know hosted monitoring services around it that you know, do long-term storage and time times to prom KL or sometimes doesn't don't and sometimes they integrate alerting in their platform and some some of those
+00:26:40 [W] Our may be compatible with Prometheus and others are their own you can find out more about commercial stuff. If you go to Prometheus iot there is a section called
+00:26:56 [W] Marshall stuff if you go to Prometheus iot there is a section called support and training and there's at least some companies listed there, but there's many more companies, you know offering support around Prometheus.
+00:27:05 [W] Knees, you know offering support around Prometheus. Can you recommend any resources to learn from ql so?
+00:27:13 [W] I think I mean this is a Shameless self plug but a long time ago or while ago, at least I wrote a two-part tutorial, which I many people told me is very helpful if you search for querying
+00:27:29 [W] Ocean on Google there.
+00:27:34 [W] So if you just say coredns Prometheus digitalocean on Google, you will find two parts of a tutorial that is named how to query Prometheus on Ubuntu 14.04.
+00:27:46 [W] So you'll see it. It's not a hundred percent up to date.
+00:27:52 [W] But if you need to understand the language from the ground up, I think that's a good resource to start with and then of course in the commercial support section on our website, you will also find trainings my company does trainings.
+00:28:02 [W] It's Ryan's company robust perception does trainings the Linux Foundation does trainings.
+00:28:07 [W] So we are many many places to learn and YouTube videos and so on.
+00:28:15 [W] Let's see Brian wanted to send me a comment about cervix.
+00:28:17 [W] Okay, so there was one question about in your opinion.
+00:28:24 [W] What what's the best way to integrate Prometheus with old tools like ZX, please if possible show me where I can find out about this.
+00:28:36 [W] Okay, Brian just sent me a link there is okay, Brian. Do you want to put that in as a public answer to that question?
+00:28:49 [W] That would be cool.
+00:28:53 [W] So Brian has a link on zabbix.com that mentioned something about Prometheus integration.
+00:28:57 [W] Okay.
+00:28:59 [W] today
+00:28:59 [W] Okay, so there was one question about in your opinion.
+00:29:00 [W] What what's the best way to integrate Prometheus with old tools like zombies?
+00:29:00 [W] please if possible show me where I can find out about this.
+00:29:01 [W] Okay, Brian just sent me a link there is okay, Brian. Do you want to put that in as a public answer to that question?
+00:29:02 [W] That would be cool.
+00:29:03 [W] So Brian has a link on zabbix.com that mentioned something about Prometheus integration.
+00:29:03 [W] Okay.
+00:29:03 [W] Because I don't know much about data can tell us but there's this many ways to integrate with Prometheus.
+00:29:11 [W] What about the semantics of value in your time series I come from the networking world where we have data models which have strict semantics like mlops and gay.
+00:29:20 [W] Because I don't know much about that because it sells but there's this many ways to integrate with Prometheus.
+00:29:21 [W] What about the semantics of value in your time series I come from the networking world where we have data models which have strict semantics like mlops and gay.
+00:29:22 [W] I am nginx flowmill P fix etcetera by just having a metric names such as HTTP requests total to take your example.
+00:29:31 [W] We lose the semantic definition defines somewhere else how to use the Prometheus metric name while not losing the semantic definition defined somewhere else.
+00:29:40 [W] Yeah.
+00:29:42 [W] So I mean Prometheus itself has a pretty loose schema and data model Prometheus itself doesn't really have a programmatic understanding of what exactly a metric name means.
+00:29:51 [W] And it does allow on a / metrics and points in the in the transfer protocol to attach a type of the metric and the help string and unit now nowadays.
+00:30:04 [W] So the help string would be a human-readable interpretation of a metric name basically saying this is the count of HTTP requests served by this binary or so, and then the type could be a
+00:30:15 [W] Metric or histogram summary or unknown and then the unit is kind of a future thing, which were not really using yet and currently so for the longest time for me to just hasn't done anything with that, but currently we do
+00:30:31 [W] Lee so for the longest time for me to just hasn't done anything with that, but currently we do ingest that data into the in-memory portion of Prometheus and there's an API to retrieve it for give metric names
+00:30:41 [W] Question of Prometheus and there's an API to retrieve it for give metric names for a given Target at its grapes it from So You is can start working with it. So for example in ravana it I think it in the Explorer mode it already
+00:30:51 [W] It's I think it in the Explorer mode. It already shows you the help strings forgiven metric name when you ought to complete it and stuff like that, but it's not, you know deeply integrated into any correctness checks yet or so.
+00:31:03 [W] We are hoping to thread that kind of information more and more through to also remote storage systems that's currently work going on on that and then making more and more use of metadata like that
+00:31:17 [W] In the query language at some point, maybe it's going to take Prometheus 3 dot X or so, but we can do some stuff already in the current major version.
+00:31:31 [W] So yeah, that's the low developing area.
+00:31:39 [W] And yeah, do you have any specific reason or that I got that one?
+00:31:39 [W] Sorry.
+00:31:46 [W] Yeah, there was another popular question and I already talked about Franco. What would you say?
+00:31:48 [W] Say about Prometheus operator. So the Prometheus operator is a tool originally by core OS Now red hat now IBM to run to automatically run
+00:32:03 [W] And it has clusters and I think it's a good thing. I would recommend.
+00:32:10 [W] I mean it's very popular. It's written by people who know both kubernative and Prometheus. Well, so there's a large overlap with the maintainers there.
+00:32:20 [W] And yeah, but I think the majority of people running Prometheus on kubernative who I know off run run at using the Prometheus operator and it's you know, it works very well. It takes a lot of
+00:32:34 [W] details of the day-to-day operation and roll out and so on and versioning of the config file from you as an operator and otherwise, you know, you know, it does introduce another layer of abstraction and another tool that you need to understand and of course if it breaks
+00:32:49 [W] Center operator as well, but it on the other hand.
+00:32:56 [W] It really integrates a lot of the operator of knowledge you need for running Prometheus on kubernative.
+00:33:00 [W] So I like it.
+00:33:01 [W] Hi, do you have a suggestion for tool for automation or structured queries of data in Prometheus other than the web UI or agrafena?
+00:33:14 [W] The art for automation or structured queries, so I mean, so there's one thing that would be plugging my own tool at the moment of my new company prom Labs.
+00:33:30 [W] It's called prom lenses.com Ellie NSD calm which is kind of a power tool at the moment for helping people understand the structure of a complex prom ql query and you know, you can run
+00:33:44 [W] The preview version on prominence.com, but you can also run it in the docker container either with a license or the free version locally against your own Prometheus servers and at least you know, it helps you understand a bit more which
+00:34:00 [W] Old any query select what data where exactly in error is happening and stuff like that.
+00:34:09 [W] Other than that, like ravana is pretty much the standard dashboarding tool that everyone uses and it does have besides the main dashboarding mode.
+00:34:18 [W] It has an explore mode which already is a bit better for just exploring from ql data.
+00:34:28 [W] So, you know looking at metadata and stuff like that.
+00:34:29 [W] Okay, is it possible to send SNMP trap alarms and brine sends me a chat message saying SNMP traps?
+00:34:46 [W] No, but I put links in the question for am web hooks.
+00:34:46 [W] Aha put links in the question is okay Ryan, I guess then you can publish this answer, right?
+00:34:54 [W] And turn off the private mode.
+00:34:56 [W] Or I will just turn off the private mode.
+00:35:03 [W] Let's see, okay.
+00:35:08 [W] I turned off private on that answer.
+00:35:17 [W] Hopefully it will show up now.
+00:35:21 [W] Okay, next question mind. There's many questions.
+00:35:24 [W] It has class to next to the application.
+00:35:31 [W] It is monitoring or on a separate VM.
+00:35:31 [W] hmm
+00:35:33 [W] I mean typically if you want to run if you want to monitor stuff on the kubernative cluster, it's better to run Prometheus in the kubernative cluster itself as well.
+00:35:49 [W] Simply because it's easier to reach all your Targets in the kubernetes cluster your part of that clusters Network and you automatically get the right service account tokens mounted into your
+00:35:59 [W] Medically get the right service account tokens mounted into your Prometheus.
+00:36:04 [W] So it's you know, it can reach all the right things and can it can do Services Calvary easily against the kubernative.
+00:36:07 [W] say Pi server. Of course, then you might be wondering like what is what happens if that entire cluster has an issue then you I would still want to have at least some kind of meta monitor outside somewhere that monitors that this entire cluster isn't
+00:36:21 [W] Of course, but for the applications on the cluster, yeah, I would I would have it would have the Prometheus in the cluster.
+00:36:32 [W] What are the scalability solutions to scrape from thousands of targets streaming or message queues?
+00:36:45 [W] Well, I mean a single Prometheus server can get you quite far up to maybe like a thousand or a couple of thousands of targets if it's a very large server, but ultimately we recommend
+00:37:00 [W] In the Prometheus project to start at some point functionally sharding either shouting your Prometheus installations by the type of service.
+00:37:16 [W] They're monitoring by team but organization or so find some cover kind of natural subdivisions to create multiple Prometheus servers that each scrape a portion of your infrastructure.
+00:37:26 [W] There's also ways of doing kind of kludgy horizontal charting where you have let's say 10 Prometheus servers and
+00:37:31 [W] And they all have the same targets configured maybe ten thousands. But each of them only scrapes 1/10 of those targets, but then you need to build stuff on top of it to kind of find the right one of those
+00:37:46 [W] Or a subset of the data and so on. So that's not the Super common use case.
+00:37:55 [W] There's also a proaches like the Griffon agent for example, which is and there's similar tools by other monitoring vendors, which you put on every host and then they scrape exactly on the targets on that host and
+00:38:07 [W] The Griffon agent for example isn't a fully-fledged Prometheus server. It can only forward it can only forward data that it collects via the remote right protocol to some kind of Prometheus compatible long-term storage.
+00:38:23 [W] But yeah, so, you know, there's there's different ways of functionally shotting and then using Federation and building if you search for scaling and Federation and Prometheus on Google, I think you will find some ways as well.
+00:38:40 [W] And then if you want to get a you know, like a unified query view over multiple Prometheus servers Thanos is for example a good candidate for for establishing that again
+00:38:51 [W] Okay, what is the major difference between using kubernative client library for kubernative say pi and Prometheus?
+00:39:05 [W] I don't understand the question exactly the kubernative client library for the kubernative API, I guess I mean that's just a general client library to do to interact with kubernetes in arbitrary ways
+00:39:22 [W] It is a monitoring system that collects metrics on an ongoing basis from the different metrics and points.
+00:39:33 [W] Yeah, I don't I don't I'm not sure if I understand that question completely.
+00:39:40 [W] What is the what is the best practices to secure the scraping of Prometheus endpoints?
+00:39:49 [W] So for the longest time, there hasn't been any built-in Security on the serving side of the Prometheus.
+00:39:53 [W] Rick's endpoints like if you have an exporter somewhere and the X the official exporters that we offer they wouldn't have, you know, a facility to say listen on https and with a given authentication
+00:40:08 [W] And if you wanted that inside your organization, we always told people.
+00:40:23 [W] Hey, just put an nginx in front with your preferred TLS and off settings. And now finally we're getting to the point where in the note exporter the one that gives you Linux and Unix metrics.
+00:40:27 [W] We're starting to try out integrating that directly the into the exporter because obviously a lot of people want that and that makes things a lot more convenient so you will have in the future.
+00:40:38 [W] Once that goes well in all of our official exporters, you will have built in TLS and basic authentication settings.
+00:40:53 [W] But you know for any support any exposure out there in the world that doesn't support that we still just say yeah secured in any way you want for example, put an nginx in front of it and configure that the way you want and then
+00:41:03 [W] Elf on the scraping side can it does support your as it does support various scrape authentication options Bearer tokens client certs basic auth and so on so that side is already solved.
+00:41:18 [W] All right.
+00:41:24 [W] Can I use Prometheus to scrape the data from Kafka?
+00:41:27 [W] Pretty sure there's a Kafka exporter we grew up.
+00:41:34 [W] So if you go on releases, ìoh Porters and Integrations page you can find it through the search.
+00:41:37 [W] There's a Kafka exporter which you could use for that.
+00:41:40 [W] What protocol does Prometheus use normally to get the metrics? Is it HTTP?
+00:41:47 [W] Yes, it is http.
+00:41:50 [W] So earlier in the talk.
+00:41:54 [W] I showed the payload and that is transferred over HTTP this simple text-based format.
+00:41:59 [W] Thanks for your presentation.
+00:42:02 [W] Could you kindly explain the best practice of Prometheus federation's? Yeah. So Federation is a way for one for me to server to pull over we are not.
+00:42:09 [W] It's grave or roughly normal scrape at least some of the collected times use data from one Prometheus server into another Prometheus server, and it's not meant to work as a full replication mode thing where
+00:42:25 [W] over all the data from one server into another it's rather you like should be used to
+00:42:35 [W] Transfer only specific metrics from one server to another like aggregations for example are very common use case.
+00:42:48 [W] So let's say you have 10 data centers and in each you have one Prometheus server monitoring only the local stuff and
+00:42:51 [W] fitting all the ten data centers data wouldnt directly fit into one Prometheus server. So you could have a global Prometheus server though that federates only the aggregations for each of the ten data centers into a global level.
+00:43:07 [W] So each of the ten per data center or per cluster Prometheus servers would record aggregations over this cluster. So it's fewer time series because it's not anymore for every process and so on
+00:43:20 [W] our cluster some kind of sum over everything and then you could pull that into a global level and this is also one of the ways you can scale Prometheus by building these kind of trees where you have a more Global level and a more local level
+00:43:36 [W] Cool level has all the detail and the global level has the entire world view, but it doesn't have all the detail anymore.
+00:43:49 [W] So this is one one example for Federation, but don't use it to replicate all of the data from one Prometheus server to another because it's not built for that.
+00:43:55 [W] It's not efficient for that.
+00:44:00 [W] You're basically it will fail or you will kill your Prometheus server at least four very large Kuma to service that have millions of series.
+00:44:05 [W] Okay. Is it somehow possible?
+00:44:06 [W] To integrate Prometheus with ice Inga.
+00:44:15 [W] Yes, Brian sent me another link search for in rpe exporter and Ryan. If you want you can add that again as a public answer to that question and make the make the answer and the question public.
+00:44:26 [W] But yeah in rpe exporter for Prometheus is what you want to look for and this energetic in rpe exporter exposes metrics on command sent to a run.
+00:44:38 [W] and rpe Demon
+00:44:39 [W] Okay, is it somehow possible to integrate?
+00:44:46 [W] We had that question.
+00:44:46 [W] Sorry.
+00:44:52 [W] Is it enough to work with Prometheus with python background or is golang preferred for working with Prometheus itself?
+00:44:57 [W] It you don't need to be able to call it at all.
+00:45:17 [W] There's a lot of existing exporters. And if you want to build your own exporter, you can also use any programming language that you prefer.
+00:45:19 [W] So that doesn't really matter.
+00:45:25 [W] Of course. If you want to start developing on Prometheus itself, then at some point you'll probably need to learn go.
+00:45:26 [W] And oh, yeah. Also there's this client libraries official client libraries for tracking metrics and then exposing them in for multiple different languages.
+00:45:43 [W] So for example, you know Peyton there's one and there's Java and they are scho and so on that's Prometheus work out of the box with opentelemetry.
+00:45:52 [W] So opentelemetry is another effort to create client libraries for tracking metrics logs traces and so on.
+00:45:57 [W] And I only know that Richard Hockman one of the Prometheus people from our team has been communicating with them and working with them and the Prometheus or well, it's the Prometheus format is evolving into a
+00:46:12 [W] tree is another effort to create client libraries for tracking metrics logs traces and so on and I only know that Richard Hockman one of the Prometheus people from our team has been communicating with them
+00:46:14 [W] Openmetrics not to be confused with opentelemetry but openmetrics is basically the Prometheus transfer format of the future and it will be one of the supported
+00:46:28 [W] Opentelemetry so yes, they will work together.
+00:46:32 [W] Does it make sense to collect metrics directly via kubernative API?
+00:46:41 [W] What are the drawbacks?
+00:46:44 [W] So again, I'm not sure exactly what it means to collect metrics directly via the kubernative API the kubernative API does expose certain information that you might want to track as metrics and there are already
+00:47:01 [W] um
+00:47:01 [W] So again, I'm not sure exactly what it means to collect metrics directly via the kubernative.
+00:47:02 [W] Zpi the kubernative say Pi does expose certain information that you might want to track as metrics and there are already exporters that translate kubernative
+00:47:06 [W] That translate kubernative API calls directly into Prometheus metrics. For example, if you search for Kube State metrics, this is one of these exporters that does that it talks to the communities
+00:47:17 [W] You like how many replicas of a given deployment there currently are how many are there should be and so on and translates that to Prometheus metrics and yeah, that's that's one example of that so that totally
+00:47:32 [W] Four things that the kubernative components don't already just expose as an existing Prometheus and point, you know, if there is already an existing Prometheus endpoint then that is usually easier to scrape directly.
+00:47:50 [W] All right, that is the last question and I will go over to slack and answer some more questions over there. Thank you.

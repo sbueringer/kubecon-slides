@@ -1,0 +1,266 @@
+﻿Intro and Deep Dive: Kubernetes SIG Instrumentation: XCVG-2856 - events@cncf.io - Friday, November 20, 2020 4:02 PM - 37 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello everyone and welcome to the kubernative Sig instrumentation introduction and deep dive session. I'm Deva - pull from Google.
+00:00:08 [W] Hey, I'm Fredrik. I'm the CEO and founder of polar signals.
+00:00:11 [W] co-chairs of sinister imitation
+00:00:15 [W] Hey, I'm on I am also a co-chair of Sig instrumentation. I also work at Google with Tim - well.
+00:00:24 [W] Great, so I'm going to kick us off and this is what we're going to cover in today's maintainer track session.
+00:00:30 [W] So I'm going to introduce what the Sig instrumentation do.
+00:00:34 [W] What are we responsible for?
+00:00:35 [W] And then we'll get into some of our current activities status updates on what we're doing for the various Sig components metrics logs and events traces and what's going on with all of our sakes sub-projects and in each of these sections
+00:00:51 [W] We'll introduce the topic and what's going on.
+00:00:45 [W] Then I will close out our talk with some resources on how to get involved in the Sig how to contribute where to find us in the various kubernative online spaces and also share some links to related talks.
+00:01:01 [W] So what does the instrumentation do our Charter and you can find these slides on the schedule?
+00:01:09 [W] So you can click all of these links if you want to get a chance to drill down but our Charter in the kubernative community repost says that we cover best practices for cluster observability across all kubernative components.
+00:01:22 [W] And as well, we develop all of these relevant components. So in summary, I like to think of this as working on metrics logs and
+00:01:31 [W] It's and traces which are sort of our various pillars of observability within the project.
+00:01:37 [W] We're also responsible for a number of sub projects again covered in our Charter, but some of those that you might be most familiar with include Cube State metrics K log metric server and many more.
+00:01:53 [W] So, how do we do it our Sig activities usually involve triaging and fixing relevant instrumentation issues reviewing all code changes for metrics dot go files developing new features and enhancements
+00:02:08 [W] Fermentation issues reviewing all code changes for metrics dot go files developing new features and enhancements and maintaining all of our various sub projects.
+00:02:17 [W] Hey Elena, what do you call a chart without any underlying metric data?
+00:02:23 [W] I don't know. What do you call it, hon?
+00:02:27 [W] pointless gonna boom
+00:02:31 [W] you got to have the drum beat. So in Second Street Station, you'll know me either as the metrics guy or the guy who likes terrible puns, but you're not going to hear me tell a pun about insects because they bug me.
+00:02:45 [W] All right.
+00:02:46 [W] That's the last one jokes aside in order to understand how metrics Works in kubernative.
+00:02:51 [W] We're going to have to know a little bit about kubernative.
+00:02:54 [W] So just very briefly communities pretty complicated stacking. It has a lot of Despair components and it gets even more complicated because these despair components
+00:03:09 [W] Large number of interactions and this can make it difficult to tell if when something is going wrong and this is basically where metrics coming and in case we instrument are binaries using Prometheus clients, which can
+00:03:24 [W] like this
+00:03:20 [W] General you can have a pony that you want it instrument some bit of software and the software exposes a simple HTTP endpoint conventional knative / metrics, which is then scraped by
+00:03:35 [W] And inserted into a Time series data base or back end.
+00:03:36 [W] And for those of you who are already familiar with Prometheus metrics. This may seem simple and a bit barn and yeah it is it's simple enough.
+00:03:46 [W] We have some software and we want to measure stuff.
+00:03:49 [W] I mean what could possibly go wrong?
+00:04:00 [W] Well, it turns out quite a lot.
+00:04:04 [W] Much can become memory leaks.
+00:04:09 [W] Typically through unbounded personality and label values.
+00:04:18 [W] Even worse we can have unbounded interpolated metric names.
+00:04:27 [W] And we can get any of these leaks in any of the kubernative binaries.
+00:04:35 [W] These issues can be latent and they can manifest through innocuous underlying changes.
+00:04:43 [W] Sometimes our metrics just don't do the job properly like we have inadequate bucket sizes, which don't make any sense.
+00:04:52 [W] So if you have two buckets for linking metrics, obviously, you're not going to get super helpful latency data.
+00:04:59 [W] Audi and label values
+00:05:04 [W] even worse we can have unbounded interpolated metric names.
+00:05:13 [W] And we can get any of these leaks in any of the kubernative binaries.
+00:05:21 [W] These issues can be latent and they can manifest through innocuous underlying changes.
+00:05:30 [W] Sometimes our metrics just don't do the job properly like we have inadequate bucket sizes, which don't make any sense.
+00:05:38 [W] So if you have two buckets for linking metrics, obviously, you're not going to get super helpful latency data.
+00:05:49 [W] Sometimes the metric says it's actually admitting seconds, but the metric units actually emitting is in microseconds.
+00:05:59 [W] So that brings us to the stuff that we do involving metrics in seconds frication first and foremost due to all of these things that we encountered in kubermatic.
+00:06:11 [W] He's we over hauled our metrics.
+00:06:14 [W] This has landed in GA recently if you want to see the cap. It's a
+00:06:20 [W] Dr. And this fixed a bunch of inconsistent and bridgecrew current broken metrics across kubernative.
+00:06:29 [W] He's but in doing so we change the API and this cost pews for people who are ingesting are older and broken metrics.
+00:06:37 [W] And so in order to offset this we implemented a stability framework so that people who are investing kubernative metrics can
+00:06:48 [W] rely on them with a proper deprecation policy and this landed in beta and we have slated work to land this into GA in 121
+00:07:05 [W] First and foremost do to all of these things that we encountered in kubermatic.
+00:07:10 [W] He's we over hauled our metrics.
+00:07:13 [W] This has landed in GA recently. If you want to see the captain. It's a
+00:07:19 [W] And this fixed a bunch of inconsistent and bridgecrew Kurt broken metrics across kubernative.
+00:07:28 [W] He's but in doing so we change the API and this cost she is for people who are ingesting are older and broken metrics.
+00:07:36 [W] And so in order to offset this we implemented a stability framework so that people who are ingesting kubernative metrics can rely on
+00:07:48 [W] with a proper deprecation policy and this lended to Beta And we have slated work to land this into GA in 121 we
+00:08:03 [W] To Alpha we have pop resource metrics, which is slated to land in 120 and dynamic cardinality enforcement slated to land in one domain one, but our work doesn't just involve
+00:08:18 [W] But our work doesn't just involve fixing metrics and improving and iterating over existing metrics in the in the Cuban errors.
+00:08:25 [W] We also want to make it easier for people to debug kubernative clusters. And in order to do that.
+00:08:29 [W] We wrote this tool called cam Q which is basically in memory Prometheus client running in your CLI.
+00:08:37 [W] Help you debug knative Prometheus and points and we have a link if you want to check that out.
+00:08:47 [W] Jeffrey
+00:08:52 [W] cool.
+00:08:53 [W] Thanks, hon.
+00:08:53 [W] That's really interesting. So now let's talk about logs and events.
+00:09:02 [W] I'll start with events. So events and kubernative are the way that users tend to interact with kubernetes objects when they're first getting started as well as when they're just trying to figure out what the heck's been going on.
+00:09:17 [W] To think about it in terms of telemetry.
+00:09:18 [W] It's essentially like writing a structured log message to the API server that kubevirt that users are then allowed to query and show up in shows up in things like you control top almost three years ago.
+00:09:32 [W] We found that we were having some scalability issues with events because they can be quite spammy. If something is Crash looping, for example, that will emit a lot of events.
+00:09:44 [W] lot of events
+00:09:46 [W] and so way way back then they came up with a plan for how to change the event object in order to make it scale better and add a little bit more structure to it.
+00:09:59 [W] And now finally three years later, we've graduated this new events API to GA and it's currently in use in many components in the kubernative ecosystem.
+00:10:11 [W] So great job. We move something to Jay.
+00:10:17 [W] For logging. This is probably the most simple form of telemetry right?
+00:10:22 [W] We're just writing things to file. So what the heck could we improve with logging?
+00:10:26 [W] Well, it turns out that often times you want to know which things are being referenced in a log message.
+00:10:34 [W] For example, if I have a log and it's about a pod it would be nice to represent fields from the Pod such as the Pod thing in a standardized way so that I can if I'm a login gesture then
+00:10:45 [W] I'm able to take those and search potentially over those attributes in my back end.
+00:10:51 [W] So Sig instrumentation worked on structured logging and the method we chose to introduce. This is to introduce new methods into the K log Library, you'll notice that the info and error methods here
+00:11:07 [W] Instead of the usual F5 format and what this does is it allows you to set a message for your logline and then to add in key-value pairs one after the other. So if for example the key might be poddisruptionbudgets
+00:11:36 [W] and because there are certain log messages that people really care about potentially some stuff in the API server or cubelet.
+00:11:43 [W] We're starting with those log messages that people find most impactful and if you're curious about the details, feel free to check out the the structured logging blog post.
+00:11:59 [W] The next set of improvements we've been working on for logging is related to logging security.
+00:12:04 [W] So as a general rule, it's a very bad thing to login credentials or other secrets into kubernative logs and sadly. This has happened more than once in the recent past and
+00:12:19 [W] Recent Security review by a third party. So we knew that we had to do something about it.
+00:12:21 [W] And we are taking two approaches in the 1.20 released.
+00:12:25 [W] The first is dynamic sanitization of logs. Meaning when you're kubenetes component is running in your cluster and tries to log something that we think is bad that log message will be blocked
+00:12:40 [W] So it doesn't contain the secret information.
+00:12:30 [W] So that's that's one method and another method that we're going to be applying in 1.20 is static checking and this is mostly during development.
+00:12:41 [W] So you can think of this as we're basically adding presubmit Sandy tests that go through or that run kubernative components or know that statically analyze all of our controller binaries.
+00:12:54 [W] And look for points in which the secret information could be logged using the K log libraries. So we try and programmatically figure out where that could be happening.
+00:13:10 [W] And this can be enabled with the logging sanitization flag.
+00:13:13 [W] I believe that's for dynamic sanitization.
+00:13:17 [W] And you can see more information at the link to cap here.
+00:13:24 [W] Now let's talk about traces traces are exciting and new.
+00:13:27 [W] In fact, this is the first time that kubernative is doing anything with tracing at all.
+00:13:32 [W] So what are we tackling first? What we decided to start with the simple and straightforward use with tracing a pi server requests. The API server is a big HTTP server that runs at the heart of a
+00:13:47 [W] And it would be really useful to know how long different requests take and especially for those ones that don't behave as we expected.
+00:13:55 [W] Maybe they're too slow.
+00:13:56 [W] We'd like to be able to see detailed information about how that request passed through the API server and on to other clients such as a TV.
+00:14:05 [W] So in 1.20, we're going to be adding distributed tracing to the API server using opentelemetry and you can enable it by specifying a configuration file.
+00:14:16 [W] The opentelemetry config file flag. If you'd like to read more about it. You can look at the kept which is linked below.
+00:14:30 [W] All right.
+00:14:31 [W] Thank you David for sharing all this awesome work.
+00:14:35 [W] I'm definitely super excited about the tracing work that's happening.
+00:14:38 [W] Unfortunately.
+00:14:40 [W] I don't have a great joke like how to start out with so let's just take it away and talk about some of our sub projects next slide.
+00:14:51 [W] so we have three primary sub projects which are actually we have a couple more but these are this is the selection that we want to talk about this time this time around the first one being cooped State
+00:15:06 [W] Finding a configuration file with the opentelemetry config file flag. If you'd like to read more about it. You can look at the kept which is linked below.
+00:15:19 [W] All right.
+00:15:20 [W] Thank you David for sharing all this awesome work.
+00:15:24 [W] I'm definitely super excited about the tracing work that's happening.
+00:15:27 [W] Unfortunately.
+00:15:29 [W] I don't have a great joke like how to start out with so let's just take it away and talk about some of our sub projects next slide.
+00:15:40 [W] so we have three primary sub projects which are actually we have a couple more but these are this is the selection that we want to talk about this time this time around the first one being Coop State
+00:17:37 [W] If maybe the oldest sub-project of sick instrumentation, it is actually under the kubernative Zork.
+00:17:45 [W] That's how old it is because I'm saying that because things don't get submitted to the kubernative Zar generally anymore.
+00:17:52 [W] Then the other one that we were talking about today is the metric server and we'll see what that is a little bit later and then their communities Prometheus adapter, which will also see
+00:18:06 [W] okay.
+00:18:07 [W] So first off Coop State metrics, I think this is a really exciting component and this really originated from a need where we were talking to a bunch of people in the communities ecosystem
+00:18:22 [W] where we were talking to a bunch of people in the communities ecosystem who are also using Prometheus at the time and the Gap was kind of people were saying well Prometheus this great and kubernative this great, but
+00:18:38 [W] I actually troubleshoot my applications.
+00:18:40 [W] I still drop down into coops ETL and furry things.
+00:18:44 [W] it would be really handy if I had a lot of this information queryable in Prometheus. I can alert on it.
+00:18:51 [W] I can do all these automated workflows with it. And so that's kind of where coops date metrics was born and kind of the philosophy that we have with groups agnostics. Is that anything that can be a metric in Accra Nettie's API?
+00:19:06 [W] our pods deployments they possess you can pretty much find metrics about any API object that is available in kubenetes as metrics in Coop State metrics and we kind of take everything that can possibly be a metric and
+00:19:21 [W] Converted into Prometheus and through the Prometheus Exposition format. And then whenever Prometheus comes around it just scrapes scrapes this output output and ingested
+00:19:34 [W] Can do really exciting things like what we have on the slides here where we can say.
+00:19:38 [W] Well, I have some expected number of replicas and I have an actual number of replicas of my deployment and if these are not the same then obviously something's not going the way it should be going and we
+00:19:54 [W] Because and I have an actual number of replicas of my deployment and if these are not the same then obviously something's not going the way it should be going and we can write pretty sophisticated and really incredible
+00:20:20 [W] Pretty sophisticated and really incredible alerting roads that have definitely helped me run applications on top of kubernative numerous times.
+00:20:28 [W] So this is extremely helpful and one exciting thing about coop State metrics is that we're actually just spend well actually over a year almost cleaning up the entire code base
+00:20:43 [W] Started doing a couple of pre-releases of a of a new major version of this this project.
+00:20:49 [W] So please go ahead and check this out.
+00:20:52 [W] Try it out run it on your clusters.
+00:20:55 [W] Give us feedback both in terms of performance as well as obviously whether things still work that they used to work. If you've if you've met already be running group Sig metrics and
+00:21:10 [W] Thing that I think I want to mention about coop State metrics.
+00:21:11 [W] that's kind of unique about it is we've done a number of really incredible performance improvements where coops 8 metrics doesn't actually use the normal Prometheus client because because of the nature of what Coop State Matrix,
+00:21:27 [W] It's every API object to a metric it tends to get potentially have really huge metrics output.
+00:21:33 [W] So I'm talking megabytes of / metrics and points.
+00:21:37 [W] And so that is a different dimension of even writing bytes out to an HTTP request.
+00:21:47 [W] So if you're interested in kind of performance work, there's lots still possible incapacitate metrics. So get involved.
+00:21:55 [W] And into this project if these are things that are appealing to you, but we've already done a really incredible job.
+00:22:02 [W] I think we used to have tens of seconds of latency with really huge clusters and we've brought that down to a handful of seconds in really really huge clusters.
+00:22:13 [W] So I think we've done a pretty good job, but there's always room for improvement.
+00:22:17 [W] So yeah, that's what I have to say about coop set metrics.
+00:22:21 [W] So going on to the metric server.
+00:22:26 [W] You met some people may not be aware of this component.
+00:22:29 [W] But almost certainly used it or another variation of the resource metrics API because the recent resource Matrix API is essentially the generic description of an API
+00:22:45 [W] He used to request CPU and memory usage of pods containers and nodes. So if you've used Kuma ztl poddisruptionbudgets.
+00:23:11 [W] And this this API can also be used to Auto scale your deployment on kubernative with resource metrics. So as I said CPU or memory and the varying
+00:23:26 [W] kind of usages that that you that you can kind of can configure and the thing to kind of keep in mind here this component essentially works
+00:23:37 [W] Very similar to Prometheus but as kind of a very narrow scope. So it also goes around each individual kubelet and collects all of these metrics by pulling them.
+00:23:49 [W] I believe every minute and then holds the state in memory. And then whenever there is a request let's say from coops detail top for example, then it presents the information that has been requested but this component is kind of
+00:24:05 [W] Very narrow so that we can we can have very crisp expectations on the scalability requirements and stuff like that.
+00:24:12 [W] So this is one possible implementation of the resource metrics API, and then we have another one next slide.
+00:24:22 [W] Which is actually something that we were just the project that we're just starting to adopt.
+00:24:27 [W] So as of this recording the adoption of this project hasn't actually entirely gone through but I expect that over the next couple of weeks.
+00:24:38 [W] This will probably happen. It has already been accepted accepted by the basic instrumentation as a whole.
+00:24:46 [W] We just need to figure out some people signing the CLA that essentially
+00:24:51 [W] what this is is much like the metric server is the default implementation of the resource metrics API, the Prometheus communities Prometheus adapter is essentially an implementation of the resource metrics API
+00:25:07 [W] Custom and external metrics apis which are also generic descriptions of metrics apis. And this one as the name already says is backed by Prometheus and why this is useful is
+00:25:21 [W] Because if you already have Prometheus collecting these metrics anyways, you might as well use Prometheus to present these metrics to your users or use it for auto scale and purposes right?
+00:25:32 [W] That way. You don't have to have this extra process running in your cluster that uses memory and CPU to essentially collect the same things.
+00:25:40 [W] is really only if you're already running Prometheus. Anyways, I would I would say that if you're not using Prometheus,
+00:25:48 [W] yes, this is probably a too complicated of a setup just to get the resource metrics API and that case the metric serverless probably the better choice, but if Prometheus is already your choice monitoring system of choice.
+00:26:00 [W] I would highly recommend you giving this a try.
+00:26:03 [W] So that's all the sub-project selections that we wanted to share today and now back to Atlanta.
+00:26:13 [W] Thanks so much Frederick.
+00:26:14 [W] That was awesome.
+00:26:15 [W] So you've heard a bunch of about our Sig activities and what we're working on.
+00:26:21 [W] How can you get involved in that?
+00:26:25 [W] So first thing is if you're interested in getting involved attend our Sig meetings, that's the best way to get an idea of what's happening with the Sig what sorts of things you can work on what sorts of projects are looking for contributors and
+00:26:40 [W] All the various people working on the various different components.
+00:26:43 [W] You can also start participating in reviews and issues and documentation.
+00:26:49 [W] All of those things were happy to accept new contributors and you don't need to ask for permission.
+00:26:55 [W] You can just jump in and we will take a look in terms of specific projects Cube State metrics is explicitly seeking new contributors and you can reach out to Lily if you're interested in working on that both metric server.
+00:27:10 [W] And the structured logging implementation are seeking contributors. And if you're interested in working on those, you can contact Marik and prom Q is also seeking new contributors.
+00:27:21 [W] So if you want to work on Prom Q which hon introduced earlier, you can reach out to him or Solly or you can
+00:27:32 [W] So, how can you find us we have regular Sig meetings effectively once a week. We have two alternating bi-weekly meetings. So our regular Sig meeting is on Thursdays at 9:30 a.m.
+00:27:44 [W] Pacific time and that alternates every other week with a triage meeting where we go over our PR and issue backlog.
+00:27:52 [W] And those are on Wednesdays at 9:00 a.m.
+00:27:54 [W] Pacific time. If you want to find more information or reach out to various folks in the Sig
+00:28:00 [W] Access to the meeting agendas linked above and if you need to know who's in charge of what just repeating again, the chairs of the Sig are myself and Hahn, and the tech leads are Frederick and David.
+00:28:11 [W] The last thing that I wanted to mention before we close at the talk is some other relevant talks from this Cube con that we want to give some brief shout outs to that go into a little bit more depth in terms of some of the things we cover today.
+00:28:22 [W] There is an entire talk discussing the structured logging implementation in kubernative 119. So highly recommend you give a look at that recording if you're interested in what's going on with structure logging that's been at least a two-year long efforts.
+00:28:38 [W] That Lads and hopefully soon becomes VA and as well the cncf cgroup servile T intro and deep dive talk is scheduled I think at the same time as this talk.
+00:28:47 [W] So if you're watching this one, I recommend you take a look at that. If you want to look at observability things in the wider Cloud native ecosystem. There are of course many other related talks.
+00:28:59 [W] I don't want to talk about every single talk at Cube con, but you can check out both the observability and
+00:29:04 [W] taner tracks for more talks on kubernative observability and instrumentation
+00:29:11 [W] And thanks so much for joining us. I hope you had a great Cube Khan.
+00:29:28 [W] Hello.
+00:29:29 [W] Hello.
+00:29:29 [W] Hello.
+00:29:29 [W] Hello. Can I run hear me?
+00:29:34 [W] Yep, I can hear you in later.
+00:29:35 [W] I'm great I can hear you too.
+00:29:44 [W] I'm checking the slack and I'm not seeing any questions in the slack.
+00:29:50 [W] We have one question that we answered in the QA on the platform about prom Q tool and now we've got a few more coming in.
+00:30:00 [W] Those question Austin asks any thoughts on integrating The opentelemetry Collector more since it'll be there for a pi server tracing routing for me theist metrics to it Etc.
+00:30:11 [W] Yes, I can take that one.
+00:30:16 [W] That's definitely a possibility The opentelemetry Collector can scrape Prometheus endpoints.
+00:30:21 [W] I would say that that will probably be a decision made by communities vendors. So some vendors may choose to use it for scraping the Prometheus endpoints others may not
+00:30:33 [W] I also have one update to make to the slides which is that tracing will not be included in the 1.20 release.
+00:30:42 [W] We encountered some problems when trying to add the opentelemetry dependency to cube.
+00:30:51 [W] But hopefully 121.
+00:30:54 [W] Yes, hopefully 121.
+00:30:58 [W] wait
+00:31:01 [W] Oh comments coming in saying people are heartbroken.
+00:31:04 [W] Yes, we're hard work into but hopefully soon we had another question.
+00:31:10 [W] Is there any performance difference between using metric server versus the adapter on Prometheus?
+00:31:17 [W] I'll try to answer that question.
+00:31:19 [W] The number of nodes and a like how you've deployed. The thing in theory metric server is designed to be highly performant and scalable.
+00:31:24 [W] But you know, that's the sort of thing.
+00:31:27 [W] I don't think one could answer without like actually collecting the Telemetry and doing performance testing. So
+00:31:37 [W] I think we've answered all of the questions on in Toronto. Are there any in the slack?
+00:31:45 [W] Looks like you know.
+00:31:53 [W] Is there anything else that we should add while we're waiting for questions?
+00:31:57 [W] Can you tell like hon level jokes David? Is that is that too high in order?
+00:32:05 [W] Yeah, that's way too much to ask.
+00:32:12 [W] Yeah, I I've been I've been told that I can sometimes exceed at sharing hon level jerks, but I didn't come with any prepared. So I don't have anything to share with the group.
+00:32:30 [W] Ask us question.
+00:32:51 [W] We got a question from slack.
+00:32:53 [W] What's the future plans for VP a regarding metrics, and I'm assuming vpa is referring to the vertical poddisruptionbudgets.
+00:33:11 [W] Can you clarify are you asking if we're adding new metrics that BPA can Scale based off of or if we're making any other enhancements?
+00:33:21 [W] You know, I suppose I know that there's a Merrick actually just wrote a nice proposal for some enhancements that could be made to the metrics server.
+00:33:35 [W] Some of those include making the scrape interval shorter.
+00:33:39 [W] So for example, if you were using vpa with the metric server deployment you'd be able to scale a little bit more quickly.
+00:33:45 [W] So that might be one aspect that Sig instrumentation is involved in that would potentially impact how well vpa works.
+00:33:59 [W] That seems like a great answer.
+00:34:00 [W] I don't know if we're going to get a clarification but we have another new question that just came in.
+00:34:05 [W] How often do you think it makes sense to scrape the metrics if the response is several megabytes, I'm assuming that's probably referring to something like Cube State metrics where the the responses
+00:34:20 [W] To be in the like hundreds of megabytes potentially for a large cluster.
+00:34:24 [W] I think it depends on what your setup can work with like how much space you have and Prometheus like how much granularity you actually need in terms of your work loads and use cases.
+00:34:38 [W] There are certainly like metrics where you can get away with only scraping once a minute.
+00:34:44 [W] There are certain metrics where you might want to scrape more frequently.
+00:34:47 [W] It's generally bad practice to have
+00:34:50 [W] have metrics scraped on different intervals in a Prometheus. So you don't want to have like, you know, these metrics are all scraped every 15 seconds, but these ones are Saul scraped once a minute and maybe these ones are really expensive and scraped every five minutes.
+00:35:05 [W] That's that's generally not considered great practices because you might encounter unexpected holes in your data.
+00:35:11 [W] So I would say, you know test it. See see what you can handle. I know that like Lon
+00:35:51 [W] Fights to Prometheus and it's still getting umm killed.
+00:35:54 [W] How do we scale Prometheus?
+00:35:55 [W] That's a great question.
+00:35:59 [W] It's very I would say it's very situational.
+00:36:04 [W] You could potentially look into Thanos which is a project designed as a cncf project which is designed to help with scaling fan of or with scaling Prometheus.
+00:36:19 [W] Do we have time?
+00:36:36 [W] Starting from the request to create a pod or could you trace Cuba start up on the boat?
+00:36:45 [W] Yeah, actually, I think the the cube can talk I gave last November which should still be on YouTube describe. Some of the experiments have done related to tracing object life
+00:37:00 [W] Pause but for now, we're trying to start small and build from there.
+00:37:05 [W] So we're starting with the API server, but it's very possible that we could trace other things in the future.
+00:37:11 [W] I will say that the model that I
+00:37:17 [W] I will say the model I was using has some problems and we're trying to work through those as we go.
+00:37:23 [W] Yeah, it's something I'm interested in for sure and we'll start with the API server and see where that takes us.
+00:37:43 [W] I think they've the sessions over so I think we're done but I don't know if we're still alive. So
+00:37:50 [W] we will catch up on questions on slack if we are still alive and you can see this.

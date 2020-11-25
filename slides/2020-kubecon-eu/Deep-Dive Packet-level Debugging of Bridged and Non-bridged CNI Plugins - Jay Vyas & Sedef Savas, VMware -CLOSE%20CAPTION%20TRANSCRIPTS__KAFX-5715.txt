@@ -1,0 +1,193 @@
+﻿Deep-Dive: Packet-level Debugging of Bridged and Non-bridged CNI Plugins: KAFX-5715 - events@cncf.io - Thursday, August 20, 2020 12:45 PM - 64 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Okay.
+00:00:04 [W] Okay. So hi, this is Jay and sadef here from VMware.
+00:05:07 [W] We're going to talk about how Cici and I plugins work and how you can look at what's happening packet packet to understand if you're having issues with cni-genie network policies or other networking related stuff in your
+00:05:21 [W] On the service that works and kubernative so that's goes start us off and then we'll get to a demo a little bit.
+00:05:30 [W] Hello. Hello everyone.
+00:05:39 [W] So we will start with introducing some communities not working Concepts and then go into detail about how cni-genie providing connectivity and we will calculate with their faculty develop truth.
+00:05:43 [W] So in kubernative networking is a combination of many Concepts and it is important to know them to troubleshoot any connectivity problem.
+00:05:57 [W] So pot the pot networking is provided by third party cni-genie gifts. And since Paul's are transient communities has an abstraction called Services, which allow us to reach a group of pause using virtual eyepiece
+00:06:08 [W] Keep proxy is enabling connectivity to Services by using load balancers like IP tables and how you find Services is also part of networking.
+00:06:22 [W] There's communities DNS service that provides that once you get basic pot pot pot pot serverless connectivity how you secure your applications by isolating them is another networking aspect
+00:06:34 [W] And since I played games provide this as well, the last aspect is how communities handles external traffic there are several ways to do it.
+00:06:49 [W] For example layer four layers of will not balances or using not parked kubernative construct. So out of these five Concepts in this talk, we are gonna muscle talking about cni-genie areas.
+00:06:58 [W] Okay, let's start with cni-genie login. So kubernative adopts cni-genie to interact with third-party cni-genie King plugins.
+00:07:15 [W] These plugins are responsible for IP assignment connectivity and parsec your tea.
+00:07:19 [W] Every time a pot is initialized cni-genie called. It creates a pseudo interface a science. It's an IP and attaches it to the underlying Network and when post
+00:07:28 [W] Just deleted cni-genie game being called to clean up the resources.
+00:07:35 [W] The sea and I Pi is pretty pretty simple in terms of what ci/cd ports because all you know, it's as delete check, you know, it's a relatively simple API in terms of what needs to be called in order to launch a container, but it is a separate
+00:07:52 [W] Pi that's managed by separate group and let's go over some traditional news constructs that are used by most of the cni-genie to provide connectivity parsec one is linked network name spaces.
+00:08:07 [W] So they provide a separate instance of carnal networking stack like different set of interfaces routes firewall rules to isolate processes all parts and wholes are sitting on different network name spaces in this diagram.
+00:08:22 [W] We have a single node.
+00:08:28 [W] We have two parts and you see all of them are sitting on different network name spaces and communicate to communicate between part network name space and not host network name space. We use a Linux
+00:08:38 [W] That's our call struck gold with payers here. You see ETI cri-o and with a is one with pair and the other one is this one they are nothing but page cables what causing one ant comes out the other
+00:08:53 [W] We also want parsec to talk to each other and use a very familiar construct called Linux Bridges.
+00:09:03 [W] So it is it is a networking switch.
+00:09:08 [W] It is nothing but but a switch and a Slayer too far verdict. Also when we want then our pots wants to communicate with the hose and hose was communicate with the pulse brought tables
+00:09:26 [W] So here you see everything that is destined to Port Siders will be sent to Bridge and be rich knows how to forward them. As I mentioned house animals are sitting on different network name space and they have
+00:09:41 [W] different route tables as you can see
+00:09:45 [W] So we looked at half-past can communicate with each other in a single load when there are multiple nodes.
+00:09:58 [W] There are different networking approaches.
+00:09:58 [W] cri-o. We can categorize them as non overlay and overlay networking approaches.
+00:10:13 [W] So the first option in non overlay networking is there to networking when the Mo's are in the same subnet or VPC virtual private Cloud traffic can be related to using as to network.
+00:10:19 [W] Another option is providing a pure layer tree networking.
+00:10:28 [W] So this option requires some configuration in the underlying Network. So it is only suitable if underlying Network can be controlled. So this is most the possible in maybe private data centers and there are several ways to achieve
+00:10:39 [W] This calcio uses bgp, or private data centers May Implement their own cni-genie provide player 3 networking.
+00:10:46 [W] And then then then our laws are not sting on the same subnet or we don't have any control on the on the line Network.
+00:11:00 [W] There is overlay networking option where packets guess encapsulated so that underlying network doesn't have to know anything about pots eiders and there are several encapsulation methods that
+00:11:11 [W] Use for encapsulation and the last one is hybrid mode whenever put so since there is encapsulation and decapsulation process in the overlay Network. There's some overhead So
+00:11:26 [W] To avoid this hybrid model comes into picture. We encapsulate a Packers only when it is necessary and entry incalculable supports this hybrid mode as well.
+00:11:40 [W] Yeah, I'll just quickly say e KS is equal R going to go over eks, Calico and Antron in a little bit and you'll see the differences but you know eksu don't need a new overlay if you're using their cni-genie.
+00:12:11 [W] Let's have a look at how encapsulation Works cri-o has support for several encapsulation methods, but let's look at two of them here IP in IP and vxlan paneling.
+00:12:26 [W] So basically what happens is Source not encapsulates Network packets packets in another header. So that underlying Network care about them without knowing product peas.
+00:12:39 [W] So for example in I P9 P10 Ali you see this is the IP header which has
+00:12:41 [W] Prada fees and it's it gets encapsulated with another header with not IPS.
+00:12:52 [W] Underlying will only have to roll out more by piece.
+00:12:57 [W] So when you capture the packets using Wireshark and when you inject those backers, you will see two IP headers in the packets and for the external links internet frames gets encapsulated into UDP
+00:13:07 [W] Because and again why you see the large shark packet capture, you will see the ethernet packet and on top of it.
+00:13:17 [W] There will be a UDP packet.
+00:13:21 [W] Okay.
+00:13:29 [W] Now we are going to briefly mention how some cni-genie providing networking at a high level.
+00:13:38 [W] So it is important to know underlying constructs. Your cni is using to better debug connectivity issues.
+00:13:39 [W] Let's start with Calico calcio supports multiple data planes likely standard Linux networking or Linux EVP F and Windows networking.
+00:13:51 [W] Also it has three networking flavors it supports pure.
+00:13:54 [W] R3 networking where traffic is not encapsulated for this. It uses bgp route Sherry and underlying Network needs to support bgp as well and set up under angra's accordingly.
+00:14:09 [W] Otherwise, this is not an option. It also supports overlay Network option supports both IP IP and we extend encapsulation.
+00:14:18 [W] Also it has hybrid mode and uses layer to networking for if the nose.
+00:14:25 [W] Is are on the same subnet and uses overlay for different sadness.
+00:14:30 [W] We're not going to go into detail of these cni-genie actors.
+00:14:38 [W] It is out of scope of this talk.
+00:14:41 [W] Let's talk about another cni-genie ELD entry area.
+00:14:49 [W] So Calico did not have any bridge in its wild doing networking.
+00:15:00 [W] But here we see a virtual Bridge that's being used pretty similar to Linux Bridges.
+00:15:10 [W] So it rots traffic using multiple flow tables and supports both windows and Linux if you like
+00:15:13 [W] Get the diagram pulse energy that the when we talk about flow tables. So open V switch is the back end for like it's enough mentioned Andrea, and so open V switch is based on these flow
+00:15:28 [W] And that's the whole that's the whole way that you are protecting that work in open V switch compared with you know, what calicos doing in the last slide with just using bgp-4 the routing I just wanted to repeat right?
+00:15:40 [W] ?
+00:15:45 [W] Yes, and if you see the diagram here are we have two pots they are connected to obvious Bridge using read pairs.
+00:15:53 [W] This part is the same with regular Linux architecture, but on the obvious, which sucked
+00:16:00 [W] are seeing a Gateway 0 part, which is the Gateway of the not subnet and tons 0 part, which is the tunnel part that is used for creating overlay tunnels between nodes and Andrea is
+00:16:13 [W] Supporting overlay mode.
+00:16:17 [W] It supports many many different encapsulation techniques.
+00:16:25 [W] It also has support for hybrids mode where it uses encapsulation only for the inter traffic internet Network traffic.
+00:16:35 [W] So we are going to see like to see when we look at the interest stuff will see that all the traffic actually flows into that into that Gateway specifically even local traffic, which is interesting.
+00:16:44 [W] From it control and security perspective.
+00:16:46 [W] Yeah, and one important difference here is that Network policies are installed by obvious flaws instead of like Calico using IP tables EBP f
+00:16:59 [W] So here we are going to show some examples of non overlay and all Rarity.
+00:17:10 [W] So here we are seeing normal overlay.
+00:17:13 [W] Which which were we do not encapsulate Packers and use regular layer to networking like our band route entry here is we have two pots that are connected via a switch that
+00:17:25 [W] That's us to demonstrate.
+00:17:27 [W] They are sitting on the same altinity are and these are the subnets of the pods inside modes.
+00:17:34 [W] So then a pod one wants to talk with part 3 it sends traffic through the bit player hits the bridge be rich in knows that it is not destined to some part in this node.
+00:17:49 [W] Has it sounds traffic to the rod table in the route table.
+00:17:55 [W] So every notes pod cider is known in the round table.
+00:18:03 [W] So here you see 1722 16.1 that 0/24 every traffic that comes to the pot cider of this node has to be sent via its etoh 0 device
+00:18:17 [W] And next up for those packets will be this one.
+00:18:23 [W] So we'll be the not like you just literally run route - Shannon your Linux terminal, right? Every Linux operating system has one of these routing tables. So this is sum command anybody can run at home if they want.
+00:18:35 [W] Yes, and after it is Round Table's the packet will be sent through eth0 and Route using standard layer 2.
+00:18:48 [W] networking and and then arise to the second node, and then it arrives it is gonna again check the rod table and every packet that is destined to the pot cider
+00:19:02 [W] Will be sent to be rich br0 interface in in both nodes. So the packet will arrive br0 grich and bridgecrew knows virt forwarded through which
+00:19:17 [W] We fire it should fire were to pick up and has this is how it works in in the same subnet non overlay networking.
+00:19:26 [W] And in Calico you would have that bridge, right? So if you would just have it just straight from the routing the routing you'll hit the Linux kernel and the lakes Colonel says, okay.
+00:19:37 [W] I know exactly how to get to that IP address and what happened attached exactly.
+00:19:41 [W] So this actually is a good point this example applies to both Calico and Andrea except that Calico instead of having average has more round table entries.
+00:19:51 [W] We'll see that. Yeah, and so yeah, if for example an overlay network is not an option for you because you are sitting on different subnets or you don't have any
+00:20:06 [W] Draw in the underlying Network and cannot do layer tree networking overlay is the way to go and encapsulation can be done in many ways.
+00:20:21 [W] So you see the only difference between this picture and this picture is this one has tons of our interfaces that is used to encapsulate packets, and you see there's a change here, too.
+00:20:33 [W] We added a router here to demonstrate that this is this is not altinity workloads.
+00:20:36 [W] Work but it is it is a layer 3 Network. This can be the internet or private or public plots.
+00:20:42 [W] So here again when the Pod one was communicate with part 2 it will hit the bridge then it will hit the round table but here our table there's a difference so every packets that is destined to the
+00:20:57 [W] Other not spots either is a gun is going to be forward to tan 0 first.
+00:21:06 [W] Yeah, so on the left you have said this before but just to repeat again on the left is that's your that's your Cloud stuff, right?
+00:21:18 [W] That's your eks.
+00:21:19 [W] That's your gke.
+00:21:24 [W] That's your if you're using something like a and an NSX or something like that.
+00:21:29 [W] You can have these fancy non overlay stuff set up for you using hypervisor knative network tooling on the right is typically when you're spinning up your own clusters. That's when you're using a cni-genie binder that will kind of
+00:21:37 [W] Like that all the way for you and using an overlay, you know for for people that don't have a whole lot of experience with this stuff, right?
+00:21:50 [W] And yeah, the packets will be sent to town zero and there's a process attached to this stanza interface that encapsulates the traffic so it adds another header with not IPS on top of
+00:22:00 [W] The Pod eyepiece and sends it over down the line that work for underlying Network. It is simply a packet that is destined from Node 1 to node 2, so it knows how to write it packet reaches to not
+00:22:15 [W] So and then it gets the capsulated sent to the bridge and reaches to its final destination.
+00:22:23 [W] So now we are going to see packet walkthrough for whatever we explained.
+00:22:33 [W] Okay. So here we go.
+00:22:39 [W] So the first thing we're going to do is go ahead and hit play so that if I don't know if it's playing or not. Yeah.
+00:22:51 [W] Yeah. So first thing we're going to do is run Arc which sadef mentioned a little while ago so we can see there that you might want to pause it.
+00:23:00 [W] See there that oh, oh, yeah, go ahead and just keep it running the whole time.
+00:23:01 [W] Don't worry about it.
+00:23:02 [W] Okay.
+00:23:03 [W] Yeah, so once
+00:23:04 [W] Is Art once we want our app we can see all the stuff. That's locally available.
+00:23:09 [W] I think like the what's it called the
+00:23:17 [W] Local pods and the local nodes.
+00:23:24 [W] So once the deaf hits play now, I'm going to see it again.
+00:23:25 [W] Okay, cool.
+00:23:28 [W] Yeah, so and that this isn't a Calico cluster.
+00:23:30 [W] I'm going to swap back and forth. The Blue terminal is Andrea.
+00:23:31 [W] The black is calico and then there's another black terminal that's eks as well.
+00:23:38 [W] And I'm just going to jump around and show you the commands here.
+00:23:42 [W] Um, yeah, so we do that and then we can see that there's these a hundred IPS and there's these 192 IP's the 192 Zoe's the nose. Now if we run IP net and S. We ran it really quickly, but you can see it again here, right?
+00:23:53 [W] We don't see it any KS which is interesting.
+00:23:58 [W] I'll leave that as a homework assignment to the viewers here.
+00:24:02 [W] Why am I iike is clustered in show me any network name spaces, but cni-genie by the Sea and I Network namespaces and here you can see that the four pods the hundred pods all have the cni-genie work namespace now turning TCP dump on now
+00:24:13 [W] Can jump in and we can see that there's some traffic going from that 60 4.12 are hundred night, 198 jump to the bottom and then we can see that the IP address that 198 IP address that that's oh by the way that
+00:24:28 [W] If you dump is tracing one of those Calico interfaces, so you do tcpdump - hi on one of the outputs of like for example the IPA command and then you can trace the exact traffic going into that interface into that pain and nothing else.
+00:24:42 [W] So, okay so we can see that that one 98 is actually Cordy. Nsmcon.
+00:24:46 [W] Perfect sense Cordy.
+00:24:53 [W] Anise is constantly chatting with the API server trying to figure with the communities API server trying to figure out and points and stuff like that. So there we go now,
+00:24:58 [W] Now we now we can do iptables save and then we can go look and see how that routing happens, right?
+00:25:03 [W] so we can see here.
+00:25:06 [W] There's a routing rule that's going to send anything 264.0 m 1 to this to the kubernative service role - MPX, right? So the easiest way to do this if you're not good at iptables like me, you just say iptables
+00:25:20 [W] A text file and then you just jump around and you can use star when you're on top of a word to jump from one chain to another right for from one world to another so literally so you go ahead and hit start and then it takes you straight down to Coop service and then you can see the comment there.
+00:25:35 [W] That's the kubernative API server service now, we're on a on a times we mission control cluster here, which means our API servers are cluster API powered. They're running on help support our API servers on host port and so we've got the API server.
+00:25:49 [W] running on a node local network 192 168 5.1 56 and we can see that that Coop service endpoint role that the serve that the service pointed to actually finally forwards you to 192 168 5.1 56
+00:26:04 [W] And if we go and we get our node IP addresses will see that that corresponds to the control plane node. So this is how for just one example of how routing is going to how you can trace through a packet flow from applied to the out to the holes Network.
+00:26:19 [W] There's a million other things use cases.
+00:26:23 [W] You may want to trace for example Pond to pot or whatever but it's essentially the same logical series of steps that you can go through and it would be the same in Andrea as well. If or any other cni-genie because the coop proxies can
+00:26:34 [W] Basically have to do roughly the same thing do keep in mind. There are different ways to do cou proxying and there's some systems may not use IP tables.
+00:26:47 [W] There's ipbs and other things other Technologies, we've gone the simple route though taking those for granted.
+00:26:52 [W] So okay now next looking at the Andrea thing so we can see here the route the output was a little different than I jumped over to cks, but you can see now in eks, all the gateways are 0000 now back to an tray you can see the output is
+00:27:08 [W] The entry gateways 1000 extra GW 0. Let's just keep going.
+00:27:11 [W] I think we're going to show again later sadef. It's not a big deal. So yeah anyways, so here we are now and what we're going to try to do is we're going to try to make in we're back on Calico cluster where I'm going to get Damon set. So that means I'm going to have an nginx Pawn of Reno trite and
+00:27:24 [W] And I'm going to save the iptables rules and we're going to show you what like vanilla routing you just get for free that you have to kind of start that there's a few iptables rules that we use as a baseline that get created
+00:27:38 [W] After you create a pod.
+00:27:42 [W] Okay, these are just these are just generic.
+00:27:45 [W] They're just being created for us by Calico.
+00:27:47 [W] The thing to note here is that they're all named.
+00:27:53 [W] They're all being added to the - A Callie - TW - cowlick for 1ae.
+00:27:54 [W] That's the interface name ignore the comment the name inside. The comment is a Calico specific thing to do comparison between between which version of the iptables rules was being written.
+00:28:06 [W] So it's a cni-genie.
+00:28:08 [W] If you want to look at the rules, it's making for a given podcast. Look at the - A what is being attended to so that's the change being upended to now we can see the pods are up now.
+00:28:20 [W] We've saved that file and then the the simplest stupidest thing you can do to figure out whether your network policies are working correctly in Calico and is going to be you just you well first we need to make our policy. So
+00:28:32 [W] Yeah, okay.
+00:28:34 [W] So we Coop CTL create.
+00:28:46 [W] This is a network policy and that Network policy is going to deny traffic to those nginx pods, and we know that we're going to see that Network policy for sure on this node, because this node it's a Daemon set which means one of these pods is running on every
+00:28:49 [W] No, not cluster.
+00:28:56 [W] So definitely going to see it. And now let's see what the difference is between our last policies and our new policies.
+00:29:02 [W] So you just get deaf and now you can see we've got a few a few different lines here and we can see that there are some Network policy stanzas return of policy, except a drop of no policies passed packet, etcetera, etcetera, right? So those are going to get applied
+00:29:12 [W] After the prewriting stage and I'll show you briefly later that this doesn't change your service level routing your cou proxy routing to your pods and all that stuff still works just the same. The only difference is the packets are being dropped from say
+00:29:27 [W] Around into the pods now, okay.
+00:29:30 [W] So, let's see here.
+00:29:36 [W] Yeah, here it is.
+00:29:43 [W] So this is so that just so if you've never seen these before you see these decimals, this is how load balancing is done from The Coop Rock sea level.
+00:29:45 [W] That's how it decides exactly which poddisruptionbudgets traffic from a service right?
+00:29:50 [W] Because obviously you may have 10 different pods - service in these clusters. I've scaled up the amount of corniness replicas so that we have plenty of examples of that again now we jump on me and Trey here in blue and we've got okay namespaces.
+00:30:01 [W] A so yeah, so we show the namespaces and then we delete everything and then after we delete this stuff, we just go ahead and recreate it.
+00:30:16 [W] I'm not going to be the old if thing I assume it doesn't matter as much this time anyways, because we're not mangling as many iptables roles.
+00:30:23 [W] We're using open V switch for security in in Triad.
+00:30:27 [W] Triad. So the Android plug-in once we create that Damon set and the policy. Well, we haven't created the policy yet. We can see these three rules if we look.
+00:30:33 [W] At table number 90, so you executive the Andrea containers directly if you want to see this stuff and you can run ovhcloud, um flows BR - in tanned that's essentially the equivalent of like looking through
+00:30:46 [W] If you tables and help you open V switch, it's like the same it's the equivalent kind of operation right?
+00:30:52 [W] You can look at those individual flows. And so now we've created the Damon set and we've created the network policy. And once you look at the network once once you look at the network policy
+00:31:06 [W] You can see we briefly showed you there's a couple of there's an extra roll in there and that row shows the reg1 the packets getting marked for getting dropped and whatnot out of that flow table.
+00:31:19 [W] So that's how you can see those policies being applied in Amsterdam.
+00:31:21 [W] And I think that's it.
+00:31:24 [W] We made it.
+00:31:26 [W] Thank you Spire. It's 38 seconds. Okay, great.
+00:31:31 [W] So yeah, that's pretty much the whole that's pretty much our story.
+00:31:36 [W] So please do reach out to us.
+00:31:45 [W] I'm J unit 100 on Twitter and sadef is I don't know if the deaf has a Twitter account.
+00:31:46 [W] Well y-yeah, but we're easy to find.

@@ -1,0 +1,258 @@
+﻿Hands-On Stateful Serverless Applications with K8s and Stateful Functions: YFTM-8279 - events@cncf.io - Wednesday, November 18, 2020 3:52 PM - 31 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi, thank you all so much for joining.
+00:00:02 [W] My name is Seth Eastman.
+00:00:03 [W] You likely know it is a world class room processor.
+00:00:06 [W] It's very popular in the data engineering space for continuously thiel's real-time aggregations and Reporting and so there's this obvious question, right?
+00:00:15 [W] Right? What does a stream Processor have to say about serverless and at the end of the session? I hope you walk away thinking quite a lot.
+00:00:22 [W] So to begin I want to do a little bit of table setting I think these terms serverless and stateful serverless. If you don't get loaded in recent years and that a lot of people are using them to mean many different things to me serverless is not simply these commercial function as a
+00:00:37 [W] And at the end of the session, I hope you walk away thinking quite a lot.
+00:00:34 [W] So to begin I want to do a little bit of table setting I think these terms serverless and stateful serverless. If you come of it loaded in recent years and that a lot of people are using them to mean many different things to me serverless is not simply these commercial function as a
+00:01:21 [W] Although that certainly does fall under the umbrella.
+00:01:24 [W] Really? It is a realization of modern infrastructure capabilities allowing us to iterate more quickly and with more confidence.
+00:01:32 [W] So if our business is running a web app and business is doing really well traffic spikes. We need to go from one instance, two three.
+00:01:40 [W] We're no longer requisitioning Hardware installing the end setting up networks instead. We simply increase a replica counts.
+00:01:48 [W] Stateful serverless at its core is really just about bringing these advances to the application layer along with some key Primitives that any real-world application needs.
+00:01:59 [W] So consistent durable State your application needs to be able to retain information it can act on in the future.
+00:02:08 [W] Cloud native fault tolerance.
+00:02:10 [W] So as we are maintaining the state we want to do. So in a way that leverages what this underlying modern infrastructure is really good at and to make our lives as easy as possible in production and simple messaging Primitives between systems your
+00:02:25 [W] Make single application but a whole host of systems that need to communicate with each other in arbitrary and complex ways.
+00:02:32 [W] We want to make this as easy and intuitive as possible.
+00:02:39 [W] So this diagram shows a very traditional two-tiered application architecture something.
+00:02:44 [W] I'm sure everyone here is very familiar with where business logic is deployed via stateless.
+00:02:50 [W] tear getting us those nice serverless benefits state is then managed on a separate tier VIII a database or other data store details here not so important, but when an application receives a request for other message something to trigger computation it
+00:03:05 [W] Stables tear getting us those nice serverless benefits state is then manage on separate tier VIII a database or other data stored you Tails here not so important, but when an application receives your request or other message something
+00:03:13 [W] Like we communicate with that data store and potentially update some values and then do one of three things one. It could do nothing.
+00:03:21 [W] It could be that this message was simply to update State. We have done that and we are finished too. We may send the results back to an end user. So this message or the sugar was to read some information were querying
+00:03:34 [W] Or three we're going to invoke another service repeating the cycle.
+00:03:39 [W] You can think of these different components interacting with each other as a sort of theta flow and the obvious question arises what happens when something fails
+00:03:50 [W] More fundamental problem with this architecture.
+00:03:53 [W] Is that for any failure in any call across a surface boundary?
+00:03:57 [W] It becomes very hard to reason about which of the desired outcomes were actually achieved applications are forced to have a method of determining whether or not to attempt to retry or somehow make their state update site imposed.
+00:04:10 [W] But what if we rethought this problem the beginning right? What if we inverted it so that messaging runs through the database?
+00:04:17 [W] Well, it turns out this is exactly what stream processors like Apache flank have been doing for years to provide what we call exactly one state semantics business logic remains stateless and is deployed as a separate service from data storage,
+00:04:32 [W] Or somehow make their State updates item poems.
+00:04:36 [W] But what if we rethought this problem the beginning right? What if we inverted it so that messaging runs through the database?
+00:04:43 [W] Well, it turns out this is exactly what stream processors like Apache flank have been doing for years to provide what we call exactly one state semantics business logic remains stateless and is deployed as a separate service from data storage,
+00:05:12 [W] Messaging is going to flow through the database in the data store is going to invoke functions and stateless containers supplying state is the part of the payload of each message these application functions will then return back both State updates and
+00:05:27 [W] Just to be sent to other functions by moving messaging from the compute layer to the storage layer State and messaging is easily made a top and if messaging were to fail for whatever reason the state update is also ruled back.
+00:05:41 [W] So retries are always item potent.
+00:05:45 [W] This is exactly the approach taken by Apache flank staple functions.
+00:05:49 [W] We are using a flint cluster for message routing and State Management while allowing the actual functions containing application logic to be deployed in a separate compute to this gives us a very powerful runtime will compute and state a logically co-located for consistency,
+00:06:04 [W] Same time physically separated Allstate accesses. It updates are integrated as part of the function invocation request and response.
+00:06:12 [W] So our business logic can be deployed.
+00:06:15 [W] However, we so choose could be standard kubernative service using an orchestration to like a knative or even a holy managed service like AWS Lambda yet. We are able to ring maintain consistent State and messaging
+00:06:31 [W] so as we go through our checklist of a proper stateful serverless framework, the initial requirements under pure serverless are easily met by deploying our business logic in stateless containers separate from everything else,
+00:06:47 [W] So as we go through our checklist of a proper stateful serverless framework, the initial requirements under pure serverless are easily met by deploying our business logic in stateless containers separate from everything else.
+00:07:07 [W] These state for consists of specific requirements.
+00:07:12 [W] Well to understand that let's talk about some of the Core Concepts in stateful functions When developing an application you're going to implement several services or what we call functions that are basically small pieces of code or logic representing entities within an application.
+00:07:25 [W] You could for example to find a function type representing a user with a single instance of that function type representing a single use within our application think of this is an object-oriented terms is being the difference between a class and instance.
+00:07:41 [W] these function instances are in vocable through messages and do not consume resources while on active or simply when they are not being invoked what this means is the runtime can host a theoretically infinite number of function instances within a fixed finite set of resources
+00:07:57 [W] Whole thing is Polly got from the ground up.
+00:07:58 [W] So we are deploying these functions their own containers. Meaning you can do so in any language you so choose.
+00:08:04 [W] The only requirements is the language supports HTTP grpc or Unix sockets, which is to say we support virtually every language communication between the point cluster and user code happens through a very well-defined and
+00:08:19 [W] Certainly something you could develop against yourself at the same time.
+00:08:09 [W] We realize that most people don't want to do that day today. And so the community does ship a number of predefined sdks the rap that protocol in higher level idiomatic constructs for that language.
+00:08:20 [W] So there's an SDK for python active development on golang Rust. There's even a Haskell Esky SDK that recently popped up in community and hopefully your favorite language coming soon adding new sdks.
+00:08:34 [W] It's very high on our priority stations.
+00:08:39 [W] Okay, so we can have user code we can write in different languages.
+00:08:42 [W] Lots of people can do that or things get interesting is that we can run these functions with Dynamic messaging and consistent state.
+00:08:50 [W] So if you have used a patchy fog in the past and you're familiar with this idea of a dataflow Tak that is completely gone instead. We support arbitrary communication between functions using logical IDs
+00:09:05 [W] Only thing an instance needs to know to message some other function instance is it's function type and ID.
+00:09:09 [W] So what sort of function do I want to message in which particular instance if we were maintaining user function to keep track of users of our business, we would have user Hazard function type and there'd be an instance for myself
+00:09:24 [W] Would accept someone else's might be John or eagle or Horton or whoever else.
+00:09:18 [W] And all of this can be done with exactly one sentence. So function instances are able to maintain local state while the runtime ensures that messaging and State updates are integrated.
+00:09:30 [W] So users can have out-of-the-box efficient consistency. This is true across event inputs to the application application State itself and outputs delivered from the application.
+00:09:43 [W] And I think most importantly all of this is no database required or better put we are using Apache flank as our database.
+00:09:51 [W] So Fleek has long provided large-scale consistent State Management through these concepts of State back ends and distribute snapshotting.
+00:10:01 [W] Steve is stored locally within the cluster for fast access these and is periodically backed up to simple blob storage.
+00:10:08 [W] This could be Amazon S3. Google cloud storage hdfs and NFS Drive Min, IO, whatever you already have available.
+00:10:17 [W] In the case of failure, when a pod that is part of the Flint cluster itself restarts for whatever reason it will simply download its latest snapshot and continue on processing.
+00:10:28 [W] This means we are not reliant on stateful sets or persistent volumes for high availability of State.
+00:10:33 [W] Organizations have scaled managing hundreds of terabytes of state within Flink applications themselves with the confidence.
+00:10:37 [W] their preferred living consistent reliable results.
+00:10:41 [W] So that is enough on Concepts.
+00:10:44 [W] It's take a look at some specific sdks actually build something today.
+00:10:50 [W] We're going to be looking at the python SDK in particular, but all of these Concepts translate to all different sdks, they all offer the same corporate office.
+00:10:59 [W] So
+00:11:01 [W] We need to begin by thinking about types because remote functions can be implemented in any language and a single application can be composed of many functions written in many different languages.
+00:11:12 [W] We need a uniform format for communication and for that we've decided to standardize on Proto pop. If you're not familiar, it is a sterilization standard out of Google that has very strong cross language support.
+00:11:27 [W] And so all messages passed between functions must be encoded as protobuf and in particular they must be encoded as protocol any which is very convenient because it contains both The Logical type along with the
+00:11:42 [W] And So within a particular user function, you can then quote unquote unwrap that any message into a specific concrete type using your language specific protocol of library that you can then work against
+00:11:49 [W] For State type. So anything we want is consistent durable state must be part about any and this allows State written an arbitrary languages to be uniformly maintained by the point cluster flank steak back ends are simply going to store the
+00:11:52 [W] Any record at the same time, we realize this is kind of boilerplate e and so and it is if you're working directly against the protocol, but for all of the language SDK is we do offer higher level constructs.
+00:12:05 [W] Only ever have to develop against specific protocol types using say the python SDK you will rarely if ever actually see in any record.
+00:12:12 [W] So as with any good introduction to a new bit of software, we're going to start with hello world, but make it stick fun specific.
+00:12:20 [W] And so we're building a greeter application that is going to greet users of our service based on the number of times that specific user has been seen so far.
+00:12:32 [W] So every user is going to get a personalized greeting first time.
+00:12:37 [W] I'm greeted in might say welcome Seth second time. Maybe welcome back Seth.
+00:12:42 [W] Third time third time's the charm stuff yet. If someone else is greeted. They're going to get their own personalized greeting and this is going to show off some very important primitive. So we're going to talk about messages. Right how a Greek request for myself
+00:12:57 [W] To a function and state so we need to maintain for every user a count of how many times they been saying.
+00:13:05 [W] So each function instance is associated with function type and ID as I said before which forms its unique address. This logical address is what we do use when messaging that function so when
+00:13:20 [W] We're going to send a Greek request to the function type greater and the ID Seth.
+00:13:18 [W] We can see that as our input to the function.
+00:13:20 [W] So this is the message that was being passed to us again, as I mentioned while the runtime is using protobuf any by leveraging Python 3 types. In this case. We are able to have that SDK automatically unwrap that for us.
+00:13:35 [W] similarly, we can send a result to another function will look at the middle bit of creating a greeting in just a moment, but we are going to both pack our results into an any type so we can avoid that boilerplate
+00:13:50 [W] Function instance in this case. We're sending it to an email sender that is going to ship out that greeting.
+00:13:54 [W] When messaging we're using our address so we have our function type.
+00:13:57 [W] Which one is it?
+00:13:58 [W] Well, it is email Center. That's the sort of function. I want to message which specific one will I want to message the email sender for this specific email address?
+00:14:09 [W] And then we can go into our personalized greeting itself.
+00:14:12 [W] And this is showing off what I think is our most powerful feature, which is durable state.
+00:14:17 [W] All this method is doing is keeping track of the number of times. This particular user has been seen so far and then generating a message based on that count.
+00:14:29 [W] So our state is being accessed via our context and we are able to read out our state based on some name.
+00:14:39 [W] And specify the type.
+00:14:41 [W] So we're keeping track of seem counter support above type by predefined.
+00:14:45 [W] We can both read that type out and write it back and you know what?
+00:14:52 [W] That's it. The rest of this is standard python.
+00:14:54 [W] There's nothing state fund specific about the rest of this method.
+00:14:58 [W] The only thing that we have done differently than say building those senior cs101 course is that our variables are being managed via the context instead of
+00:15:10 [W] Basic instance variables right?
+00:15:12 [W] Bible right and we get all these nice Primitives like durability out of the box.
+00:15:14 [W] So we've written our code right but we have to make it available.
+00:15:17 [W] right?
+00:15:18 [W] It's running in some remote container. And so the first thing we need is our function registry.
+00:15:25 [W] This is going to map logical function types to concrete bits of code.
+00:15:32 [W] So in this example, we have written both are greet function and our send email function. They are both written in Python and they're both written the same file, but neither of those requirements.
+00:15:43 [W] The send email function for example could be a rust function or could be implemented in Haskell, and it could be running Halfway Around the World to Mark reader.
+00:15:54 [W] But we're going to bind these for registry and we're giving the function type. So the when we shoot off a message to that type, we know how to associate it with a specific concrete method.
+00:16:05 [W] And then we need to expose it to the Flint cluster and we need to ensure that it actually works against our protocol and for that we ship a request reply Handler which dispatches the invocation
+00:16:20 [W] To the bound functions and then in codes their side effects both resulting output messages along the State updates as an HTTP response to be sent back to the Flint cluster and then we simply expose this
+00:16:21 [W] Favorite hgp framework in this example and the later examples I'm using flask but that is not a hard requirements.
+00:16:15 [W] That is just something that I chose to use plug-in your favorite Library here.
+00:16:22 [W] Okay, so greeters are interesting readers are fun. But that's not what you're building. Your business is not built on hello world applications, but it might be built on model serving.
+00:16:34 [W] So we're going to take a look at building a fraud detection application specifically for credit card transaction. So as a transaction comes in we want to build up feature vectors, which require looking at States, right?
+00:16:48 [W] We need to remember things about our users and our merchants.
+00:16:51 [W] We need to query these functions in Dynamic ways.
+00:16:54 [W] And then we want to score that against something that was likely provided by our data science team giving us back a score on whether or not we believe this transaction to be fraudulent and at that point we can take some action.
+00:17:08 [W] Okay, let's take a look at the code for this model survey example again, we're going to be sticking with the python SDK and for Simplicity, all the functions are implemented in a single file is a single flask application.
+00:17:20 [W] Tation, but just to reiterate make it very clear though.
+00:17:24 [W] that is not a hard requirement simply for Simplicity of this demonstration. These functions could all be implemented in different languages.
+00:17:32 [W] supported and expected more flow of many state fund systems
+00:17:36 [W] So we're going to be building up feature vectors that whenever a transaction comes in. We need to get information that we can use to send to our model and one of those features is a fraud count.
+00:17:50 [W] So how many times over the last 30 days has this particular accounts reported and confirmed fraudulent activity the idea here being that the more often that we see fraud for a particular count the more likely
+00:18:05 [W] To see it in the future.
+00:17:52 [W] It's a rolling 30-day some because people's behavior changes and so as Things become further in the past.
+00:18:03 [W] they become less relevant.
+00:18:05 [W] So our function type is varicose / counter, right?
+00:18:09 [W] This is The Logical type. We will use to message this function and we take into parameters are context. It gives us access to capabilities like State and messaging and the actual message.
+00:18:21 [W] To the sent to us.
+00:18:23 [W] Leveraging Python 3 Type annotations, we get to avoid all of our any protobuf boiler plates and I'm using a union type here because we support working against multiple message types.
+00:18:35 [W] So let's start with this confirm fraud message a record is going to come in say from a Kafka topic that
+00:18:46 [W] Tells us that a user has confirmed fraudulent activity against a particular account this function.
+00:18:53 [W] I forgot to mention is always scoped to a particular account ID.
+00:18:57 [W] So fraud count is our function type account is going to be our ID for The Logical address when this comes in we need to increment our counts. And so all we're going to do is go into our context.
+00:19:11 [W] We're going to read out the current accounts and then we're going to increment it if it already
+00:19:16 [W] Our accounts once we have done that we will simply repack it.
+00:19:15 [W] We will set that value and we're done.
+00:19:18 [W] So while we have switched to using a context versus local variables, we are otherwise just writing very simple python code and getting fault tolerance and durability from the runtime.
+00:19:33 [W] But I said we also need to do rolling 30-day count. So every time I increment this fraud counts value in 30 days, I need to decrements it.
+00:19:44 [W] Well, we're able to send messages to other functions, but it turns out we're also able to send messages to ourselves and more interestingly. We can send messages with DeLay So after we
+00:20:00 [W] Are going to pack and send after and we are this means we're going to send a message where we sending it.
+00:19:54 [W] Well, we're going to send it to ourselves.
+00:19:55 [W] We have the context we can get the current address and so we're going to send ourselves and expire frog message that tells us to decrement but we are going to give it a delay of 30 days. So this message will not arrive until 30 days after we send it.
+00:20:11 [W] And the runtime is able to ensure this message is consistent endurable so that if we have failure over the course of that 30-day period for whatever reason this message will not be lost.
+00:20:24 [W] We do that and write a gun.
+00:20:26 [W] So we see that expire fraud is also an accepted type and so after 30 days it will arrive and what we going to do with it.
+00:20:34 [W] Well, we're simply going to decrement our values. So I will read out our fraud counts will decrement it. And then if it's 0 will go ahead and delete the state entirely just freeze up a bit of space and makes things more scalable, but this is really
+00:20:49 [W] Otherwise we are going to go ahead and set the new value. So if it was 5 it's now for we have decremented it and we are good to go.
+00:20:51 [W] But storing state is fine.
+00:20:53 [W] We also need to act upon it and so the third message type that this function accepts is query fraud. Someone can message a particular instance of this function, right?
+00:21:04 [W] They can query for particular accounts and ask how much fraud have you seen over the last 30 days who knew received this will simply check our state value if it's not already said if there was nothing there will give it some default.
+00:21:17 [W] And then we will reply so send this message back to the caller.
+00:21:21 [W] This is everything we need for distributed durable consistent State and messaging of this function.
+00:21:30 [W] Well, it's not see how it's used.
+00:21:31 [W] So I have some of the functions in here.
+00:21:34 [W] we're going to skip past but the main function in this workflow is what I'm going to call the transaction manager.
+00:21:39 [W] This is what coordinates the whole workflow and build up our feature Vector every time a transaction comes up.
+00:21:49 [W] So again, we have our context we have our message types the main one being a transaction. So every time a user say swipes their credit card or does something else we will get a transaction events that contains the account ID.
+00:22:03 [W] We see this we are going to cash it in state. We want to hold on to this and make it available later on and then we're going to farm out to our different functions that we are using to build up our feature Vector so you can see here. We are querying that
+00:22:07 [W] Above and we are going to the instance for this particular account.
+00:22:00 [W] We're also getting some Merchants information and some other values.
+00:22:07 [W] When these functions respond, right? We saw that our fraud count replies back with a reported fraud will hear it is when we get those what we're going to do. Well, there's a bit of business logic to ensure that we have gotten all of our features
+00:22:22 [W] When these functions respond, right? We saw that our fraud count replies back with a reported fraud.
+00:22:27 [W] will hear it is when we get this what we're going to do. Well, there's a bit of business logic to ensure that we have gotten all of our features if we haven't will store that reported fraud counts and state until we get all the different features back, but when we have
+00:22:59 [W] Store that reported fraud counts and state until we get all the different features back.
+00:23:03 [W] But when we have them all we are going to build up our feature vector and message our model.
+00:23:09 [W] This is likely living somewhere else.
+00:23:12 [W] It's provided by the data science team.
+00:23:13 [W] They're going to iterate and deploy the separately of the rest of the application and it will take in that feature Vector computer score and respond back.
+00:23:26 [W] When it does so we are going to get this fraud score.
+00:23:30 [W] So this is our confidence interval from 0 to 100 of How likely we think it is that something is fraudulent. So zero being is absolutely not and 100 being this is absolutely fraud.
+00:23:45 [W] When we get that score, we will compare it to some predefined interval and if it is above the threshold say 80% Well, we will send an alert to a Kafka topic called alerts that says hey we think this is
+00:24:00 [W] In the user will see that and they can act upon it. They can maybe confirm it and the bank will block that transaction or they can say, you know what this was really me. Please let it go through.
+00:24:11 [W] We are also going to delete all of our state values at the end because hey, we have scored and alerted on this transaction.
+00:24:20 [W] We don't need to retain this information any longer.
+00:24:25 [W] As we have built all of these up we are making them available via the request reply Handler and we are packaging.
+00:24:32 [W] This is a flask application.
+00:24:33 [W] I've defined an endpoint / state fund that accepts a post and so whenever data arrives whenever we receive that will simply send the whole payloads the Handler and it will manage dispatching to our functions encoding our
+00:24:48 [W] It's in our responses and we will simply send that back to the caller of this endpoint, which is the flight cluster.
+00:24:46 [W] When we go to package this so let's take a look at the dockerfile. You'll see that there is nothing state fund specific here.
+00:24:55 [W] This is a plain and simple flask application.
+00:24:58 [W] There's nothing about the Flink runtime.
+00:25:01 [W] We're going to see there's nothing special about this in any way and if we look at our dependencies as well.
+00:25:09 [W] We are including the state fund SDK, which is what
+00:25:15 [W] Somehow a protocol and then we are pulling in flask and whatever other python dependencies we need.
+00:25:21 [W] we need. So we're this the model function we might be pulling in numpy or sci-fi or any of those good data science libraries. We have full flexibility here.
+00:25:30 [W] And when it comes time to deploy this well, we are going to deploy it as a standard kubernative deployment.
+00:25:38 [W] So I have written this deployment specification.
+00:25:42 [W] I've pushed my image.
+00:25:44 [W] I want ten replicas of this because I want to be able to scale out.
+00:25:47 [W] We are exposing it under Port 8000.
+00:25:51 [W] But this is all stock in standard kubernative.
+00:25:56 [W] Additionally. There is a service that is making it reachable.
+00:25:59 [W] No, we're too.
+00:25:53 [W] All right. So this file is our module that yam will file.
+00:25:57 [W] This is the configuration.
+00:25:58 [W] We give to the Flint cluster that tells it how to map function types logical function types to address these under which are functions are reachable so we can see here I have our
+00:26:13 [W] Action I have said that this is The Logical function type. So when you see a message that is targeting varicose / counter.
+00:26:07 [W] This is the metadata you should use the function is exposed as an HTTP end points. And this is the specific end points. You should use we also have at the bottom our e in grasses and
+00:26:23 [W] This is how the functions communicate with the outside world.
+00:26:22 [W] So you fall solve for example that we were sending alerts to a Kafka topic. We are also reading our data from Kafka.
+00:26:31 [W] Let's look at the example of our confirm fraud message.
+00:26:36 [W] Well, I have said that this is coming from Kafka.
+00:26:40 [W] I have given it a name and I have my Kafka specific configuration. So where the Brokers live consumer group IDs things like that.
+00:26:49 [W] And then we give it a list of topics to consume from so we are reading from the confirmed topic.
+00:26:56 [W] We've specified are type URL.
+00:26:59 [W] So what sort of data are we reading and then we give it a list of targets.
+00:27:03 [W] So what function types do you want to send these messages to we give it a list of types. The ID is implicitly pulled from the header and it will route our messages to the appropriate function to begin that computation.
+00:27:20 [W] Along with Kafka. We support eight of us can uses out of the box.
+00:27:24 [W] And then if you are comfortable writing a little bit of java code, we also support a whole host of other systems including jdbc elastic pulsar provegan rabbitmq, and
+00:27:39 [W] Andrew lat more first-class Campbell support for those other systems
+00:27:41 [W] We we're going to take this file after we had written it and build our Docker image.
+00:27:48 [W] So this base image Flink state fund contains the entire Apache flank runtime along with all these stateful function specific runtime code and all we need to do is copy our module dot Jama file
+00:28:04 [W] There's no Java code to right there is no fling specific code, right?
+00:27:58 [W] I am also including a point Kampf which is some point cluster configurations, but this is stock and standard if you have written other Apache click applications in the past.
+00:28:10 [W] And in this is the image we are going to use to run our cluster.
+00:28:16 [W] And so I am in fact already doing that.
+00:28:19 [W] Let's go ahead and take a look at our pots.
+00:28:23 [W] I have a kubernative cluster that is running three Kafka Brokers for our data.
+00:28:31 [W] I have a data simulator that is simulating transactions and confirm fraud accounts and all those good things and then we are running our flight cluster and our user code, so I'm running three instances
+00:28:46 [W] It's in my fling cluster. Each of these only have a single core. So it's very small and then we are running our user code and I have a replica set of ten. So I want to really scale out that compute if we go ahead
+00:28:56 [W] Let's go ahead and believe I'm already poor forwarded. So
+00:28:51 [W] I can pull over the flank UI you can see that everything is up and running.
+00:28:57 [W] This is the point UI if you're not familiar it tells us what our application is doing. And so we can see here we have processed since I started this roughly 200,000 messages.
+00:29:08 [W] Let's these are all calling out to our user code is being routed through this application.
+00:29:14 [W] It is sinking the results into Kafka if we take a look at our
+00:29:21 [W] It's not our fault tolerance.
+00:29:22 [W] We can see that things are going through smoothly.
+00:29:24 [W] There was a failure, but that's okay.
+00:29:26 [W] We handled it gracefully and currently I'm managing about seven gigabytes of state within the blink posture.
+00:29:33 [W] Remember this is being stored locally either in local memory or spilling to local disk, but it is always local we are never using versus advantageous a full sets. Mineo is providing all of our fault tolerance.
+00:29:47 [W] And when it is time to go make a change, so maybe I want to change my replica count or I want to deploy a new version of my user code. All I need to do is apply those.
+00:30:03 [W] Values that we have for our function so I can cue control applied a chef state fund functions in this has our deployment camel and our service animal and this will apply those changes in this case.
+00:30:15 [W] I haven't actually changed anything. We can also apply a horizontal load balancer.
+00:30:22 [W] So perhaps I did not want to have a static set of functions, but I want to scale is my load goes up and down throughout the day we can do that.
+00:30:30 [W] And we will be able to do so gracefully.
+00:30:34 [W] and we can
+00:30:36 [W] Multiplex different function modules together so I'm running this code perhaps I'm more of a data engineering team.
+00:30:43 [W] And so we're in charge of building the feature vectors maintain that state the data science team has their python code that is our model.
+00:30:53 [W] They're going to deploy that separately and make their own updates and we can all do that gracefully inconsistent.
+00:30:59 [W] So I really appreciate you taking the time to listen to my talk today.
+00:31:03 [W] I hope you are excited about stateful functions and the future of stateful serverless applications.
+00:31:11 [W] If you have any questions, I'm always on Twitter. I @ SJ. We spend also the Apache Flink user mailing list is the most active user mailing list of any Apache project, and it's a great place to get help.
+00:31:26 [W] Much and I hope you enjoy the rest of the conference.

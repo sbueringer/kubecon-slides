@@ -1,0 +1,304 @@
+﻿DevOps All the Things: Creating a Pipeline to Validate Your OPA Policies: BWYT-6877 - events@cncf.io - Thursday, November 19, 2020 4:52 PM - 38 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello everyone.
+00:00:00 [W] Thank you for joining us on our talk devops all the things creating a pipeline to validate your Opa policies.
+00:00:06 [W] My name is Gerardo some I'm a senior lead technologist at Booz Allen Hamilton.
+00:00:10 [W] Hi, my name is carpe diem Balin.
+00:00:13 [W] I'm also a senior Lee technologist at Booz Allen Hamilton.
+00:00:16 [W] I'm happy with spicy food.
+00:00:19 [W] It's by movies any time in love anything open source.
+00:00:23 [W] awesome.
+00:00:24 [W] So today we're going to be talking to you about open policy agent carbon.
+00:00:28 [W] Um, could you please tell us a little bit about Opa for those viewers?
+00:00:31 [W] That might be new to the technology?
+00:00:32 [W] Sure Opa or open policy agent is an open-source general-purpose policy.
+00:00:40 [W] Ation engine it takes any Json Json data as input and evaluates that against predefined policies or rules written in a declarative language called Regal the fashioning policies and
+00:00:55 [W] A couple policy decision-making from policy enforcement and opa allows us to Define rules that lay out how your system should behave across the stack and this of course relates to the devops tack as well.
+00:00:55 [W] Right?
+00:00:55 [W] It's not enough to have these policies live in a vacuum right at its core devops is about streamlining value to customers by shifting left quality assurance, which includes security as much as possible continuous integration has become a standard that
+00:01:11 [W] many teams adopt automatically by executing unit tests and integration tests as part of their devops pipeline these CMV same practices can and should be applied to infrastructure as code configurations code configuration management.
+00:01:24 [W] And today we're going to demonstrate how to apply these practices When developing your Opa policies to ensure that things work as expected early and often carbon. Um, could you tell us a little bit about some of the tools that we'll be using in our demo to address these stages?
+00:01:37 [W] So yes, there are many tools that wrap around.
+00:01:41 [W] The OPA engine to provide policy enforcement capabilities at various layers of the stack and various stages of the devops cycle along with some of the policies that we've written today in Rego.
+00:01:53 [W] We are using some such tools to help automate and strengthen our development and enforcement process one such tool is the gatekeeper, which is a community's admissions controller when Gatekeepers installed in the cluster
+00:02:08 [W] he's a pi server will trigger the gatekeeper admissions webhook to process the admissions request whenever a resource in the cluster is created and based on the results of this evaluation made by The Gatekeepers Opa engine that mission
+00:02:15 [W] Request whenever a resource and the cluster is created and based on the results of this evaluation made by The Gatekeepers Opa engine the admission of the resource to the API server will be the granted or denied.
+00:02:13 [W] another tool we will use is called conf test which is also a wrapper around Opa evaluation engine can't test allows us to statically run validation test against policies that we have written before we even actually
+00:02:29 [W] Use is called conf test which is also a wrapper around Opa evaluation engine contest allows us to statically run validation test against policies that we have written before we even actually go install.
+00:02:43 [W] Location and deploy them. This allows us to verify that the policies we are writing are evaluating as we expect them to and of course the Manifest we are developing or complying with those policies
+00:02:58 [W] Today in our demos called constraint. That's Kon St.
+00:03:02 [W] Are a int an open source contribution by an organization called Plex that translates generic Rego policies into specific templates used by gatekeeper that are called constraint templates.
+00:03:17 [W] Strains this allows us to keep our policies as generic Rego core and have different tools evaluate and enforce the same set of policies at different points in the devops cycle.
+00:03:27 [W] Finally.
+00:03:29 [W] We will use get pre-commit hook to order made using contest and constraint together to automatically validate the manifests. The developers are creating this process allows us to ensure that all code that we check
+00:03:44 [W] They ate the Manifest the developers are creating.
+00:03:44 [W] this process allows us to ensure that all code that we check into. Our application Repose is conferment to rlp Opa policies Grand. I think it's time for a demo.
+00:03:57 [W] I think you're right.
+00:03:58 [W] Okay, let me switch our view here.
+00:04:00 [W] Okay, and just to set the stage a little bit.
+00:04:03 [W] do have a kubernative cluster that's running and I think my my port forward time to of course.
+00:04:11 [W] Demo Gods. All right. We have a just to set the stage.
+00:04:15 [W] We have a kubernative cluster.
+00:04:16 [W] that's running.
+00:04:16 [W] I have Argo CD deployed into it with some applications that we're going to use to Showcase here. We have gatekeeper already installed in the cluster.
+00:04:24 [W] So it's already activated and ready to do its job and I have a couple of empty applications here that are going to hold our constraints, right?
+00:04:33 [W] So they're empty right now.
+00:04:34 [W] Sorry concern templates as well as the constraints which is where they're going to live and we're going to see them get deployed.
+00:04:41 [W] And then I also have like a little demo app of come of components that we're going to test against these constraints to see them launched successfully.
+00:04:48 [W] So just to set the stage there.
+00:04:50 [W] And so now if we go to the terminal I have our little repository here and we'll start right with the policies directory, right?
+00:04:58 [W] This is where we're centralizing all of the various Rego policies that were writing.
+00:05:03 [W] So if I look into one of these here, I can see that we have the RICO Source actually in here, right? So this is
+00:05:11 [W] For any spec, right? We need actually something to load this into our cluster.
+00:05:14 [W] So that's where that tool that carpet on was talking about comes into play which is called constraint constraint does the job of taking generic rido policy files like this and creating constraint templates and constraint files for us, which we then
+00:05:30 [W] You launch into our cluster and have Opa consume them, right?
+00:05:30 [W] So just as an existing to dive a little deeper constrained templates, basically describe the Rego that enforces the constraint and the schema of the constraint and then the constraint itself is the basically the definition of what we want to enforce and
+00:05:45 [W] and so for that we've actually written this little wrapper script around constraint and all this does it does some cleanup if we try to run this multiple times, but it'll call constraint against the policies that we've written in our policies directory to
+00:05:57 [W] Strength against the policies that we've written in our policies directory to generate the constraint templates and constraints and then it will place them into two directories that I have are going to CD watching to be able to deploy those files. Right?
+00:06:07 [W] So let's actually do that.
+00:06:08 [W] Let's call this script now.
+00:06:10 [W] All right. And so if I do a git status I can actually see that we've created a bunch of files. We've created several constraint templates and we've created several constraints to go with them.
+00:06:20 [W] so I can actually add those right now.
+00:06:25 [W] and will commit
+00:06:28 [W] And we can push those to our repository, right?
+00:06:33 [W] And so Argo CD seeing this commit now is going to pick those up but just so we don't have to wait for the default Argo refresh to actually check our repository. I'm going to hard refresh it here to tell it.
+00:06:45 [W] Hey, we've got some changes because we're a little short on time.
+00:06:48 [W] And so Argo City is already picked out the constraints that are coming up it recognizes them from the source code that we've committed and it'll start creating.
+00:06:57 [W] Custom research definitions which Opa gatekeeper will then consume right?
+00:07:02 [W] So the constraint templates are there and there is a there is a order that needs to be done in place. The constraint templates have to be created before and constraint can be created the constraints depend upon the template to know how to instantiate right.
+00:07:17 [W] So if I go back into my applications and I go into the constraints
+00:07:22 [W] The city has already picked out the constraints that are coming up.
+00:07:25 [W] It recognizes them from the source code that we've committed and it'll start creating those custom resource definitions, which Opa gatekeeper will then consume right?
+00:07:35 [W] So the constraint templates are there and there is a there is a order that needs to be done in place. The constraint templates have to be created before and a constraint can be created the constraints depend upon the template to know how to instantiate right?
+00:07:50 [W] So if I go back into my
+00:07:51 [W] My applications and I go into the constraints.
+00:07:57 [W] And this doesn't start slowing down.
+00:08:10 [W] Demo Gods why there we go, and we'll do the same refresh.
+00:08:23 [W] Oh my gosh.
+00:08:38 [W] This is crazy.
+00:08:40 [W] And likes it's like it knows we're recording.
+00:08:52 [W] One day it's for that's just a network traffic.
+00:08:55 [W] That's not even true thrush.
+00:09:03 [W] All right.
+00:09:06 [W] All right.
+00:09:07 [W] Sorry about that internet issues.
+00:09:09 [W] What can you do anyway, so now we've seen that the constraints of launched right? So these have now been loaded into gatekeeper and Gatekeepers actually ready to start enforcing these new policies that we've just loaded in using Argo CD. So
+00:09:25 [W] That the constraints of launched right?
+00:09:26 [W] So these have now been loaded into gatekeeper and Gatekeepers actually ready to start enforcing these new policies that we've just loaded in using Argo CD.
+00:09:36 [W] So going back to my little demo here. I actually have a have a directory that has some
+00:09:45 [W] It has some files that will violate certain policies that we have running in our cluster.
+00:09:51 [W] For example, we've made it so that containers that try to spin up images using the latest tag are non-conforming right you might wish to pin your applications that you're launching in the cluster on specific versions.
+00:10:04 [W] You don't necessarily want to use the latest tag because that can contain breaking breaking changes that you know, don't necessarily want to deal with until you go through a rigorous process of evaluating those changes with the newer versions.
+00:10:16 [W] Additionally we've decided to enforce resource limits, right?
+00:10:21 [W] We don't want people to create deployments or containers that don't have resources specified.
+00:10:26 [W] And finally we want to be explicit about not running containers as roots, right so you can see I've commented those out but basically if I try to create this deployment right now, it's going to fail for several reasons that I just covered.
+00:10:37 [W] So let's let's validate that right.
+00:10:39 [W] Let's do a cube control create - F
+00:10:43 [W] with container
+00:10:47 [W] And we can see here.
+00:10:48 [W] This is a response from gatekeeper saying hey your action is denied for all these reasons right images must not use the latest tag container resource constraints must be specified pot can pods can run as root.
+00:11:03 [W] That literally the policies that we just instantiate it into our cluster are already being enforced.
+00:11:08 [W] But what if you know, what if I'm not someone that has cute control access what if I'm just a developer that is trying to commit some code right run it through a pipeline get it deployed into a cluster.
+00:11:20 [W] I don't necessarily use Q control to get my resources into the cluster.
+00:11:26 [W] I just make a commit right? So I have that demo folder that's being watched by Argo to deploy applications. So what if I
+00:11:32 [W] Just took this container and I moved it up to the demo demo directory that's being watched by Argo. Right and let's add that and let's try to commit it.
+00:11:44 [W] Let's just do a commit we can see here contest is basically validating what we're trying to commit in the demo directory against the policies that exist in our policies directory, right?
+00:11:59 [W] So not only are we actively guarding against new
+00:12:03 [W] Being deployed into the cluster, but we're also guarding against, you know, the development phase of developers trying to push objects or code.
+00:12:12 [W] That's non-conforming. Right?
+00:12:14 [W] So this is just a local git git commit hook pre-commit hook the basically tells us.
+00:12:19 [W] This c25 let's change the latest tag and specify a specific version.
+00:11:56 [W] Let's uncomment the resources that we want to implement here.
+00:12:04 [W] And then let's bring in a security context and specify that.
+00:12:08 [W] We don't want to run as root that we want to run as a specific user right.
+00:12:12 [W] Let's write that. Let's try to commit it.
+00:12:18 [W] And let's see if the get both I'm messed up a spacing. Of course.
+00:12:25 [W] I believe I am one short here.
+00:12:37 [W] All right.
+00:12:37 [W] let's try again.
+00:12:51 [W] two
+00:13:00 [W] I think the security context also needs to be moved one more of the same.
+00:13:07 [W] Thank you very much.
+00:13:09 [W] here
+00:13:17 [W] Let's try again.
+00:13:30 [W] two
+00:13:39 [W] the security context also needs to be removed one more of the same.
+00:13:47 [W] Thank you very much.
+00:14:00 [W] Here we go.
+00:14:01 [W] Thank you.
+00:14:02 [W] So now we can actually Commit This we can say adding.
+00:14:05 [W] Sorry.
+00:14:08 [W] adding
+00:14:11 [W] Right now we can actually push this and if we push it Argo should pick it up and we can go into our demo apps.
+00:14:29 [W] Port forward failed again. My Internet is just loving me tonight.
+00:14:35 [W] Go into our demo apps do a hard refresh and we can see that Argo is going to start deploying that container since it picked it up from source code.
+00:14:45 [W] So that's great.
+00:14:46 [W] So let's do one more test.
+00:14:47 [W] I have one more file in here in this directory. I have a name space. W potential to create right?
+00:14:54 [W] So this namespace is going to check for a specific label, right?
+00:14:57 [W] Let's say we have a co-writing our environment.
+00:14:59 [W] We want to make sure that you see on Jackson is enabled right? So we'll do the same test here.
+00:15:05 [W] I will try to create it.
+00:15:07 [W] And we should get back.
+00:15:08 [W] Hey, you can't do this, you know, you need to have the proper label installed on your in your manifest, right?
+00:15:15 [W] So same thing.
+00:15:16 [W] Let's try moving it.
+00:15:18 [W] See if we can be sneaky and get around this and try committing it.
+00:15:26 [W] Port forward failed again. My Internet is just loving me tonight.
+00:15:32 [W] Go into our demo apps do a hard refresh and we can see that Argo is going to start deploying that container since it picked it up from source code.
+00:15:42 [W] So that's great.
+00:15:43 [W] So let's do one more test.
+00:15:44 [W] I have one more file in here in this directory. I have a name space that we potentially want to create right?
+00:15:51 [W] So this namespace is going to check for a specific label, right?
+00:15:54 [W] Let's say we have a co-writing our environment. We want to make sure that it's the injection is enabled right? So we'll do the same test here.
+00:16:02 [W] I will try to create it.
+00:16:04 [W] And we should get back.
+00:16:05 [W] Hey, you can't do this, you know, you need to have the proper label installed on your in your manifest, right?
+00:16:13 [W] So same thing.
+00:16:13 [W] Let's try moving it.
+00:16:15 [W] See if we can be sneaky and get around this and try committing it.
+00:16:23 [W] Same thing.
+00:16:24 [W] Hey, you know your manifest isn't conforming. So we're going to not allow you to commit this.
+00:16:30 [W] So let's fix it again.
+00:16:38 [W] All Rights
+00:16:48 [W] And let's refresh one more time.
+00:16:53 [W] And there we go.
+00:16:54 [W] The namespace that we have there is getting created right? So that's good.
+00:17:00 [W] Cool. Let's go back to our PowerPoint.
+00:17:09 [W] So let's go over what we just covered. Right? We've showcased how you can centralize all your ego policies.
+00:17:15 [W] You can extrapolate this to your own organization in that this allows you to keep all your ego policies for all your various applications and one location in Source control.
+00:17:23 [W] This location can be leveraged by any of your pipeline tools that require those policies.
+00:17:29 [W] We've showcased a process that allows you to automate the creation of constraints and constraint templates, which are valid kubenetes objects that graphql.
+00:17:36 [W] Keeper can consume as well as the seamless deployment of those Resources with Argo CD.
+00:17:43 [W] Nations in one location in Source control this location can be leveraged by any of your pipeline tools that require those policies.
+00:17:50 [W] We've showcased a process that allows you to automate the creation of constraints and constraint templates, which are valid kubenetes objects that gatekeeper can consume as well as the seamless deployment of those Resources with our OCD.
+00:18:04 [W] We shown you use cases that validate these policies that are deployed into the cluster with by gitops using Argo CD and finally we've shown validation and
+00:18:13 [W] In the development phase right using contest and get hooks to not only give validation feedback to application and manifest developers.
+00:18:20 [W] But at the same time continuously validate the RICO policies that exist in our code repository.
+00:18:27 [W] So what's next?
+00:18:27 [W] Well the get the get pre-commit hook that we showed is local right?
+00:18:32 [W] You can take the same validation test and make it a part of your pipeline so that the Manifest and policies are validated before deployment policies can be developed independently centralized in one.
+00:18:43 [W] Station and can be enforced and enforced uniformly across the devops life cycle.
+00:18:47 [W] You don't want to test new policies or changes to existing policies in a live environment.
+00:18:52 [W] You get set up a pipeline that employs terraform and validates with Terror test to generate an ephemeral kubernative environment apply your policies and then run a battery of tests to validate against those policies.
+00:19:05 [W] When those tests come back, you can improve the merging of new policies to your code base, and that's it.
+00:19:12 [W] Thank you so much for attending our talk, and we'll be around to take your questions in the chat.
+00:19:16 [W] Thanks. Bye.
+00:19:52 [W] There's a question that's been asked.
+00:19:55 [W] How would you keep the policy used by coms test and GateKeeper?
+00:20:03 [W] That's inside the cluster always synced. The answer to that is it lies in the gitops secret with the Gita gitops because everything that's tracking gets deployed
+00:20:19 [W] It strengthened is tested by constant.
+00:20:22 [W] So it's technically we tested and we deploy the same thing that statically tested according to the question to their go see.
+00:20:33 [W] Hope that answers that question.
+00:20:35 [W] Yeah, there's another question of what is Argo?
+00:20:41 [W] So Argo CD is a mechanism for continuous delivery through gitops.
+00:20:46 [W] So it's basically an agent that can watch your Source control and it has the permissions to create and modify and delete objects within your kubernative cluster.
+00:20:58 [W] So we basically pointed it at our little demo code Repository.
+00:21:03 [W] And when it notices new git commits, if it's something that it can interact with such a such as a kubernative object, it'll go out and actually instantiate those objects into your cluster.
+00:21:23 [W] So there was another question for to kind of go over the flow again, right?
+00:21:29 [W] So the goal of what we were trying to show here is that one you can have a centralized location where you can write generic Rego policies, right Rego is not just for kubernative, but it is a popular use case for
+00:21:44 [W] From within that centralized location you can use items such as contests and constraint to generate more specific templates that you can utilize within your cluster, but more importantly,
+00:21:52 [W] Tie them into local development or even ci/cd pipelines by having things such as get pre-commit hook sore your ci/cd pipeline leverage that centralized policy location to generate
+00:21:56 [W] Strains to run against the code that you're either trying to check-in or code that's running through your pipeline.
+00:22:02 [W] So that's that's really what we were trying to show cases.
+00:22:04 [W] What's typically seen I believe with kubernetes with having gatekeeper run inside your cluster kind of guarding the wall against what items are created.
+00:22:15 [W] The goal is to shift it left to involve it even earlier in your development process.
+00:22:21 [W] I think that sets a good precedent and it sets a good message for your developers to have an earlier and closer integration against the
+00:22:31 [W] Policies that you're trying to enforce within your cluster, right if you have a developer that commits some code and it goes through some pipeline it only fails until the very end, right it can build some negative sentiment against ci/cd possibly
+00:22:46 [W] Combat, some of that you make the policy checking come into the development cycle and process as early as possible.
+00:22:52 [W] So that developers get quick and Rapid feedback against what they're developing to be able to accommodate or change it as they need to be able to adhere to your policies. Your organization's policies to be able to have that committed and deployed into their cluster.
+00:23:17 [W] So there's a question for where is the repository for this? I can share that with in the chat? I think car program since it is a private repo on your behalf.
+00:23:29 [W] You'll have to open that up.
+00:23:30 [W] So we'll share that in the chat now and then I'll have or rather carpet gum will probably publish it and make it public.
+00:23:40 [W] Just give me a couple of hours right after this and I will get to it would be able to access it.
+00:23:51 [W] So, let's see.
+00:23:54 [W] There's a question sounds like this talk is about using pre-existing Rego policies to validate changes to yeah mlops the get pre-commit for those who hosts their Rego policies in a git repo.
+00:24:04 [W] Else so one that immediately comes to mind right is you can have a set of manifests that you know are either good or invalid, right and as part of developing new policies,
+00:24:14 [W] Sting those policies with some standardized sweet of manifest that you expect and can assert and certain responses from those policies car become. I don't know if you had something that you can maybe add on to that end.
+00:24:56 [W] Here is to be able to use that common set of policies at different stages of our Pipeline and I could start like the Tennyson but rather than the canonical cold and then the
+00:25:49 [W] each phase of that about cycle as far as there's a question of as far as what was the next part the next part right, which we didn't necessarily have the full time to dive into is we showed this as part of
+00:26:05 [W] each phase of that about cycle as far as there's a question of as far as what was the next part the next part right, which we didn't necessarily have the full time to dive into is we showed this as part of the
+00:26:20 [W] Also, you can easily Source control and share with your developers.
+00:26:23 [W] The next phase would be involving it in something like a ci/cd pipeline that gets executed whenever a developer commits additional code, right?
+00:26:32 [W] That's when you would involve that battery of tests and valid manifest that you know are good right to test against that and further you could then as far as developing new policies or validating policies that you have spin up a femoral kubenetes environments
+00:26:47 [W] So, you know are good right to test against that and further you could then as far as developing new policies or validating policies that you have spin up a femoral kubenetes environments using something like terraform and validating
+00:27:07 [W] like terraform and validating those environments with Tara test using something like Argo CD to automatically deploy your Suite of policies that you wish to test against validating them running the code against it and then giving that feedback
+00:27:22 [W] C pipeline
+00:27:26 [W] Can we see your constraint files?
+00:27:28 [W] Are they in a git? Repo?
+00:27:29 [W] Yes.
+00:27:29 [W] Oh, I did share the git repo in the chat and I think once we make that public you'll be able to dig into that.
+00:27:46 [W] Hey cover. Can you move the phone a little closer to yourself?
+00:27:49 [W] Yeah, if you go to GitHub on the public internet they have a cold.
+00:28:20 [W] as well
+00:28:21 [W] There's a question about sharing the PowerPoint. The PowerPoint should be attached to the page of the talk.
+00:28:29 [W] I believe I uploaded there so you should be able to whatever the additional materials tab is to find it there.
+00:28:36 [W] There's another question of is there support for regression testing to see the impact of new policies.
+00:28:41 [W] Reactor behave and report that back as part of the pipeline process to the developer to see which test pass which test failed.
+00:28:54 [W] How did you automate Opa constraints and templates?
+00:28:57 [W] I'm not sure if you mean automated the deployment or the automated the creation right?
+00:29:01 [W] So we showcased a centralized Rigo policy library, right? Like you can imagine that every organization would start to build their own Suite of Rago policies, right?
+00:29:13 [W] And then we used a tool called constraint to actually generate the constraint templates and the constraints themselves the valid kubernative objects, and then automated the deployment of those with
+00:29:23 [W] OCD
+00:29:28 [W] do you keep all Rego in one git repository? So we did for this demo you could do that as well and your organization right have a centralized repository that maybe you know your devops team manages and then as part of a ci/cd pipeline
+00:29:43 [W] like a pre-commit process that those repositories can be referenced by your pipelines or your pre-commit process to actually validate against
+00:29:57 [W] Can you go a bit into detail on how to test Opa policy may be in a prod setting sorry very new to Opa in general.
+00:30:05 [W] So no problem.
+00:30:06 [W] So I think with Opa you have to know what you're trying to enforce, right? So some of the some of the constraints that we showed our very common within kubernative right ensuring that you
+00:30:21 [W] That you launch has a resource limits, right? If you run into a potential problem of things eating up too many resources. If you don't I'm not running privileged containers ensuring that your pods have specific labels that are important to you your your process.
+00:30:27 [W] You need to begin outside of something Jay.
+00:30:26 [W] to enforce and then finding a way to do so within the basically the Rego policy language right whether that's a label or some field or something that you want to ensure is either there or not there and then
+00:30:42 [W] valid and invalid use cases against those policies
+00:30:49 [W] Did you utilize Gatekeepers audit functionality for any clusters that had been deployed already before jumping to enforcement?
+00:30:55 [W] So not not in this particular demo, right?
+00:30:57 [W] But car become I think you're more familiar with the audit capability. Right? It's able to audit things running inside your closet, right?
+00:31:05 [W] So gatekeeper is pretty versatile so we can run it only in audit more and where it would just ordered everything that's already deployed inside the cluster
+00:31:20 [W] How it measures up against the policies and all the violations are slag.
+00:31:24 [W] So you get into the lungs and and in the status of the part not the constraint status itself all the violations that are detected and then it also has
+00:31:39 [W] A Mode called dry run for the policies are evaluated but not enforced so it'll say this particular manifest, which is being admitted.
+00:31:50 [W] It doesn't live up to the policies.
+00:31:53 [W] It's probably exhibit but it'll let it through still because it's in the dryer right run mode.
+00:31:59 [W] And then there's an enforcement world and this can all be fine grain and you can choose pick and choose on which policies and you want to enforce which ones we want to dry run which namespaces didn't exclude.
+00:32:15 [W] student clue
+00:32:16 [W] there's another follow-up for you car program.
+00:32:19 [W] I think that you might be able to answer pretty what do you think are any handy ways of writing Rego policies?
+00:32:28 [W] Could you repeat that again and catch that sure we have someone that's asking if there are any handy ways of writing Rego policies.
+00:32:36 [W] I think we just kind of wrote ours because we knew what to you know, what we wanted to limit against but maybe for someone coming new to Opa how they would write Rego policy.
+00:32:51 [W] Regular is like a declarative policy is with as such the rules.
+00:32:57 [W] So every statement evaluates to true or false and if it goes to the chain, if anything evaluates to false, then it's a violation to can trigger violation
+00:33:13 [W] The logic works now, there is a also Durango playground where you could online that if you go to the Rego open source area you would see
+00:33:23 [W] Dried policies and tested online and you can step through the code and it really helps to develop the skills to write a radical complex Sugar Code
+00:33:30 [W] Input different Jason in the right hand side and you can change a code of the lab and you can see how it evaluates.
+00:33:37 [W] Yeah, I had a couple more questions come in about the repository.
+00:33:41 [W] I'll also post this in the cncf slack after we're done.
+00:33:44 [W] does your ci/cd for other Repose? We have one minute until the end of QA.
+00:33:50 [W] Okay, that's good to know.
+00:33:50 [W] There's your ci/cd for other Repose then clone the centralized wriggle repo or how do you distribute a centralized?
+00:33:55 [W] Yeah, so it depends on how you do your ci/cd, right. If you have some sort of a pipeline templates kind of configuration right where you have, you know, your pipelines depend on other pipelines or other repositories.
+00:34:07 [W] Tory's importing them in that way or cloning them locally right to run within that pipeline run.
+00:34:12 [W] It really depends on how you do it. But I think if you centralize it it gives you more flexibility in the different places that you use it.
+00:34:19 [W] There's a question is I'm interested in trying to move to the next step.
+00:34:24 [W] Are there any gotchas when installing Opa gatekeeper on kubernative? I think depending on the types of validation web hooks that you make
+00:34:33 [W] Being careful as to what policies you said in place or where you accept items with respect to cube system because if you make it, how do I how do I say this?
+00:34:44 [W] If you make it very intrusive in the cube system namespace you run the risk of it potentially bringing down core system pods that your dependent upon.
+00:34:55 [W] Types of validation web hooks that you make being careful as to what policies you said in place or where you accept items with respect to cube system because if you make it, how do I how do I say this?
+00:35:08 [W] If you make it very intrusive in the cube system namespace you run the risk of it potentially bringing down core system pods that your dependent upon.
+00:35:19 [W] Do you use Argos CD for apps for app do I think it might have ended it disconnected me or at least my phone. Did you use Argo City for apps or app deployments also or only for system level containers we have used Argo
+00:35:34 [W] For app do I think it might have ended it disconnected me or at least my phone. Did you use Argo City for apps or app deployments also or only for system level containers we have used Argo CD for application deployments as well.
+00:35:50 [W] Is the repo going to be under our organizations org and GitHub know this will be a public Repository.
+00:35:59 [W] As far as which chat there is a security identity and policy sect - ID - policy slack Channel where this will be posted.
+00:36:13 [W] I feel like some of the constraints you're enforcing we do similar ones with admission web hooks from your perspective which use case Falls more into Opa policy control. And which ones does admission webhook might be more suitable car become did you want to tackle that one?
+00:37:19 [W] So I'm not sure if carpet gum can be heard.
+00:37:21 [W] I think maybe the call dropped.
+00:37:24 [W] But at this point, I think we're starting to run up against time. Anyway would be happy to take more questions in the slack channel of I've also pasted the git repository there.
+00:37:32 [W] So thank you everyone for coming to our talk.
+00:37:34 [W] really appreciate everyone's time. I hope you were able to take some of this away for your own project.
+00:37:55 [W] You should be able to find it or if you if you need me to paste it to you.
+00:37:59 [W] I'm also on slack myself if you search for my name Geor. Aan you'll find me on Slack.
+00:38:05 [W] And that's it.
+00:38:07 [W] Thank you so much everyone and thank you to the to the video Engineers for helping us as well.
+00:38:14 [W] And we'll see you on Slack.

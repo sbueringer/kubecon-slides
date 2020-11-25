@@ -1,0 +1,348 @@
+﻿KinD-ly Validating Your K8s Apps Automatically Per PR: AELB-6825 - events@cncf.io - Wednesday, August 19, 2020 10:47 AM - 1187 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:07:56 [W] All right, everybody.
+00:08:01 [W] I'm sorry Philippe and I'm Greg Griffis, and we'll be talking to you today about kindly validating your kubernative zaps automatically / PR to give you a little background about myself.
+00:08:08 [W] I'm a few Solutions engineer.
+00:08:10 [W] I'm I've been at GitHub for 11 months now previously.
+00:08:14 [W] I was a cloud apps and platform engineer at GE where I worked out microservices kubernative and Cloud Foundry today. I'm focusing on inner Source Automation and improving this
+00:08:21 [W] For development life cycle for fun.
+00:08:26 [W] I enjoy volleyball traveling and the beach.
+00:08:26 [W] And I'm Grant.
+00:08:31 [W] I've been at portworx for about a year and a half now.
+00:08:32 [W] I'm a software engineer previously.
+00:08:36 [W] I was at GE working on the data services team and platform and generic.
+00:08:41 [W] I'm a contributor to Sig storage and kubernative CSI and for fun. I like climbing soccer and surfing
+00:08:45 [W] awesome.
+00:08:51 [W] All right, let's jump into our agenda.
+00:08:53 [W] So today we'll give you a quick overview. What our motivations are what our challenges are will go into why kinds jump into our Automation and continuous integration conversations give you a quick overview of what we'll be testing will do a live demo right after that and then
+00:09:06 [W] takeaways
+00:09:08 [W] So let's start off with our overview.
+00:09:16 [W] So what why did we why did we want to do this talk?
+00:09:18 [W] Well, we wanted to be able to collaborate successful in both internal and open source projects.
+00:09:23 [W] We had some challenges.
+00:09:25 [W] What were those challenges? Well collaborating needs to be transparent consistent and rigorous testing kubernative plication is varies varies all the time between per developer environment.
+00:09:39 [W] It can vary against the different configurations that you have on set up for your environments.
+00:09:42 [W] And it's time and resource consuming to constantly spin up kubernative applications and kubernative clusters every single time.
+00:09:49 [W] You make a single change.
+00:09:50 [W] So yeah, well we'll cover is basically a simple steps simple simple set of steps to create an automated a homogeneous testing environment and we'll use kind to automatically run e2e tests across a common environment and then we'll also automate the creation of this environment parole Crest and
+00:10:07 [W] Imagine and you might notice a lot of fun pictures from Amsterdam, as you know, this conference was supposed to be named Sudan. So try to keep the theme gun strong.
+00:10:18 [W] So yeah, we're going to talk about kinds now.
+00:10:26 [W] So kind is basically kubernative and Docker it's similar in usage tab meaning something like minikube k3s, basically a different District of k3s of sorry of Cape kubernetes.
+00:10:34 [W] It's great for local testing or testing even remotely in ci/cd.
+00:10:45 [W] And if you want to learn more go to kind dots eggs dot k, that's dot IO yeah. All you need is Docker and you can spin up your own communities cluster.
+00:10:49 [W] See, how do you actually do this?
+00:10:58 [W] So if you're on a Mac or if you have Brew installed, all you need to do is to brew install kind and then kind create cluster.
+00:11:00 [W] So it's extremely easy to get started.
+00:11:01 [W] probably the lowest barrier of entry tool to kind of spin up your own container scheduler ever. It's very awesome and really cool tool to use.
+00:11:13 [W] So this is kind of what it looks like when you start up so it pulls the kubernative version prepares the notes and then it starts up all the different components.
+00:11:18 [W] So just a quick comparison, you might be using another tool out there and maybe k3s or minikube.
+00:11:26 [W] Used to brew install kind and then kind create cluster.
+00:11:37 [W] So it's extremely easy to get started.
+00:11:37 [W] probably the lowest barrier of entry tool to kind of spin up your own container scheduler ever. It's very awesome and really cool tool to use. So this kind of what it looks like when you start up so it pulls the kubernative version
+00:11:39 [W] So for example, there's minikube that that actually requires the VM but it's a single node kubernative itself.
+00:11:48 [W] They didn't change any of the kubernative code.
+00:11:54 [W] That's the main difference between k3s minikube k3s is actually a slimmed down version of kubernative.
+00:11:59 [W] They actually pulled out things like the volume drivers.
+00:12:00 [W] You can only use CSI and they pulled out some other things that are dedicated to basically lower the binary size so that it's very quick and a minimal version.
+00:12:07 [W] Of kubernative and kind as we mentioned. It's quick easy to deploy low barrier to entry and great for testing.
+00:12:14 [W] So let's jump into our Automation in our continuous integration today will be we today. We have a couple of goals that we wanted to achieve when we ran our tests.
+00:12:32 [W] So the first goal is to run our validation test on you code changes that helps us reduce the amount of bugs and validate before it hits production. Once you block merge to production if tests have failed, so if the test has failed you don't want to merge any broken code.
+00:12:41 [W] No one should note reduction of broken code into your main branch or a production Ranch and yugabyte.
+00:12:45 [W] I also want to hold the dev accountable to fix the issue.
+00:12:48 [W] You also want to set up a pre-configured environment when testing this helps you a lot to systematically this helps you this allows you to systematically catch problems with your application with your application logic and it helps you maintain consistency across the results that you receive from your tests.
+00:13:05 [W] Everything with event triggers that increases the frequency of your test runs that makes it more repeatable and generally more efficient.
+00:13:18 [W] You don't want to spin up a test if it's just a simple code fix on a readme, but you want to spin up a test one.
+00:13:21 [W] It's a poor Quest against your production code.
+00:13:22 [W] All of that is great.
+00:13:37 [W] But what's also top of mind even from an individual developer point of view or from a Enterprise point of your from our organization point of view is Resource as costs a sorry. It is the cost efficiency of using up resources
+00:13:39 [W] Want to reinvent the wheel if somebody has already worked on something similar.
+00:13:45 [W] So what do you think about when you do that open source open source comes into my into my mind all the time, especially because 90% of today's softer is composed of Open Source software you're using dependencies you're using scripts that are people have worked on.
+00:13:59 [W] With that in mind, what did we do next?
+00:14:10 [W] Well, we found an open source action that spins up kubernative suspense of kind and Docker for us.
+00:14:12 [W] Sorry kind in kubernative and talker for us.
+00:14:19 [W] So with that we were able to find on a pre-existing action.
+00:14:20 [W] I didn't have to reinvent the wheel.
+00:14:24 [W] It's open source, so I was able to go through the code and make sure that it works for our use case and we made sure that it's configurable so we can actually
+00:14:29 [W] Implement our own llamo files make sure that we're using kubernative version that we want to so here's a quick link if you wanted to find the action that we use again. It's open source, and you can find on that get the marketplace.
+00:14:42 [W] So for our automation today, we'll we'll walk through some of the components of will be talking in our demo.
+00:14:53 [W] So we have our kittycat Dev over here.
+00:14:54 [W] He introduces new code and creates a poor Quest this poor Quest then triggers our automation workflow that automation workflow spins up a bill job and a published job.
+00:15:05 [W] So we build and publish it to DTR after that. We spin up our kind creation are kind cluster creation are kubernative testing. That's
+00:15:13 [W] Great, but I also said that the kind action was configurable so I can test against a kubernative version.
+00:15:27 [W] Right here.
+00:15:29 [W] He introduces new code and creates a poor Quest this poor Quest then triggers our automation workflow that automation workflow spins up a bill job and a published job.
+00:15:30 [W] So we build and publish it to DTR after that. We spin up our kind creation are kind cluster creation are kubernative testing.
+00:15:31 [W] That's great.
+00:15:31 [W] But I also said that the kind action was configurable so I can test against the kubernative version. Well, we use a matrix build to actually test against three
+00:15:32 [W] different communities versions because I want my application to be able to run across all of these and be compatible.
+00:15:34 [W] Once we have all of the tests passing and we're confident that this is not going to break any over production code.
+00:15:36 [W] That's when we decide to merge.
+00:15:48 [W] We actually block the merge by implementing protector branches. So we don't have to merge our so nobody will be merging code if the tests fail and speaking of testing let's jump into what will be showing in testing today.
+00:15:49 [W] Awesome.
+00:15:53 [W] See I now that we've covered basically at a high level what's going to happen.
+00:15:57 [W] Let's go into detail about testing and how you can actually test your kubernative applications.
+00:15:58 [W] So typically you'd want to do this with integration or ETA tests. If you're going through the Hoops of spinning up a kubernative cluster or kinds cluster you'd want to use integration or e2e tests.
+00:16:14 [W] And the reason for this is if you have maybe dependency between apps if you have like a database like MySQL or Cassandra or Kafka or something and you want to basically see how your code interacts with those applications or if you want to see how your code interacts
+00:16:25 [W] Days, like MySQL or Cassandra or Kafka or something?
+00:16:25 [W] And you want to basically see how your code interacts with those applications or if you want to see how your koi interacts with a kubernative object.
+00:16:27 [W] Say your application actually needs to reach from the secret or read from a config map or something that you might want to actually do an E 2 e 2 e or integration tests, but there are some there are some reasons as to why you might not want to actually use integration tests.
+00:16:41 [W] It can be very resource and time intensive or basically unit tests can cover a lot of business logic. You don't need to spend three or four hours running all of your unit tests within with against a against an actual kubernative clustering because
+00:16:57 [W] Consuming and not very smart use of infrastructure.
+00:17:02 [W] so an example of out there you can actually see for yourself is being used in production as the kubernative CSI team has something called CSI release tools just to rebuild the has all the released tools basically that we use to to basically
+00:17:18 [W] And repositories for kubernative CSI. And inside of there is something called proud sh and what it does is it creates a kind clustering deploys a sample CSI driver and it's sidecars.
+00:17:32 [W] So basically it's dependencies and then it runs some tests against them.
+00:17:38 [W] them. So basically it's an example the kubernative team itself actually uses to do development and what we did actually for our example today is we did something similar we basically
+00:17:48 [W] Started a portworx, ete tests.
+00:17:53 [W] I work at portworx.
+00:17:57 [W] So it's a project that I work on in a something called quarks security basically prevents users unauthenticated users from accessing the platform.
+00:18:08 [W] So you basically can't create a volume or Mount the volume if you don't have if you don't have the correct token secret, so that's kind of a test. We're going to be going over and we'll be testing using the portworx CSI driver which basically is a driver that
+00:18:19 [W] Allows you to it creates Storage storage volumes.
+00:18:29 [W] So yeah, and open storage to sort of clear is the open source control plane for portworx.
+00:18:32 [W] So it's basically all of the code that basically handles like all the different control plane components.
+00:18:38 [W] It doesn't have the actual storage layer.
+00:18:38 [W] So that's kind of a test.
+00:18:49 [W] We're going to be going over and we'll be testing using the portworx CSI driver which basically is a driver that allows you to create Storage storage volumes.
+00:18:49 [W] So yeah and open storage disorder clear is the open source control plane for portworx.
+00:18:50 [W] So it's basically all of the code that basically handles like all the different control plant components.
+00:18:50 [W] It doesn't have the actual storage layer.
+00:18:51 [W] So yeah, let's go into re to be test. So basically the first step you'll see and actually when we talk about the demo, this is the same scenario that we're going to demo.
+00:18:54 [W] So basically the first step is to create a kind cluster and inside of that kind cluster.
+00:18:55 [W] We're going to have a cube system space and then a cut user space as well.
+00:19:00 [W] And then what we're going to do is deploy the pork CSI driver that's going to be in the cube system space and all of its dependencies will be there as well. Next. We're going to create a token secret. This basic rule is basically a password and it's basically the the token that's required in order to
+00:19:17 [W] User space as well.
+00:19:17 [W] And then what we're going to do is deploy the pork CSI driver that's going to be in the cube system space and all of its dependencies will be there as well.
+00:19:19 [W] Next.
+00:19:20 [W] We're going to create a token secret. This basic rule is basically a password and it's basically the token that's required in order to authenticate with portworx.
+00:19:20 [W] Next we're in create a storage class in the storage class refers to our portworx ESI driver after that.
+00:19:34 [W] You're going to create a create a persistent volume that basically looks at that storage class.
+00:19:42 [W] So get it's basically its parameters and basically you'll create the persistent volume based on the storage class parameters.
+00:19:43 [W] Next we're going to create a pod that uses this for example in MySQL pot and use the persistent volume to store its data.
+00:19:51 [W] So the test scenario we have today is basically the test that we want to cover and we want it.
+00:20:01 [W] It's very crucial to the to the actual performance of PX security is that you shouldn't be able to create a new volume in a private system. If you do not have a token Secret.
+00:20:13 [W] So in this case actually right here, you'll notice that the test has failed and that's because there's no link between the storage class and the token secret.
+00:20:29 [W] So in order to get this test to pass we're going to have to do is create a link from the storage class pointing to the Token secret to basically tell our app to basically tell it to look for the token secret so that portworx knows where to find the credentials.
+00:20:41 [W] Right now so what we have is we're going to do a screen share and I'm going to show you all my up. Look us we have open already.
+00:20:58 [W] So what we have here as you may have noticed this is open storage.
+00:21:09 [W] So it's basically the control plane components as the CSI driver and everything inside of it.
+00:21:15 [W] So what we're going to do is we're basically going to open a little PR inside of this PR.
+00:21:18 [W] We're just going to change really quickly and basically do change from debug F2 info F. Not the biggest change in the world, but for a demo, it's nice and then what we're going to actually do it.
+00:21:29 [W] we're going to notice that the test is failing because I've manually set the token secret to be invalid and then so what happens actually as a result is that the tests here are failing as you can see, so it's preventing merging from
+00:21:44 [W] Inside of it.
+00:21:45 [W] So what we're going to do is we're basically going to open a little PR inside of this PR.
+00:21:45 [W] We're just going to change really quickly and basically do change from debug F2 in-toto F not the biggest change in the world, but for a demo, it's nice and then what we're going to actually do is we're going to notice that the test is failing because I've
+00:21:47 [W] Protected branch which there is going to talk about in a little bit.
+00:21:51 [W] So basically what we do is we can bring up this test and we can look inside and we can cri-o what happens so run tests failed.
+00:21:59 [W] So let's go inside of run tests.
+00:22:04 [W] We can actually see that it created the secret created the storage class. It created the PVC.
+00:22:14 [W] However, the PVC was not bound after 15 seconds. So basically portworx wasn't able to create the volume and it said,
+00:22:15 [W] And who is this person trying to create a volume because you don't have the correct token. So I'm not going to let you create a token create a volume.
+00:22:25 [W] So that's the reason for the test feeling.
+00:22:28 [W] So let's go ahead and actually fix that live right now.
+00:22:34 [W] So what we're going to do is inside a few we can actually just edit this.
+00:22:36 [W] So if we edit the file, we can actually just change this real quick to be a valid token Secret.
+00:22:43 [W] So now what we're going to do is just create commit that change.
+00:22:50 [W] And now we just have our one change right here.
+00:22:56 [W] So that test should pass now.
+00:23:08 [W] So as you can see since we set up our action to basically run on proquest open when you update or you send a new commit it'll basically rerun the tests and see if they pass my not.
+00:23:09 [W] Building and running our Docker image builds. So now that we are seeing this in action.
+00:23:26 [W] Let's jump into the actual llamo so we can talk to through that.
+00:23:28 [W] Here we have our e to e with kind Yah Mo file.
+00:23:33 [W] This is our automated workflow as Grant mentioned were only running this on for requests and specifically on quora quest to master the point.
+00:23:46 [W] The reason is our around this is we don't want to run our end-to-end testing every time there's a push or a small change.
+00:23:55 [W] actually want to run it only employer Quest because that will be the time where you and you code is being introduced into a master branch. In this case. We're using our Master Branch as our production Branch so we don't want to
+00:24:02 [W] Merge any code that hasn't passed into and testing in the first place.
+00:24:07 [W] So now that we have our trigger here, let's jump into our different jobs.
+00:24:11 [W] So our jobs here, we have two main jobs are build and our test job in reality what we first what we have learned trying to achieve this overall workflow is that we originally had our build and test job only in a single job.
+00:24:22 [W] Test all in once all at once what that really did not that why that really did not work.
+00:24:38 [W] It's because the testing and the build jobs had to functionalities. So the reason for the bill job was to run and sorry run to make Docker build a Westie and that on all ultimately builds our image
+00:24:44 [W] You Quay in our second and our second job.
+00:24:55 [W] We actually have our full blown integration testing running with kind spinning up the cluster and running our test scripts.
+00:24:59 [W] We split these up in the first place because our kinds cluster creation and our tests are going to be run against three different kubernative version, but when we build our image, we only need to build it on the single.
+00:25:10 [W] On a single version, so we're running opentelemetry.
+00:25:40 [W] Or it but in this case we the test job needs to build job and similarly to above we're running in a boon to in this case.
+00:25:56 [W] We have configured a matrix build. This allows us to concurrently run three different versions of kubernative.
+00:26:01 [W] And this is simply an environment variable that kicks off three concurrent jobs.
+00:26:04 [W] We use this environment variable later on when we're setting up or kind cluster as you see here. This is similar to what we showed in the PowerPoint, but this has a configuration that
+00:26:11 [W] Mentioned we're using this open source action and configuring it with our specific use cases.
+00:26:18 [W] So we named our cluster name.
+00:26:19 [W] We had our cluster name.
+00:26:20 [W] We set up our own llamo and we are testing against the different kubernative versions using the Matrix build with that Matrix build in mind.
+00:26:31 [W] We then set it up correctly to spin up all of our applications and then we have our test being run in this case here.
+00:26:36 [W] What the branch protections rules look like?
+00:26:47 [W] So here we have our Master Branch.
+00:26:52 [W] This is the name pattern that you couldn't decide on how you want to configure it. In this case. We call it Master but you can have a prod you can have release you can call it main you can have several types of Branch protections and we really encourage this because this will allow you to
+00:27:02 [W] Sex any changes are happening in to that Branch by validating and having somebody review it. Once you have these checks run then that allows you to then merge the code into your production.
+00:27:15 [W] So in this case, I'm requiring a poor Quest review before merging.
+00:27:20 [W] So I'm only requiring One reviewer most of the times you probably want to have a codon or that's more knowledgeable of the code changes that are happening and we're also requiring a couple status checks.
+00:27:33 [W] So in this case, we're running the bill job. So that's also required. And then we also have our three test jobs running against the three different kubernative versions. The reason why this is important is because again, we are compatible our application is supposed to be compatible.
+00:27:45 [W] Against all of these and if that's not compatible against one of these then it will be an issue. So we don't not want to merge that code into production.
+00:27:55 [W] You can configure it to a allow different other types of requirements. You can have required permits. And I know that's something that some open source communities are doing today require linear history and this can include administrators.
+00:28:07 [W] So now that I've gave it given a quick overview of the branch protections and the kind.
+00:28:13 [W] Yeah mlops go back into our poor Quest and see what's happening here.
+00:28:17 [W] Sweet, so we just ran a couple of our components. We see our setup kind job spun up.
+00:28:31 [W] Have required permits and I know that's something that some open source communities are doing today require linear history and this can include administrators.
+00:28:34 [W] So now that I've gave it given a quick overview of the branch protections and the kind.
+00:28:35 [W] Yeah mlops go back into our poor Quest and see what's happening here.
+00:28:35 [W] Sweet, so we just ran a couple of our components. We see our setup kind job spun up.
+00:28:37 [W] We have our start open storage drawer both.
+00:28:38 [W] Sorry star opens storage set up also running and now we're running our environment checks.
+00:28:38 [W] So great.
+00:28:40 [W] Do you want to talk a little bit about the different checks that were running through?
+00:28:43 [W] Yeah.
+00:28:49 [W] So basically what we're doing out here is we started open storage starting to keep this keep system space after
+00:28:50 [W] Spinning up the kubernative cluster and this is dependent kubernative 1.16 next. What we're doing actually is we're checking to see that the environment is set up.
+00:29:05 [W] This is important because you can't run the test until you've ensured that basically the environment is set up or else it basically won't ever run.
+00:29:12 [W] So what actually is happening live now as you can see as if the containers are spinning up so open storage is 0 out of 2023 looks like open source just started to a tattoo.
+00:29:18 [W] And now we're running the tests because everything is successfully up checked to make sure and now we've created the token secret.
+00:29:28 [W] We've created the storage class and we've created a PVC now. We're basically yeah test passed luckily and then live demos are always nervous nervous.
+00:29:42 [W] But yeah test passed it's all good. And yeah, so everything looks good. So what we did is we in
+00:29:48 [W] It's never run. So what actually is happening live now as you can see as if the containers are spinning up.
+00:30:03 [W] So open storage is zero out of 2023.
+00:30:04 [W] Looks like open source just started to a tattoo and now we're running the tests because everything is successfully up checked to make sure and now we've created the token secret.
+00:30:05 [W] We've created a storage class and we've created a PVC now we're basically yeah test passed luckily.
+00:30:08 [W] And then live demos are always nervous nervous.
+00:30:09 [W] But yeah test passed it's all good.
+00:30:09 [W] And yeah, so everything looks good.
+00:30:10 [W] So what we did is we introduce that fix and it fixed everything and now the test is passing and as you can see if you go back to the pr and refresh you can see that all of the tests have passed
+00:30:13 [W] You this park as before you can merge it, but that's for another day.
+00:30:14 [W] And this case I'll just do a quick review since I am the reviewer so we can wash the code and you can see the change happening.
+00:30:15 [W] So awesome.
+00:30:16 [W] It looks good.
+00:30:17 [W] I'm going to prove this mixer great job Grant.
+00:30:22 [W] I love the fixes that you made and now that we have all of our checks have been all the changes have been approved by the reviewer. All the checks have passed everything that is required.
+00:30:32 [W] It has a little check mark next to it now we can
+00:30:33 [W] Completely merge the code.
+00:30:35 [W] So let's jump into sorry.
+00:30:42 [W] Let's jump back to our slides.
+00:30:44 [W] So let's talk about our takeaways here.
+00:30:46 [W] So what did we learn today? No, more manual work. You can decide on the events that you want to trigger your automated workflows with decide what type of events make the best makes sense for your suit the suit that job that you need to run.
+00:30:59 [W] So in this case, I have two examples. Should I run this test on every push to Maine or should I run it on a specific question?
+00:31:06 [W] And in this case, I decided to only run it against our Branch our main branch and only are on our poor quest to our main branch as well.
+00:31:15 [W] When should I deploy to my up to gke well, I don't want to deploy it every time somebody makes a push.
+00:31:24 [W] I don't want you to put every time somebody creates a poor quest in this case.
+00:31:30 [W] I only want you to play it when I create a release in and that's how you can show it and this is similar way.
+00:31:33 [W] This is very similar to what you could do with other automation tools as well.
+00:31:37 [W] You can use this in pipelines in Jenkins pipelines or Travis CI.
+00:31:39 [W] So next up after we decided what our trigger was.
+00:31:42 [W] You want to trigger your automated workflows with decide what type of events make the best makes sense for your suit the suit that job that you need to run?
+00:31:44 [W] So in this case, I have two examples.
+00:31:45 [W] Should I run this test on every push to Maine or should I run it on a specific push to Maine in this case?
+00:31:45 [W] case? I decided to only run it against our Branch our main branch and only are on our poor quest to our main branch as well.
+00:31:48 [W] When should I deploy to my up to gke well, I don't want to deploy it every time somebody makes a push.
+00:31:50 [W] I don't want you to put every time somebody creates a poor quest in this case.
+00:31:52 [W] I only want you to play it when I create a release and and that's how you can show it and this is similar way.
+00:31:53 [W] This is very similar to what you could do with other automation tools as well.
+00:31:55 [W] You can use this in pipelines in Jenkins pipelines or traps tikv.
+00:31:56 [W] So next up after we decide what our trigger was.
+00:32:01 [W] Let's decide.
+00:32:02 [W] Let's talk about our workflow our workflow here talks.
+00:32:02 [W] So these are two examples of our workflow.
+00:32:03 [W] I need to build my Docker image and push a DDT are that's one workflow. And then the other workflow was our kind workloads want to set up kind spin up and run it around my test against that and I need Docker builds to be successful beforehand just to make sure that all the images
+00:32:04 [W] Flowmill workflow here talks.
+00:32:05 [W] So these are two examples of our workflow.
+00:32:05 [W] I need to build my Docker image and push a DDT are that's one workflow.
+00:32:06 [W] And then the other workflow was our kind workloads want to set up kind spin up and run it around my test against that and I need Docker builds to be successful beforehand just to make sure that all the images are we're pulling our the latest code.
+00:32:08 [W] We also decided to set up Branch Protections in these Branch protections. We decided oh, we need a code reviewer.
+00:32:19 [W] We need to have status checks, and we also disabled Force push. We do not want any time.
+00:32:25 [W] don't want any anybody to erase any commits accidentally when they do a force push into our Master branch.
+00:32:26 [W] So let's do a quick recap our Dev introduce some new code and created a PR. So that was an event trigger using the poor Quest events. Then we kicked off our first bill job following up with our kind of cluster creation job
+00:32:41 [W] Second job.
+00:32:47 [W] We actually had a matrix build that had three parallel jobs to test against all kubernative versions.
+00:32:55 [W] And finally we had Branch protection rules already set where you can only merge your branch.
+00:33:00 [W] You can only merge your branch changes into your master branch of when the tests have passed and thanks to a grant being such a great coder all the tests pass and we're able to successfully we will to successfully merge that code so
+00:33:10 [W] and what were the Lessons Learned break down the bill job and the kind jobs into two separate ones that makes that made it much easier to have a cleaner workflow and to have different configurations for each of those jobs triggering end-to-end testing on only PRS to the master
+00:33:26 [W] Need to have end-to-end testing on every single push unless that push is the master.
+00:33:31 [W] Use Matrix bills to run your tests to validate against multiple kubernative versions.
+00:33:42 [W] Well, in this case, we had our application running against three different communities versions to make sure it's compatible across all three and lastly test against the same image in all your workflows. If you are building a brand new images during your work flow, then you should use that exact same image.
+00:33:52 [W] You shouldn't have to build it every single time.
+00:33:55 [W] You don't need to use a pre-existing one.
+00:33:56 [W] So why did we do this overall simplified builds cleaner workflows are more efficient runs, the end-to-end testing will otherwise be efficient efficient. If you have them running / push using unnecessary using up and necessary resources.
+00:34:11 [W] having the concurrent testing with the same automation script major life as a developer little easier because you don't have to write another automation script and it spun up everything based on our existing configuration and at the end of the day, you always want to save time and resources
+00:34:26 [W] To reinvent the wheel you don't want to talk about creating something from scratch and somebody else has already done that job for you. And if it's open source, you can just use the open source projects and leverage them for your use case.
+00:34:42 [W] You can contribute back when you find a bug you can contribute back. If you want to enhance that open source project at the end of the day. It's up to you as a developer to decide, you know, what's the best solution that I need to achieve and this is the you can how can I do that in an automated way
+00:34:55 [W] I'm using you can use a Docker registry Quay packages or whatever. You want to manage your Docker images with and pull from that image because you want it to always be auditable and you can refer back to it. If a
+00:35:10 [W] You want onion?
+00:35:13 [W] There was a breaking configuration change.
+00:35:18 [W] You can always refer back to it and analyze that and use that image and you're following and you're following test.
+00:35:21 [W] So with that I'll pass it off.
+00:35:24 [W] Oh, yeah, so we're here we're done.
+00:35:28 [W] Thanks everyone for listening.
+00:35:31 [W] Let us know if you have any questions and we'll go ahead and answer them.
+00:35:32 [W] Thanks everyone.
+00:35:34 [W] Okay.
+00:35:44 [W] So yeah, let's we're just going to go through some of the questions that we have in the platform.
+00:35:46 [W] So, let's see the first one how you wrote the tests to create storage class.
+00:35:51 [W] I actually answered this and you can actually check the actual get up covid self.
+00:36:01 [W] So just get up.com styra S Khalifa / open storage and all the code is in the demo folder there.
+00:36:04 [W] I'm going to see the link in the the a Q&A section.
+00:36:05 [W] Awesome, so I'll be answering Alexander's question used to just to launch this / the ci/cd pipeline on each command or only on PR or a specific branch.
+00:36:19 [W] In this case.
+00:36:23 [W] We are only running in on PR to our Master Branch.
+00:36:31 [W] We're not running in on each commence since its end to end testing we figured it's not necessary because it will use of too many resources.
+00:36:32 [W] Folder there. You can see the length in the be a Q&A section.
+00:36:41 [W] Awesome, so I'll be answering Alexandra question.
+00:36:42 [W] Do you suggest to launch this / the ci/cd pipeline on each commit or only on PR or a specific branch? In this case? We are only running in on PR to our Master Branch.
+00:36:43 [W] We're not running in on each commence since its end-to-end testing. We figured it's not necessary because it will use up too many resources.
+00:36:45 [W] So the another question we've been getting a lot of questions like these slides and we will be uploading them after this talk will upload them on scat itself.
+00:36:50 [W] So if you go back to where you saw this off and schedule you can find the slides there.
+00:36:50 [W] Awesome, so we have one more question.
+00:36:56 [W] Can we integrate the solutions with the rest of of the CI to loodse like Jenkins?
+00:37:00 [W] Yes, you can integrate the solution with any type of ci/cd tool.
+00:37:03 [W] If you want to write your own pipelines and rankings using Jenkins files.
+00:37:04 [W] That's also a possibility.
+00:37:06 [W] You can integrate that testing tools that that Grant mentions during our session in any type of cri-o that you want to today.
+00:37:14 [W] Yep, so we have a couple more questions coming in.
+00:37:23 [W] So the question is so this eat we testing is only for infrastructure or is it also for application III testing the answer is it can be both if you would like if your integration tests may involve
+00:37:33 [W] And during our session in any type of cycle that you want to today.
+00:37:33 [W] So we have a couple more questions coming in.
+00:37:34 [W] So the question is so this eat we testing is only for infrastructure or is it also for application III testing the answer is it can be both if you would like if your integration tests may involve
+00:37:36 [W] With this method this method basically just shows you how you could spin up a cluster and run any set of tests. It's up to you what you want to test with this.
+00:37:46 [W] If the test fails don't you need to delete the pushed image from the registry going to answer that question there?
+00:37:57 [W] Yeah, you can you can delete it.
+00:38:03 [W] You don't have to you can just put a new image with a new version number that is based on the commit or hash code that you're using or chakra that you're using in this case deleting.
+00:38:14 [W] It will save you some resources. So yes, you can clean it up afterwards if you want to refer back to it and understand.
+00:38:19 [W] Outfield you can always pull that keep that image there and pull it locally.
+00:38:24 [W] So then you coming on tests look we don't have to run it on see I play. Yeah, the next one is can this pattern be used to test and validate kubernative mammals?
+00:38:36 [W] Yes, definitely.
+00:38:37 [W] That's probably the most useful one of the most useful use cases is actually interacting with kubernetes through these tests because you can't really do that easily for unit tests. It's just not natural to do it that way.
+00:38:49 [W] way, so, yeah, you can totally do this use this pattern to test and validate kubernative CI most what you would want to do is just in your test scripts, whatever test testing framework for using you could just apply the animals and
+00:39:03 [W] It's kubernative the animals.
+00:39:04 [W] Yes, definitely.
+00:39:04 [W] That's probably the most useful one of the most useful use cases is actually interacting with kubernetes through these tests because you can't really do that easily for unit tests.
+00:39:05 [W] It's just not natural to do it that way.
+00:39:05 [W] So yeah, you can totally do this use this pattern to test and validate kubernative CMOS. What you would want to do is just in your test scripts, whatever test testing framework for using you could just apply the animals.
+00:39:07 [W] And basically validates that the expected behavior is happening.
+00:39:09 [W] Yeah, awesome.
+00:39:17 [W] So I'll be answering herrmann's question. So are there any plans to forget have actions to be multi repo?
+00:39:18 [W] Yes, there are open source. So you can actually use them across any type of repose you can use them within your orchid can have an orc template that allows you to create actions at the org level. So yes, the answer is yes to all of those your question.
+00:39:33 [W] They can be used across multiple Repose and they can be shared.
+00:39:38 [W] So then you don't have to reinvent the wheel rewriting it and action every single time.
+00:39:42 [W] Yep. So another quick question.
+00:39:48 [W] Can I get the GitHub link of the demo, please?
+00:39:49 [W] Yeah will all answer the I'll answer with the link there in a second but it's basically yeah. It's also in one of the other the other answers, but I'll send you the link in a second.
+00:40:01 [W] Question on kinds are reusing self-hosted th a running on kubernative pods.
+00:40:10 [W] Will I be able to create the kinds and poddisruptionbudgets?
+00:40:31 [W] Across multiple Repose and they can be shared.
+00:40:34 [W] So then you don't have to reinvent the wheel rewriting it in action every single time.
+00:40:34 [W] Yep.
+00:40:35 [W] So another quick question.
+00:40:35 [W] Can I get the GitHub link of the demo, please?
+00:40:35 [W] Yeah will all answer the I'll answer with the link there in a second but it's basically yeah. It's also in one of the other the other answers, but I'll send you the link in a second question on
+00:40:36 [W] All of these, please.
+00:40:39 [W] Feel free to message us on slack and we'll answer them there.
+00:40:43 [W] Do you remember the GitHub link really quick before we close our session?
+00:40:44 [W] Yeah.
+00:40:46 [W] it's github.com.
+00:40:47 [W] Yeah, it's good.
+00:40:59 [W] Huh? Bol.com /s Covey say, it's SK H. Eh L Ife / open storage one word and inside of there you'll see a demo folder and I'll send that in the answer for the
+00:41:02 [W] So yeah, it looks like there's a couple more questions, but unfortunately we're going to have to end here again.
+00:41:15 [W] Both of us are available on the cncf slack.
+00:41:17 [W] So let us know if you have any questions there.
+00:41:21 [W] Do you want to go to handle on this cncf slack It's s Khalifa.
+00:41:23 [W] Yeah mines G Griffiths.
+00:41:26 [W] So first letter my first name in the last name, you can find that both of those in the talk details.
+00:41:31 [W] So, yeah. Thanks everyone and have a good keep calm. Thanks for attending a session.

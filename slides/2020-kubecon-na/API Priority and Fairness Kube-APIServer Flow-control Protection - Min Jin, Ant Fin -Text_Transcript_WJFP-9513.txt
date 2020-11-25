@@ -1,0 +1,208 @@
+﻿API Priority and Fairness: Kube-APIServer Flow-control Protection: WJFP-9513 - events@cncf.io - Friday, November 20, 2020 5:57 PM - 33 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi everybody.
+00:00:00 [W] Welcome to my presentation.
+00:00:02 [W] Presentation is how down like virtually so I reach the contents of this power points of this so that you can check out the details after it's finished in the topic is about a new feature gate
+00:00:17 [W] Is 118 releasing the API priority and fairness earlier this year in April?
+00:00:18 [W] There is a official blog on the kubernative sites named API program chain from this Alpha which basically tells you what's happening in the are four releases in if you don't got any
+00:00:34 [W] The other informations about this feature I highly recommend you to read this blog is only going to take you like five minutes.
+00:00:39 [W] So for folks who are interested in the design or implementation details. There is also a cat under the kubernative cgroup a Machinery folder.
+00:00:54 [W] It's gonna take you have a deeper inside of this feature.
+00:01:01 [W] And the things you might be interested when in terms of further customizing for your cluster, then I'm going to have a brief introduction about myself and then I'm working it.
+00:01:16 [W] Unscrew as a software engineer, and I've been working as capm machinery for about three years, and I'm also a kubernative CPM machine erisa project owners
+00:01:29 [W] My kids have aliases you in 99 4488 to the same name is also my Gmail account. If you got any questions after this presentation, please feel free to contact me by.
+00:01:37 [W] The email or the names on the kubernative slack channels.
+00:01:40 [W] So the team the score building this feature covers many different developers from different countries in different companies in my so there's
+00:01:56 [W] Daniel from Google they made from Red Hat and there are also other contributors so far everyone Jonathan Cruz to money.
+00:02:02 [W] Thank you for all your contributions so far.
+00:02:07 [W] Then let's take a look at the agenda of our presentation today. We can show you the background and motivation of this feature.
+00:02:17 [W] Then there's going to be a visits retrospection of system design in and next.
+00:02:24 [W] I will also show you the Our father of our station climatization, which basically covers the API model saying a nnd systems the implementation sources.
+00:02:38 [W] and then we move on to the demo which I will show you how to customize flow control settings for your own clusters notably we are using a cane T Castle which is just created by me
+00:02:53 [W] Listen, it's basically covers the API models saying a and and the system's the implementation sources and then we move on to the demo, which I will show you how to
+00:03:35 [W] Not knowing what your box say.
+00:03:36 [W] It's just a new brand new concert so that you can easily reproduce that. You can easily we're under to your local environments and At Last I will show you there's a few planned enhancements for the beta stage.
+00:03:53 [W] Okay, let's move on to the first part the background and motivation.
+00:03:59 [W] Basically, there are two Higher Goals of our future. The first one is the self protection with basically covers two points.
+00:04:09 [W] The first thing is prioritize cluster critical request for self-maintenance.
+00:04:14 [W] And the second one is prevents. Tammy clients all foggy controllers from standing the whole cluster.
+00:04:22 [W] The first one is basically saying that we are going to sort all the time requesting two different priorities. And the second one is saying that we are not we are not allowing any client requests to spoil all the classes
+00:04:37 [W] Vanilla isolation between clients as for protection. We are actually protecting kubevirt servers from incoming client requests. So we should start by understanding their
+00:04:52 [W] Request being served by the typical kubevirt servers. There are apis that were group X delegating requests for my aggregating a pi server or Mission web hooks.
+00:04:52 [W] There are also controller request and there are email request.
+00:04:59 [W] As for kublr Percival Loop X. So the kublr + / instance will be requesting against itself.
+00:05:06 [W] Even if there are no client requests at all such as there's a former Factory instance Singleton in each of the kubevirt server process.
+00:05:16 [W] process. Basically the kubevirt serverless to know the actual status of each cluster spy accessing the object cash provided by the
+00:05:27 [W] From a factory all of this informers who keep raising list and watch request against the kublr episode mirantis Down.
+00:05:36 [W] And there are also several embedded controllers inside the kubevirt server. For example, there's class OCA rotators and their ci/cd related controllers and there are also a pi server application related controllers.
+00:05:51 [W] controllers should be regarded as first class citizens in the kubernative work because they are strongly connected with the housing status of how classer if you're failing the class of
+00:06:04 [W] Bigger problems in your clusters the classes were very likely to be touching down.
+00:05:49 [W] And as for the delegator request form aggregated API server and Mission prep Cooks.
+00:05:55 [W] So basically the kubevirt server provided us some extent abilities to allows us to add a new resource to the concert and also intercept some of the resources these
+00:06:10 [W] Will be invoked during the time and the creepy episode we're serving a income would pass. For example, if you add a mission that pokes on the pottery Source thing that you are starting a request against kubeacademy
+00:06:24 [W] We saw standard kubeacademy were will raise another request. I can see commissioned by pokes. The secondary request should be should have a higher priority than the original request.
+00:06:31 [W] Otherwise, there's going to be a deadlock in the question which is going to cause some problems in the Clusters.
+00:06:41 [W] And there are also controller problems.
+00:06:45 [W] We had a situation where about in the deployment controller causing to run and make under certain certain circumstances issuing requesting a tight Loop. So we don't like this controller
+00:07:00 [W] The problems we had a situation where about in the deployment controller comes in to run and make under certain certain circumstances issuing requesting a tight Loop.
+00:07:09 [W] So we don't like these controller Parts not to take the whole system down. This controllers can also be some custom route controllers, which is developed by elaborating some
+00:07:25 [W] System down this controllers can also be some custom route controllers, which is developed by elaborating some scaffolding toolings for example computers
+00:07:40 [W] With the custom resource definitions and if these buggy controllers can have these new behaviors. It's going to be a harm to recruit members of as well.
+00:07:55 [W] So the there can be controlled a single tennis and there can be also demons.
+00:08:01 [W] You can be a kubelet haproxy or other per node controllers. If there are bugs in this per node controllers the impact that influences on the system is going to be multiplied from the
+00:08:16 [W] The there can be controlled a single tennis and there can be also demons.
+00:08:20 [W] You can be a kubelet haproxy or other per node controllers. If there are bugs in this per node controllers the impact the influences on the system is going to be multiplied from the
+00:09:06 [W] The Singleton so we definitely want to avoid them on the other hand.
+00:09:14 [W] These the issues from demons doesn't necessarily connected with a bug.
+00:09:19 [W] You can be the cluster reaching its scalability limits.
+00:09:23 [W] For example, if you have too many nodes in the cluster, then your cluster will be reaching the scalability feelings, but we don't we don't know the ceilings until we actually reaches so
+00:09:37 [W] But at Leeds at least we don't want it.
+00:09:41 [W] You'll be a David no to be taking the whole system down. There should be a way to make the cluster keep running even if there's too many demons added to the passer.
+00:09:56 [W] There's another higher proposed multi-tenancy which demands us to provide currency. The capacity for controllers tests are considered less important and the tenants in the same
+00:10:11 [W] The server the cost of together equal share of the service.
+00:10:16 [W] So I believe that kubernative is designed to be shared by multiple tenants.
+00:10:21 [W] There are many different kinds of tenants definitions. So far attendant can be a namespace computer user can be several users sharing a prefix or several users having the same host
+00:10:36 [W] And don't forget that there is another subject under kubernative six names body, Tennessee, which has a brand new definition of tenants, which is basically a group of spaces.
+00:10:40 [W] They're also done goes over feature background.
+00:10:43 [W] There will be no coordination between a pi server.
+00:10:48 [W] No reason external load balancer and will be also not attend auto-tuning the capacity.
+00:10:55 [W] We will not attempt to reproduce the functionality of the existing even with a meeting our mission plugging. The emission plugging is basically intercepting the requests that can see even through a source file using a
+00:11:10 [W] Too soon, sir. So this one is basically saying that we are not generalizing the token bucket filters to all the resources or something like that.
+00:11:16 [W] Let's move on to the second part of the system design introspection.
+00:11:21 [W] So we need to know their Basics about flow control algorithms.
+00:11:26 [W] There are basically two kinds of flow control algorithms.
+00:11:30 [W] The first one is that the source or the client side and the second one. Is that the Gateway or service I would say the client side were limiting is already started because kubeedge Servo about the kubenetes Klein
+00:11:45 [W] Welcome pocket for a limiter for muscling the clients and there was even a dedicated our mission controllers for limiting the rate limiting the events, but there are still a few known defects.
+00:11:50 [W] The first one is that user can opt out from the real imitating by granting the token bucket - so infinite capacity and also it's sometimes it's tough to control the granularity if there
+00:12:06 [W] Multiple clients building in the same components to the same processes. For example, we want to hire a loose loose control of limiting for One controller and
+00:12:14 [W] Then it's going to be a big task to configure.
+00:12:15 [W] Then let's take a look at that. You can see sting limiters in the kublr kosovars.
+00:12:21 [W] There are two Dimensions to to do the limits.
+00:12:24 [W] The first one is by configuring Nats mutating requesting flights Metropolitan flight flax, which allows you to set some limits of required concurrence request count on either
+00:12:39 [W] In requests or not mutating requests and you can also apply a timeout for non wrong running request, which is basically the non-virtue request.
+00:12:51 [W] Then let's move on learn from the Linux cutest systems because it's going to be really helpful for us to understand how the Linux networking
+00:13:07 [W] Systems, which is already proven to be successful.
+00:13:05 [W] There are basically two kinds of activities in Linux networking.
+00:13:11 [W] The first ones is classless and classful.
+00:13:17 [W] There are a few of standing algorithms from growing codell PBS under the classlist cutest and actually there there's a longer list of it, but we're not showing every algorithms.
+00:13:32 [W] Just a few outstanding algorithms.
+00:13:36 [W] Anyway that in the classlist cutest every request will be regarded equally, but in the kubernative a pi server, there's already a system of authentication authorization.
+00:13:51 [W] So there is already a strategy of user identities.
+00:13:51 [W] So we need to test for killings during the Cougars over there. There's a few class for a few days algorithms building
+00:14:06 [W] It's working system's.
+00:14:02 [W] there's deficit round robin and hierarchical tufin buckets to mention. One thing to mention is that we are learning a lot from the post's algorithms.
+00:14:12 [W] I remember we spent like several meetings discussing the differences from
+00:14:23 [W] That deficit from lobbying and there's a few other algorithms, especially the hierarchical token bucket sits a bit complicated, but it's proven to be working. Well for most of the use cases,
+00:14:39 [W] the deficit round robin and there's a few other algorithms, especially the hierarchical talking about it's a bit complicated, but it's proven to be working well for most of the use cases,
+00:15:02 [W] Um, here's a obstruction of flow control system classful flow control system.
+00:15:09 [W] We want to build in the Google apis over. There are basically going to be three abstract components.
+00:15:15 [W] The first one is the rule based classifier then a queue assignor then accuse tell you about the three components is basically working like a Lambda functions classify your Maps request to a request
+00:15:30 [W] To assign our puts a requesting the group has class into the second kills then secure scheduler applies Alliance to the cubes where the the request is waiting.
+00:15:48 [W] Then let's move on to the to what we can do in the classifier.
+00:15:52 [W] We extend the obstruction of class from Linux PC systems kubernative levels in the kubevirt server in the new flow control system.
+00:16:03 [W] A profitable level is a priority level bands that request in higher priorities should have a higher should be executed in Proverbs lower priorities in a priority level is a
+00:16:18 [W] Which all of this matching request will be handle the equally and a priority level is also a prayer request class where we applies the same rejection strategy.
+00:16:33 [W] So to classify the requesting to property levels the information we can get from the kubernative several requests context has for the first one is client-side identity for now. There are two kinds of
+00:16:48 [W] Four identities.
+00:16:43 [W] The first one is the user or user name. Then the user groups, like list of tax on the users. Then there are requesting targets which basically covers the requesting.
+00:16:58 [W] Spaces and other request metadata from sample weaveworks. They targeted for resource types Etc.
+00:17:03 [W] So so we know that what we are doing in the keywords I know is basically making a request to a priority level using the identity of this.
+00:17:17 [W] Then let's move on to the Cuban signer.
+00:17:19 [W] So each product level contains a group of requests cubes for scheduling the problem.
+00:17:28 [W] The question is how to map a request to one of the cubes one way it went is is way or integrating ways to map one Cube per user if you have 10 users, then
+00:17:43 [W] Using the for one particle levels, but there were going to be problems. If you have tens of thousands of users then if you have tens of thousands cubes in your products leveled and there's going to be a significant memory
+00:17:56 [W] To avoid that we use another technique namely Shuffle shutting the shop or shaving help us to bones that they memories into a fixed number a constant number integral in this picture.
+00:18:04 [W] It is a fixed number account number in the bar in this picture.
+00:18:07 [W] I showed you a shovel shouting of hand size 2 and basically to the users from user one for example is started in the round robin manner to post q1 and Q2.
+00:18:22 [W] Little too so that's the other users.
+00:18:28 [W] This picture of also showed you the event the there's some problem with the user is a 1 then the impacts will be spreaded to q1 and Q2.
+00:18:41 [W] So the user three number three will not be affected at four and but user to and user for will be partially tactics the higher a higher numbers of
+00:18:57 [W] Orson sighs you have the impact will be shouted NASA.
+00:19:04 [W] And as for the Q scheduler, we have we ever using a algorithm than fair queuing which is basically aiming at achieving the following goals or when as for scaling request form queues.
+00:19:19 [W] First one is the even distribution of some service capacity and the other is the next new furnace.
+00:19:29 [W] the owner of to I got a few details about the fair queuing but we are not expanding them today because because the time is limited, so if you got interested in the fair
+00:19:45 [W] You can revisit these slides afterwards.
+00:19:38 [W] So we had a variance of fair queuing for several requests to solve these limitations for kubectl Server.
+00:19:48 [W] The first one is dispatching request to be served rather than packets to be transmitted. Second one is multiple requests can be served at once. The third limitation is the actual service time is not known until we request based on being served.
+00:20:05 [W] So we made a few mutations variants to the fair queuing algorithm so that you can adapt through the could be his server.
+00:20:18 [W] I'm still not going to expand it to save our time.
+00:20:21 [W] So this is the our flow control system going to be low card. There's a priority level classifier and Shuffle sharding can be fair Chui.
+00:20:36 [W] Then let's take a look at the alpha level API definition models. You can acquire the new feature by enabling the official Gates and the a new Flats to the kubeacademy
+00:20:51 [W] This is the exam flows schemer very can see we in matches.
+00:20:56 [W] Then when a user in the group system Masters assessing everything in the concert and it will be matching the exam from steamer.
+00:21:07 [W] There is also a catch-all from scheme on one thing different is that it has a distinguisher method if you got interested in distinguishing Mark turton you can we can take a take a look at the Caps to know how
+00:21:23 [W] As assessing everything in the concert and it will be matching the exam from schema.
+00:21:19 [W] There is also a catch-all from scheme on one thing different is that it has a distinguisher method if you got interested in distinguishing methods and we can we can take a take a look at the Caps to know
+00:22:11 [W] for this is doing
+00:22:13 [W] and in the priority level configurations, you have places to configure the hand sizes for troubleshooting which we just talked about and then I'm gonna have a
+00:22:29 [W] neither this
+00:22:33 [W] so I'm using a cluster.
+00:22:37 [W] so you can you can create a new KD classifier using these settings in their wake up say
+00:22:53 [W] gravity level name the workloads medium.
+00:22:57 [W] We are equating this to the pastor.
+00:23:02 [W] And we create a new flow Skinner.
+00:23:09 [W] Which matches and the users from demo user?
+00:23:15 [W] latest video
+00:23:20 [W] so
+00:23:29 [W] then we can take a look at this f***** a dashboard in this panel shows you the capacity limit of this protein level and the QPS of each protein level
+00:23:44 [W] Request of the each protein level are killed. I've been waiting and the actual executing time cost of each protein level or all of these
+00:23:57 [W] Each photo level all of these times are calculated by using p53 1980 99.
+00:24:03 [W] In this example the medium the workloads medium quality level configurations only has a concurrency shares of one.
+00:24:15 [W] Now we give it's a higher performance teacher for example, make this city.
+00:24:23 [W] Then we apply when we apply this to the cluster.
+00:24:40 [W] Then you can see the concurrency Shares are recalculated the medium the medium workloads level configuration now gets a capacity limits of
+00:25:07 [W] yeah, and
+00:25:12 [W] because the time is limited so I can show you how everything works. If you if you're going to questions. I can give you a detailed demo after
+00:25:27 [W] Let's give on move on to the presentation.
+00:25:35 [W] Then it's the plant enhancements for better stage.
+00:25:40 [W] There are few.
+00:25:41 [W] They are blocking items and not blocking items plan for the stage as for blocking items.
+00:25:51 [W] Plus it's improving the observability and robustness.
+00:25:56 [W] We added a debug.
+00:25:59 [W] We are having a debug and points to the API server, which is already done.
+00:26:03 [W] play these sort of already published in kubernative 119 release in there is also a few new metrics added to the system, which is definitely helpful.
+00:26:19 [W] but I'm not showing them to you in this presentation because it's basically used for debugging and if you've got interested, I can answer that the Chinese section and
+00:26:35 [W] These providing approaches to opt-out clients.
+00:26:33 [W] Are we limiting?
+00:26:33 [W] I'm not sure if it's done so far, but the ultimate goal is to remove the client side.
+00:26:42 [W] We limiting to move them all to the server side.
+00:26:48 [W] Educate wait and then the third one is we're doing necessary to retest. This is our current progress.
+00:26:57 [W] We are adding e2e test hopefully before 120 release.
+00:27:07 [W] And as for number locking items here is a few optional goals. The first one is supposed concurrency limits on Rollingwood long-running request.
+00:27:19 [W] In the second one is allow constant companion currency and relating shelves in protein level again model, but for now, it's only a proportion of APA shares even API concurrency shares.
+00:27:34 [W] We hope to allow users to configure a fixed concurrency or preserved concurrency for a priority level.
+00:27:32 [W] The third one is automatically automatically manages versions of mandatory and suggested configurations.
+00:27:40 [W] This one is basically saying that we are providing a better user experience for users to roll out to update upgrade.
+00:27:52 [W] grading system / sets flow control settings
+00:27:59 [W] Split ends of the first one is discriminate page native Place requests. This is what we are trying to achieve the for 120 release because
+00:28:14 [W] You need to release request is very likely to harm the cluster and and it's almost happening every day in our production classes.
+00:28:15 [W] So we hope to prevent this from happening.
+00:28:19 [W] this is what we are going to do blocking items for bigger stage for more graduating courtiers for beta stage. You can also be done.
+00:28:33 [W] From the cat in thank you for visiting my presentation.
+00:28:39 [W] Then let's move on to the Q&A session.
+00:28:42 [W] session. Thank you.
+00:29:09 [W] Hey.
+00:29:12 [W] But I don't see any questions yet in the Box.
+00:30:05 [W] Yes, the this feature is its landed on the kubernative Chuan 18 release in arfa.
+00:30:17 [W] So, yeah, you can you can experience the featuring a young a 118 release kubernative cluster.
+00:30:29 [W] Yes, we are using this in the basically in the concert Federation which requires us to control their shares for
+00:30:46 [W] Multiple kubernative cluster. So basically each kubernative cluster is a should be regarded as a tenants or so in each cluster in the kubernative
+00:30:59 [W] Kind of should get a fair share without ruining the with without eating up the whole capacity.
+00:31:10 [W] We're gonna start working 10 2010.
+00:31:12 [W] Yes.
+00:31:13 [W] That's what I'm about about to say because about one weeks ago.
+00:31:22 [W] We just moved the kubernative API protein if you have property and furnace feature, we move it to Beta stage and I believe everything's
+00:31:37 [W] And we are we will be seeing it in the 120 release.
+00:31:43 [W] Cyril thing will be enabled by default.
+00:32:04 [W] I don't know if there is a plan for ta yet. But yeah, well, we've already made it on Theta.
+00:32:18 [W] that's my condo community service organizations and
+00:32:33 [W] Can we just make all the kubernative instruction requires spatial audio quality?
+00:32:39 [W] Yes, and I think that's exactly the current behavior because we are matching.
+00:32:47 [W] We are supposed to be matching the request from class or means to be matching the exempt priority level which basically doesn't apply any real limiting to the request.
+00:33:06 [W] In the other as for the other requirement and non-exempt request, they will all be throat older people.
+00:33:19 [W] If the cluster goes under pressure.
+00:33:27 [W] and by the way, the

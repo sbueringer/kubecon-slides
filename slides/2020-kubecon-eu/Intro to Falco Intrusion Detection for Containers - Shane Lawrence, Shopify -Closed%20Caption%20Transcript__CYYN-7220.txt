@@ -1,0 +1,252 @@
+﻿Intro to Falco: Intrusion Detection for Containers: CYYN-7220 - events@cncf.io - Tuesday, August 18, 2020 7:44 AM - 81 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:52 [W] Hey, I'm Shane from Shopify and thanks for watching my talk.
+00:01:04 [W] This is intro to Falco and to tell you about a security tool that we've been using at Shopify since 2018.
+00:01:10 [W] But first I have a confession I'm not actually Falco maintainer and this is a maintainer track talk. I'm barely even a contributor but they thought it would be cool to have an end-user go through a few things
+00:01:23 [W] Yet in one form or another since 2018 so little bit about myself.
+00:01:31 [W] I'm on the infrastructure security team at Shopify.
+00:01:34 [W] I've worked in the past mostly with intrusion detection systems like Network intrusion detection or needs using a tool called snort also a bit of Sir Katha the Zeke formerly known as bro and also some host IDs or hints
+00:01:46 [W] Heck I've also done some Sim or security information and event management and logs which is basically Gathering a haystack of events from all the things aggregating them and trying to pick out malicious needles and all of it.
+00:02:01 [W] that's hard because most of the things that feel like needles turned out to just be pointy pieces of hay now I spend most of my time doing none of those things.
+00:02:15 [W] joined chop fine 2017 on the infrastructure security team since then my primary focus has been on preventing anything bad from happening in the first place.
+00:02:19 [W] Lace mostly by giving developers paved roads and guard rails so that it's easier for them to deploy secure applications than it is to deploy insecure ones.
+00:02:31 [W] So with that let me actually introduce Falco.
+00:02:33 [W] Falco is a tool that detects events that may be suspicious in your environment.
+00:02:47 [W] And I'm going to tell you a bit about what it's not how to get it running some tips and tricks for making it work better some use cases so that you can actually make it useful for you if you want to try it and then
+00:02:57 [W] Apps for what you can do if you want to contribute or if you want to get some more help now prevention is always going to be behind detection.
+00:03:13 [W] So something like Falco is really important. And if you want to know more about the story of how Shopify came to use it then check out my keynote with Chris nóva from sysdig, and you can hear more about that.
+00:03:16 [W] So Falco is not New Wave.
+00:03:22 [W] It is also not any of this and you'll see this in my other talk, but the most important thing you can do right now is follow best practices do these things and keep your systems up to date effective monitoring augments that but it doesn't replace it.
+00:03:39 [W] We'll see this in my other talk, but the most important thing you can do right now is follow best practices do these things and keep your systems up to date effective monitoring augments that but it doesn't replace it.
+00:03:42 [W] So this is what people see when they see Shopify and this will get into why Shopify is using it. So we've got over a million stores on Shopify.
+00:03:54 [W] They all have control over their own look and feel to the
+00:03:57 [W] Vast majority of people who will interact with Shopify in some way.
+00:04:03 [W] They'll see something that looks a little bit like this and most of the time they don't even realize that they're looking at a Shopify store. So that's what our customers see but this is what our Merchants see
+00:04:13 [W] They see that they're dealing with Shopify.
+00:04:17 [W] They've chosen Shopify.
+00:04:23 [W] They know it's us big businesses have chosen us because they want a reliable platform that leaves The Branding to them and small businesses want it to be easy to benefit from that same reliable platform as large ones.
+00:04:32 [W] This is what I see though.
+00:04:33 [W] I see 10,000 services on 50 clusters and that's a lot of infrastructure to secure. So in some of these clusters including the ones that actually process the petabyte-scale.
+00:04:43 [W] I mean card data for a hundred ninety million dollars a day.
+00:04:51 [W] We need to do everything we can to ensure that were preventing any unauthorized access.
+00:04:52 [W] We do this by following best practices and by deploying scripts to scan and ensure that all of our workloads really are following the things we've learned in the past.
+00:05:03 [W] as large ones
+00:05:09 [W] this is what I see though.
+00:05:10 [W] I see 10,000 services on 50 clusters, and that's a lot of infrastructure to secure.
+00:05:11 [W] So in some of these clusters including the ones that actually process the payment card data for a hundred ninety million dollars a day.
+00:05:13 [W] We need to do everything we can to ensure that were preventing any unauthorized access.
+00:05:13 [W] We do this by following best practices and by deploying scripts to scan and ensure that all of our workloads really are following the things we've learned in the past we both strimzi.
+00:05:16 [W] This by having external Auditors validate our security posture and by making some of our systems eligible for security bug bounty.
+00:05:20 [W] and I mentioned this in my other talk, but if you missed any of the things on the left, then you might be vulnerable and if an attacker knew about any of the things on the right before you had a patch for it, then you are probably vulnerable
+00:05:26 [W] I mentioned this in my other talk, but if you missed any of the things on the left, then you might be vulnerable and if an attacker knew about any of the things on the right before you had a patch for it, then you are probably vulnerable and If You're vulnerable you might
+00:05:28 [W] Monitoring in order to be sure that everything else we're doing is working and sometimes we're just not even aware of the things that could lead to a compromise.
+00:05:39 [W] This is why effective monitoring is so important.
+00:05:40 [W] now we've chosen Falco specifically because it sees every syscall it knows exactly what is happening on the system at the kernel level, but it's also containers and kubernative and we're so in our case we use Docker so it
+00:05:56 [W] It to see exactly which container correlates to the process that it saw us as call from and then it looks up from the kubernative is a pi.
+00:06:07 [W] what Padma space corresponds to that. So with all of this information we can use a rules engine to decide that it's okay for certain things to perform an action but not for others now if we do get an alert it makes
+00:06:22 [W] Able to the end user as well and that's really useful because it will talk a little bit more about when you get an alert. You need to know what to do next.
+00:06:37 [W] It uses EBP F, which is extended Berkeley packet filters, and that's really cool because for one thing it's performant and another it's read-only yet the user Space level. So it's a little bit safer than using some of the other
+00:06:45 [W] Might be available.
+00:06:49 [W] Also Falco is open source.
+00:06:50 [W] It's under active development.
+00:06:53 [W] It's got a very responsive development team.
+00:06:59 [W] And if you need to ensure a quick response from certain members of their team and Italy, I've heard they love pineapple pizza.
+00:07:01 [W] So just lead with that since we started using it.
+00:07:04 [W] It was also donated by sysdig its creator to the cncf. So it's cool that we get to work with another cncf project.
+00:07:10 [W] So since this is an intro to Falco talk I should probably tell you a little bit about how you actually get this thing up and running. Now. The easiest way to do this in most cases, you can just run Helm add and then Helm install and it'll get Falco
+00:07:27 [W] If like us are using coughs on gke with the EBP ft / instead then it's actually four steps because you need to get the configuration file and change one line in it to turn on E BP F.
+00:07:43 [W] So it's slightly more complicated but it's still really fast really easy.
+00:07:49 [W] That doesn't mean it's the best way to do it though. So what we suggest we have a fairly elaborate deployment pipeline that turns the config as code in the repo into an actual thing running.
+00:08:00 [W] Cluster tooling validates the rules quickly before it actually builds this and this is actually really important to us because if you get a typo or something something's wrong with your syntax. You want to know that right away before you've even push this image so that you can
+00:08:13 [W] Or you've gone to all the trouble of deploying this to a hundred nodes in a cluster. Even if that is just a staging cluster you're saving a lot of time most kernels actually have a driver pre-built for you.
+00:08:28 [W] But if your cloud provider has tweaked the colonel for your image, and it's now non-standard, then you might need to build the driver yourself.
+00:08:40 [W] have your tooling do that as a separate step in a separate Docker stage and then when you've already got this image, you can have it already populated and you don't need to wait for it to build every time the
+00:08:46 [W] A container starts up because it takes a couple of minutes now at Shopify. We use our own attested builds with binary authorization to help protect against software supply chain attacks.
+00:08:58 [W] And of course you spent a couple of years fine-tuning it and will continue to tweak it over time.
+00:09:01 [W] So I'll tell you a little bit about some of the technical challenges and give you some tips and tricks for how you can improve that one of the things that you might encounter is modifying the rules. And again I said that Helm is the easy way
+00:09:18 [W] It's very popular because it's so fast because it's so easy and it is really great. If you're just starting out.
+00:09:34 [W] There's also a little script and Falco extras called rules to helm and you can use that to help with escaping and updating the animal if you're using the helm charm the problem with using this is that it's slow when you deploy it every time you use Helm upgrade
+00:09:39 [W] To send this configure each pod will restart to pick up the new config.
+00:09:46 [W] So in production, you don't want to have to build a new image and wait for the whole thing to deploy every time the rules change.
+00:09:57 [W] So use a config map instead.
+00:09:58 [W] That's what they're for.
+00:10:05 [W] You put the configuration files in a config map the then you project that config map as a volume and mounted as Etsy Falco and it turns out actually that the helm Char already does this if you modify the config map you can see it in the Falco namespace
+00:10:13 [W] It will change the contents of etsy phalke where the config is stored.
+00:10:26 [W] But the problem with the helm deployment is that there is nothing there to detect that and restart Falco or get it to recognize that the rules have changed.
+00:10:31 [W] So the only way you can do this is with helmets self and and that restarts everything or you can send a hang-up signal the the better alternative I think is you edit the dockerfile to run a
+00:10:41 [W] Falco container and then you tell that Falco container to run inotify wait and watch to see if anything in this directory changes.
+00:10:57 [W] Then when you change the config map it changes the Etsy Falco directory and automatically sends a kill Sig Hub to the Falco process. This hang up signal will tell it to just reload the rules or the configuration without any downtime
+00:11:08 [W] And an easy way to do this is just to copy the Upstream Docker file and add the changes in yourself with a little bash script.
+00:11:19 [W] That's quite simple that way.
+00:11:19 [W] So another challenge that a lot of people will probably run into is that Falco sometimes alerts even on behavior that is expected.
+00:11:37 [W] So the solution to this problem is to make sure that you're always adding events to and allow us now like Falco is great with its ability to add contextual information from Kate's to teach its what's normal, but you need
+00:11:46 [W] that you're staying on top of that now at one point in our own environment ran into a problem where we had recently updated some rules and upgraded Falco to a newer version and suddenly we were saying alarms going off telling us that every node and one of our clusters was connecting to a Bitcoin
+00:12:02 [W] Every node in one of our clusters was connecting to a Bitcoin mining site. So we got into a bit of a panic had someone taken over. The cluster was one of our Upstream dependencies compromise.
+00:12:14 [W] We looked at the alerts more closely and saw that the traffic was coming from Falco itself.
+00:12:17 [W] So now we're wondering is Falco compromised.
+00:12:18 [W] Well, no, it turns out that the update had added a rule that detects traffic to coin mining websites and it knows this by their domain name. So when we upgraded Falco it started up,
+00:12:28 [W] The rule that said tell me if you see anything talking to the mining site and on each node, Falco dutifully performed a DNS lookup for the mining site so that it would know exactly where traffic should not go the rule that the Falco team had created wouldn't trigger itself.
+00:12:43 [W] We actually had another rule that was sort of an extra defense against data exfiltration and Falco Zone DNS lookups for picked up as these unexpected outbound connections to the mining site and our data exfiltration rules went crazy.
+00:12:58 [W] This is a bit of an extreme example because at first glance it appeared to
+00:12:59 [W] Be a legitimate alert, but even if it's obvious that an alert is false, you still need to teach Falco what's expected so that it doesn't keep alerting.
+00:13:07 [W] Now in this example problem, this is one of the first things you might see is that when Falco launches it detects this privilege containerless inch and so we need to teach it that this is okay and the solution to this. This is just a sample of the
+00:13:23 [W] See and then this is what you need to add to the rules file and order to teach Falco that this is okay.
+00:13:36 [W] So in our case there's an image repository called Falco security / Falco and the list itself had prefixed this with Docker and so it wasn't recognizing this as a fellow container was an understanding that it's okay to start
+00:13:46 [W] Get rid of all the noise that you would see when you first start Falco. It makes for a cleaner startup.
+00:13:53 [W] So another problem that a lot of people have actually complained about and get have issues lately and this is actively being worked on but is this dropped Cisco event and a small number of syscall drops is sort of expected especially
+00:14:09 [W] actually complained about and get have issues lately and this is actively being worked on but is this dropped syscall event and a small number of syscall drops is sort of expected especially if like us you're running on gke
+00:14:11 [W] On gke and so what this alert is showing here is that one syscall out of 8,200 were dropped and that it was due to a page fault. And this is really isn't that big of a deal.
+00:14:22 [W] we're okay with this but because the Falco developers didn't expect really any of these they created this so that it would appear as a critical alert and this actually is set up by default
+00:14:36 [W] You report this as a critical alert every 30 seconds on every node. And and so if this is happening all the time that's going to create so much alert fatigue so fast for no reason at all. So again a simple solution here.
+00:14:50 [W] You just go into the Falco configuration and you change it from a critical alert to just a log and then you tell it to do it less frequently.
+00:15:00 [W] shown an example here where it alerts instead our log story once every hour.
+00:15:03 [W] So these are a few pretty simple straightforward things that you can do when you're starting out that's going to make the experience a lot better for you when you're trying to use Falco, but it still doesn't give you a whole lot of usefulness.
+00:15:15 [W] So let's take a look at some of the things that we can do and actually in order to actually use Falco and detect some attacks. So
+00:15:23 [W] If we've got for instance suspicious shell access in a container. Now, if you have sensitive workloads, hopefully you aren't routinely Cube troll exacting into them to make changes because they're supposed to be containerized after all. I'm going to demonstrate someone getting shell access and
+00:15:38 [W] You control for the example, but an attacker might also be able to do this by exploiting some other vulnerability in that container or perhaps by finding some less important, but also less secure workloads.
+00:16:07 [W] So to start I'm just going to do the demonstration on one of the Falco pods themselves.
+00:16:14 [W] Switching to the Falco namespace and I'm going to look at which pods are running here.
+00:16:24 [W] And let's just pick the first one and we're going to suppose in this, you know, contrived example that the attacker has somehow compromised this Falco poddisruptionbudgets.
+00:16:45 [W] I need to see what information is going through here or perhaps to do a little bit of surveillance Network reconnaissance.
+00:16:55 [W] So because the attacker I might decide I want to install tcpdump now for the sake of the example.
+00:16:58 [W] think I've shown enough. Maybe I've had a change of heart and I really don't want to
+00:17:01 [W] Oh, so I'm just going to exit the container there.
+00:17:06 [W] Take a look at Falco poddisruptionbudgets.
+00:17:38 [W] Packages installed.
+00:17:43 [W] So when you see something like this, you can see the command apt-get install tcpdump by user root.
+00:17:49 [W] And as soon as the human looks at this they're going to know that something strange is going on and they're going to be able to respond to that.
+00:17:53 [W] So another potential use case that you might find valuable is related to the instance metadata service and in 2018. I gave a talk about a report that we received from a researcher who'd managed to exploit a
+00:18:09 [W] We were running in a second-tier environment at Shopify and he used a combination of things to get into this metadata service and ultimately got access to these kubenetes that could have potentially led to a cluster take over.
+00:18:24 [W] So I've mentioned before that.
+00:18:26 [W] It's way more important to prevent access to these things than it is to monitor your career ending in real time.
+00:18:34 [W] So in my demo cluster, I've got workloads identity enabled and what that does is put some proxy out in front of the metadata service and it hands out only the
+00:18:39 [W] proprietary office account token and it blocks any inappropriate requests that they can't go through.
+00:18:46 [W] So I'm going to pop into a normal container and I'm going to hit that metadata instance and I'm going to see what it shows me. So I've got
+00:18:55 [W] Let's test normal and that just means that it's not privileged it's not hosting at work it's sort of a typical container workload that you might see and I'm going to keep control exact into it and again an attacker would find another way of gaining access here.
+00:19:17 [W] I'm going to try to hit that metadata service and this actually came in to prevent SSR F and so the metadata and since requires that we have this metadata flavor.
+00:19:33 [W] Header and that just means that it's going to allow it and the idea here is that it would be more difficult to add a header to a request than to just point it somewhere and you've missed.
+00:19:49 [W] Yeah, okay, so we can see we can only get the cluster location the cluster name and the cluster ID.
+00:20:18 [W] These are things that it's pretty normal to want to be able to access when you are an application running in the cloud somewhere.
+00:20:20 [W] So this is actually pretty good.
+00:20:21 [W] It's good to see this and then if we also want to I'm going to copy and paste this time so I don't make any mistakes if we also want to take a look at the service account that you would be able to access from inside this.
+00:20:34 [W] workloads
+00:21:02 [W] Okay, so we can see we can only get the cluster location the cluster name and the cluster ID.
+00:21:05 [W] These are things that it's pretty normal to want to be able to access when you are an application running in the cloud somewhere.
+00:21:05 [W] So this is actually pretty good.
+00:21:05 [W] It's good to see this and then if we also want to I'm going to copy and paste this time so I don't make any mistakes if we also want to take a look at the service account that you would be able to access from inside this.
+00:21:07 [W] workloads
+00:21:10 [W] So, let's see what would happen on the other hand if we did this.
+00:21:11 [W] I'm going to leave that container for a minute and come over here and set of the test normal.
+00:21:19 [W] I'm going to go into a test post Network and again pull up my shell here.
+00:21:25 [W] So we want to do the same thing and we want to see what attributes are available. Again.
+00:21:44 [W] This one's on the host Network.
+00:21:45 [W] So what this pod can do is it uses the same IP address as the host itself and shares a network with it and this might be for instance an infrastructure workloads that needs to be able to interact with everything running on that particular
+00:21:59 [W] So, let's see what would happen on the other hand if we did this.
+00:21:59 [W] So I'm going to leave that container for a minute and come over here and set of the test normal.
+00:22:00 [W] I'm going to go into a test hosts Network and again pull up my shell here.
+00:22:01 [W] So we want to do the same thing and we want to see what attributes are available. Again.
+00:22:02 [W] This one's on the host Network.
+00:22:02 [W] So what this pod can do is it uses the same IP address as the host itself and shares a network with it and this might be for instance an infrastructure workloads that needs to be able to interact with everything running on that particular
+00:22:05 [W] Network so it doesn't go through the proxy it goes directly to the instance metadata service and what you can do with this kind of access is exactly what the researcher did and the talk that I gave a couple years ago.
+00:22:20 [W] We get the kubenetes.
+00:22:36 [W] So this is pretty bad. We can also see another problem here if we go to the instance service account.
+00:22:46 [W] Plural, this is not an application service account.
+00:23:03 [W] This is actually the instances own compute service camp that the VM itself runs as so if the attacker and this example me takes this we can get the token from that and we can use that
+00:23:13 [W] This is pretty bad.
+00:23:13 [W] We can also see another problem here if we go to the instance service account.
+00:23:14 [W] Plural, this is not an application service account.
+00:23:15 [W] This is actually the instances own compute service camp that the VM itself runs as so if the attacker and this example me takes this we can get the token from that and we can use that
+00:23:16 [W] This VM anywhere on.
+00:23:16 [W] the cloud providers infrastructure, so
+00:23:22 [W] Take that whole the token and there it is.
+00:23:29 [W] We could use that and impersonate the VM itself, which again is not desirable you want to be able to lock these things down but supposing we did have some sort of Miss configuration and we miss this we can actually try to find out if our monitoring would be able to
+00:23:41 [W] Not so let's see what our Falco pods detected.
+00:23:48 [W] and you can see here that they did in fact detect it and see outbound connection to Cloud instance metadata service and it shows the exact command that I used here trying to get the service account trying to get the kubenetes if we had been running Falco with this rule
+00:24:05 [W] Second-tier cluster in 2018, then we would have immediately got an alert when that researcher was able to compromise this and it would have saved us 25,000 dollars in that case.
+00:24:16 [W] So what else can we do?
+00:24:23 [W] I'm actually not going to demonstrate this one because it's going to look pretty much the same. But what we can do is you don't even need to get a host Network poddisruptionbudgets.
+00:24:46 [W] Redirect to the proxy is done with the network Fabric and so in our case, we're running IP tables with Calico.
+00:25:01 [W] So an IP tables rule tells requests to metadata dot Google that internal or 169 254 is you saw it tells all those to go to the proxy instead.
+00:25:07 [W] But if you have root privileges, you just change the rules you don't go to the proxy co-direct the instance metadata and you get the same pwnage that we saw in the last example, so there's a lot you can do and in order to be able to detect
+00:25:16 [W] these things it really fills in the gaps.
+00:25:20 [W] And so if you've missed anything, then you want this ability to see what's happening in your clusters.
+00:25:27 [W] So I'll go to another example now, it's been a strange summer.
+00:25:28 [W] I'd wear away from each other and there are some people who are inside away from each other and some of those people who are inside found some exciting new vulnerabilities and kubernative while they were at home.
+00:25:43 [W] If you've done any old school Sidman work, then you've probably configure disk usage monitors and like those are usually designed to send you like an email when your disk usage.
+00:25:53 [W] It's 85% then page somebody when it gets 95% and if it hits a hundred percent nobody's responded then the server fails and it probably does some unpredictable weird things as
+00:25:59 [W] Well, so the CV 2028 55:7 it just fills up a file all the way to a hundred percent with junk. And once that volume is full that would be bad enough
+00:26:13 [W] But the problem is it does this with Etsy hosts which lives on the Node not the container.
+00:26:28 [W] So it takes down the whole note not just the Pod and when this came out the qubits eviction manager forgot to consider it see hosts.
+00:26:30 [W] So it would allow it to just keep filling up until the node failed. And if you've got large nodes that could run many different workloads. It could mean this vulnerable application doesn't just go down itself. It brings down a hundred larger more important ones.
+00:26:43 [W] So this is actually detectable by Falco.
+00:26:44 [W] Co just using the default rule set so going to demonstrate that now so let's go into for the sake of time we're just going to keep control executive again
+00:26:59 [W] Be some other exploit that someone's used to gain access to this pod.
+00:27:05 [W] They've compromised it in some way and you want to be able to contain that but thanks to this CV they can bring the whole no down.
+00:27:13 [W] So I'm in this privilege poddisruptionbudgets.
+00:27:29 [W] Age of this they'll be writing a huge amount not just this one line, but this advice is for example. So let's take a look at what Falco detected when we decided to do this. So again, we'll take a look at our
+00:27:45 [W] and
+00:27:48 [W] look for this Rule triggering and let's just say for the last five minutes.
+00:27:55 [W] There it is. So at the exact time that I ran this command you can see error file below at Sea opened for writing and this is just the default rule if you wanted you could make it more specific to detect the cve specifically but it's almost better in my opinion that it just detects this out of the box
+00:28:10 [W] Telco what should be able to write below this directory and if other things are doing it than we know that's bad.
+00:28:20 [W] And if you're looking closely you might notice that it didn't show the echo command.
+00:28:28 [W] That's just because Ecco is built-in. So the binary itself was just shell but you can see which file it was that was modified and then you can use some other method to decide how you want to this.
+00:28:36 [W] Maybe go check the file size of etsy hosts and figure out if you've been compromised or if you just need to allow list, whatever it is that did this
+00:28:41 [W] this
+00:28:41 [W] So these are some examples that we've looked at of use cases.
+00:28:48 [W] There are hundreds more that you can find in the Falco default rule set. Also in Telco dot-org you can find out a lot more but let's take a look at what I think is a more difficult problem and that is managing
+00:29:02 [W] So you need to make sure that you're handling your output. It needs to be visible searchable aggregated and annotated so that you can see what happened and when so you can see which of your alerts are being problematic and which ones may be
+00:29:18 [W] Way they are and you also need to be able to add annotations to these things.
+00:29:25 [W] That's really important because you don't want to spend time investigating something that someone else on your team is already looking at and has maybe already resolved also by being able to see when this alert has triggered before you can decide if maybe it's going off too often.
+00:29:38 [W] Of alerting on some specifics.
+00:29:47 [W] Maybe you can make the rules a little bit more broad or go the other way make it more specific. So teach Falco what's normal in your environment so that you're not getting false alarms all the time.
+00:29:54 [W] This is going to create alert fatigue if it's going off too much and a big part of handling.
+00:29:58 [W] This is normalization. So as soon as you see something and you know that it's a false alarm you need to promptly go in and allow us this you should also make it as simple as possible maybe using PR templates or even on
+00:30:09 [W] A nation so that when a person identifies that this doesn't need to bother somebody this doesn't need to wake somebody up in the morning. They can very quickly and easily assign that combination of poddisruptionbudgets.
+00:30:39 [W] Name is if you're not sure if something is a bug or you've just done something wrong. Then Falco slack is the place to go. They also have a weekly Community call. If you know that it's a bug you can open a GitHub issue or if you really want to contribute the best thing you can do is open
+00:30:54 [W] And give back, so thanks so much for watching my talk.
+00:31:00 [W] If you do want to get involved.
+00:31:01 [W] It's a cncf project.
+00:31:03 [W] There's so many ways. You can help out also, you can learn more about me.
+00:31:09 [W] see what Telco is all about jumping to the sectional there or also Shopify is now digital by default, and we're hiring. You can also check out the Shopify engineering blog to see what else we're doing.
+00:31:18 [W] So, thanks again.
+00:31:18 [W] Okay, so I'll take any questions that you have now and I see we've got a question already.
+00:31:35 [W] So the question was is it possible to automatically take actions and with Falco by itself?
+00:31:48 [W] No, but there are so many ways that you can consume these streams that you can use something as trivial as a shell script that's monitoring a lot.
+00:31:50 [W] Filed to do this or I mean if you have an advanced Sim, then really the sky's the limit.
+00:32:00 [W] There are so many options that you have for going back and changing things and like I mentioned with the config map being able to very quickly deploy. These rules changes is going to be critical to having any kind of automation involved at all and in addition
+00:32:12 [W] When do you automatically take action?
+00:32:18 [W] I think that's extremely Case by case.
+00:32:20 [W] I would want to be absolutely certain that the action was the right one before I had automation doing something that could affect a very critical production environment.
+00:32:33 [W] But again, like this is a tool that we're using for detection right now. If you want to get into prevention or taking automatic action, then that's a bit more advanced and it's something that I'll go will allow it.
+00:32:45 [W] Its capabilities, but it's not something that it does by itself.
+00:32:48 [W] And as you mentioned, yes, because any false positive would disrupt your own service. So that's that's why you know, you want to be very careful with the sort of automation that you would Implement here.
+00:32:58 [W] And the next question is is there a free edition of Falco or is this a premium feature?
+00:33:07 [W] So Falco is completely open source.
+00:33:08 [W] It was donated by sysdig to the cncf.
+00:33:11 [W] It's just think that you can use and we're using open-source Falco.
+00:33:18 [W] Another question here is do you use a UI for Falco at all?
+00:33:35 [W] Don't use that. So Falco itself does not have fancy web front-end or anything and I actually kind of like that because then I can just integrate it into the tools that I was using any way and if I want to check something
+00:33:58 [W] These examples just looking at the standard output of Falco.
+00:34:06 [W] It's also you know, that's probably not how you're going to consume it.
+00:34:10 [W] So we have fluent be ingesting everything from standard out on all of our Docker containers and dumping it into Splunk.
+00:34:19 [W] So that's one way of consuming it.
+00:34:21 [W] There's also Falco sidekick, which makes it really easy to send alerts to various destinations such as slack and you might have seen because my
+00:34:29 [W] besides that we're supposed to not show did shows there were a couple times where you might have seen a slack color pop up while I was demonstrating something and that is Falco sidekick sending the slack the problem that I find with using slack for alerts is that it
+00:34:44 [W] Humming if an alert triggers 100 times, I really only want to know once I want one alert that says this triggered 100 times and there's no real way to aggregate solid eight those in slack so you can just get flooded with a spammy
+00:35:00 [W] Miss a much higher priority that came through so site can be really useful in the beginning. But as you try to Wrangle all of these many alerts you are probably going to want to have something a bit more sophisticated and a bit more searchable.
+00:35:15 [W] I will absolutely post the link to the slides after I'm done here.
+00:35:21 [W] Oh, this is a really good question.
+00:35:28 [W] Could you walk through how you test the rules before deploying them?
+00:35:35 [W] So we have a shell script that does a very simple verification verification check on this before it gets deployed and that's important because we don't want to waste all this time for see I too try to deploy a whole
+00:35:44 [W] the for it fail at the last step because of a syntax error, but actually making sure that the rules are working as intended we use a staging environment for so we can trigger some of these alerts on command or by
+00:36:00 [W] Staging environment for so we can trigger some of these alerts on command or by contriving some sort of action just like I did in the demo and if we're experimenting with a new rule, then we'll come up with how we want it to work.
+00:36:09 [W] We might spin it up in a sandbox and then when we think we've got it the way we want it. We'll run it and staging and test it to make sure that it works correctly.
+00:36:16 [W] So hopefully you'll be able to see the link to the other talk that I'm giving a little bit later today with Chris nóva system also about Falco and a little bit more about the story behind why we chose it and if there's any other questions and please feel
+00:36:38 [W] now
+00:36:39 [W] Okay, I don't see anything else.
+00:37:24 [W] Thank you so much for watching.
+00:37:25 [W] Take care.

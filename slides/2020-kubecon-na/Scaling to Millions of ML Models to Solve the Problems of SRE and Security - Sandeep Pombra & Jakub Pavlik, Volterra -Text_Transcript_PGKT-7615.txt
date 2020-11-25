@@ -1,0 +1,216 @@
+﻿Scaling to Millions of ML Models to Solve the Problems of SRE and Security: PGKT-7615 - events@cncf.io - Friday, November 20, 2020 4:02 PM - 28 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Ok, so hello everyone Welcome to our presentation. My name is a republic and I am director of engineering at Volterra and I'm responsible for leading the study team.
+00:00:15 [W] Camera, and I'm the head of data science and I am responsible for doing all the machine learning data science and data modeling at Altera.
+00:00:24 [W] Okay. So today we are excited to get our session to Q Khan and we would like to share with you our story and journey how we get to the scaling to the million machine
+00:00:39 [W] And how we are using kubernative Apache spark and apogee Arrow to work with all those data and what great features we are able to get from them.
+00:00:34 [W] So a little bit about agenda. First of all, I will take you through quick overview of what this Volterra because not everybody probably is familiar what we are
+00:00:49 [W] Little bit about agender. First of all, I will take you through a quick overview of what this Volterra because not everybody probably is familiar what we are doing then some deep will explain our
+00:01:07 [W] Danna Sunday Bill explained our of machine learning functions and I will model explosion and the problems what we were facing then I will take you to machine learning
+00:01:22 [W] Journey, and how we continuously improve our large infrastructure and then Sunday it will take you to all models scaling challenges now to begging this I pick up this
+00:01:37 [W] Don't worry.
+00:01:36 [W] It is not so much vendor stuff, but I wanted to show you what is basically behind. So we at the Volterra rebuilt distributed cloud services, wherever your apps and data need them so it can be
+00:01:51 [W] It can be private clouds physical age nomadic Edge or our Global backbone. We focus on providing distributed Network Services and distributed infrastructure for the
+00:02:04 [W] So this is how looks our normal slide but from the our engineering side and what you can see the behind and what is running so for us it is basically kubernative everywhere
+00:02:17 [W] location and all those sides means kubernative site the kubernative sides and it also means load of flocks and metrics and data which we are able to pull from and then
+00:02:31 [W] provide great features for our customers and also for us to be able to operate
+00:02:40 [W] Okay.
+00:02:41 [W] Thanks jakub.
+00:02:42 [W] So I'm going to talk a little bit about our machine learning applications as jakub describe, you know, we have a very complex distributed microservices multi-cloud environment and this entails a lot of different machine learning functions.
+00:02:56 [W] First of all, we need to provide a very sophisticated web application firewall function and typical rule-based baths are not sophisticated enough to handle zero zero day attacks. So we need to prodyna
+00:03:10 [W] Why'd the most you know sophisticated machine learning algorithms that allow us to handle that besides that's important part of an application for us is understanding how the API is within the application of working.
+00:03:24 [W] So we use machine learning to to discover apis and basically compress the whole, you know application into a bunch of different API endpoints, then we do a lot of different types of anomaly detection
+00:03:39 [W] In detect water tax and different types of DDOS attacks.
+00:03:42 [W] We do time series anomaly detection and we also do per request anomaly detection. And we also do user Behavior Analysis to understand if there's any malicious users as well as to understand the application better.
+00:03:52 [W] So as you can see from this picture, there is a lot of different types of machine learning functions.
+00:03:58 [W] They are divided between the learning core which is the training and and the inference engines which run on the edge and the learning core actually is
+00:04:07 [W] Global Learning area where we do all our training and as you will see in the next few slides that to do this, we have to match really manage a very massive scale.
+00:04:21 [W] So we'll talk about this more as we go forward.
+00:04:28 [W] Okay. So before we get to the actual models, let me explain you the scale and how we collect metrics and locks in our infrastructure.
+00:04:42 [W] So we have three types of sites.
+00:04:45 [W] We have a customer edges which are available in thousands, right so they can be thousands and hundreds of thousands of
+00:04:54 [W] Of the sides then we have something we call Regional edges which are our point of presence and our Global backbone.
+00:05:02 [W] Which is today distributed across three regions and this is the place where we are doing data analysis.
+00:05:00 [W] So the way how it works is that we have a Prometheus in each of every site which scrapes local kubernative workloads as well as nodes and then we are doing from the connected
+00:05:15 [W] Just Prometheus Federation with metrics right listings and we are scraping only certain metrics which we are particularly interested in and which we want to work with. So not basically everything and we use
+00:05:19 [W] Which gets writes data into cortex as our long-term storage for all those kind of metrics Regional H.
+00:05:28 [W] Prometheus is permitted. I also send alerts and produce alerts to our ad manager on the oxide today. We are using fluent bit.
+00:05:39 [W] bit who captures all the log messages from our services and from the third party services.
+00:05:46 [W] So they are forwarded to aggregation fluently and fun bits demons in the pops and original ideas.
+00:05:56 [W] And from there. We write into two places today.
+00:06:00 [W] So we write into elastic search and we also write into AWS S3.
+00:06:08 [W] S3 and those apis are then available for our metric data analysis.
+00:06:16 [W] Even data analyze this and other services which Sunday will be explaining on the food slides.
+00:06:28 [W] Yeah, so as Yahoo! Just showed that we have a very complex architecture with a lot of different types of data ingestion.
+00:06:36 [W] And we also have when we are deploying applications.
+00:06:40 [W] Under underlying these applications are a lot of different dimensions.
+00:06:41 [W] Basically, we have application virtual host Source sites destitution sites.
+00:06:46 [W] And one of the things we found when we doing all our machine learning modeling is that every application every customer every geography has its own characteristics.
+00:06:56 [W] So it's very difficult to develop a universal model for all of these.
+00:07:01 [W] So basically to get the best performance in terms of our machine learning accuracy, we have to develop models for each
+00:07:07 [W] Reach across each of the dimension and as you can see basically doing that kind of a combination just by a multiplicative logic leads to a very large cardinality of models and in our case we were looking at
+00:07:22 [W] Cases some of the models for example for the time series.
+00:07:15 [W] We're getting into millions of Time series.
+00:07:17 [W] So basically we need to figure out a way to scale these models.
+00:07:22 [W] So initially when we started this project, you know, obviously we were trying to get the machine learning and our algorithms working.
+00:07:28 [W] So we were running these models on a single instance in a civilized Manner and what that did was basically it took a very long time to run and obviously, you know, when we are training and doing inference in scoring based on these models if the model takes
+00:07:42 [W] virile hours to run the model itself becomes Obsolete and definitely it's not something that was sustainable.
+00:07:48 [W] So now yakub is going to talk about a little bit about how our infrastructure was also struggling to meet this need.
+00:07:58 [W] so when we started we actually and this is the infrastructure picture, which is looking now on the global controller as I introduced in the previous slide, so
+00:08:13 [W] More engines but this picture cover one of the region where we provided elastic search cortex and AWS S3 API and we ran everything as
+00:08:21 [W] PW ss3 API and we ran everything as a eks cluster in the inside of the case cluster and it was basically a single cost of running continues rent lightning jobs
+00:08:27 [W] Rent, lightning jobs and issue was that parallelism and also inefficient CPU RAM usage and
+00:08:44 [W] We have to resize to bigger and bigger VMS and flavors and it was not quite efficient because some because those jobs running few hours and then they don't run many
+00:08:57 [W] Was not quite efficient because some because those jobs running few hours and then they don't run many hours.
+00:09:04 [W] So you need to find kind of balance. So it was not really a cost efficient and resource efficient and therefore we wanted to find a different way or take a look
+00:09:19 [W] And therefore we wanted to find a different way or take a look on the different perspective how we can handle this very large data sets ingestion and the training.
+00:09:37 [W] Yeah, so I'm so as I could mention, you know, we were coming running into a lot of bottlenecks and our infrastructure.
+00:09:43 [W] Also, obviously, you know from machine learning model scaling the obvious approach is to run several models in parallel and you know, this can be done in various ways.
+00:09:54 [W] You know, we could use that score job labor variety of python because most of our code was in Python, but we want something which was much more easier to maintain easy to scale easier to
+00:10:05 [W] Much. So we wanted to combine the best of scaling horizontal scaling as well as having the ability to Auto scale scale to different customers do automation as Kuma mentioned with ci/cd
+00:10:21 [W] That infrastructure management, and we also wanted to be able to have very Universal way of our data ingestion so that we could easily do secure and seamless data ingestion.
+00:10:32 [W] So for all these reasons we decided that we wanted to
+00:10:40 [W] I think it's not allowing me to go to the next slide.
+00:10:46 [W] Okay, there it is.
+00:10:47 [W] Sorry about that.
+00:10:47 [W] Yeah, so basically to do this we wanted to combine the best of spok scaling and parallelization and kubernative infrastructure.
+00:10:56 [W] So we use spark basically as a horizontal scaling and kubernative as a distributed data ingestion architecture with integrated ci/cd.
+00:11:04 [W] So we wanted to have a faster time to Market.
+00:11:08 [W] So rather than creating our own open source spok engine we decided to Leverage The SAS technology from
+00:11:16 [W] It has brakes.
+00:11:23 [W] Yes, so when we start let me talk about little bit about how we actually integrate the data breaks and what we had to do. So if you look at the
+00:11:39 [W] Out of data breaks integration.
+00:11:25 [W] Basically, they calculate that you will give them access to the full AWS VPC and they can provision the VMS and jobs as they need and you do AWS peering with your
+00:11:40 [W] V BC where you have your data in our case our Global control with cortex, Prometheus and gnostics actually Pi.
+00:11:36 [W] So the the problem what we find here was that we didn't want to give them access to our VPC.
+00:11:47 [W] So we created dedicated instance dedicated account, but we still didn't want to use just the peering because we wanted to have a visibility on
+00:11:58 [W] on what is Flowing said detail firewall rules and make sure that it cannot get breached and they cannot access our core infrastructure and they don't
+00:12:13 [W] Use our Cas and our own certificate. So we wanted to relay isolate them and we busy peering was not good enough.
+00:12:19 [W] So we come up with the idea that we can actually leverage leverage our own technology and make it better. And therefore we worked with this design. So we took
+00:12:34 [W] Our eks and our existing VPC as is and we just created dedicated account.
+00:12:36 [W] For data breaks learning jobs. And then we launched our ingress/egress gateway called Volta mesh which basically allow us to
+00:12:51 [W] Egress gateway called Volta mesh, which basically allow us to get connectivity for only particular API, which we need in this case.
+00:13:03 [W] It's a Prometheus cortex and elastic search and we just advertise only those apis with different certificates and different authoritative for the data brake switch.
+00:13:18 [W] Allow us to really provide granular to API filtering and service policies and allows to Volterra learning services such as a pi Discovery
+00:13:33 [W] Animal addiction better question of my addiction requisite analyzes all user Behavior analyzes to run and consume and produce metrics bags to our infrastructure without any
+00:13:49 [W] It's a breaching or direct access to core Volterra services.
+00:13:50 [W] And of course this help us also to improve our own technology.
+00:14:01 [W] Okay, great.
+00:14:02 [W] Thanks guys. So now I think the rest of the talk I will focus on how we use spok to paralyze our models and basically sorry I can go to the previous slide.
+00:14:13 [W] Thank you.
+00:14:13 [W] So the waist part works is you know, spok relies very much on running the functions on the driver itself and then running a bunch of executors in parallel. And typically that can be done by creating either data frames are
+00:14:29 [W] It is which are resilient distributed data sets which are collection of data frames are data modules that run on different executors.
+00:14:35 [W] So the idea is basically you take some huge data and then you split it into different executors. And actually if you're executors are multi-core, you can even go and split them into multi-core. So for example if we have for
+00:14:50 [W] Of course so we could paralyze by factor of 16.
+00:14:45 [W] So the first approach we took was for the kinds of scaling where basically we were going to ingest the data and we were going to also Express the models into the various interfaces that are jakub talked about and for that
+00:15:00 [W] Very simple scheme where basically we took our Dimensions like applications namespaces and created what we call is, you know, a panda's data frame out of it and then we did
+00:15:11 [W] Frame into an rdd. And then basically what we can do is do a map which is basically applying any function.
+00:15:20 [W] This allows us to run a function.
+00:15:22 [W] Obviously the input output of this is more symbolic where basically we want to make sure that your function is executed, but the actual core functionality can be very complicated.
+00:15:35 [W] So if you look at this code snippet, I can basically explain a little bit further how we did this.
+00:15:42 [W] So basically spark has two kinds of operations. There is a Transformations like the map.
+00:15:49 [W] Which is apply of a function and then there is basically actions which actually execute the thing like collect or count and things like that or other kinds of aggregations.
+00:15:58 [W] So in this case, you can see if we Define this outer function, which is basically a standard python function.
+00:16:06 [W] We get our pandas frame which has all the keys that we're going to use for mapping.
+00:16:13 [W] We create a spark data frame based on the point of
+00:16:19 [W] and then basically we make sure that we have the actual mapping function which is embedded within this function so we can use any of these variables like variable one variable to inside this function
+00:16:34 [W] Automatically exported to each of the executors and so pretty much this function is we've take the data frame we map and we convert into our DD and we map this function this
+00:16:45 [W] and the map of the convert into our DD and we map this function the this therefore it applies this function to every role of this rdd, which is the original Bond a frame and and then we do a collection to make sure that this function is actually executed
+00:16:44 [W] Function is actually executed because spok has lazy execution where it will only execute the function when they actually do the collect thing, but one thing I wanted to point out is that this model function, which I have not really talked described here can be a very complicated function
+00:16:59 [W] A lot of different types of objects to it without any problem and this will all be done seamlessly and this automatically scales the the the function into various parallel components.
+00:17:13 [W] So this is actually a very cool approach and this works very well in scaling when you know, we do everything within the function but there are other instances where basically we have much more complicated data frame.
+00:17:25 [W] Sorry.
+00:17:26 [W] Let me see.
+00:17:26 [W] How do I go to the next slide? Here? We are.
+00:17:29 [W] Could you could you go to the next slide?
+00:17:31 [W] I'm not able to do that for some reason.
+00:17:36 [W] can we go to the next light
+00:17:39 [W] thank you so much yeah so there is a lot of situations where basically our data set is already available it's a complex data frame and not every single column within the data set is are the key is there's a lot of actual data
+00:17:54 [W] Want to actually you know, get data out of our functions which are much more sophisticated. So we cannot use that simple approach in that case.
+00:17:59 [W] And in that case, what we have to do is we have to come up with a different approach and we decided to use an approach which uses the conjunction of pandas UDF with Apache arrow and we'll talk about a party arrow in the next slide, but basically
+00:18:14 [W] Is udf's basically means a user-defined function and typically in Python.
+00:18:10 [W] When you do python udf's that is basically takes every row of the data frame and converts and transfer function every row and that's that's very inefficient.
+00:18:21 [W] So we want to use Pond has UDF which actually work in a much more vectorized fashion and can increase the performance Bap 200 times on on Python udf's and obviously since we are going to do our
+00:18:34 [W] Models across a lot of different dimensions. We want to use something called a group map and as udf's which allow us to take a you know, a group by approach to split apply combine these udf's and do these
+00:18:50 [W] In a much more seamless fashion. So I'll talk a little bit more about Apache are oh, yeah.
+00:18:53 [W] So so when we do this kind of go from like, you know basically spark which is running in like a Java virtual machine and go into a python panda is API.
+00:19:04 [W] There's a lot of serialization involved if you don't use any party arrow and that Civilization can take a lot of time.
+00:19:12 [W] It's very efficient efficient because it works
+00:19:15 [W] row by row, but with Apache Arrow, we can use a commoner way to to basically send this data from spok to to python API and to a pond as a pi and this corner is data is very
+00:19:30 [W] Takes advantage of all the same the architecture of all are the modern CPUs and this allows a very efficient way to to get this data in a very vectorized fashion from from basically the spok data frame.
+00:19:36 [W] The pond as a pi and so this is essential in getting the performance and the cost reduction that we need.
+00:19:34 [W] So I will talk a little bit about more about the the group and as a pi.
+00:19:41 [W] So as I said, you know, basically the idea is we have an original data frame which is consist of all our data and a bunch of keys and we use those keys to group this data frames into different groups and
+00:19:57 [W] Those keys to group this data frames into different groups and these groups then go into a pond has function and the function is applied to each group separately.
+00:20:05 [W] And then the result of these groups is a pond as output and that allows us to get basically a very efficient way to do this this function.
+00:20:16 [W] So basically the idea is we are kind of doing the python function as a python API, but we are using these underlying
+00:20:24 [W] Knowledge he's like Apache arrow and found as UDF to do it in a very efficient and very parallel fashion.
+00:20:29 [W] So what I'll do is I will go through a code snippet that actually explains how how we do this in a much little more detail.
+00:20:40 [W] basically if you look at this python code there is a very it's a very simple instance of how to run several models of a random Forest scikit-learn random Forest liquor regressor.
+00:20:54 [W] Parallel, so that would be a good example of some of the models we use.
+00:20:58 [W] So the way we do that is first we Define a schema which basically defines worth. What kind of output we are going to have in this case.
+00:21:07 [W] We are doing something that is simple We have basically our group ID, which is the key we do the paralyzation pie and then we have the model string which basically just gives you the model file name, but this this schema can be very complicated
+00:21:22 [W] Do you know a complete Panda's data frame with all of different types of objects in it to really return a very, you know, very complete data frame.
+00:21:33 [W] So in this case, you know, we have to use a decorator to basically instantiate this Pond has UDF and we are doing a group map UDF.
+00:21:42 [W] So once we do that, then everything else is pretty straightforward.
+00:21:45 [W] This is your regular python function that basically has a panda's data frame as Nats.
+00:21:52 [W] Input the group ID is basically something we pass as part of this data frame and that allows us to identify this specific group.
+00:22:01 [W] And then, you know within the data frame we can have a lot of different columns. And in this case, we have three columns which has the two features and the label and so by extracting those columns. We can run the random Forest regressor
+00:22:16 [W] basically can do a pickle dump of the model and we can basically pass the model and the group ID back and this way this whole function runs in parallel across several executors and the way
+00:22:18 [W] At this function is first, we basically enable arrows.
+00:22:11 [W] So the civilization is is very fast and is vectorized then we have our original Panda's data frame that contains the actual data.
+00:22:20 [W] We convert that into a spok data frame and then we apply the group by model on it.
+00:22:26 [W] I'm sorry Group by pandas UDF on it. And then once we apply this as I mentioned before spok has lazy execution, so we have to convert this back to Pond has and this way we get
+00:22:37 [W] at our results back. So it's a really simple way with just using underlying python functions and doing parallelization spok without getting into too much of the nitty-gritty of us Mark. So this actually demonstrates, you know, the two ways we have
+00:22:52 [W] Back, so it's a really simple way with just using underlying python functions and doing parallelization spok without getting into too much of the nitty-gritty of us Mark.
+00:23:02 [W] So this actually demonstrates, you know, the two ways we have paralyzed and been able to scale our models to this this level.
+00:23:11 [W] So so that actually concludes our presentation.
+00:23:15 [W] We have a few concluding remarks we can talk about those.
+00:23:19 [W] So basically, you know, we presented a way to take the best of kubernative and best of spark to do a scaling with end-to-end Automation and security and ci/cd
+00:23:34 [W] Garrity and ci/cd to basically part eyes are models and scale them to very high cardinality.
+00:23:42 [W] We used a very unique architecture as yaku described.
+00:23:46 [W] It's very unique because we embedding spok into a micro service within kubernative.
+00:23:50 [W] I think this is a very novel but but very but very simple so obviously, you know, the one advantage we have with spark as jakub mentioned was you know, when we run these models we can run them as
+00:24:04 [W] as basically clusters that we create and terminate once the the actual job or the training is over that way. We save a lot of resource courses.
+00:24:14 [W] sorry resource costs. And then as we evolve with more models and more applications, it's very easy for us to integrate those into into our current infrastructure, and now, you know in terms of scaling.
+00:24:27 [W] We also looking at other dimensions of scalings that we can do within this architecture, which is beyond just
+00:24:34 [W] The the models itself.
+00:24:36 [W] We are looking at you know, when an application is very big and has a lot of different complexity. We can basically scale within the application with the data itself.
+00:24:45 [W] And then we also looking at some very sophisticated deep learning models which you know, which tend to be very complex and we're looking at how we can leverage this architecture to even scale within those modern models and paralyzed those models.
+00:24:57 [W] So those are some of the things we are going to be doing in the in the future great.
+00:25:02 [W] Thank you.
+00:25:03 [W] Okay.
+00:25:04 [W] Thanks, Sandy.
+00:25:07 [W] That's all from our site.
+00:26:09 [W] yes, so
+00:26:13 [W] Okay, so hold that is one question.
+00:26:16 [W] Maybe someday I'll get for you.
+00:26:20 [W] Why not ship models to the edge?
+00:26:24 [W] I don't ship the models to the edge.
+00:26:13 [W] Why do we see so one of the main reasons we don't do that is because we want to have a maximal amount of data for modeling and since our data is collected from a lot of different edges if we were to ship
+00:26:28 [W] Then we would have to basically do a database partitioning at the edge and then combine those and there's a lot of you know issues involved with that certain models are not splitted.
+00:26:37 [W] You know spreadable by data. So so it's much easier to have a collective, you know aggregated training also lot of our models, you know have to do with time series analysis
+00:26:52 [W] These times cities are typically we collect this time series through cortex and Prometheus and these times these are also aggregated based on different dimensions and it's much easier to do that locally.
+00:27:07 [W] Okay, so then if that is question if there any place to get more details, so I think you can so more details about actually what we are doing
+00:27:23 [W] Ink and results in output you can find our documentation at the Volterra.
+00:27:23 [W] Do I owe or you can actually contact us on slide right on link or Link in me or Sunday and we can chat more about what you are interested or we are also on the
+00:27:39 [W] And then there is the one more question for you Sunday.
+00:27:38 [W] Can you say what algorithm you use for a Time series for example arima
+00:27:47 [W] Alpha times this video we use different types of algorithms. We use autoencoders using neural networks.
+00:27:54 [W] We also use State space predictive models.
+00:27:57 [W] Yeah.
+00:28:03 [W] Hello.
+00:28:04 [W] Yes.
+00:28:05 [W] Yes.
+00:28:05 [W] Yes.
+00:28:05 [W] Yes. Okay. So that is the
+00:28:11 [W] Last question, I think.
+00:28:17 [W] Yes, so thank everybody for the attention.
+00:28:21 [W] Feel free to contact us. We both me and Sundy para to answer any questions or even show the result what we are able to achieve his the machine learning models.
+00:28:34 [W] So what is it like and user view? We can show it or point you to some other resources, but it was great to be part of this conference. Thank you.
+00:28:46 [W] Yeah, same here.
+00:28:47 [W] I was really enjoyed preparing these material and hope it's useful and informative. Thank you very much.

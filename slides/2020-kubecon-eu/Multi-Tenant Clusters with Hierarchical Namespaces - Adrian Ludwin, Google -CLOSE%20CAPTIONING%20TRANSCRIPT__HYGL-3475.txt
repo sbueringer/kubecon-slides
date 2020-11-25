@@ -1,0 +1,278 @@
+﻿Multi-Tenant Clusters with Hierarchical Namespaces: HYGL-3475 - events@cncf.io - Wednesday, August 19, 2020 11:40 AM - 1139 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:03 [W] Hi there, good morning afternoon or evening to everybody who's joining us.
+00:00:07 [W] My name is Adrian gladwyn, and I'm an engineer working on Google had she said he could run Eddie's engine at Google and today.
+00:00:13 [W] I'm going to be talking about how to build multi-tenant clusters using hierarchical namespaces.
+00:00:19 [W] So there's a at a brief overview.
+00:00:25 [W] There's a couple things will be covering today the concept of hierarchical namespace is quite you. So I'll spend a little bit of time explaining both what multi-tenancy is how hierarchical namespace has can be used to provide a multi-tenant cluster and also
+00:00:38 [W] Contributing to the project because it is all core support of the open source ecosystem how you can help us out.
+00:00:47 [W] So here's the topics.
+00:00:48 [W] we're going to go through today. I will talk about why you should be interested in multi-tenancy will talk about the foundation of multi-tenancy and kubernative which is namespaces and how these are being extended to become hierarchical.
+00:01:02 [W] Then we're going to talk about the product called the hierarchical namespace controller or hnc which implements these are Google namespaces and I will give a slide where demo
+00:01:09 [W] whoa it which is much easier than a live one on this recorded session. I'll talk a little bit about some Advanced a chancy topics and then we can talk about how you can contribute how you can get involved how you can get a chance and try it out for yourself.
+00:01:25 [W] So first, let's talk about why to use multi-tenancy.
+00:01:31 [W] I'd imagine if you are listening to the session.
+00:01:37 [W] You probably have some idea of why you want this anyway, but let's go over it because sometimes different people come to this topic for different reasons and there are a wide variety of reasons that you might be interested.
+00:01:43 [W] So most companies care about two things called mainly cost and velocity and if this seems a little bit reductive, well, you can take an expansive you to both of these costume velocity and Compass all kinds of other concerns such as
+00:01:58 [W] Teams that are tripping over each other's feet that's going to impact both your cost and velocity. But it does of course include the sort of more basic concerns such as how much you pay your cloud provider and how quickly you're able to develop new features
+00:02:16 [W] Albums that you can have is that if too many different teams are running trying to do too much on their own they end up impacting both of these and so let's look at how this works with kubernetes kubernative is works really well for out of the box for
+00:02:32 [W] Reviews are so you've got a user the user uses either the command line interface Cube cuddle, which we all know and love or the API or some kind of graphical user interface to talk to the control plane the control plane then communicates in turn to the nodes
+00:02:48 [W] User interface to talk to the control plane the control plane then communicates in turn to the nodes via the qubits and everybody is pretty happy.
+00:02:57 [W] This also scales up well too small teams. And usually when you start talking about terms like tenants the kind of talent that you have in mind is a team now, there are other definitions of tenancy as well. Sometimes you can think of an application is being a tenant
+00:03:06 [W] sighs producer you can think of your customers as being tenants or sometimes if your customers are customers and those can be tenants to but for the purpose of this discussion, we are mainly going to be talking about the development teams that want to use your cluster and
+00:03:22 [W] Nettie's Works quite well for a relatively small number of people out of the box now what happens if you have two tenants or two teams, do you give each of them their own cluster?
+00:03:33 [W] This is a very common pattern, but the problem is that it doesn't really scale all of that.
+00:03:42 [W] Well, and again, it impacts both of your both your cost and your velocity.
+00:03:49 [W] So in terms of cost each cluster usually has some kind of overhead either there's an explicit fee per cluster and even if there isn't you're paying for the
+00:03:52 [W] Is of the control plane if you're paying for system components such as let's say sto your logging system and monitoring system.
+00:04:07 [W] And that's just direct monetary or compute costs. Then there's the effort that it takes to manage all of this who's going to upgrade all of these who is going to decide when it's time to go from one version of kubernative to another and
+00:04:15 [W] What we find is that while this is a great way to get started and it's a very easy way to get started at some point a lot of large companies or even medium sized companies will quickly decide.
+00:04:25 [W] You know, what we already have enough trouble managing the Clusters we need to have in different regions.
+00:04:33 [W] Why do we also have each team trying to manage it themselves?
+00:04:36 [W] And so to solve these kinds of problems.
+00:04:38 [W] They're part of the open source ecosystem includes the multi-tenancy working group and it was form to categorize and understand and then solve these kinds of
+00:04:46 [W] LT tenancy problems in the ecosystem and so the there's another state called the multi cluster Sig which is trying to solve the problem of having lots of clusters, but we are trying to solve the problem of reducing the number of clusters that
+00:05:01 [W] There's a couple of projects that's run by this group.
+00:05:07 [W] One of them's agency which will be discussing in this presentation other ones include virtual clusters and a benchmark or compliance project.
+00:05:15 [W] I'll talk a little bit more about the working group at the end of this presentation.
+00:05:22 [W] But if you are looking through these slides on your own there's a link that you can click or you can just search for us were easy to find.
+00:05:23 [W] So the the canonical view that we like to promote in the working group looks like this where you have multiple tenants they all talk to the same control plane and their workloads run in different namespaces and namespaces are the primary unit of isolation in kubernative.
+00:05:39 [W] But what I found kind of fun is that you don't actually hear people talking about them very much.
+00:05:46 [W] So let's talk a little bit about namespaces because then we can see why it's important that we can make them hierarchical now.
+00:05:51 [W] So namespaces seem boring.
+00:05:55 [W] We don't actually talk about them a lot.
+00:05:57 [W] They're a little bit like the walls in your apartment.
+00:05:59 [W] They are not in and of themselves very complicated, but they make a lot of other things possible the most obvious thing that comes to mind when you think of a name space is just that it allows you to organize your objects.
+00:06:13 [W] So for example, in namespace A and B, I can have objects that otherwise have the same name which would conflict but they're differentiated by the namespace name.
+00:06:18 [W] That's great. You could probably do that by hand if you really wanted to
+00:06:21 [W] In space is actually do a lot more than that, especially when it comes to the area of multi-team tenancy.
+00:06:28 [W] So there are some security features of kubernative Z coordinate that require names faces.
+00:06:38 [W] So for example, let's talk about kubernative service accounts every workloads runs as a service account and secrets every workloads can access secrets and they are freely usable within a namespace what that means is that anybody who has permission to deploy a pod
+00:06:48 [W] Can use any secret or can run as any service account within that namespace unless you set up other rubles outside of the rules of kubernative.
+00:07:04 [W] And so what that means is that even though in theory you can use different service accounts within a namespace to provide different levels of privileges to Applications.
+00:07:09 [W] That's not really a good solution for multi-team tenancy where you don't want the humans to have access to those privileges to be able to run pods as as using elevated privileges.
+00:07:18 [W] Now I should note before I go on any further that the namespaces constructs only isolate the control plane of the data plane.
+00:07:35 [W] So if you put two pods into two different namespaces, they can land on the same node. And because containers are not as security boundary something that escapes if you have a malicious workloads that can escape its container it can attack other
+00:07:43 [W] Other workloads running on the same node, or even the rest of the cluster.
+00:07:47 [W] There are a lot of good presentations, especially from Cube Con San Diego 2019 the talk about this so namespaces are great for the control plate. They are not sufficient to protect your data plane.
+00:08:02 [W] You need to look into sandboxing technology such as G visor or Kata containers to defend the data plane, but those are out of the scope of this presentation.
+00:08:09 [W] Moving on there are many other features which work best with namespaces, even though technically you don't always need them.
+00:08:17 [W] So for example, our back works really well at the namespace level.
+00:08:24 [W] It is the only way that I'm aware of to scope the privilege of creating new objects, unless you want to go to the entire cluster level I should say and even if you want to look at other privileges such as reading objects or updating or deleting objects in
+00:08:35 [W] Are back at the per object level, but this is quite brittle doesn't scale very well.
+00:08:46 [W] So really you want our back to apply at the namespace level in the vast majority of situations this applies to many other things as well resource code is and limit ranges aren't really about security the more about resource sharing but again, they work
+00:08:55 [W] Things as well resource code is in limit ranges aren't really about security the more about resource sharing.
+00:08:58 [W] But again, they work best at the namespace level or I think only apply the namespace level Network policy.
+00:09:00 [W] Similarly.
+00:09:05 [W] They can be finally targeted using labels, but they work best using the name space boundaries by default. Now one caveat is that of network policies is that is that if you are looking at traffic coming from another
+00:09:16 [W] is the way to select that in spaces to use labels and labels are a problem because they're not actually secure anybody who can edit any namespace can modify any label that is on that namespace and what that means is that if
+00:09:30 [W] Can modify any label that is on that namespace and what that means is that if labels are part of research your security policy.
+00:09:34 [W] There is no differentiation between any user on your customer who is able to edit any namespace?
+00:09:47 [W] So we're actually going to come back to that in a few moments because each and see and hierarchical namespace is provide a solution to that problem.
+00:09:49 [W] Now that talks about why you should go things to namespaces.
+00:09:58 [W] But what happens if you want policies that are across different namespaces.
+00:10:01 [W] Usually you're going to need some kind of tool and a source of truth that is outside of kubernative. So you can use see I did obstacles like flux or Argo if you are in gke you can use tools such as config saying coredns, 'this config management all of these look at
+00:10:13 [W] So typically in gives and can propagate things to the cluster and typically across multiple names basis.
+00:10:26 [W] There are other solutions that are fully in clustered that add some kind of concept of accounts or tenancy.
+00:10:29 [W] One of them is called kiosk which I haven't actually played with myself, but I want to look into it.
+00:10:36 [W] Another one is called the tenancy or D, which is actually also run by the multi-tenancy working group, but we felt when we were starting agency is that there is a need for a solution that was both fully kubernative knative.
+00:10:43 [W] So no dependencies on get and the didn't introduce A New Concept because both kiosk or ten the tenancy Rd.
+00:10:55 [W] They have a fairly well-defined idea of what a tenant should be.
+00:11:00 [W] But as I mentioned at the beginning of this presentation, there's a great many different types of tenants and so having something that's at one level lower than that can be really useful.
+00:11:10 [W] This brings us to hierarchical namespace has hierarchical namespace is our name spaces. They are kubernative namespaces both they've added this concept of ownership.
+00:11:14 [W] of course, you can see here by the arrows and what this ownership provides is the ability to delegate certain operations and the ability to impose policies that were on a parent name space into a child or descendant and hierarchical
+00:11:28 [W] Our an add-on they are provided by the hierarchical namespace controller, which I'll talk about in a moment, but let's talk about how they work.
+00:11:44 [W] As I said they express ownership. But on top of that what they do is you can create something spaces without cluster-level privileges namespaces are great.
+00:11:52 [W] But if you want to allow a team to create a namespace that's limited by for example the policies of its parent.
+00:11:53 [W] There's no way to do that each NC provides a way for you to create a small object in a parent namespace which results in the child namespace being.
+00:12:04 [W] Created for you.
+00:12:09 [W] It can allow you to Cascade policies and secrets from one name space to another so that you can limit these things to a subtree of name spaces without having to manually figure out where they go.
+00:12:15 [W] It adds a set of trusted labels that you can use for policy application and it's also easy to extend
+00:12:20 [W] So just to make some of these ideas more concrete. Let's look at a demo of what HSE looks like in practice.
+00:12:28 [W] So first I'm going to enable it on my cluster because I'm on gke I'm going to use a feature called hierarchy controller, which is part of convincing.
+00:12:36 [W] So I'm going to edit the operator manifest and I'm just going to set higher key controller is enabled and hard controller includes agency. If you're on OSS stories, it's just a one line cute couple apply. You can find that from our GitHub.
+00:12:51 [W] Definition for that.
+00:13:03 [W] So we've created these namespaces called parent and child and if we get the list of names faces, you can see they've shown up but there's nothing special about them.
+00:13:10 [W] They are completely normal top-level namespaces.
+00:13:15 [W] And what I'm going to do now is I'm going to look at a plug in a hierarchical namespace HS plug-in, which is a cute couple plug-in which is part of the project and I'm going to use the tree command and - 8 is the all namespaces to see what is the hierarchical structure
+00:13:26 [W] called namespace HS plug-in, which is a cute couple plug-in, which is part of the project and I'm going to use the tree command and - 8 is the all namespaces to see what is the hierarchical structure of this cluster and there is none you get exactly the same output is what we
+00:13:30 [W] And there is none you got exactly the same output as what we had before because we have not set up any hierarchical relationships.
+00:13:36 [W] So let's talk about article relationships.
+00:13:38 [W] Let's use that plug-in the HMS plug-in to set a property on normal child.
+00:13:43 [W] We're going to set its parent to normal parent.
+00:13:45 [W] And if we go again and run that command we can now see that normal child shows up as a child of normal parent.
+00:13:55 [W] Now. What do I as I said, what is this normal business that I've been talking about?
+00:14:01 [W] Well, what we're going to see is that because we created these these name spaces in the normal way. You can arrange them into hierarchies.
+00:14:10 [W] We call these in HSE we call these full name spaces. The opposite of full name space is a some namespace, which is a lot more limitations, but don't require cluster level privileges to create.
+00:14:17 [W] And I'll be demonstrating those in a minute.
+00:14:18 [W] So now that you have these hierarchical namespace is what can you do with them?
+00:14:22 [W] Well, let's create an are back roll.
+00:14:25 [W] So we're going to create an are back roll called parent s re and we are going to put it into the parents namespace. So that's created. Now typically if you looked in any other names base now for this object, it would not appear, but we are going to look in the normal child
+00:14:38 [W] Limitations but don't require cluster level privileges to create and I'll be demonstrating those in a minute.
+00:14:39 [W] So now that you have these hierarchical namespace is what can you do with them?
+00:14:39 [W] Well, let's create an are back roll.
+00:14:41 [W] So we're going to create an are back roll called parent s re and we are going to put it into the parent name space. So that's created. Now typically if you looked in any other names base now for this object, it would not appear, but we are going to look in the normal child
+00:14:43 [W] Object not normal parent and what we can see is that it shows up and not only does it show up.
+00:14:49 [W] It shows up as being inherited from the normal parents because of course HSC is not actually magic for an object to look like it appears in another name space. We've had to copy it and the way and when we copy it we set up this label and this label is used by
+00:14:59 [W] Such as update this copy when the parent is updated or just as importantly delete it if the original object is deleted I should add that by default agency does propagate only are back objects of rolls and rolls bindings, but it's easy to configure to propagate any other
+00:15:15 [W] Like although I don't recommend propagating pods with the like that's for things like Network policy is resource quotas limit ranges and so on.
+00:15:30 [W] So now let's talk about the opposite of a full name space, which is a sub name say so here we're going to use that plug-in again, but instead of creating a new space we say HS create and we're going to create a sub namespace child.
+00:15:39 [W] And so this creates something called a subduing space anchor it is a namespaced object in the parent name space and if we look at the tree of the parent name space, we now see that it has two children one is the normal one and one is the sub namespace now.
+00:15:54 [W] What's a little bit hard to appreciate maybe from just looking at the slide is that you didn't need any cluster level privileges to create this.
+00:16:08 [W] You only needed the ability to create a sub namespace anchor in the parent name space and so you could give people privileges to create this in summoning spaces, but not in others.
+00:16:14 [W] But once that needs to be says been created it is a full kubernative namespace and but you can't manipulate it directly. You can't delete it directly to do that.
+00:16:19 [W] You have to delete the the anchor you can't move it because it has been created by somebody who only had privileges within this one namespace and so it cannot have its parents changed.
+00:16:31 [W] There are a couple of work around them both around that but those are beyond the scope of this presentation.
+00:16:35 [W] So now let's talk a little bit about how you can extend agency. So let's take a closer.
+00:16:41 [W] Look at this namespace that we've created.
+00:16:43 [W] If you look at the name space itself, you will see that there are a couple of labels and have a bit of an odd structure.
+00:16:54 [W] They start with the name of another name space and then they have this kind of tree suffix and what this does is this encodes the hierarchy. So what we're seeing here is that some child namespace we're looking at has the depth of 0 to itself and a distance of 1 to its
+00:17:07 [W] What this allows you to do is it allows you to select entire sub trees that means faces.
+00:17:15 [W] So for example in your network policy, if you wanted to allow traffic in or out of any namespace owned by the same team, we're team is has a parent name space. You can create that selector. Now I said before labels are not safe for security policies because anybody
+00:17:27 [W] I think in or out of any namespace owned by the same team we're team is has a parent name space. You can create that selector. Now. I said before labels are not safe for security policies because anybody who has access to edit the name space can modify them
+00:17:30 [W] Access to edit the name space can modify them?
+00:17:35 [W] What agency does is it prevents you from doing that? If you try to modify one of these labels, it will be rejected. And if you somehow bypass the web hook of the reconciler will get rid of it. So you can trust these labels because a chancy enforces them any other
+00:17:45 [W] No, you can modify any label that doesn't begin with agency dot X kids dot IO or sorry have that in the suffix, but these labels are protected.
+00:17:56 [W] So let's talk a little bit more about how you can extend agency now.
+00:18:04 [W] So what I'm going to do is I'm going to give a demonstration that shows a couple of extensions and other systems and what I'm going to use here is config saying which is a flux or like gitops tool that is part of gke and what you can do is it already
+00:18:17 [W] Namespace inheritance that's quite similar to agency. In fact agency was inspired by it in park but that hierarchy Works in a very different way instead of being present on the cluster.
+00:18:33 [W] What config sink and which is the same as the atlas config management.
+00:18:45 [W] What can fixing does is it allows you to define a tree of directories in get and you can create a bunch of llamo files in them and these Leaf directories in this case team a team B and team see these become namespaces on the clock.
+00:18:50 [W] Stir and so what we just done now is I flipped over to another cluster where this is running and if I look at the list of names basis, you will see that team A B and C have been created.
+00:19:00 [W] I haven't shown it here.
+00:19:06 [W] But if I look for acne or bore and those are not synced, they do not appear as real name spaces on the cluster.
+00:19:07 [W] But if you go look at Team B, which is a from a chance, he's point of view is a is a root knative space. You can see that these labels actually have shown up. Now.
+00:19:20 [W] How is this possible given that I said that these labels are trusted well agency defines an extension Point called managed by that you can use to extend the hierarchy in ways that each in see doesn't knative Lee understand.
+00:19:31 [W] case, we have told hnc that there is this other system called config management gke that is managing this route.
+00:19:37 [W] And there are a bunch of things in place that stop you from adding this managed by annotation and less in a ways that can damage security.
+00:19:59 [W] And so what that means is that those what that means.
+00:20:04 [W] is that these labels are usable by by any other systems such as Network policies that the regular agency Liberals are can use as well.
+00:20:18 [W] You can also create a something space underneath them. So here we're using each and see to create a service that's owned by TV called surface one.
+00:20:24 [W] And now let's look at another extension Point. Let's run a small application inside of that inside of that news service name space you're going to run out and it creates a service in a pod and if we look at the Pod what we'll see is another
+00:20:39 [W] Again, this one it only works in gke for reasons that we'll see in a second.
+00:20:47 [W] We can see all of those labels have been copied down to the Pod.
+00:20:51 [W] The reason we've done this is that logging in gcp is based on labels that are put on top of the pods.
+00:21:02 [W] And so this allows what this does is this allows us to go into our logging system. And in our case, it's stackrox vlogging and filter and Route and analyze these logs based on the hierarchical structure and other log.
+00:21:10 [W] These systems will have similar abilities but they might integrate a slightly different ways again what this is showing is how easy agency is to extend by your platform team in order to solve your own problems.
+00:21:24 [W] So let's have a look at one of these labels.
+00:21:27 [W] So this is we're going to look at for example, every log that came out of the engineering organization on this cluster.
+00:21:33 [W] So on in cheek loud and she's happy the way to do this is you create a filter which is pretty straightforward.
+00:21:42 [W] We're going to say that the kubernative labels must include this label and is tri-agency.
+00:21:46 [W] You can see the name got mangled a bit but with the depth having any value and if we run that we can see that we are reading the logs they came from that deployment of nginx that we put into that pod.
+00:22:00 [W] So again, the details here don't matter very much because it's going to be different in every sysdig.
+00:22:02 [W] Mm.
+00:22:05 [W] Is if it understands the concepts of kubernative namespaces or kubernative labels, you can use it with hnc because that's how a chancy has been designed to extend.
+00:22:20 [W] I'm going to very briefly cover some of the advanced topics with agency not in any depth just so that you're aware that they exist and to give you an idea of the kinds of things that you have to think about when you're building a system like this.
+00:22:36 [W] There are authorization checks in place to make sure that you cannot modify the hierarchy and bad ways because if you move your name space to a new parent you get access to all of its Secrets.
+00:22:43 [W] This is obviously dangerous operation and shouldn't be allowed unless you have access to those Secrets already we can do cascading deletion of some
+00:22:55 [W] Lives and so if you delete a parent namespace all the anchors and that needs to be he's got deleted which deletes the some namespaces and so on obviously this is dangerous. And so there are a variety of methods that we have in place to make sure you don't do this on purpose.
+00:23:06 [W] You can monitor agency Itself by open sites. This plus the objects that it creates a huge namespace and of the cluster level have a status section that you can you can use to ensure that everything is working the way you expect and finally we've put a bunch of thought into
+00:23:23 [W] all this you wouldn't want all of your something spaces and all of the objects in them to disappear if you delete a chancy and so we've put effort into making sure that you'll get a pleasant experience if you try it out and it doesn't work for you how in terms of how
+00:23:38 [W] this for simple organizations or in Dev clusters is pretty easy to understand how you can use this you can give teams control over their own namespace hierarchy without letting them which includes letting them create their own name spaces without giving them the ability
+00:23:54 [W] You can use this you can give teams control over their own namespace hierarchy without letting them which includes letting them create their own name spaces without giving them the ability to modify or impact anybody else and again, you can do this without
+00:24:00 [W] Modify or impact anybody else and again you can do this without each and see if teens do not have to own multiple names basis. As soon as they do on multiple names basis.
+00:24:06 [W] It becomes a lot more complicated in a more complex production environment.
+00:24:14 [W] It allows you to do things like safely distribute Secrets among related namespaces.
+00:24:16 [W] It allows each team to have their own continuous delivery tooling such as gitops that then you can give the service accounts for those Tools limited privileges and not to the entire class.
+00:24:25 [W] Stir which has been required in the past in summary. What you can do is you can extend agency to create these higher level tools including Concepts such as accounts or tenants there today provided like by projects such as kiosk
+00:24:40 [W] Let's wrap this up.
+00:24:43 [W] How do you get this?
+00:24:44 [W] How you play with this?
+00:24:47 [W] Well, the most obvious way if you're on open source is to just go to our github's releases page.
+00:24:51 [W] So it's pretty easy.
+00:24:57 [W] You can search for hierarchical namespace controller or if you are looking at these slides you can click on that link to go to GitHub.
+00:25:06 [W] It's follow through to the releases and you will find the latest version of each in C. And it's a one line installed to get it onto your core to line. And so to get it onto your Custer another couple of lines to download a plug-in if you are on GK your anthos you can enable hi.
+00:25:16 [W] Ricky controllers I showed using in convincing coredns, 'this config management which gives you a couple of these x-ray Integrations like like The Innovation with logging and I would expect in the future that other providers would provide similar Integrations into their cloud and then
+00:25:26 [W] That plug-in if you are on GK your anthos you can enable higher two controllers.
+00:25:27 [W] I showed using in convincing coredns, 'this config management which gives you a couple of these x-ray Integrations, like like The Innovation with logging and I would expect in the future that other providers would provide similar Integrations into their cloud and then there are user guides and demos
+00:25:28 [W] Demos that can help you get started.
+00:25:29 [W] We are interested in contributors.
+00:25:35 [W] There's a bit of a laundry list of features that we are considering adding 2 H and C such as exceptions.
+00:25:40 [W] We're looking at a way to implement namespace the RDS which sounds like a contradiction in terms, but contact me later. If you want to talk about that and improved products that age production ization such as Prometheus support.
+00:25:53 [W] And of course, we are always happy for people to test and help document the product.
+00:25:55 [W] Finally, if you're interested in multi-tenancy as a concept, please come and join the multi-tenancy working group.
+00:26:04 [W] We have a variety of products projects that we are leading launches fire people namespaces. This includes virtual clusters the tendency Rd and benchmarking and this effort is led by Tasha Druid VMware and Sanjeev ample at Cisco.
+00:26:17 [W] It's a really friendly Community.
+00:26:20 [W] We meet every two weeks on Tuesdays and please come to the market Rico.
+00:26:28 [W] Where you can find all the information to join the mailing list and to join our bi-weekly Zoom calls.
+00:26:31 [W] That's the end of this pre-recorded session and I will see you from my point of view in about three weeks to answer your questions, or we can go to questions right now.
+00:26:40 [W] Thank you very much.
+00:26:41 [W] Hi, there. It is now Wednesday, August the 19th.
+00:26:51 [W] Tekton the same Sig called the tenancy Rd.
+00:27:05 [W] I just mentioned that actually on one of the last slides it is not competing project.
+00:27:09 [W] It is a more opinionated Solution.
+00:27:11 [W] That's at a higher level of the stack as what I would think what I would hope at some point in the future is that it might actually be re based on to hierarchical namespace has but it's a very it's got a very different purpose
+00:27:24 [W] Get that user model and it works perfectly for you.
+00:27:28 [W] That's great.
+00:27:34 [W] I don't think it's got as much activity on it is actually working much more closely with the virtual cluster project, which is much more about hard multi-tenancy than then hnc which is much more about sort of
+00:27:43 [W] Soft multi-tenancy. And by the way, if I don't answer your question today, please feel free to contact me on the through the multi-tenancy working group. My email is there you can see - on slack and
+00:27:59 [W] Reach me and by the way, I'm sorry for anyone who is looking for the slides who can't see them on shed if you look for my name is Adrian loved one on speaker deck.
+00:28:10 [W] I have uploaded them there as well.
+00:28:13 [W] I'm hoping will pop up on shed, but they haven't been turning up yet Daniel asks. Can you Scope cluster scoped things to HS like series?
+00:28:20 [W] For example, as I said, no is the short answer the namespace controller is all about namespaces. However, we have been chatting about
+00:28:32 [W] Out some possibilities to let's say simulate namespace to see our DS in kubernative sand if we can do that then then agency will work. Well with them as forgetting truning space series interview Burnett. He's that is a very
+00:28:44 [W] Shouting about some possibilities to let's say simulate namespaced cri-o is in kubernative sand if we can do that then then agency will work. Well with them as forgetting truning space series interview Burnett. He's that is
+00:28:46 [W] I'm linking strimzi, which is just an add-on true name space. ER days would require changes to kubernative.
+00:28:53 [W] He's and some pretty expensive ones as well.
+00:28:54 [W] But please do join us on the mailing list run slack and explain what your use cases for stuff like this because the more use cases we have motivating this the higher the chance that somebody will be able to do anything about it.
+00:29:08 [W] it. Andrew asks any thoughts on the approach that were shown during yesterday during a hard multi-tenancy solution. I think I may have watched.
+00:29:15 [W] That one if that was the one about running lots of different API servers on one cluster.
+00:29:27 [W] that is a great solution. If you need that kind of hard multi-tenancy virtual clusters, which are being run through the multi-tenancy working group are another solution if you need shared notes as well as
+00:29:36 [W] As multiple API servers.
+00:29:46 [W] I apologize if I'm responding with the wrong one, but but basically a chancy is not really for the herger use cases.
+00:29:51 [W] It really is for the more kind of Cooperative use cases, which is not to say you cannot you cannot put in policies that ad for your safety. That's the whole point, but it's not really for like mutually hostile tenants at least not at this point.
+00:30:02 [W] Years of hardening before we could get there.
+00:30:05 [W] It's hierarchical resource quota management part of the agency roadmap. It is something that is asked for quite frequently.
+00:30:15 [W] However, we have some other let's say more pressing concerns.
+00:30:21 [W] This is as I mentioned in that second to last lylas if I can.
+00:30:23 [W] There we go.
+00:30:27 [W] Hierarchical resource quote a second from the bottom there.
+00:30:36 [W] Yes, that is that is a feature that we would be happy to accept some contributions from it's certainly something that's come up in discussion.
+00:30:41 [W] And yeah, if you are interested in contributing, we are happy to hear it as far as the road map goes. It is on I would say it at the moment.
+00:30:50 [W] It's on our nice to have list, but we have some more important features that we need to get in there before. Can I eval agency and GK at the
+00:30:56 [W] Or do I need to set up each and see on my own and jjigae.
+00:31:06 [W] So if you are using gke I as I showed in the demo, you can use a feature called hierarchy controller, which is part of a larger feature called config sink.
+00:31:10 [W] So if you just go to the Google Docs, you'll be able to sort of a Google Cloud documentation search for higher controller that is a like a curated version of agency with a couple of gcp specific extensions.
+00:31:22 [W] That you can certainly install it based off of our releases on GitHub which we which we've tried to make that as easy as possible as well because that's what we do during our development process everyday.
+00:31:35 [W] Does the child need space and sub namespace get owner ref of the parent name space? I wish it did the the we had to set a lot of that stuff up ourselves because owner refs the only work within a namespace because as I mentioned namespace is the default boundary for a lot of stuff
+00:31:51 [W] I wish it did the the we had to set a lot of that stuff up ourselves because owner refs only work within a namespace because as I mentioned names to these is the default boundary for a lot of stuff in kubernative and so since we could not have
+00:31:55 [W] Burnett he's and so since we could not have references across namespaces, there was no good way to use owner F to make this work. If you go to our repo and check out the design the original design doc.
+00:32:04 [W] I think we cover like we looked into that and we explain why that wasn't possible unfortunately.
+00:32:11 [W] Kane a Kate's knative resources or this is Max asking Kate's knative resources are dealing with h and see how about Opa or linkerd E.
+00:32:22 [W] I must confess.
+00:32:23 [W] I have not looked at linkerd e at all and that includes in relation to agency now Opa I know relatively well, especially in its form as gatekeeper and that those labels that I showed the tree labels.
+00:32:37 [W] that is an extension point that we could write some policies and Rego based off of and actually
+00:32:42 [W] Us on my list of things that I want to try out in the next month or two.
+00:32:47 [W] I talked with a bunch of the gatekeeper folks pretty frequently.
+00:32:51 [W] And so yeah, do you want to try that out?
+00:32:52 [W] But that is how you would integrate gatekeeper and opa it was a chancy is that you would go based off of the labels on the namespaces if we need more than that.
+00:33:07 [W] that. So for example, if we wanted let's say constraint template in gatekeeper, which is this a policy that applied only to a some treat namespaces we need to do.
+00:33:14 [W] Bit more work there because right now everything in gatekeeper is cluster level.
+00:33:20 [W] Frequently and so yeah, do you want to try that out?
+00:33:26 [W] But that is how you would integrate gatekeeper and opa it was agencies than you would go based off of the labels on the namespaces if we need more than that.
+00:33:28 [W] So for example, if we wanted let's say constraint template in gatekeeper, which is this a policy that applied only to a some treat namespaces.
+00:33:29 [W] We need to do a bit more work there because right now everything in gatekeeper is cluster level. So first we would have to get
+00:33:32 [W] Is level constraints into gatekeeper not an impossible task, but not a completely trivial one either and then they would naturally propagate along with everything you could you could set a chancy up to propagate them very easily.
+00:33:36 [W] Can you mark other labels as protected or unmodifiable know you can't the idea of having what's called a cold labels or ACL?
+00:33:44 [W] So Access Control lists on labels is a tricky problem to solve in general, but it would be yeah, if you have a use case for that, please give me a show we could do something at the code level
+00:33:57 [W] What's called a cold labels or ACL?
+00:33:59 [W] So Access Control lists on labels is a tricky problem to solve in general, but it would be yeah, if you have a use case for that, please give me a show we could do something at the code level
+00:34:01 [W] Is there any reference for setting up with gitops tools like flux or Argo?
+00:34:06 [W] So at the moment?
+00:34:09 [W] No, there isn't I haven't tried it with anything.
+00:34:12 [W] I haven't even tried it with convincing to be honest, but kubernative but hnc objects are simply like any other kubernative objects.
+00:34:24 [W] And so you can simply check them into your into your repo at some point. It would be actually that would be a great place to make a contribution is if you wanted to try
+00:34:29 [W] That out right a medium post or blog post or a or contribute to our own documentation.
+00:34:37 [W] That would be great.
+00:34:38 [W] We would welcome to that.
+00:34:41 [W] How do you manage cluster capacity namespace quotas?
+00:34:48 [W] I think I covered this already hierarchical namespace quotas are something that we would be interested in adding if we had any contributors.
+00:34:54 [W] Let's see. I've we're running a little bit low on QA. I'll get his I'll get through as many as I can.
+00:34:58 [W] But again, please do contact us on slack or on the multi-tenancy.
+00:35:01 [W] Most oh, and I'm sorry, we are at times.
+00:35:06 [W] So I apologize to James Martha and Lassie and Max.
+00:35:12 [W] was not able to get to your questions, but please do contact us on Cyclone the mailing list, and I'll answer you there. So thank you very much for joining us and I'll see you later.

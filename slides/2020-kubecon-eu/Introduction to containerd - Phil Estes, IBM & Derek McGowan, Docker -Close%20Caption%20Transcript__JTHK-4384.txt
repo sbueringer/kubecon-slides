@@ -1,0 +1,286 @@
+﻿Introduction to containerd: JTHK-4384 - events@cncf.io - Tuesday, August 18, 2020 11:39 AM - 57 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:02 [W] Hello, I'm Derek McGowan.
+00:05:48 [W] I'm a maintainer on the containerd E project.
+00:05:55 [W] I'm joined today by Phil ssds from IBM who was also a maintainer of containerd e we are going to give you an introduction to containerd e today most of you have already heard of containerd e but today we will focus on the decisions that you might make as a container to user or a potential contributor
+00:06:04 [W] Through what containerd e is where it came from and what problems it is solving then he will go into why you might be using containerd e today or want to use it in the future after that.
+00:06:19 [W] I will discuss how to contribute to containerd e we will go through the high level architecture of containerd e and discuss the different parts, which you may want to contribute to lastly.
+00:06:25 [W] We'll discuss what's coming up and containerd E.
+00:06:26 [W] All right.
+00:06:27 [W] Let me hand it over to Phil.
+00:06:29 [W] Thanks for that intro Dirk.
+00:06:31 [W] The hi everyone.
+00:06:33 [W] It's obviously would be a lot more fun to be together.
+00:06:38 [W] It could con like we have for the past few years like many of you. It's one of my favorite conferences where I see tons of friends and colleagues across the container world.
+00:06:49 [W] No, we're going to do the best we can and hopefully give you some details on containerd E that are valuable to you and your current role and hopefully in the future.
+00:07:02 [W] We'll see you again at a conference in the future, but let me try and get us all on the same page.
+00:07:04 [W] Answer this question what is containerd e and sure, you know the default easy responses.
+00:07:12 [W] Well, it's a container runtime but we all know that that term is fairly overloaded. And so maybe it's easiest to see containerd e as being below certain things and we maybe call those platforms like Docker or kubernative
+00:07:27 [W] The lower layer of what might be the actual container runtimes you think of like run see or even some of the other isolators you may have heard about like Kata containers or firecracker orgy visor and so containerd e really fits
+00:07:43 [W] And so containerd e really fits in this middle spot below these more feature-rich platforms, but above the lower layer runtimes, which actually do the work of executing your container in some environment whether Linux
+00:07:56 [W] Of executing your container in some environment whether Linux kernel features or qmu KVM.
+00:08:00 [W] So obviously if we sit in that space where you could also think of us as a resource manager, so again, we're doing the work on behalf of a platform and there's another process below as managing the the discrete
+00:08:15 [W] Of we sit in that little space and become this resource manager for those processes for their lifecycle handling start stop pause Etc.
+00:08:31 [W] And again we deal with the artifacts you're going to need to even start a container. So talking to a registry pulling the Manifest getting the config in the layers unpacking that into file system snapshots.
+00:08:41 [W] So containerd e supports several file systems, but RFS overlay.
+00:08:47 [W] Rapper and so containerd e is that resource manager of you've pulled an image and now you need to turn it into a file system snapshot that can be used by the driver you're using all these resources need have some metadata.
+00:09:01 [W] They've got dependencies.
+00:09:05 [W] They have namespaces and other ways to administratively separate them.
+00:09:10 [W] And so containerd e again handles these for you. And when Derek comes back you'll see this in an architectural diagram that hopefully
+00:09:16 [W] Do you see how it all fits together the other aspect that's important to know about containerd to use that were a tightly scoped runtime.
+00:09:27 [W] It takes a hundred percent maintainer approval to change increase our scope so far the only major change we made and it's been several years now is to bring in the cri-o plantation. So kubernative has this container
+00:09:38 [W] There was an implementation started separately that used containerd e we've brought that within the project and it's been that way for several years a couple quick highlights.
+00:09:55 [W] You've may have heard about them already at past conferences.
+00:10:02 [W] but we're the fifth project to graduate with the within the cncf. There are others who have graduated more recently. It's been over a year now since we graduated in the past year we've grown
+00:10:09 [W] Own in contributors and more companies and so we now have over 250 unique contributors to the project.
+00:10:19 [W] We support Linux and windows or Windows support has grown and we also support multiple architectures and we've added more recently govern sub-projects like a rust Lang implementation of the TT RPC
+00:10:30 [W] Um container encryption lazy image pull support as an external snapshot ER and so again, a lot of things have happened in the last year or two with containerd e, so if you aren't up to speed there's also a great project Journey report.
+00:10:46 [W] that was put out early this year.
+00:10:48 [W] You can find that on the cncf website or just by searching for containerd E project Journey.
+00:11:00 [W] So hopefully that gives us kind of a level set of what is containerd e what are kind of the main components of it and
+00:11:01 [W] And what's been happening in the last year?
+00:11:04 [W] So let's move on from there talked about what containerd e is now let's talk a little bit about where containerd e came from it was originally built up alongside Docker. It wasn't for coredns Heritage from the docker could base. It was a new project
+00:11:18 [W] Same time that the oci was formed and run see was created.
+00:11:24 [W] And so it was initially that process supervisor.
+00:11:27 [W] That's at between the full Docker runtime and run see over the years.
+00:11:34 [W] It's grown in scope from that initial just process supervisor to a full runtime along the way again, even though some of those capabilities and containerd E overlap with the docker could base. The decision was to create new interfaces
+00:11:46 [W] Learned from those initial years of building the docker engine and come up with a cleaner API and better separation for the management of containers and images.
+00:12:02 [W] I mentioned this already but the cri-o was originally this out of process plug-in. And so that was kind of the last piece that came into containerd e, so again this growth over years from the supervisor to this full runtime and then adding in the cri-o to be a runtime for kubernative.
+00:12:16 [W] That happened over a number of years within that time frame. It was donated to the cncf A lot of times. There is a desire to compare containerd e with Creo que Creo actually uses parts of the docker codebase unlike what I just said about
+00:12:32 [W] And forked for example, the graph drivers all the overlay and device mapper and other drivers and use that as the starting point for curio. Whereas containerd e started with learnings from that
+00:12:48 [W] Code base, but initially and continued to create completely new interfaces.
+00:12:57 [W] So that gives you a bit of the history of where we came from how the project started and where we are today with the the full cri-o did to that full runtime with registry interaction with containerless
+00:13:10 [W] And so of course the million-dollar question is great.
+00:13:24 [W] Should I use containerd e, of course, you're asking the maintainers of the project to have spent the last four years building. And of course the answer is yes, but you're probably looking for a more nuanced answer of well, why would I use containerd e
+00:13:30 [W] Few aspects before we dig even further coming at it from different perspectives.
+00:13:40 [W] For example, are you using kubernative containerd e is a stable well supported very mature runtime for kubernative.
+00:13:54 [W] And as you'll see in a few minutes most major Cloud providers have a kubernative offering that uses containerd e today.
+00:13:55 [W] What about for development both Docker and build kit?
+00:14:01 [W] that would be our recommended tools for a developer facing workflow. But those are using containerd e already today. So maybe you're using Docker build kit. And therefore you're already using containerd e today you're
+00:14:14 [W] Developer facing workflow, but those are using containerd ER ready today.
+00:14:15 [W] So maybe you're using Docker build kit. And therefore you're already using containerd e today you're interested in Edge containerd e is the most memory efficient and stable runtime.
+00:14:21 [W] look at ranchers k3s, and they chose containerd e again for that reason for this minimize kubernative. Use functions is service if that's an area you're interested in
+00:14:32 [W] Again containerd he's performance and efficiency have caused it to be selected by open fans for the fans d project IBM Cloud functions uses containerd e as the runtime under the covers as well.
+00:14:48 [W] well. So these are these are aspects, you know, maybe you're using containerd e already because you're using a popular Cloud providers kubernative offering but these are all the kind of aspects that we see where people are using containerd e,
+00:15:02 [W] And it's important to think about this in terms of stability.
+00:15:08 [W] We initially in 2016 and 2017 talked about containerd e being this core stable runtime, but stability means different things to different people there's processed stability. So again if
+00:15:20 [W] Being a demon like kubernative.
+00:15:30 [W] He's or Docker or some other demon you want process stability and that that that demon process doesn't crash on. You corrupt your data.
+00:15:32 [W] You don't lose containers. That's one aspect of stability.
+00:15:36 [W] We focused on and containerd E stability around resource use you don't want to run away process or runaway demon that uses all your memory or eats up your CPU.
+00:15:49 [W] And so we focused and don't have done a lot of testing around memory usage.
+00:15:51 [W] Around CPU usage making sure we don't have spiky resource use and having the smallest possible overhead for each container about how much extra memory and CPU is required for the lifecycle management around
+00:16:06 [W] The TT grpc protocol was one way to notice that memory usage could be quite large for that management supervisory process.
+00:16:22 [W] And so we created an additional sub-project that solve that problem and dropped our memory use per container again file system. Use we have garbage collection and containerd E which handles and accounts
+00:16:33 [W] Of image artifacts and layers being cleaned up when they're not being used. And so these aspects of stability or things we focused on in containerd E and made progress on over the years and have caused it to be one reason
+00:16:49 [W] choice in various Avenues of use today
+00:16:54 [W] So we've talked about our focus on stability and the use cases that exist for container runtimes and so naturally what you'll find is that containerd e because of this focus is really widely used in
+00:17:10 [W] And so there's a handful of logos here.
+00:17:14 [W] There could be many more but these are all places where containerd to use used in production today. And of course, you will see Cloud providers, you'll see various kubernative use cases, and of course Docker and then people have used containerd
+00:17:28 [W] System so containers is a service via far gate or Google Cloud run or AWS is bottle rocket are firecracker or weaveworks ignite all these tools and systems and
+00:17:44 [W] Built on top of containerd e in each one of these use cases is well supported by the containerd E framework and model of having a clean API clean separation people can use various aspects of containerd e without using others.
+00:18:00 [W] API clean separation people can use various aspects of containerd e without using others and so we've seen a huge growth over the years in both containerd e is a building block but also leading to
+00:18:09 [W] A building block but also leading to a wide use of containerd e and production and that's led to the even a lot of contributions.
+00:18:15 [W] So the device mapper snapshot are from the firecracker team or other features that have been contributed or developed or external projects building around containerd e that you can find today.
+00:18:28 [W] again given that it's natural that you'll see when you look at the cncf annual survey or sysdig.
+00:18:36 [W] eggs annual container report the use of containerd e especially in production is grown year of a year every time the surveys have come out and you'll see that given we know Docker uses containerd E when you combine
+00:18:51 [W] Saturday especially in production has grown year of a year. Every time the surveys have come out and you'll see that given we know Docker uses containerd E when you combine containerd e and Docker usage together, it is the
+00:18:54 [W] Docker usage together it is the Lion's Share of container runtime use in the industry today.
+00:18:59 [W] So I talked about this a few minutes ago, but effectively because of all these use cases because of all these implementations if you're running containers you maybe already are using containerd e in some way are using Docker then
+00:19:14 [W] Maitre d if you're using build kit that then you're already using the containerd tapi.
+00:19:23 [W] Are you running containers in a cloud context as a service like far gate or Google Cloud run, then you're already using containerd e and we've caused mentioned the the common kubernative use case.
+00:19:36 [W] So all the cloud providers manage service offerings use containerd e and so you probably may already be using containerd e today.
+00:19:45 [W] If you have a use case that hasn't been represented here.
+00:19:48 [W] We'd love to hear from you and hear how yours is using containerd e, but at this point be a great time to transition back to Derek to talk about not just using containerd e but contributing to it, so pass it back to you Derek. Thank you.
+00:20:03 [W] All right, let's discuss how to get started contributing to containerd e most of you are already using containerd e in some form.
+00:20:13 [W] We're still happy. If you're only contribution to containerd e is attending this session and learning more about containerd e we hope you never encounter issues while using containerd e, but we all know that's a noble with any software.
+00:20:22 [W] Please contribute by filing those issues on GitHub. We also recently opened up GitHub discussions for containerd E. This operates in place of a developer mailing list and is a good place to ask and answer questions. All maintainers are also available on
+00:20:38 [W] Your issue if you want to contribute code knowing the high level architecture will help you understand where to contribute. It may also help you align your particular interests with different parts of containerd e if you are integrating with kubernetes, the cri-o N is a good place to contribute
+00:21:00 [W] Lower level system development run times are good place to start if you just like to hack around with container Technologies or have a new feature. You want to try out the containerd E client provides good flexibility for that usually contributing to the client is the best place to start
+00:21:16 [W] get started pretty quickly as a user of containerd e the client is the first place you will interact with if you are building a system on top of containerd e the client is what you will be working with you can see in the diagram that some core functionality that is often associated with container
+00:21:32 [W] Working with you can see in the diagram that some core functionality that is often associated with container runtimes is implemented here in the client an example of this is container management which handles creation of the oci specification preparing the containerd snapshots
+00:21:41 [W] creation of the oci specification preparing the containerd snapshots as well as starting individual containerd tasks image pulling is also completely implemented inside the client because of this approach clients are mostly limited to using Argo Library
+00:21:52 [W] Even though python Java or another language could talk to the containerd E API using grpc basic functionality would need to be re-implemented to use the full runtime.
+00:22:07 [W] The cri-o interface is probably much easier to work with if you are not implementing your project in go.
+00:22:07 [W] One of the first things you'll come across in the client is the options pattern.
+00:22:17 [W] We realize not everyone is a fan of this pattern and we always appreciate feedback and pull requests to make the client better.
+00:22:20 [W] Any software can get complex really quickly.
+00:22:27 [W] Sometimes adding Simplicity and one part can lead to complexity in another part with containerd e we chose the keep the core as simple as possible by defining clean simple interfaces inside the core that meant the client had to have more functionality and configurability in the containerd
+00:22:35 [W] Rick Barry had two options on a core type but in the client you will see these with options used on these types to implement a feature you will commonly see this used for example for labeling or filtering on the different types. We were also hoping this would allow
+00:22:51 [W] On the different types.
+00:22:56 [W] We were also hoping this would allow clients to include their own opinions rather than be forced to work around opinions in the containerd E Damon the core of containerd e contains the components. We consider most critical in terms of stability.
+00:23:02 [W] ere.
+00:23:06 [W] We Define the main data types and interfaces used by containerd E. If you think containerd e / uses interfaces, this is partially intentional we want data and operations flowing through the core and everything else wrapping those types or using data that is
+00:23:18 [W] Act by the corps, the corps has the main implementation of these interfaces and these interfaces are extended and used all the way to the client.
+00:23:32 [W] The design is such that all data flows through the core so that plugins and other components don't need to store data.
+00:23:36 [W] This is important because we have implemented garbage collection inside the core metadata store.
+00:23:43 [W] So if data is being used somewhere else, it is really hard to track that data and make sure that it is removed when it is no longer needed. This makes containerd e stable by keeping storage and memory usage stable.
+00:23:48 [W] It also helps avoid data inconsistency and random crashes.
+00:23:52 [W] We don't expect as many changes in the core relative to other parts of containerd e features generally aren't implemented inside the core.
+00:24:02 [W] However, some features may require some chord changes.
+00:24:08 [W] If you have a high level feature, which requires a bunch of changes to the core to implement it that is usually not the right design.
+00:24:12 [W] However, some features require small changes inside the core.
+00:24:17 [W] The design is such that all data flows through the core so that plugins and other components don't need to store data.
+00:24:22 [W] This is important because we have implemented garbage collection inside the core metadata store.
+00:24:23 [W] So if data is being used somewhere else, it is really hard to track that data and make sure that it is removed when it is no longer needed.
+00:24:24 [W] This makes containerd e stable by keeping storage and memory usage stable. It also helps avoid data inconsistency and random crashes.
+00:24:25 [W] We don't expect as many changes in the core relative to other parts of containerd e features generally aren't implemented inside the core.
+00:24:27 [W] However, some features may require some chord changes.
+00:24:29 [W] If you have a high level feature, which requires a bunch of changes to the core to implement it that is usually not the right design.
+00:24:31 [W] However, some features require small changes inside the core.
+00:24:32 [W] So for example, we recently added a feature to support remote snapchatters. The high level feature of remote snapchatters is not something that the core knows anything about but one functionality
+00:24:37 [W] We did add to the core was the ability for the snapchatters themselves to report that they already know about a snapshot as it is flowing through the core.
+00:24:43 [W] So when you go to create a new snapshot you can pass information that says this is the target snapshot that I'm trying to create and we'll pass that to the backend the back in now can actually communicate back up to the core to let it know that it already has that snapshot that allows the
+00:24:45 [W] But one functionality we did add to the core was the ability for the snapchatters themselves to report that they already know about a snapshot as it is flowing through the core.
+00:24:47 [W] So when you go to create a new snapshot you can pass information that says this is the target snapshot that I'm trying to create and we'll pass that to the backend the back and now can actually communicate back up to the core to let it know that it already has that snapshot that allows the
+00:24:48 [W] Is the core report that snapshot as already existing.
+00:24:56 [W] Meanwhile, the core has no knowledge of what a remote snapshot is it is really important for us to keep the core of containerd e on opinionated to make sure we don't get feature creep showing up in the containerd E Damon.
+00:25:06 [W] We also don't want opinions to show up in the Damon. So that later on new features requirements are limited by previous opinions added to the core for the underline runtime.
+00:25:17 [W] There's a component in the containerd E Damon and an external shim for managing container processes. The runtime in the Daemon is
+00:25:23 [W] Responsible for starting up new runtime shims.
+00:25:25 [W] It will pass through the oci specification and all the commands to the shim.
+00:25:29 [W] The runtime shims are the boxes on the right side.
+00:25:32 [W] These shims are what actually own the container processes.
+00:25:36 [W] The containers are parented directly to the shim the containerd E.
+00:25:38 [W] Damon will talk to the shims using the lightweight grpc protocol called TT. Grpc.
+00:25:44 [W] We use this lightweight RPC to reduce the memory footprint of the shim. If containerd e gets restarted, it will reconnect to the shims in order to send commands to the container.
+00:25:50 [W] There are many different runtime Shimon fermentations.
+00:25:55 [W] The Run see implementation is the most common there is run each CS4 running on Windows.
+00:26:02 [W] There's also a few sandbox shims such as for firecracker or Kata containers since the shims only implement this RPC interface.
+00:26:10 [W] Anyone can Implement their own shim to be used by containerd E pretty easily containerd. You just need to know about the shin binary in order to use it to run containers.
+00:26:16 [W] The back ends themselves are also pluggable.
+00:26:22 [W] For example, all snapchatters are implemented as plugins. Each plug-in can Define their own configuration, which it's included with containerd.
+00:26:29 [W] He's Global configuration object.
+00:26:37 [W] If you have a grpc service, it can be added as a plug-in and call into the core Services directly cri-o as shown in the diagram as a plug-in.
+00:26:41 [W] It is just registered as a grpc service plugin, even though cri-o is very important and big enough to have its own core.
+00:26:48 [W] We don't include it as part of containerd. He's core. This is because
+00:26:49 [W] RI consumes the core services, but today it is implemented completely outside the core code base and containerd E 1.5.
+00:27:04 [W] We are looking into bringing the cri-o codebase into the main containerd e repository this will allow us to merge some of the core components of cri-o.
+00:27:19 [W] Ugh in is pretty easy.
+00:27:29 [W] You can compile in the snapshot ER and registered as a plug-in just like every other built-in snaps shutter, or you can Implement your snapshot as a proxy plug-in haproxy plugin allows a snapshot or to just Implement containerd.
+00:27:33 [W] He's snap shutter grpc API and configure containerd e to talk to your plug-in over a Unix socket the proxy plug-in approach is great for experimenting with plugins without having to compile containerd e or ship your own binaries to include your plugin.
+00:27:47 [W] Station by default the containerd E client will use the proxy Services which communicate with the containerd E Damon through the grpc API.
+00:28:04 [W] However, a client can be instantiated with any custom implementation of a service even allowing clients to operate completely without a Damon you can also add your own resolvers resolvers are what are used to push and pull images to containerd e the default
+00:28:12 [W] Clients to operate completely without a Damon you can also add your own resolvers resolvers are what are used to push and pull images to containerd e the default implementation communicates with a Docker registry using the standard oci distribution API.
+00:28:18 [W] However, you can Implement your own very easily if you have a different or faster way to distribute images.
+00:28:29 [W] Okay going back to the whole containerd e diagram, you can see operations flow from the client on the left all the way to the runtime and back ends on the right the components on the left tend to be more stateless the components on the
+00:28:33 [W] the right have more State even though our garbage collectors in the middle.
+00:28:46 [W] It tracks resources used by all the back ends, but it operates completely invisible to the client our end goal is to track any resource, which may be used by containerd E to guarantee the long-term stability of the runtime containerd you wound up for has recently been released and you can start using it today.
+00:28:52 [W] It includes support for cgroup v2 improved SC Linux support support for remote snapchatters and support for cri-o on Windows. If you want to hear more about remote snapchatters attend the Deep dive session for containerd e
+00:29:04 [W] The containerd E.
+00:29:05 [W] 1.5 roadmap is currently being decided on as I mentioned before a large item will be merging the cri-o code base with the main containerd e code base.
+00:29:17 [W] We also have ongoing work to introduce a new Sandbox API and course and box interfaces.
+00:29:25 [W] This will not only allow for better integration with virtual machine sandboxes, but also allow us to clean up the way pods are managed by containerd E.
+00:29:29 [W] There's also work going on to improve the way system resources are managed by the runtime this relates to improving interactions with resources and tying them into the canonical.
+00:29:34 [W] rates in the container life cycle similar to cni-genie
+00:30:01 [W] everybody
+00:30:14 [W] Derek I don't know if your video is
+00:30:19 [W] turned off or I'm just seeing your photo.
+00:30:24 [W] Maybe that's a platform issue.
+00:30:30 [W] So I know that the only question we have in the Q&A box at the moment is asking about the slides which should be on the this Keda.
+00:30:58 [W] We do have we have some time here to answer questions.
+00:31:08 [W] next minute or two, we can close out the session but know that there is a
+00:31:19 [W] a channel on the cncf slack specific to the maintainer track which which is what we're in right now.
+00:31:35 [W] And so the cncf events team is already created a thread for our Toc introduction to containerd e with our names and so we're happy to answer questions there throughout the rest of the day
+00:31:43 [W] The something comes up that you didn't think of while we're here.
+00:31:51 [W] Yeah, looks like we just got a question.
+00:32:00 [W] Are there any grpc clients and other languages than go.
+00:32:04 [W] Derek, you know about that.
+00:32:12 [W] there's been talk of some but not today. I mean the the client is we called a fat client.
+00:32:24 [W] So it's really it's really easy to have the bindings the grpc bindings in other languages, but if you want to do anything that's more complicated than just
+00:32:32 [W] a few logo of operations and it's not really easy to implement a full client and other language normally like if you're going to use another language cri-o, probably a better API to use it's a little higher level or
+00:32:47 [W] Image you can tell cri-o to just pull an image.
+00:32:51 [W] You don't have to in containerd E pulling an image is what through the containerd he's grpc interface would require quite a few like lower level interactions versus just saying pull this image.
+00:33:03 [W] Yeah, so, you know, I have heard of people, you know, trying to use the Proto definitions to to generate their own client.
+00:33:19 [W] But again, you know today I think as Derek said that there's some other complexities Beyond just using the API. They might want the client go line based interface.
+00:33:34 [W] What types of plugins should be designed to work with containerd e in which should be kubernative operators, but I mean clearly at the containerd E level. We're talking about container runtime style operations
+00:33:50 [W] Peter's at the kubernative Slayer will naturally be aimed at the kubernative API. So I think that's really going to be the differences is whether you're dealing with container runtime
+00:34:05 [W] I think that's really going to be the difference is is whether you're dealing with container runtime concerns or dealing with kubernative Z API and object interactions know if Derek you have anything
+00:34:12 [W] With kubernative zpi and object interactions of Derek you have anything to add on that?
+00:34:13 [W] Yeah, so in containerd E. We have we don't have pluggable interfaces for everything in terms of like what you might want to implement as your own pluggable interface.
+00:34:28 [W] We certainly have like if you compile containerd e yourself, there's a lot of options for customization, but in terms of the interfaces, the plug-in interface is we're targeting such as like back in runtime snapchatters.
+00:34:40 [W] There's at a much lower level than you'd see kubenetes.
+00:34:49 [W] So for some things like if you're trying to customize the runtime normally like the actual underlying implementation would be a plug-in for containerd e, but if you want to do anything higher level
+00:35:00 [W] The actual underlying implementation would be a plug-in for containerd e but if you want to do anything higher level that would kind of operate at the Pod level then they'll probably send you on the doing communities.
+00:35:06 [W] All right, great.
+00:35:11 [W] hitting point.
+00:35:14 [W] We're integrating containerd e and hog, man.
+00:35:22 [W] I guess the only the only way to do that would be to to remove Padma man's dependence on to their own projects.
+00:35:30 [W] So if you on gethub container / image and containerd slash storage, I think are the two main libraries so to speak so that's containerd e obviously has our own
+00:35:37 [W] Limitations of image and storage based on our snapchatters and our client API.
+00:35:45 [W] I'm not sure what the purpose would be there.
+00:35:47 [W] Other than if you like hot man's sort of Docker API front end. So to speak with containerd e at the back end, but I we don't have plans to do that.
+00:36:00 [W] It would be up to someone who had interest in trying that out in the community to attempt that
+00:36:04 [W] It is a KS. So believe that would be as yrs. Kubernative managed service will default to containerd e as the default runtime in 1.19 any tips, I should keep into account.
+00:36:21 [W] Thing because IBM cloud cover during service went through that same migration around the 1.11 to 112 kubernative time frame. So we definitely had some learnings from that. I think if you're running clusters
+00:36:37 [W] you have any tool, you know pods that are sort of more tool oriented like, you know, or are doing something at the host level trying to you know, pull statistics or information or
+00:36:52 [W] Nation or trying to use the dock or socket. That's usually where you run into issues as a managed service, which is from the docker engine to containerd e is a default runtime so, you know
+00:37:06 [W] Into container D is the default runtime so, you know trying to assess whether you have tools or scripts or anything at the host level which is dependent on the dock or socket, you know tends to be the biggest things,
+00:37:16 [W] Host level which is dependent on the dock or socket, you know tends to be the biggest things to to go investigate hopefully applications all these other, you know higher level kubernative
+00:37:26 [W] Kubernative constructs that just assume that the cri-o drives whatever runtime is below it you shouldn't have any problems with those.
+00:37:38 [W] You know, that layer shouldn't care what the runtime is.
+00:37:41 [W] So it's really about that host level tooling, you know sysdig other vendor tools almost all the all the popular tools today support all the runtime, so it shouldn't be a problem.
+00:37:53 [W] That is something to test out as you as you do that migration.
+00:37:55 [W] All right. The next question is has there been recent work on Mac OS or ESD knative containerd runtime support.
+00:38:12 [W] Nothing that I've seen but I think that certainly be really interesting to see.
+00:38:13 [W] You know, I don't know if anything there.
+00:38:16 [W] You know the next question. Do you know providers that don't Public Services like containers as a service directly talking to the containerd E API without Docker kubernative Zar another layer on top, so I guess k3s.
+00:38:38 [W] see
+00:38:38 [W] Yeah, I don't know if anything there.
+00:38:39 [W] Yeah, the next question.
+00:38:39 [W] Do you know providers that don't Public Services like containers as a service directly talking to the containerd E API without Docker kubernative or another layer on top, so I guess k3s.
+00:38:50 [W] Driving containerd e directly via the API.
+00:38:56 [W] I know there's a couple more I think some of the weaveworks tooling I mentioned I feel like ignite drives the containerd E API directly.
+00:39:08 [W] So there are Services out there or tools that talk directly to the containerd tapi.
+00:39:18 [W] We've tried to represent some of those on our page of adopters on our website. So that might be another place to go dig into that.
+00:39:20 [W] And I think that the Amazon implementation they use containers.
+00:39:30 [W] They run containerd e for some of the services that aren't communities as well.
+00:39:35 [W] So I assume that I don't know their implementation would assume they're using the containerd API directly true.
+00:39:37 [W] Yep.
+00:39:39 [W] T does the Pod sandbox API bring functionality to start a new pod from core containerless how it works now.
+00:39:51 [W] Yes, that's kind of the idea.
+00:39:54 [W] year, so the Pod or talk about that if it's the new pods and box API that we're talking other than you sandbox API the idea is to be able to setup the VM runtime directly from core, but any notion
+00:40:09 [W] Our implementation since that's not something that containerd even those directly about but we're trying to introduce the idea of the actual underlying sandbox, which could be a witch could itself be a VM or it could just be using
+00:40:25 [W] How do you know how many people are currently involved in pulling off one new release of containerd e well, you can go look at the release notes.
+00:40:47 [W] We list all the authors that are involved and all the contributors.
+00:40:50 [W] There is actually quite a lot of contributors. I ran I ran a script to see and it was there was over half of the author's there are new contributors to 1.4. So there's there's quite a while.
+00:41:04 [W] The people involved we have 13 maintainers and maybe six reviewers today that are involved and kind of getting stuff keeping stuff moving along that.
+00:41:17 [W] Yeah, we're always looking for more people to come get involved you contributors whether that's code or just you like to help things move along or promote containerd be like if that's what you're interested in.
+00:41:30 [W] that's really useful for us.
+00:41:32 [W] Yo, yo, yo, it's like there's kind of two aspects of that question. But yeah me too. The nice thing is actually creating a release is a very simple process that we've put a lot of Automation
+00:41:48 [W] so to actually create a releases quite simple, but as Derek said there's are a lot of people involved in contribution and getting things ready and testing across, you know, various
+00:42:03 [W] Of containerd e and beta cycles and Artie.
+00:42:09 [W] but yeah good question.
+00:42:11 [W] Looks like we have one last one.
+00:42:17 [W] What future feature are you most excited about?
+00:42:18 [W] Hmm. Interesting question, I think okay.
+00:42:27 [W] There's there's a there's a few I think the sandbox API and Enterprise that's really interesting.
+00:42:39 [W] I really like the remote snapchatters. I think that's it's a feature that we just release, but it was released with a with a one implementation.
+00:42:42 [W] The star gz which is which is interesting, but I really want to see more implementations of these remote snapchatters.
+00:42:56 [W] I think anything where we can see how to lightning fast startup of containers like not having to go through the normal light pole and unpack having snapshot speed almost like immediately available to
+00:43:05 [W] D which is which is interesting, but I really want to see more implementations of these remote snapchatters.
+00:43:06 [W] I think anything where we can see and a lightning fast startup of containers like not having to go through the normal light pole and unpack having snapshots feed almost like immediately available to
+00:43:07 [W] I think that's something that's really exciting and make containers kind of operate at like level of magnitude faster than for start-up and we see today.
+00:43:20 [W] Yeah, I would agree that I think well all the work we've done to get 214 and have remote snapshot or support that has the has the
+00:43:37 [W] Capabilities that allow people to now extend containerd e in ways that we may not have envisioned.
+00:43:48 [W] You know, I there are a lot of people have been looking forward to that.
+00:43:50 [W] And so I think there was even a talk this morning.
+00:43:52 [W] by the star Stargate star gz snapshot or team so you can find that in the kubernative.
+00:44:02 [W] He's a kook on schedule and watch that.
+00:44:04 [W] So we have a couple minutes apparently a few more questions as a second page - yes, and if we don't get to these in a couple minutes, please follow sober too slack to the
+00:44:19 [W] Mark to the containerd e - maintainer, I'm sorry coupon - maintainers Channel.
+00:44:26 [W] There's already a thread there.
+00:44:31 [W] Do you want to answer the first one about Docker you which containerd you release it uses? Yeah.
+00:44:39 [W] I think it's just that the docker support Cycles are are pretty long.
+00:44:46 [W] So like the testing and the time it takes to like test a Docker release get it out and supporting its
+00:44:48 [W] is pretty long but they've been they've been becoming more confident with containerd e in terms of like upgrading some say 1.2 1.3 within one like support cycle, so
+00:45:04 [W] I think we're I think it's getting better.
+00:45:11 [W] I understand like yeah, we're trying to move off of 1.2 as well.
+00:45:15 [W] It's releasing its end of end of support. So I think well, I think we'll see that happen.
+00:45:19 [W] So, you know this there's a link to a specific issue in a c&t. T repo on GitHub that mentions defining common configurations across multiple container run times. I would have to go look at that
+00:45:41 [W] Since but we're happy to take that question over to slack and follow-up. I'll cut out cut this issue so I can load it my browser and take a look
+00:45:58 [W] Thanks for having us and hopefully we can answer any other questions that have come up over in slack and love to see some new contributors and folks join us in the project.

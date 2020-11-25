@@ -1,0 +1,340 @@
+﻿Using Open Policy Agent to Meet Evolving Policy Requirements: PQLK-7745 - events@cncf.io - Friday, November 20, 2020 5:07 PM - 45 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, welcome to using open policy agent to me evolving policy requirements in this talk.
+00:00:57 [W] Hello, welcome to using open policy agent to me evolving policy requirements in this talk.
+00:01:03 [W] I'm going to cover how my team has been using open policy agent or Opa fur around the last year in order to meet evolving requirements that we've faced as we've moved into new regulated environments.
+00:01:15 [W] My name is Jeremy Rickard.
+00:01:17 [W] I'm a software engineer at VMware and my team is really been focused on doing things in the kubernative space for last few years.
+00:01:25 [W] I'm also the kubernative 120 release lead and I've worked on a number of Open Source projects like virtual kubelet and service catalog for communities. If you'd like to reach out to me after this talk, feel free to ping me on Twitter or the kubernative slack where you can find me as
+00:03:55 [W] My name is Jeremy record.
+00:03:56 [W] I'm a software engineer at VMware and my team is really been focused on doing things in the kubernative space for last few years.
+00:04:04 [W] I'm also the kubernative 120 release lead and I've worked on the number of Open Source projects like virtual kubelet and service catalog for communities. If you'd like to reach out to me after this talk, feel free to ping me on Twitter or the karate slack where you can find me
+00:04:19 [W] respond to emails
+00:04:21 [W] So what is my team at VMware do?
+00:04:24 [W] We're called the VMware developer platform and we've got this long collection of words that describe what our team does.
+00:04:29 [W] But if I boil it down to a really simple explanation our team provides manage kubernative to VMware SAS services along with supporting infrastructure, like maybe Vault or creation of resources
+00:04:45 [W] Creation of resources in AWS the my support what those teams are doing. This project has been around since mid 2018 kind of generally available for VMware SAS teams.
+00:04:56 [W] And the the Genesis of this thing was really focused on deploying clusters for multi-tenant use so we would deploy kind of shared clusters and these clusters would have multiple tenants on them.
+00:05:10 [W] These were deployed into Amazon. So running in public clouds and available.
+00:05:14 [W] To the SAS team set up by their workloads, since we are running multi-tenant clusters.
+00:05:19 [W] We kind of use namespaces as the the level of isolation where we're enforcing the multi-tenancy and we use our back pretty extensively in order to make that happen.
+00:05:27 [W] So to really facilitate that we also have a data plane that we run in something we call our management clusters.
+00:05:34 [W] So when a user is going to use VP the use a CLI that we've written to maybe create names faces or label namespaces do things like that then once they have the name space created they're able to do prodyna.
+00:05:44 [W] Much whatever they want inside of that namespace and it belongs to them.
+00:05:47 [W] looking to find out where policies things like that.
+00:05:51 [W] But we very quickly came to see that that's not really sufficient for all the use cases.
+00:05:57 [W] There are teams that needed to do more than just exist within one maybe two namespaces.
+00:06:02 [W] They needed the ability to create more namespaces do other things on the cluster.
+00:06:07 [W] And doing that doesn't really fit into that multi-tenant cluster kind of kind of model.
+00:06:12 [W] cluster pertinent
+00:06:14 [W] And in those cases, they get much more access to the cluster.
+00:06:18 [W] They can do things like create namespaces.
+00:06:20 [W] They get nearly cluster admin access.
+00:06:24 [W] Instead of having to rely on our data plan to do a lot of that stuff.
+00:06:27 [W] But at the same time we have resources that we deploy that are really respond, you know required for the cluster to operate successfully.
+00:06:34 [W] So we come to this challenging point of tenants really having what amounts to Cluster admin they can do a lot of things that might impact the operation of our system. But we also have resources that we want to protect and are back wasn't really sufficient to handle all of those things
+00:06:49 [W] Resources that we want to protect and are back wasn't really sufficient to handle all of those things.
+00:06:47 [W] Maybe we need to validate that somebody can do something based off of their org membership in an external system.
+00:06:52 [W] So thinking about how we might solve that problem.
+00:06:54 [W] We realized pretty quickly that what Hooks, you know, the mutating dynamic admission control that's available in kubernative would really solve this problem or give us a point where we could write some extensions to make that happen.
+00:07:06 [W] If you're not familiar when you do something like a cube CTL apply the to
+00:07:11 [W] the tooling seal the CLI makes a call to the kubernative API. It does some basic authentication checks to make sure your authorized and authenticated to do what you're trying to do and then it moves into the dynamic admission control in that you can Define mutating weaveworks, which might
+00:07:27 [W] Stu the requests coming in may be inserting a sidecar poddisruptionbudgets labels doing things like that.
+00:07:33 [W] Finally. It moves on through the chain until it gets to the validating my books and there it makes decisions about whether the request should be allowed or not.
+00:07:42 [W] Maybe it's checking parts of the request against other things in the system to make sure that that should be allowed or maybe it's checking something against an external system.
+00:07:53 [W] system. So we ended up writing a web booked to do some of this and it was finops.
+00:07:56 [W] Focused on protecting the resources the VDP manages in the Clusters, but allowing them to do most everything else.
+00:08:03 [W] So when a request comes into a v DP manage name space where we have deployed things we can can analyze who's making the request and either allow or not. Allow it this really became a great just general extension point for us to add new
+00:08:18 [W] Directly Express with with role-based access control, but as our scope started to grow, you know, we on-boarded more tenants.
+00:08:23 [W] We also started to pick up some additional places where we needed to run.
+00:08:27 [W] We needed to follow our tenants to where they needed to be and the first place they needed to be beyond our normal commercial AWS regions was gov cloud and Amazon golf club and our tenants wanted to start pursuing
+00:08:42 [W] Actions starting with that back fedramp moderate moving into Federal.
+00:08:40 [W] Hi, so we recently just completed an effort to help the VMware cloud and AWS team secure the fedramp high certification and doing that meant that we needed to evaluate a lot of what we are doing and you know, look at the requirements for that certification process
+00:08:55 [W] the fedramp high certification and doing that meant that we needed to evaluate a lot of what we are doing and you know, look at the requirements for that certification process find the gaps in what we had to pull it already and start to evolve to fix those things shortly after we
+00:09:09 [W] We had to pull it already and start to evolve to fix those things shortly after we started to support a PCI certification effort for vmc. Again each one of these new environments brought new requirements when you consider fedramp, hi, there's over 400
+00:09:24 [W] Requirements when you consider fedramp, hi, there's over 400 different controls that you have to meet in order to get that certification PCI has a completely different set of requirements.
+00:09:36 [W] A lot of them are similar, but there's also differences between you need to really review each one of these things against what you've deployed and how you're operating to make sure that you're fitting into that those requirements does kubernative directly meet all of those things.
+00:09:51 [W] Of those things probably not and in our case, we didn't try to justify each one of those things with kubernetes. One of the nice things about getting these certifications is that they've realized that not every requirement.
+00:10:05 [W] that's written can be directly applied to every business case or every computer system.
+00:10:11 [W] They've allowed for what they call compensating controls and a compensating control can be applied to almost all PCI requirements and in-toto.
+00:10:20 [W] It really says that if this requirement can't be directly applied for technical reasons or business reasons that are documented. You can go ahead and identify additional problems that help mitigate the risk that those controls
+00:10:35 [W] Us and for us that was a great way for us to take the kubeedge Clusters and the other stuff that we've deployed for our tenants and figure out how we can augment those things maybe with policy is there may be some additional things.
+00:10:49 [W] deploy that can help to really reduce those risks. And as we looked at each one of these things and considering that we have lots of different clusters, you know, we're playing in the commercial regions u.s. West to u.s. East one.
+00:11:05 [W] Us a pack or Europe regions when we look at those and compare them to the gulf Cloud deployments the pretty different and the requirements for them are pretty different.
+00:11:14 [W] We do have a base set of security things that we have to follow for VMware security. Obviously any VMware service that's going to be deployed has to go through a set of security validation and to make sure that it's going to meet our internal requirements,
+00:11:30 [W] Fireman's there's more and more restrictive things but in place so we obviously don't want to force all of these requirements onto the tenants that don't need them because that would make their jobs harder.
+00:11:30 [W] We want to be an enabling feature for them.
+00:11:34 [W] Help them be successful but doesn't seem like it fit really well with our web hook model because we would be adding, you know different features that we would have to probably feature flag and different clusters.
+00:11:45 [W] Keep track of all those different things. It's additional code we'd have to write
+00:11:48 [W] Write and test every time you wanted to make one of these new features available.
+00:11:53 [W] Then it would have to go through our whole rollout process and just be a little bit more complicated than we think would be great.
+00:12:01 [W] And we also thinking about this problem want to make sure our users don't hate us additionally some things.
+00:12:08 [W] We really wanted with, you know, this change these new things.
+00:12:13 [W] we wanted to apply was that we didn't really want to require new code for each one of these things. We didn't want to have to make
+00:12:18 [W] Changes to our existing web hook up the truck code that's written in go.
+00:12:22 [W] We build it into a Docker container.
+00:12:25 [W] We deploy it it rolls through our pipelines goes through a full upgrade process.
+00:12:30 [W] If we wanted to make individual changes to the that thing every time we had to identify one of these new policies that we needed to enforce that would get a little bit complicated.
+00:12:41 [W] So we wanted to require something didn't really require new code.
+00:12:45 [W] To not require them to learn a brand new programming language from the ground up.
+00:12:43 [W] Obviously, there's probably gonna be some domain specific language involved something that looks like code but we didn't want to force, you know, everybody in the team is not a go developer to learn go in order to build new policies like this and finally
+00:12:58 [W] new policies like this and finally while we don't want to go through the process of doing a full upgrade every time and rolling these things out and going through the whole process we do want to make these things testable so we can make sure that when we're defining these policies however they're going to be applied
+00:12:51 [W] We can test them before you roll them out. So we're not breaking things down the road.
+00:12:55 [W] So we looked at all of these requirements, you know, the fact that we want to have this kind of Applied on a cluster by cluster basis.
+00:13:02 [W] We wanted to make sure that we could satisfy these wants we did a search across the cncf landscape and we really identified something that we think would help us with thought would help us quite a bit.
+00:13:16 [W] It turns out that was Opa open policy agent open policy is it's pretty extensible.
+00:13:21 [W] It provides its own language for defining what policies look like and we'll look at that in just a second and it turns out it integrates pretty well with kubernetes.
+00:13:30 [W] There's a project called gatekeeper that highly recommend you take a look at we ended up not using gatekeeper for a few reasons and I'll get into as we go through the talk mostly because when we started this journey, it was pretty early days for gatekeeper, and we ended up going with
+00:13:45 [W] well with kubernetes there's a project called gatekeeper that highly recommend you take a look at we ended up not using gatekeeper for a few reasons and I'll get into as we go through the talk mostly because when we started this journey, it was pretty early days for gatekeeper, and
+00:14:10 [W] Approach which runs Cube and achievement and opa together like in a sidecar manner.
+00:14:16 [W] It ends up looking something a little bit like this just like we wrote our own web hook validating admission controller this plugs into pretty much the same way.
+00:14:29 [W] So when you deploy Opa and cumin together, you can register them as validating and mutating web hooks. They plug into the API server. Just like any other web hook would
+00:14:40 [W] So when a user is making a request with Cube CTL ci/cd pipelines maybe are using the API directly maybe using QC tell themselves or when in controllers inside of the cluster are making changes to objects and resources via the API
+00:14:55 [W] Then goes through that normal admission process an admission request hits Opa Opa looks at that request determines if any of the policies that you'd applied should should result in a denial or a block and then it sends that response back and
+00:15:10 [W] Appropriately, so let's look at a really simple example of what a policy might look like here.
+00:15:05 [W] We want to deny any request that comes in that's labeled with a certain value. So you can see that this is really a declarative language.
+00:15:14 [W] We're saying a series of facts or in this case really just one fact and then if that fact is true, then we're setting a variable value of this getting returned.
+00:15:24 [W] So we start this off with a deny block. So the keyword deny.
+00:15:29 [W] And in that is a message that's going to be returned.
+00:15:32 [W] And then the first line in this is really the statement that we're checking the policy were enforcing.
+00:15:38 [W] So in this case if the metadata has a label called pants with a value of sweatpants, then the message we're going to send back is you can't sit with us if you notice in that line input that request that
+00:15:53 [W] Really coming from the kubernative admission request. If you look at the Json that makes up a Kuma raids admission request.
+00:15:57 [W] It's got those pieces of it.
+00:15:59 [W] So it's really great in this policy.
+00:16:00 [W] You are able to say I want to look at the metadata of this object that's coming in or maybe I want to look at the speck of this object that's coming in.
+00:16:07 [W] Maybe I want to look at the verb.
+00:16:10 [W] Is this a Creator an update?
+00:16:11 [W] Maybe I want to apply policies differently that way.
+00:16:13 [W] it's really flexible and gives you a lot of power without having to go right, you know new code.
+00:16:18 [W] It's still code. Obviously, you're still writing some declarative statements.
+00:16:22 [W] You still have to end up putting those in the cost or somehow, but it's a much simpler path forward to test this Opa provides a lot of tooling and you can actually take this stuff and put it into Opa playground.
+00:16:36 [W] I have a link to that at the end of the presentation just to test these things without having to run anything locally on your machine. You can you can build out a sample test document and build out your sample policy in this in run the validation in this playground and it's pretty cool.
+00:16:49 [W] So with all of that in mind, let's talk
+00:16:52 [W] About a few use cases that we have solved with open policy agent Rego and for each one of these I'm going to go through three examples.
+00:16:59 [W] I'm going to Loosely tie this back to some control or some rule that we found in fedramp or PCI that we needed to apply to our system.
+00:17:08 [W] And the first of those is the use of external Information Systems inside of this requirement.
+00:17:14 [W] That's a whole bunch of different rules and a lot of different individual control points.
+00:17:17 [W] Really qualify as those external Information Systems.
+00:17:16 [W] So we deploy our engulf Cloud we deploy kubernative is into those fedramp environments and we do play a lot of other things in there.
+00:17:23 [W] We try to minimize our Reliance on external resources things that are outside of that authentication boundary and one of those things is a Docker registry.
+00:17:32 [W] So in production in our commercial environments, we're using a hosted service from jfrog that's not available to us to use directly as part of our fedramp offering so we needed to run
+00:17:42 [W] our own registry and in boundary. So inside of that Guff Cloud environment, we have our own Docker registry that we're running and we push all of our images to that.
+00:17:51 [W] So then when we want to deploy stuff into the cluster, we need to reference those images.
+00:17:56 [W] We also want to make sure that the cluster isn't running things that it's directly pulling from the internet.
+00:18:01 [W] There is some kind of tivity or there was originally we've locked it down and since then, but originally you were able to pull things from Docker Hub or pull things from our jfrog hosted solution. So the first thing we
+00:18:13 [W] Out with Opa was how do we restrict the use of those other registries?
+00:18:19 [W] We weren't really lock it down to just the one so we want to make sure that requests that are coming in only come from that registry that we want them to come from.
+00:18:28 [W] So one of the first policies we built was a pretty simple one that would look at the the image that's being used by containers.
+00:18:35 [W] Certain repositories.
+00:18:30 [W] So in this case we start off again with that deny block.
+00:18:34 [W] And the first thing we look at is does this kind the the kind of this request? So just like, you know, you deal with kinds of kubernative.
+00:18:46 [W] We're checking that here.
+00:18:47 [W] So an admission request will come with whatever type of object you're dealing with.
+00:18:51 [W] So we really only want to apply this to pods and you know good we could do this at different levels.
+00:18:56 [W] look at the deployments replica sets. This was the simplest
+00:18:59 [W] As for us just look at when a pod is created is the container using something using the registry that we expect it to use.
+00:19:08 [W] It's a pretty simplistic check.
+00:19:09 [W] So we iterate through all of the images.
+00:19:12 [W] So obviously you can have multiple images in in a pots back and we want to make sure that each one of those things is is is valid.
+00:19:22 [W] So we start off with the second line of the block some I so like just for every image that exists in this array.
+00:19:29 [W] Of input that request that object.
+00:19:32 [W] that's tekton containers.
+00:19:33 [W] Let's grab that thing and validate it. So then for each one of those images, we basically just say does this image start with what are you know, our gov Rick Lowe is replace it here with VMware is awesome just for promotional purposes, but you can see the
+00:19:48 [W] Using a registry that we expect it to use and it's a pretty simplistic check.
+00:19:37 [W] So we iterate through all of the images.
+00:19:40 [W] So obviously you can have multiple images in in a pots back and we want to make sure that each one of those things is is is valid.
+00:19:50 [W] we start off with the second line of the block some I so like just for every image that exists in this array of input that request that object that spectacle containers. Let's grab that thing and validate it so then for each one
+00:20:03 [W] those images we basically just say does this image start with what are you know, our gov Rick Lowe is a replace it here with VMware is awesome just for notional purposes, but you can see the, you know, we're making a little bit more complex policy
+00:21:10 [W] It more complex policy here by calling into that function when this evaluates true when the first line is it's a pod and when this is not a gov Cloud image, we're going to return the message pods container is not allowed to use the image from
+00:21:25 [W] So what's it look like in practice? So using this deprecated functionality of creating a pod with cute CTL run.
+00:21:31 [W] We're still running fairly old clusters so I can still do this.
+00:21:33 [W] I'm going to try to run an m q test client from my personal Docker Hub account.
+00:21:41 [W] So I run that with Cube CTL run that actually behind the scenes right now and that version of communities create the deployment and that deployment that will then spin up pots. I don't get an error here though because my policy was
+00:21:54 [W] we applied to just the Pod so to kind of work around that or to see how like what feedback you get.
+00:22:01 [W] Let's take a look at the events.
+00:22:03 [W] We can run keep CTL get events and filter that down to open policy agent in the string and you can see that we can actually create the Pod and if I did a cube still get pods here you would see that there were no pods created for this deployment and it's specifically showing that error
+00:22:18 [W] For so this was great and we were able to lock all of the Registries down make sure that we weren't pulling anything from you know, the non-controlled things that were inside of the boundary, but now we have some fairly unhappy users.
+00:22:32 [W] Our goal all along I mentioned this is the beginning was to make sure that the users didn't hate us.
+00:22:30 [W] We wanted to make sure that things were as easy as possible for them and not every one of our tenants is super versed in kubernative.
+00:22:37 [W] They're using kubernative use, they realized the benefits of deploying their stuff onto under the platform there along for the ride for gov Cloud but us adding this constraint makes it a little bit more difficult for them.
+00:22:51 [W] They either have to go maintain a separate set of values files.
+00:22:55 [W] If they're using Helm or some other tool that does kind of template and overlaying maybe they're Helm chart doesn't even allow them to really template that because they've not done a super great job of templating that stuff out.
+00:23:07 [W] So there were changes that had to be made there.
+00:23:09 [W] So we thought what can we do to help with that situation and I mentioned this earlier but you can actually run Opa as a mutating webhook in addition to evaluating web hook. So what's the big difference there?
+00:23:23 [W] Well when it runs as a validating webhook
+00:23:25 [W] We have the those blocks and they started with deny and what happens there is when all of the rules match for a deny the validating webhook functionality will say this request is not allowed.
+00:23:37 [W] Here's the error message, but just like every other mutating webhook Opa can also update your resource and it does that by generating Json patches the syntax gets a little bit more complicated and I'm not going to show you the entire thing here, but I'm going to show the pretty like the
+00:23:52 [W] We've defined two variables V DP repo. So it's going to Matt, you know be whatever our Upstream public managed jfrog thing is and then also whatever argh of cloud the host, you know the host name for our
+00:24:06 [W] Gov Cloud the host, you know, the host name for our glove cloud of cloud repo is and then instead of using the deny block.
+00:23:56 [W] We're going to define a patch block which is going to return whatever Json patch needs to be applied. So in this case, we have a couple of extra things here.
+00:24:05 [W] I probably should have removed from the example, but we first want to make sure is mutation allowed.
+00:24:10 [W] So we want to validate that the type of resource that we're going to mutate is something we want to mutate. We have some rules built around
+00:24:17 [W] And you know what namespace it's in or what labels it might have on it specifically labels a brown disallowing mutation.
+00:24:27 [W] So we have a label that we've put in place for some of our components where we don't want to mutate like this because could lead to unexpected consequences, but we essentially check to see if that exists or not then move on and then just like the deny rule.
+00:24:40 [W] We're going to iterate over all the containers and then we're going to check to see if that container
+00:24:47 [W] Matches the Upstream public repo and replace it with the downstream value if any of that generated a new value, then we're actually going to make the Json patch here.
+00:24:58 [W] So I've removed some of the bits about actually making the Json patch and I'll link to the documentation at the end of the talk. But what will happen here is that when we make a request, so maybe we're going to helm deploy some deployment and it's going to reference
+00:25:13 [W] Team jfrog our repository.
+00:25:15 [W] This code will actually get invoked.
+00:25:18 [W] it'll look at that request.
+00:25:20 [W] It's coming in and say oh, hey you're using the Upstream version.
+00:25:24 [W] We can't use that engulf Cloud.
+00:25:26 [W] Let me go ahead and mutate that for you. So when this actually hits the API server or sorry at CD it's going to actually get the gov repo instead of the Upstream repo. So it'll try to pull that down and it'll work just like we would expect it to work, but we've made it a little bit transparent to the end
+00:25:41 [W] First use case that we had that we solved with opa.
+00:25:43 [W] As we got further and further into the process one thing that kind of bit us was this next requirement.
+00:25:51 [W] It didn't PCI, but it's also enough Cloud but I like the word in here a little bit more and this is PCI requirements things develop and maintain secure systems and applications.
+00:26:01 [W] So there's a lot of a lot of things to unpack in that terminology, but specifically 6.1 underneath of this requirement is that you need to establish a process to basically scan.
+00:26:13 [W] Vulnerabilities and when you identify these vulnerabilities, you have to remediate things that are medium or higher.
+00:26:19 [W] So you get different severity levels and these are based off of CVS's scores. And when you get these things you have depending on the certificate, whatever certification you've achieved you have n number of days to fix them.
+00:26:32 [W] So like engulf Cloud we have 30 days to fix things.
+00:26:35 [W] It's not a long time, but it's also not a short time but as we deploy a ton of stuff
+00:26:43 [W] we found as we went we went through this initial process.
+00:26:46 [W] We found a lot of containers that we are deploying that actually had a number of vulnerabilities.
+00:26:49 [W] So as I mentioned these things are based off of CVS's scores.
+00:26:54 [W] These things are based off of CVS's scores.
+00:26:54 [W] So in the PCI case anything that's mot medium or higher, which is a CVS high score of four or more.
+00:27:01 [W] You actually have to remediate or you will fail your PCI audit and any re re investigation or you know subsequent audits you go through you have to demonstrate that you've been doing these things and fixing these things and you can do this.
+00:27:15 [W] You can check this yourself.
+00:27:17 [W] a number of tools you can use we happen to use twist lock, but you can
+00:27:22 [W] use an open source tool from Aqua set called trivy. That'll do. It's pretty similar things.
+00:27:30 [W] Just a really quick example of what that might look like.
+00:27:32 [W] I scanned one of the images that we have deployed in our commercial environment and you can see that it found a number of vulnerabilities two of them are critical three were high for medium and three were low so we
+00:27:47 [W] Abilities two of them are critical three were high for medium and three were low. So we definitely have to fix those criticals those highs and for PCI.
+00:28:00 [W] We need to fix those mediums.
+00:28:01 [W] What kind of things do you find inside of them?
+00:28:04 [W] So these can be os-level vulnerabilities you could say like the version you're running a no bun to based container and it's got grpc vulnerability inside of it that will come up in these scanners and that will
+00:28:17 [W] We'll get flagged by one of the Auditors so may not really be a problem. But it's best to for us at least to the least amount of effort is to fix the problem can also be application Level things.
+00:28:29 [W] So in this case is a Java application and the problem here is actually the version of log4j that it's using.
+00:28:36 [W] So, how do we fix this process?
+00:28:38 [W] How do we how do we in the VDP team handle fixing these things?
+00:28:42 [W] How would anybody else really handle these things? Well, you generally need to build some new canonical.
+00:28:47 [W] in order to do this updating libraries may be applying OS updates inside of the container if you're using something like Photon if you're a VMware person or a bun to or Debian as a base images, so we built a little process around that for ourselves and
+00:29:03 [W] That involves taking whatever the base image that we have.
+00:29:05 [W] So maybe it's some Upstream component is basically Alpine or some Upstream component.
+00:29:11 [W] It's based off of Ubuntu.
+00:29:12 [W] We write a new Docker file.
+00:29:13 [W] We take the old one as the the from line.
+00:29:16 [W] So if you're building a Docker file out first line is from whatever then we run whatever the OS appropriate updates are just to make sure that we apply those things and then we added something we've built we add in you know mission that we've rebuilt that with whatever the updated libraries are
+00:29:31 [W] That results in a new tack, hopefully without any vulnerabilities then we need to deploy that to the cluster.
+00:29:35 [W] So we go and maybe we run Helm update or chaosmesh.
+00:29:58 [W] We build all of the images we've identified in our inventory file, which is of course the ammo file and we update those things to generate new tags.
+00:30:08 [W] Then we update the inventory file and then we somehow need to deploy that to the kubenetes cluster and we want to do this in the not really manual way.
+00:30:15 [W] So we were able to pretty pretty easily automate the front half of that process where we would rebuild these containers.
+00:30:21 [W] We've already written the doctor files for them.
+00:30:23 [W] We have the the skeleton of the inventory. How do we then take that into play it so
+00:30:29 [W] one of the cool things is that Opa especially when you're using the queue management side car is that you get access to other resources and kubernative it acts just kind of like any other kubernative client would wear it establishes a watch sees things from the API server, so
+00:30:44 [W] To config map in the cluster it lists out the name of the image and then what version we want to run and then the OPA sidecar Kuma management see is that those things have changed and makes them available as a data field to
+00:30:56 [W] Set like this. So next we can write a pretty simple policy that looks at that inventory and Compares that to what's deployed and then mutates the tech. So are we again start with a patch block
+00:31:00 [W] All the images in the in this case the in it containers we do this for the Nick containers and the regular containers obviously want to update both call this update image version function, which returns us back a modified version of that reference.
+00:31:16 [W] Fight version of that reference and then we make a patch off of that and return it as just part of the mutation process just like we did with the repos.
+00:31:22 [W] We're now updating the tag to match what we have in our ci/cd system.
+00:31:26 [W] So now our inventory file gets deployed to kubernative we play that is a config map that gets reloaded by Opa and then we run a small job that just labels touches the labels on all our deployments which then forces
+00:31:41 [W] Mission process again that forces the mutating web hook in this case Opa to update all the tags and then start up again with all of those new hopefully vulnerable vulnerability free images.
+00:31:53 [W] So the last policy that we really wanted to enforce was running as non-root and running is non-root.
+00:31:59 [W] We're doing mostly with pain security policies, but security policy works pretty well and it's pretty easy for our tenants to understand except when they don't pay attention to the notifications we send
+00:32:11 [W] and don't make changes to their there there BMO.
+00:32:16 [W] So all of a sudden my cards won't start. What's going on?
+00:32:20 [W] Well, did you specify the context the security context in re Mo you mean I have to update my chart again.
+00:32:26 [W] So again, we bring mutation to Bear here. And in this case we take again checking to see if mutations allowed. We look to see if the suspect already has a security context to find and if it doesn't
+00:32:41 [W] Then we make another patch where we actually add in the runners user and Fs group to make this thing run as not it's not a rout. The great thing here is though when the users are making these calls and they're deploying their stuff.
+00:32:54 [W] They can actually specify whatever security context they want and we want mutate it.
+00:32:58 [W] This is just a nice add-on for them when they don't have that done.
+00:33:01 [W] So recapping what have we learned?
+00:33:04 [W] Right a lot of deny rules to lock your clusters down and do a lot of things but mutation can get you even further you can do a lot of things we can combine these two things together red goes pretty pretty easy to learn the declarative nature of it just makes it pretty easy for people to pick
+00:33:13 [W] And we have found that it's pretty easy for all the team members to really learn it and start writing new policies or fix problems.
+00:33:15 [W] We found in the policies. And then with those in mind we were able to balance our security needs pretty closely with our desire to make the user experience as nice as possible in this security world that we're living in
+00:33:30 [W] but let's go back for a second and talk about the the mutation aspect of this.
+00:33:35 [W] I have mixed feelings about mutating weapons. And if you read the documentation the kubermatic documentation, there's actually some call-outs to say hey, you should probably be aware of these things and maybe it's not the greatest case and one of them is that users don't necessarily know.
+00:33:50 [W] The mutation aspect of this I have mixed feelings about mutating weaveworks. And if you read the documentation the kubernative documentation, there's actually some call-outs to say hey, you should probably be aware of these things and maybe it's not the greatest case and one of them
+00:34:19 [W] It's happening. They may be confused.
+00:34:20 [W] I like what this thing that I've created doesn't look like what's in the cluster.
+00:34:25 [W] Now what happened?
+00:34:26 [W] We actually had that problem with the security context mutation as we were going through this process people weren't specifying security policies on their their their deployments and then actually tried to run as root and gave us an
+00:34:41 [W] In the past where we created a security service accounts for them things like that, but they didn't declare the security context because they were just letting you know depending on our automation are easy mode access for that.
+00:34:54 [W] So think about the things you want to do with mutation and and maybe use it judiciously and I think about what impacts it may have Downstream.
+00:35:05 [W] So here's some Great Links if you want to kind of follow up on these if you want to read more about the fedramp high requirements or the PCI standards.
+00:35:13 [W] I've linked them both here Plata open policy agent a torque is great to go experiment and mess around with policy.
+00:35:20 [W] There's a great tutorial link here as well and like how to validate Ingress in the cluster. And then finally one of the reasons we didn't use gatekeeper was it doesn't you mutation yet, but there's an open issue here and maybe by the time you come comes around this will be done.
+00:35:36 [W] I would totally advise you to follow this and give gatekeeper a try if you're going to look at OPA especially if you want to do just validating sort of things at the moment.
+00:35:44 [W] So at that point, I'll turn it over to questions. If you have any questions, I would love to answer them now. Thank you so much.
+00:36:02 [W] Hey everyone.
+00:36:03 [W] I hope you enjoyed my talk. We have a couple minutes left.
+00:36:07 [W] You as questions go ahead and pop them into the Q&A session and I'll try to address as many of them as I can.
+00:36:14 [W] So first question from Raj that we haven't answered yet is what's the link to cube management?
+00:36:22 [W] So in this case, we're deploying not gatekeeper. So there's different ways. You can kind of Leverage Opa and in the system as a cute kubernative Mission controller, I think one of
+00:36:35 [W] of the reasons that we're using OPI right now the way we are is because we couldn't use gatekeeper.
+00:36:41 [W] It wasn't really ready yet.
+00:36:42 [W] what kubenetes but it does here is act as a sidecar to the actual Opa engine itself and it's doing things like what like anything that would watch kubernative resources.
+00:36:53 [W] So in our case, we're using a config map to store all of the valve the tags that we want to use and what cumin does is watch that for us. So when we change the config map
+00:37:05 [W] You know kubenetes looking at that and looking for changes in the making that data available back into kubermatic.
+00:37:12 [W] Hope that answers the question. Next up Lena Lyn Olli. No, sorry if I mispronounced your name is Opa only used for for kubernative Space Systems, or is it available for other things like doctors warm? So Opa in general is just a it's a policy agent
+00:37:27 [W] You can actually use it for a whole lot of things in this case.
+00:37:19 [W] We're using the kubernative pieces mainly because we wanted to take advantage of just the admission control that you can get with with kubernative in general.
+00:37:28 [W] I think the the documentation if you go to the open policy agent website has a lot of examples for using different places.
+00:37:36 [W] was a question asked earlier about have I seen it used for checking topics or policies or files and there's actually an example of using it with Kafka.
+00:37:46 [W] That you can kind of look at that as another example, Jeff asks, what is what was the top challenge in getting the vulnerability management process implemented?
+00:37:56 [W] I think the biggest challenge we ended up with that was that it was pretty fragile and brittle and a lot of things to learn over time just implementation things.
+00:38:08 [W] We're we're continually rebuilding these images continually updating that config map and making sure that config map was rolled out one of the issues. We ended up having with in-toto.
+00:38:17 [W] We're making some changes down to kind of reflect that is that when we're using Helm for a bunch of our deployment things and when Helm does a three-way patch like with him to until her it wasn't actually picking up that they were changes because the the release that was stored.
+00:38:32 [W] Maybe still had the old image.
+00:38:24 [W] We weren't actually updating the the helm charts. Right? Like we were just keeping them static and then relying on the mutation of the tags to push those things through so that ended up not working quite well for us and we had to go back and add some additional things into
+00:38:39 [W] To make sure that like when we did a Helm upgrade that it actually triggered a change that would go through the system Carolyn asks, how are you testing your policies other than surprising users of the cluster.
+00:38:50 [W] So actually there's a couple ways you can do that one of them that we're using right now on the OPA command if you install Opa like there's a command line tool you can get called Opa and one of the things that can do is test. So what we've done is Define
+00:39:05 [W] Tests for most of our policies and we're doing that by, you know, like defining sample admission requests in uml form or depending what pieces were trying to test because really like when these policies get evaluated
+00:39:21 [W] It you're evaluating pieces of it and you can have it test smaller pieces bigger pieces kind of like doing unit tests or like all the way up to bigger like kind of end to end tests.
+00:39:31 [W] So we Define pieces of admission request that look really similar to the things we're capturing that we're seeing from our tenants coming through and making sure that as we're rolling things out that it catches those things.
+00:39:45 [W] We're not, you know, introducing something that breaks down the line.
+00:39:49 [W] Early on one of the other use cases we use for this was as we were preparing for our kubernative 116 upgrade.
+00:39:55 [W] We realized pretty quickly that there are a ton of people that were deploying deprecated apis.
+00:39:59 [W] So we wanted to roll out a policy that would do that and it was pretty good until we started getting hit by some really large really large.
+00:40:10 [W] Helm deployments and we ended up generating bad patches for those things and we needed to go back and add a lot more testing so we could tighten up some of those rules.
+00:40:20 [W] Bridget asks are we moving to helm three we sure are you know, so this has been a journey for us for a little while and we are in the process of doing that right now just small team lots of stuff to do
+00:40:36 [W] We're also pushing all of our tenants to move to helm 344 whole variety of reasons, but haven't quite gotten there yet.
+00:40:43 [W] Sen. Syndrome are sorry if I mispronounced your name how many Opa kubeedge been instances do we run per cluster?
+00:40:51 [W] We are running to assets with three replicas each per cluster.
+00:40:56 [W] So we have one that's dedicated for the admission or the validating piece and one that's dedicated for mutation.
+00:41:03 [W] Just we wanted to make sure that they were separated.
+00:41:07 [W] More resilient to failure Raj has a follow-up question.
+00:41:12 [W] How do you remediate vulnerabilities that are marked unfixable by the scanner?
+00:41:16 [W] So for those we either get we write down in justify why they're not fixable.
+00:41:23 [W] There are definitely things that are not fixable because Upstream patches haven't been available like OS vulnerabilities things like that and then as part of the process you're going through and doing this validation for
+00:41:37 [W] Those compliance reasons when things are fixable. You can justify.
+00:41:40 [W] This is a OS vulnerability, but it doesn't have a vendor fix yet. So there's a vendor dependency on that one and you end up not not remediating that we keep a list of them and then you know this the scanning happens for us multiple
+00:41:55 [W] During the day and eventually it'll get picked up and hopefully updated.
+00:42:02 [W] Musab asks, does OPA work with terraform.
+00:42:05 [W] So again, like Opa can work with a lot of things.
+00:42:08 [W] It's a general-purpose policy agent it can you know, in this case we're using it to look at karates requests that are coming in really in the end.
+00:42:18 [W] It's looking at Json data and anything that you can assert about that. You could write policies for assuming you're passing the data into it properly.
+00:42:29 [W] See if we have any other unanswered questions down here.
+00:42:39 [W] Michael asks was you're mutating admission weapon custom-built?
+00:42:43 [W] The one that we're using for Opa know that's part of that the OPA /q management bundle that you can you can you can play it as a validating what book or a mutating my book.
+00:42:54 [W] We do have some custom mutating but books that we've written and this kind of predate. We've tried to use Opa as much as possible.
+00:43:02 [W] Just we don't have multiple things to solve or trying to do Simplicity here and
+00:43:09 [W] and leverage one tool for as much as we can obviously trying to hit the screw in with a hammer in some cases, but we have built some of those using job or using go when needed and there are a little bit of that the predates
+00:43:24 [W] Use of opa here.
+00:43:28 [W] Any suggestions on Ingress controller to use for use Opa for security policy.
+00:43:34 [W] I don't know the answer to that question.
+00:43:35 [W] I can take this over to the cncf slack in the number 2 Cube concept ID policy Channel and kind of follow up on that and see if we can find some some good resources. Maybe other people have input that they want to provide there as well.
+00:43:54 [W] Does OPA support caching and cash responses?
+00:43:57 [W] It's a great question.
+00:43:57 [W] I don't know that off the top of my head see if we can find that in the documentation to and follow up in the cncf slack Channel.
+00:44:08 [W] I think we answered all of the questions that are in here. Oh wait, there's another page.
+00:44:16 [W] Are using Capac rebuilding the images we are not right. Now. We are just using Docker just kind of as part of our pipeline.
+00:44:25 [W] We're evaluating that that actually just coincidentally as a thing going forward, but we're not using it currently.
+00:44:35 [W] Looks good.
+00:44:35 [W] We have any more questions.
+00:44:38 [W] I think we're almost out of time to so wait.
+00:44:42 [W] Do you have these policies available on GitHub?
+00:44:45 [W] Actually, I don't I should have done that and I will do that after this talk.
+00:44:49 [W] I'll drop a link to a GitHub repo this afternoon into the the policy channel on the cncf slack.
+00:44:57 [W] Thanks for asking that sorry.
+00:44:58 [W] I didn't do that ahead of time.
+00:45:03 [W] All right.
+00:45:04 [W] I think that's everything. So thank you so much for coming today, and let's continue the conversation over in hashtag to cube concept ID policy on the cncf slack and please remember to rate the session
+00:45:19 [W] I'm at the sched website happy to take all feedback.
+00:45:23 [W] Thank you so much.
+00:45:24 [W] I hope you've enjoyed this and I hope you have a great rest of your Kube card.

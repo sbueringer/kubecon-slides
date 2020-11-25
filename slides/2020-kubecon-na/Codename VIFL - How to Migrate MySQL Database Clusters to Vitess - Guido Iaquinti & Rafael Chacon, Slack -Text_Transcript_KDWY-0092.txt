@@ -1,0 +1,272 @@
+﻿Codename VIFL - How to Migrate MySQL Database Clusters to Vitess: KDWY-0092 - events@cncf.io - Wednesday, November 18, 2020 4:57 PM - 40 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] The name of this project was be fools, and this stands for vitess in front of the layer see charts.
+00:00:06 [W] Team about how we migrated more than a thousand my SQL shots to beat us.
+00:00:12 [W] We will be sharing techniques that we believe could be applied at other companies in the industry. So first a little bit of introduction about yourself
+00:00:25 [W] My name is Rafael check on and I'm a Staff software engineer in the data stores team at slack.
+00:00:32 [W] I've been part of this team since we test was just a prototype and I was here when we develop the Prototype and we took it to production as part of this journey.
+00:00:45 [W] That is almost four years now.
+00:00:48 [W] I also been very involved with the open source community in the be test project and I'm a maintainer there.
+00:00:55 [W] Swell, hello everyone.
+00:00:58 [W] My name is Guido your Queen T and the work as engineer in the datastore teammates lock.
+00:01:02 [W] I'm one of the founding member of the team where I designed built and deployed the first implementation of vitess.
+00:01:09 [W] Here's a quick overview of today's agenda.
+00:01:12 [W] We're going to start with an introduction about databases as lack will then go through the Legacy Charles architecture that we plan to deprecate Jumping then on the details of the migration project default.
+00:01:25 [W] Challenge and strategy validation and automation will then close with a few final remarks and we leave some time at the end for QA for those of you that are not Familiar Eyes with or product is Lucky's a new layer of business
+00:01:41 [W] Technology stack that brings together people applications and data.
+00:01:45 [W] The slack is World Works happen or mission is to make people's working life simpler more pleasant and more productive.
+00:01:54 [W] So first a little bit of context about the scale that we are working at at slack. We have around 12 million daily active user that generate sixty five billion queries per day at this point. We have around nine petabyte-scale
+00:02:10 [W] That store and we have this across thousands of database servers across the world.
+00:02:17 [W] And in order to get some context about all the project that we are going to be talking about is important that you have in mind.
+00:02:25 [W] What was the architecture that we call the Legacy charts and let's talk about that.
+00:02:31 [W] So in the beginning when a slug was way simpler application, we have a monolith that we call the web app.
+00:02:40 [W] That was all nature diem for the most part these still exist. But now there are like many other components around this and the way that we architecture or data stores was kind of like simple and it allows us to scale pretty well for
+00:02:56 [W] The first four or five years of product and it were mostly like this.
+00:03:01 [W] We have a set of databases on the left.
+00:03:03 [W] You see what we call the oxus that it was just like a kitchen sink data that didn't belong to any team. We have some set of databases for that kind of data.
+00:03:12 [W] We have one that we call the means that store the mappings of where the team data is going to be stored. So every time we got a request and of course
+00:03:24 [W] Oh, hey Willie cash, but still like the source of Truth was the database and we got a request for the team in this example, id-1 we go to the mains database and we select what is the D which are
+00:03:40 [W] This team's data is stored and with that data, then the application can connect to that specific team Char. And then just from that moment on and in the future only talk to that database and
+00:03:55 [W] This model like were quite well for many years, but with time started to show some military action limitations, the main limitations were at the product level basically the requirements
+00:04:10 [W] In a way that storing all the data for the team in a single chart didn't longer make sense.
+00:04:16 [W] For instance. Like now, you know that you can connect channels between different companies in which teams Char. Would you store that channel data if his chair between two different teams, so this model
+00:04:31 [W] Although it was simple and flexible at the time.
+00:04:35 [W] It didn't provide us the needs that then or application required and from databases specifically there were also other limitations just mentioning one.
+00:04:46 [W] Here's an example hot spots were a thin and or big as a more active customers, you will see like a distribution like the one that you see in this graphic many like few charts with many many like tons of load.
+00:05:01 [W] But then quickly like a logarithmic distribution where there is a long tail of Charter or not the heavily use and this was a problem both from the efficiency perspective and the scale perspective at some point.
+00:05:14 [W] We literally didn't have more bigger instances in AWS to be able to support or biggest customers.
+00:05:24 [W] So it was with this challenges that four years ago. We started to look the next generation of data stores at slack and high-level. This were the requirements that we had in mind. We needed to support my SQL because the application heavily rely on that.
+00:05:40 [W] Because of the reasons of the pro requirements that I mentioned earlier, we needed flexible charging strategies. So each table could use a different key to chart.
+00:05:49 [W] Also. We wanted to move away from having the charting instruction being baked into the application and we wanted to move that to the infrastructure and of course we wanted it to be horizontal about scalable and highly available next.
+00:06:09 [W] In this is how we landed on the vitess technology for the purpose of this talk.
+00:06:13 [W] I'm going to go and do a deep dive on what is vitess like how it works that we have talked about this in multiple talks already and you can refer to those if you're interested in this topic, but for the context of this presentation, I just wanted to
+00:06:28 [W] Highlight that we just provided the right instructions that we needed in order to scale slack databases.
+00:06:36 [W] Now let's enter in the core of this presentation protest in front of the Legacy charts.
+00:06:43 [W] The first two and a half years of this project we focus on migrating the most complicated in highest volume tables.
+00:06:51 [W] It was not that many tables between 10 into 20, but they were 70% of all slack database workloads.
+00:07:01 [W] Each of these tables was a multi quarter project with many Engineers involved to do the migration in reality.
+00:07:09 [W] There was not a migration. It was more a tree architecture of each.
+00:07:13 [W] This tables we took the opportunity to do a bunch of cleaning. We do we did the recharging and it was heavily involved.
+00:07:21 [W] Actually, I would like to show you how this migrations you could imagine the self if you can put it in a small video.
+00:07:30 [W] So it was a bunch of application Engineers watching very closely and then removing this tablecloth to make sure that everything was still in place, but it required a lot of focus a lot of understanding.
+00:07:43 [W] And a lot of watching to make it right but this is how like we did this traditional migrations.
+00:07:50 [W] But this was not going to work for the remainder of 30 percent of the traffic.
+00:07:55 [W] This wasn't going to work because that 30% was more than 200 tables and all of the strategy was designed and all the tooling and all or framework was thought to be used in
+00:08:10 [W] Table by table based in the base of the cases each table took about a month.
+00:08:16 [W] So doing with the approach that we had at the moment. It was going to take 16 years to finish the migration.
+00:08:25 [W] Of course, this is a little bit exaggerated, but it was obvious that the normal approach was not going to work.
+00:08:31 [W] So we needed to come up with a different strategy to migrate those 200 tables.
+00:08:38 [W] And we wanted to do this in a year.
+00:08:40 [W] We wanted to do this with minimal disruption to application developers. So they were able to continue to work without knowing that we were moving like this tables. And of course we didn't want any
+00:08:56 [W] Downtime while we were performing this migration.
+00:09:00 [W] So what we wanted for this look more something like this.
+00:09:05 [W] We had a lot of instrumentation.
+00:09:07 [W] We have a lot of Automation and then we just wanted to migrate all the tables on ones with no one noticing like very fast and in a very reliable way.
+00:09:19 [W] So now let's talk about how we did this.
+00:09:24 [W] First we need to have some context about what was the topology of the MySQL level.
+00:09:30 [W] Let's start with the Legacy one.
+00:09:31 [W] We were running or clusters using MySQL five six. We were using statement based replication with a sink replication.
+00:09:39 [W] also we have a very unique set of where we have two pair of databases in a primary primary mode where each side was gradable and this is very unique.
+00:09:53 [W] I was like like not that many companies ground my SQL in this mode and this has the side effect that it was kind of like complicated to find a path forward to even upgrade my SQL using this topology and then on
+00:10:08 [W] This side we had a more standard topology using MySQL by 7. We are using broad based replication and we have a primary single holster is writable and then multiple replicas that we can use for reads.
+00:10:23 [W] In another interesting fact is that we use semi cgroup occasion here.
+00:10:29 [W] Basically, we needed to go from the topology on the left to the topology on the right. And as I mentioned earlier due to this primary primary set up it was very complicated to do this migration and it was
+00:10:44 [W] Dramatic that we haven't upgraded my SQL in multiple years.
+00:10:50 [W] So just thinking about this.
+00:10:53 [W] It was very challenging.
+00:10:54 [W] However, we were able to come up with a framework that set us a path forward.
+00:11:03 [W] next
+00:11:05 [W] we came up with a series of steps where each step in isolation allow us to move forward in this migration.
+00:11:14 [W] first.
+00:11:15 [W] We wanted to see if we are able in the vacuum to restore an upgrade this charts. Then we wanted to find ways to synchronize them with the Legacy topology validate that everything was working and finally
+00:11:30 [W] Find a way to migrate them.
+00:11:33 [W] So what did Intel to restore an upgrade basically we set up an empty jar in orbit has cluster and as you know like the way that you run out, too.
+00:11:48 [W] Sharks invitations to is true with the gates.
+00:11:52 [W] This will be important later in the presentation.
+00:11:54 [W] So we wanted to introduce it at this point.
+00:11:57 [W] So you have it in context and we put strap a chart that is empty in a shark that was going to represent the equivalent of its Legacy version.
+00:12:11 [W] Of course, we set up this with the topology that we use when we test from the get-go.
+00:12:16 [W] We use broad based replication and the standard primary replica set up and the way that we did this is that we start empty.
+00:12:26 [W] We see the Char with the latest available back off run or Legacy infrastructure, and then we run ReStore in place and we upgrade my SQL so we migrate dynatrace.
+00:12:40 [W] Say to the new version then we take a backup of this see Char and we cycle and all the host and we have kind of like a vanilla vitess Char.
+00:12:54 [W] see that with a backup from your legacy infrastructure.
+00:12:58 [W] So now that we have this Char on the test with a backup, how do we keep in sync with your legacy infrastructure?
+00:13:06 [W] This was a big challenge because of the topology and the difference in my SQL versions We couldn't just set up normal my SQL replication to connect them and set up the new shot as a replica of the Legacy ones.
+00:13:20 [W] So in order to solve this problem, we leverage a core component of the test that is called be replication that implements the my SQL replication protocol and we use it to chop all data from an external database in this case
+00:13:36 [W] is or Legacy chart to a Target chart in vitess and we actually implemented this functionality to connect to external databases that are part of the ecosystem of the we test system and the way that this looks is that
+00:13:51 [W] A simple as this this is a very like first class citizen eat API on the vitess side and you created as if we were like a normal Row in the test configuration and you can say create this workflow.
+00:14:05 [W] We call it as V teachable where you have like this rule that match basically everything that is on the source. We said it's going to be an external my SQL database we specify like some configuration of like we're in the replication stream.
+00:14:19 [W] stream. Do you want to start replicating?
+00:14:21 [W] from and then from that moment on the tablet process that takes on and make sure that this is replicated with the same kind of level of guarantees that normal my SQL replication will give you and then at this point we
+00:14:36 [W] Half like orbiters chart seeded from the back up the replicating from the Legacy Source chart when we got to this point.
+00:14:43 [W] This was a very powerful and we were like super excited and we knew that we had like a path forward to finish this migration.
+00:14:51 [W] However, we needed to build the confidence that this was working as we expected.
+00:14:57 [W] We needed to know that we didn't leave any data behind.
+00:15:03 [W] Also, we needed to verify that the view from the application perspective is matching and more may be equally as important was this process reliable.
+00:15:17 [W] Can we trust the be replication is not failing or having any kind of like edge cases? Were it could create data loss and we divided this problem from two perspective.
+00:15:30 [W] the databases in the application in we ensure that both correctness in scale was correct from this to perspective if these systems were isolated
+00:15:45 [W] In the vacuum, the problem would have been nice if we just take each table on the source and we compare it against each table and destination and if something doesn't match something is fading.
+00:15:56 [W] However, the challenge is that these systems were taking rights.
+00:16:00 [W] was not an easy task.
+00:16:02 [W] And we were able to find a solution that it's actually quite simple.
+00:16:08 [W] The only thing is that the systems are taking traffic as I mentioned before but the idea is that we have a consistent snapshot between the two databases and the way that we did this is that we start
+00:16:24 [W] Stopping be replication.
+00:16:26 [W] so we know that no data is flowing into the destination system.
+00:16:34 [W] Then we issue a query to lock a table on the source database.
+00:16:42 [W] We then also select everything from the table in a streaming fashion.
+00:16:47 [W] We record the middle position at that point and then we unlock the table and this operation is really fast because we only lock the table from the moment that we issue the select and then as soon as
+00:17:03 [W] Start streaming, like record the position and unlocking the table at this point.
+00:17:08 [W] We know that we have a read There is a streaming from The Source from a point in time.
+00:17:15 [W] Now, we need to make sure that we can read from that exact same point on the destination the way that we do that is that we start with replication and we stopped it at the position Alpha
+00:17:30 [W] That we recorded earlier in because we lock the table when we issue the select on the source.
+00:17:36 [W] We know if that we issue a select at this time on the destination.
+00:17:41 [W] They will be on the exact same position and no rights were in between these two moments.
+00:17:47 [W] That was actually quite it we can start with replication again, we start comparing the data from the two streams that we have from the source and destination. Once that compare this
+00:17:59 [W] done. We can repeat this process for each table on the databases.
+00:18:05 [W] The validation of the databases is assuring us that the data store are in sync till a specific point in time, but there is still a validation that we need to do in order to know if this is also valid from the application perspective is
+00:18:20 [W] Matching also there also, what about real-time traffic?
+00:18:26 [W] We divided the validation for the application side into major step scale and correctness in the first we validated that expected performance regressions fit within unexpected Bound in our case.
+00:18:41 [W] This was an additional round trip time during read operation due to the Extranet for Hope in VT gate and to run free time during write operation that was due to the additional Network.
+00:18:53 [W] Hope for VT gate and the additional run.
+00:18:56 [W] Time due to the semi synchronous act needed for MySQL replication.
+00:19:00 [W] This slowdown was upset about by the application and it wasn't noticeable in the overall system performance in the correct name phase.
+00:19:11 [W] We also validated that the worm no query regression from a syntax perspective due to the query right engine in vitess and also that the query results were matching between the Legacy systems and vitess.
+00:19:26 [W] To perform the validation we built a framework by extending our database library to execute and evaluate query results against the two systems as mentioned before we were interested about both performance and
+00:19:41 [W] result correctness
+00:19:43 [W] the framework supported two main operation mode dark reads and dark rights.
+00:19:50 [W] In the first only reads operation when sending evaluated to both system while for the latter we were sending only right workloads.
+00:20:00 [W] We also turn it on both mode at the same time to evaluate scale when running with 100% of the expected workloads.
+00:20:10 [W] Here is a visualization of a query routed via the dark ridpath once our main client webassembly.
+00:20:40 [W] The majority of query results were matching, but we had to manually investigate some of the liar as the result set wasn't huge.
+00:20:49 [W] We used a simple spreadsheet to coordinate the investigation of those between team members.
+00:20:58 [W] The validation phase run for over two months and we collected different performance regression for all queries.
+00:21:06 [W] We then analyze every single issue and the majority of error were driven by changes in order preference in MySQL and places where the application expected read after write semantics.
+00:21:18 [W] It's worth mentioning that we got to this phase within the first four months of the project prototyping fast and having results quickly.
+00:21:28 [W] Help us a lot to iterate on the overall design.
+00:21:32 [W] Fortunately, we didn't have to change any of the core assumption we made but having early feedback, especially for a complex project like this one was very important and the sure as we were going in the right direction once we evaluated
+00:21:47 [W] Every single issue we concluded it was safe to proceed.
+00:21:53 [W] Let's now take a look about how the economy gration procedure works.
+00:21:58 [W] here is the view of a single shot in pre-migration state where the destinations chatting with test has been already provision.
+00:22:05 [W] The verification stream is configured and the validation step has verified that the both data store are in sync from the application perspective.
+00:22:16 [W] Nothing has change and the only overhead we introduced to the system is an additional replication stream.
+00:22:23 [W] Legacy sharp primary to Vitesse
+00:22:28 [W] now that we know that validation password correctly.
+00:22:31 [W] We are ready to migrate our shot.
+00:22:33 [W] We start by pointing live DB to send all traffic to a single Legacy Charles host and we then wait till all the transaction from the Legacy shot host on the left are replicated to the one on the right.
+00:22:48 [W] We now have reach what is probably the most important moment of the whole migration as in the next step. We reach the only no returning point of the procedures.
+00:23:00 [W] Due to its importance before moving forward. We needed to validate that all the metrics were nominal and the two system were still nothing.
+00:23:11 [W] Once we validated that all metrics are okay.
+00:23:14 [W] We toggle live DB through traffic to the new system making the test the only authoritative source for that specific chart.
+00:23:23 [W] As this operation is not Atomic few of you might have already noticed that there might be a race between when we execute a query in Legacy with then execute another one in vitess involving the same Rose.
+00:23:37 [W] We consider this settle ization issue, but for the test and simulation that we run we validated it couldn't create issue in our workload and product especially as the timeframe of this phrase was in the order of
+00:23:52 [W] milliseconds
+00:23:54 [W] now that we test is the authoritative source for our application traffic.
+00:23:58 [W] We only need to make sure that all the transaction from the Legacy share system made to the new data store.
+00:24:06 [W] Once we verify that we can stop the video application strimzi operation of the commissioning the old Legacy shots.
+00:24:14 [W] As the old system is not serving any more traffic. We can take one final back up and then the commission entirely the Legacy Char is now a thing from the past.
+00:24:29 [W] We validated that the core idea is working now.
+00:24:32 [W] We only have to repeat this process more than a thousand times with no error and zero downtime.
+00:24:40 [W] We now have another task build an automation to make it happening.
+00:24:44 [W] When we started this task. We decided to Simply build an automation to execute the V for migration procedure that is repeatable and safe.
+00:24:57 [W] Due to the constraint of the overall project.
+00:24:59 [W] We didn't have much time to develop new solution. So we try to reuse as many components as we could.
+00:25:07 [W] We build the automation using Python and by leveraging our internal Library Black Ops Black Ops offers several modules and functionalities to interact with internal system as lock like monitoring service
+00:25:23 [W] Vision in system and so on.
+00:25:27 [W] It's now time to build but how can you make sure you're going to succeed?
+00:25:32 [W] We try to approach the problem with a very defensive attitude.
+00:25:36 [W] We decided to build an automation as a finite State machine made by several important step.
+00:25:45 [W] A nice property of a state machine is that it's component of predictable based on the current state and an input machine performs State transition and produce an output this help us to implement very
+00:26:00 [W] Its boundaries and allow only the action needed for each step.
+00:26:05 [W] Making the whole development faster easier and safer.
+00:26:11 [W] We also made sure that every step of the system machine was also safe to be around multiple times.
+00:26:17 [W] This was unfortunately a more time-consuming process as are giving this property in distributed system.
+00:26:23 [W] It's usually not very straightforward. Fortunately this investment paid off quite immediately as it helped us to build confidence in the tool as well as allowing robots and human to recover from transient issue during the execution.
+00:26:39 [W] We briefly describe State machine properties and it important as very valuable characteristic for our automation.
+00:26:47 [W] But are those enough to achieve our strict requirements may be in our case with also implemented some additional safety guard rails against other automation conquering for shared resources, like schema changes back up
+00:27:02 [W] Shot a split but as well as human error.
+00:27:06 [W] Actually, the majority of safety guard rails were triggered by human error and not other automation.
+00:27:15 [W] Let's now close with some final remark.
+00:27:19 [W] This project was designed built and executed by a team of four engineer in a timeframe of around a year.
+00:27:26 [W] We calculated that by following the Legacy macstadium path.
+00:27:30 [W] It will have to collect more than 70 Engineers to deliver the same results in a similar time frame.
+00:27:38 [W] Equally important this migration was completely transparent to our application engineer as well as end user.
+00:27:47 [W] We were able to leverage and modify for our needs some vitess functionalities to do the most delicate part of this project.
+00:27:55 [W] keep the data stores in sync and verify that data was not left behind. We move hundreds of terabytes of data with zero down time and not a single outage today 99% of luck
+00:28:11 [W] Is on vitess and we expect to wrap up this Migration by the end of the year here is the vitess adoption at slack before we started migrating sharp. We have evil the time frame of this graph is 2.5 years.
+00:28:27 [W] Here's the same view with six additional months starting from May 2020. We were able to increase the adoption by 30% in less than six months.
+00:28:40 [W] As things never fully goes as expected.
+00:28:43 [W] We had to face some unexpected challenges while preparing the immigration of few of our busiest shards.
+00:28:50 [W] We hit few my SQL 5-7 Optimizer regression that increased a latencies and we also had to deal with the additional overhead VT tablet and it's golang garbage collection.
+00:29:03 [W] Breaking down the validation immigration step was key for us as well as either eight over the initial design several time by balancing speed execution time and safety.
+00:29:16 [W] Was this a success?
+00:29:17 [W] We think it was we accomplished everything that we said we were going to do hitting some hiccup in a project of this size is normal.
+00:29:26 [W] We consider pretty remarkable that the project planning building and execution was done within a year.
+00:29:35 [W] The current state is that 99% of databases as luck are running on vitess today.
+00:29:41 [W] Could you replicate this elsewhere? Yes with few caveats.
+00:29:46 [W] If you want to know more about vitess, here's a link for a suggested session from two of the covetous maintainer.
+00:29:53 [W] Thank you very much for your time.
+00:30:41 [W] I think that this is a question.
+00:30:43 [W] Yeah. All right, they're gone Golan GC.
+00:30:50 [W] So basically because some of like our busiest charts had certain query patterns were they are doing very large allocations and they're reading
+00:31:05 [W] A bunch of data from SQL and then parsing the data from SQL into the v t tablet and then sending it back through grpc and that put like significant that put significant pressure in Golan
+00:31:20 [W] Rich collection in we ran into some issues where we are having multi milliseconds stop the work events and that affected or tail latencies and we
+00:31:35 [W] sickly like this is something that we've been investigating for quite a bit of time now, but I think we narrow it down to a problem that is being fixed in Golan language itself
+00:31:50 [W] And Ford now like we were able to mitigate that by tweaking the go DC value and change the pace at which time we run garbage collection because the stop the war events that we are seeing are doing.
+00:32:05 [W] Some specific parts of the garbage collection faces that by slowing down the amount of time that we run garbage collection.
+00:32:15 [W] We see less of this kind of failures.
+00:32:24 [W] Widow there is another question around our BR.
+00:32:27 [W] I think that when yeah, so yeah, this is something pretty kind of historical but due to like how our application kind of handle like a kind of the Legacy of Shannara Rio
+00:32:42 [W] we use a lot of like statement like insert and duplicate key update or even like like replace into that again didn't play that well with rbr at least for a test that we did so
+00:32:57 [W] Kind of wasn't kind of an option for us.
+00:32:59 [W] Also like are BR like this a nice nice addition but was just kind of part of the equation of migrating to the new system Yeah. So basically that we consider
+00:33:14 [W] But if we didn't find a path forward the didn't like it was complicated with the Legacy topology set up.
+00:33:28 [W] Yeah, we had to kind of write like quite a bit application to make it happening as well as a lot of kinds of dancing dependencies like the data warehouse and so on.
+00:33:49 [W] Ruff I think like there are few other if you scroll down so like we're considering a migration and we are looking at moved able to handle the immigration.
+00:33:59 [W] That's a great question.
+00:34:03 [W] So this when we started this move tables was not ready yet.
+00:34:10 [W] So basically we were bracing subbu from the open source project that he was developing these features as
+00:34:18 [W] we were kind of like also trying to do this project.
+00:34:23 [W] But if I were to start this again from scratch today, I think I will consider using move tables like one caveat. Is that the work that we did to be able to connect to external
+00:34:38 [W] Databases like that doesn't work with move tables yet.
+00:34:42 [W] So there is a strong word that it's on the queue for us in the open source Community, but it's not there yet.
+00:34:50 [W] But at the end of the day, like what we did for or migration is the exact same building blocks that they move tables use and it's all relying on
+00:35:05 [W] Be replication.
+00:35:09 [W] Then there is a question regarding like did you consider a tool like Maxwell demon to follow application and all the data?
+00:35:16 [W] don't know like Graphics are familiar with this tool, but honestly.
+00:35:24 [W] I'm not I'm not familiar with the Maxwell demon tool.
+00:35:32 [W] Apologize for this like no.
+00:35:35 [W] No, you can provide like maybe like more context. Maybe we can yeah.
+00:35:41 [W] So, what's the name?
+00:35:42 [W] That's a great question from Anthony?
+00:35:44 [W] So the answer I think it's know because we're whiskey for this new automation to work is that we don't we didn't need to recharge the data all the original tables that we migrated.
+00:36:01 [W] Because mostly like program requirements and then also scale requirements charting by team like didn't make sense for those tables.
+00:36:09 [W] So this strategy only works if like we can keep the same charleen key as in the Legacy system.
+00:36:39 [W] Did you need to migrate my SQL?
+00:36:47 [W] CDC, what do you mean by CDC?
+00:36:51 [W] Change data capture like or ETL tools.
+00:36:55 [W] Are you referring to ETL workloads Kye Chan if that's the case a we did not because we have an independent system, but
+00:37:10 [W] I suggest that we have an independent system built internally for all the ETL workloads. And when we started to adopt vitess we make it compatible with vitess and it works with both my SQL and vitess and then
+00:37:26 [W] Why did you decided to make a wrapper around my SQL instead of to pick up a new distributed out-of-the-box database?
+00:37:32 [W] I think this one like there are some talks where we go in depth around this topic high level is a for us MySQL was a most it was a requirement.
+00:37:48 [W] All or application really rely on MySQL semantics like both from the relational perspective and even just a my SQL that syntax it was too much of a heavy lift for us to other
+00:38:04 [W] something different than my SQL and then also not only because of slack but in general like it's like operations team had like many many years of Browning my SQL clusters at scale so
+00:38:19 [W] For us that was like a good property and we wanted to continue to have that and there are like many more nuances around why we decided to use vitess instead of a different database.
+00:38:35 [W] I can point you later two more talks about that.
+00:38:45 [W] Yeah, so there is a subpage to I don't know if you saw it Raph about for the question. So yeah change data capture.
+00:38:52 [W] So yeah, I think we reply to your question. But so and then Christopher was pointing to Maxwell demon iot my SQL application and stream the data to other arbitrary places.
+00:39:04 [W] Yeah, like from let's say top of my head like a maybe like could have been kind of a solution like weaveworks.
+00:39:15 [W] Let's still need like a way to kind of verify that even the data as in from the application was exactly the same as we mentioned briefly in the presentation like we change from like a topology or
+00:39:30 [W] SQL five six two five seven. So also that kind of In-Place upgrade the have to be kind of verified and so on.
+00:39:38 [W] So yeah, like without having more context about this Maxwell demon.
+00:39:44 [W] I'm not super sure if I can reply may be again.
+00:39:47 [W] That's something that might work for others.
+00:39:49 [W] Yeah.
+00:39:59 [W] And I think we are running out of running out of time.
+00:40:03 [W] Yeah, we can follow up in the slack Channel.
+00:40:07 [W] And yeah, I think session is about Korean like what I think they're happy to talk more about the about this Christopher like be minutes in the slack. I think I have like also I can add some nuances there
+00:40:23 [W] And thank you so much everyone for attending. Yeah.
+00:40:29 [W] Have a good day.

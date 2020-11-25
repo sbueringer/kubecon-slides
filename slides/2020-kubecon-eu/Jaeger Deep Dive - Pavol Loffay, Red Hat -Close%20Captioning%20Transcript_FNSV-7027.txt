@@ -1,0 +1,260 @@
+﻿Jaeger Deep Dive: FNSV-7027 - events@cncf.io - Wednesday, August 19, 2020 7:31 AM - 57 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:04:51 [W] Jaeger Deep dive project session.
+00:13:25 [W] This is the second presentation at Club native controversial.
+00:13:35 [W] The first one is Jaeger intro and if you haven't seen Jaeger in action, I encourage you to watch the recording.
+00:13:41 [W] I'm pretty sure there is very nice demo of Jaeger in action.
+00:13:46 [W] So in this talk that agenda is will talk about the project in general. Then I will spend some time talking about how tracing Works under the hood.
+00:13:59 [W] We'll have a look at two concepts.
+00:14:04 [W] So I will explain how the data collection Works inside your application, but also have tracing infrastructure Works under the hood, then we will jump through a couple of different topics namely sampling Jaeger.
+00:14:14 [W] Architecture and the compatibility and last but not least we'll spend some time talking about new features since the last cute cone something about roadmap. And finally we will do QA.
+00:14:29 [W] So just briefly about myself.
+00:14:34 [W] I'm Pablo fine.
+00:14:36 [W] I'm software engineer at red hat and I have been working on Jaeger since basically it has been open sourced in 2017 and apart for jaeger.
+00:14:49 [W] I contribute to bunch of other projects that are distributed to a simulated namely opentracing micro profile opentracing and also opentelemetry project.
+00:14:57 [W] So Jaeger is a distributed tracing Pot Farm.
+00:15:08 [W] It's not just you know, a single server that you run on your laptop or or as a deployment.
+00:15:11 [W] It's much more than that is the whole ecosystem of different components for different purposes.
+00:15:23 [W] So on one side, there are instrumentation libraries or sdks that run inside your application and they collect data and they report it to the tracing collection back end.
+00:15:29 [W] On the other side there is a visualization or the user interface that we use to to see our distributed transactions and in Middle.
+00:15:41 [W] opentracing micro profile opentracing and also opentelemetry project
+00:15:45 [W] So Jaeger is a distributed tracing platform.
+00:15:46 [W] It's not just you know, a single server that you run on your laptop or or as a deployment.
+00:15:46 [W] It's much more than that.
+00:15:47 [W] It's the whole ecosystem of different components for different purposes.
+00:15:49 [W] So on one side, there are instrumentation libraries or sdks that run inside your application and they collect data and they report it to the tracing collection back end on the other.
+00:15:50 [W] Side there is a visualization or the user interface that we use to to see our distributed transactions and in Middle.
+00:15:54 [W] There's also data mining Integrations and platform that reduce to aggregate the data and derive. I know another interesting insights from the data which we collect.
+00:15:56 [W] So we agree as a project.
+00:16:02 [W] It's inspired by Google Dapper and opens it in and it's mainly because the u.s. Is very similar data model as these two system use it has been created at Uber in August 2017 and
+00:16:13 [W] Aggregate the data and derive. I know another interesting insights from the data would we collect?
+00:16:14 [W] So Jaeger is a project.
+00:16:15 [W] It's inspired by Google Dapper and opens it kin and it's mainly because the u.s. Is very similar data model as these two system use it has been created at Uber in August 2017 and
+00:16:17 [W] It's a it has been open sourced in 2017. The same here is also joined cncf Foundation as an incubator project and last year. So basically again two years later
+00:16:31 [W] Incubating project and last year. So basically again two years later it graduated to top-level cncf project.
+00:16:35 [W] So from technology stack Jaeger itself is written in go blank and it's very pluggable system for storing data.
+00:16:51 [W] So with the Upstream project, we directly maintain implementations for Cassandra elastic search Badger and in memory for demo and test purposes,
+00:17:03 [W] Storage layer is very it's pluggable but is also quite simple to implement.
+00:17:19 [W] So if you have a expertise in running different storage, it's very simple to implement storage, right and query interfaces.
+00:17:20 [W] DUI is is ranked. Yes. It's very nice UI you will see that in a Jaeger intro.
+00:17:29 [W] And the collection libraries or the sdks the Implement opentracing API and they are available in many languages. So for example in go Java python node.js C++ C
+00:17:45 [W] B and Ruby
+00:17:48 [W] Jaeger also integrates with Apache Kafka and fling and Spark for streaming and data processing will see that more in architecture.
+00:17:59 [W] So as a community Jaeger is hosted on GitHub under you get Racing Organization.
+00:18:12 [W] The main repository has roughly around 11,000 stars. And there is about 1700 contributors across the all repositories inside the main organization.
+00:18:25 [W] This is roughly 15 maintainers again across all the components would are in the organization.
+00:18:33 [W] We do have also Twitter Channel and get your channel will where you can ask questions or raise problems, and we always try to help our users to resolve
+00:18:45 [W] And get help them to get started with jaeger.
+00:18:51 [W] We do release roughly every one to three months.
+00:19:00 [W] always try to release once we have reasonable set of new features.
+00:19:01 [W] And Jaeger itself is distributed as a set of Docker images, but also as a set of binaries that you can get from the GitHub release page.
+00:19:15 [W] So have Jaeger works, but more in general.
+00:19:22 [W] How tracing Works under the hood.
+00:19:23 [W] So in this diagram, we see bunch of stuff. Right? And but basically there are two important pieces here on the top.
+00:19:35 [W] There are two microservices. So our standard applications and on the bottom there is tracing infrastructure and we see this microservices that they embed tracing API and tracing Library.
+00:19:49 [W] So the tracing API is something that you know, the application uses to
+00:19:53 [W] Straight some data to create events and the tracing library is the implementation of this API the repos data to the tracing system.
+00:20:03 [W] Now if we zoom in into the application, we see that application consists of different layers.
+00:20:13 [W] Something in the middle.
+00:20:20 [W] So for example business logic and then there is a the outbound layer which can be for example on RPC layer to the next service and every layer talks
+00:20:32 [W] API and we call this point stress points. So so this transport three trays points.
+00:20:45 [W] they report tracing data via the tracing API and and so with this trains points, we call them also instrumentation.
+00:20:56 [W] So instrumentation is just, you know, a piece of code that basically admits tracing events based on
+00:21:03 [W] the behavior of the application
+00:21:05 [W] This is a little bit different to metrics and logs because tracing is stateful.
+00:21:18 [W] So it carries some context with it. So when we see it, when a request arrives to the first micro service what tracing API does it will create a special context with unique IDs?
+00:21:29 [W] This IDs are also generated generated by the Tracy API. Now this context is propagated to all Downstream instrumentation points and all Downstream microservices.
+00:21:44 [W] The context doesn't change and this is important because the context doesn't change because all these events will have the same IDs. So later to tracing system can correlate all
+00:21:58 [W] And reconstruct the full trace or execution flow.
+00:22:03 [W] And so the context propagation it's basically the foundation of this Unity tracing.
+00:22:18 [W] So let's have a look at the tracing infrastructure itself.
+00:22:24 [W] So once the data leaves the tracing Library, it goes usually to collector or agent that stores data to a trace storage.
+00:22:30 [W] Apart from three storage. There is also some data mining and the presentation layer.
+00:22:39 [W] So let's have a look at how the tracing works with which opentracing and Jaeger.
+00:22:49 [W] So opentracing Jaeger many people they use these Technologies interchangeably, but actually there is a clear difference between these two.
+00:22:59 [W] So on this diagram we see again on the top the application or the process and on the bottom the tracing infrastructure the application we see that is instrumented in two different ways.
+00:23:16 [W] manually instrumented Frameworks and automatic instrumentation
+00:23:22 [W] So manually instrumented Frameworks. This is just something like a library that you can pull in into your class path and it will emit tracing events in automatic instrumentation is for example Java agent.
+00:23:39 [W] Your class path and it will emit tracing events in automatic instrumentation is for example, Java agent that does bytecode manipulation to instrument your application.
+00:23:44 [W] So all this instrumentations they basically used as opentracing API and then the tracing Library implementation in this case Jaeger just implements this API and reports data to the agent or collector.
+00:24:01 [W] Was instrumentations they basically use just opentracing API and then the tracing Library implementation in this case Jaeger just implements this API and reports data to the agent or collector.
+00:24:03 [W] So the tracing API is important because there are so many Trends points in our application.
+00:24:16 [W] And so if you wanted to change the implementation and we haven't used the API, we do have to change all of those calls to do tracing API.
+00:24:22 [W] So the tracing API basically abstracts the implementation which makes it easier for us to switch to implementation, which is very important.
+00:24:33 [W] However, opentracing there is one slight problem is that if you want to change the implementation, we have to recompile and redeploy our applications.
+00:24:45 [W] So when we look at the bottom there is Agent and collector.
+00:24:57 [W] So the the library that lives in our process reports data to the agent or collector and it can choose where the data will report it right difference between agent and collector is that agent lives?
+00:25:06 [W] Us to switch to implementation, which is very important.
+00:25:07 [W] However, opentracing there is one slight problem is that if you want to change the implementation, we have to recompile and redeploy our applications.
+00:25:08 [W] So when we look at the bottom there is Agent and collector.
+00:25:09 [W] So the library that lives in our process reports data to the agent or collector and it can choose where the data will report it right difference between agent and collector is that agent lives?
+00:25:10 [W] Close to the application.
+00:25:11 [W] So it's something like sidecar container or it lives on the same host as the application process.
+00:25:19 [W] Then the data goes to collector and collector just stores the data into storage.
+00:25:26 [W] Now, let's have a look at the opentelemetry versus Jaeger.
+00:25:32 [W] So we see the opentelemetry is also the instrumentation API, but it's also the tracing component a Chien.
+00:25:41 [W] And this has a couple of advantages over opentracing because now if you want to change the implementation, we don't have to recompile and redeploy our application, which is a big plus.
+00:25:55 [W] What is may be confusing on this slide is that opentelemetry is also the agent and The Collector.
+00:26:03 [W] So this is a new component in opentelemetry which is called collector and collector is a component that can receive the data can process it and then can send it to the other systems.
+00:26:16 [W] So difference between Jaeger collector and opentelemetry collector is that Jaeger collector is also able to store the data in a storage.
+00:26:25 [W] So let's have a look at the sampling.
+00:26:33 [W] So sampling is a technique how we store or less data that we actually receive.
+00:26:39 [W] There are basically two approaches how to do sampling.
+00:26:47 [W] The first one is coherent had based sampling and add one is still based sampling.
+00:26:53 [W] The coherent had based sampling means that the sampling decision is made when I request first time reaches our infrastructure and so we make the decision and then the decision is propagated to all
+00:27:04 [W] Services and these Services they have to respect the decision that has been made at the beginning.
+00:27:11 [W] And there are two implementations how we can sample at the Hat.
+00:27:20 [W] The first one is probabilistic and the second one is rate limiting probabilistic basically says for example, sample only 1% of all the requests what you receive very limiting says
+00:27:32 [W] Will sample only 10 requests per time unit. So for example 10 requests per second.
+00:27:40 [W] Sampling is usually configured per service.
+00:27:50 [W] And so this is a problem because some Services they receive lot of traffic at some endpoint but other endpoints my receive very low traffic and if we use a single sampling
+00:28:01 [W] All those endpoints the endpoints with low traffic will pretty much not be sampled at all.
+00:28:13 [W] So Jaeger allows you to configure tracing also / and point level to solve this problem.
+00:28:18 [W] The other feature would be a good provides is centrally controlled sample sampling.
+00:28:25 [W] And so the in Jaeger there is a configuration file where you can configure all the sampling strategies and this configuration is then pushed to Jaeger.
+00:28:33 [W] clients reporting the data
+00:28:34 [W] And so the other approach to sampling is Dell based sampling Jaeger at the moment doesn't do tell based sampling.
+00:28:47 [W] It is something that we are looking at and I will talk about it in the roadmap.
+00:28:54 [W] So Integrations Jaeger integrates very well with kubernative.
+00:29:01 [W] There is a Jaeger operator and Helm chart.
+00:29:05 [W] So the operator is a component that can deploy but also managed and upgrade your applications.
+00:29:11 [W] So it's much more robust way of deploying, you know business application into kubernative.
+00:29:19 [W] The next integration with is with Prometheus.
+00:29:39 [W] So we agree server and all the client libraries. They report metrics in Prometheus format.
+00:29:45 [W] The opentelemetry integration all the opentelemetry clients or sdks they ship with jaeger exporter. So we take you can use opentelemetry sdks with jaeger back end.
+00:29:58 [W] And opentelemetry collector ships with jaeger receiver and exporter.
+00:30:03 [W] from servicemeshcon
+00:30:21 [W] So let's have a look at architecture.
+00:30:27 [W] So when Jaeger was introduced this was the default architecture.
+00:30:39 [W] So on the left side, there is the host and container for our application.
+00:30:40 [W] Reporting data to The Collector and then collector was storing data to storage which then Jaeger query was using to get the data for the user interface.
+00:30:52 [W] An sto they come with jaeger as a standard tracing system and NY uses knative Jaeger cichlids pass client.
+00:31:03 [W] So let's have a look at architecture.
+00:31:03 [W] So when Jaeger was introduced this was the default architecture.
+00:31:04 [W] So on the left side, there is the host and container for our application.
+00:31:04 [W] Reporting data to The Collector and then collector was storing data to storage which then Jaeger query was using to get the data for the user interface.
+00:31:07 [W] The data processing was done in batches. So spok job was reading the whole indices and tables from database.
+00:31:08 [W] It calculated some results and store them back to storage and and so this architecture had couple of problems, especially with scalability and traffic spikes.
+00:31:15 [W] So if there was too much data going through the collector the storage couldn't keep up so which is drop the data.
+00:31:20 [W] and also we couldn't calculate sometimes the aggregation we couldn't run the aggregation jobs because there was just too much data in the database and it was
+00:31:36 [W] Them back to storage and and so this architecture had couple of problems, especially with scalability and traffic spikes.
+00:31:37 [W] So if there was too much data going through the collector the storage couldn't keep up so which is drop the data and also we couldn't calculate sometimes the
+00:31:38 [W] Very resource heavy to run these Park jobs because they had to pull a lot of data from the database into memory.
+00:31:47 [W] So to others this problem, we introduced Kafka that sits between the collector and storage so collector instead of writing to the database it writes data to storage and then there's in gesture that just reads data from Kafka and pushes them to
+00:32:03 [W] So collector instead of writing to database it writes data to storage and then there's in gesture that just reads data from Kafka and pushes them to database.
+00:32:05 [W] This allows us to run streaming jobs.
+00:32:09 [W] So instead of patch jobs that basically this streaming jobs. They connect to the same topic in Kafka and push data or push results to storage.
+00:32:22 [W] So Zipkin compatibility.
+00:32:31 [W] So Jaeger is fully compatible with Zipkin. It can ingest zipped in data in pretty much all the formats and it can also read zipping data from Kafka from the client side Jaeger
+00:32:44 [W] Understand Zipkin context a context propagation protocol be free so you can use Zipkin instrument. It applications with Yeager's in instrumented applications.
+00:32:57 [W] So what is new in a Jaeger since the last Cube Khan in North America?
+00:33:04 [W] So we have done a lot of progress.
+00:33:12 [W] There has been a lot of new features lot of boxes bug fixes and lot of stability improvements.
+00:33:19 [W] So one of the major features is data loss statistics from for clients.
+00:33:22 [W] So we are your clients they can drop data.
+00:33:26 [W] It's obviously a problem with clients drop data.
+00:33:30 [W] they drop the data because they want to keep a reasonable quality of service.
+00:33:31 [W] They don't want to Avila around the back end.
+00:33:33 [W] And so this is a problem, but it used to be bigger problem because we couldn't tell how much data at the clients dropping.
+00:33:40 [W] So now there is a way how clients can notify the back end how much data they dropped?
+00:33:47 [W] We have also done a lot of security improvements.
+00:33:51 [W] So for example, Kafka basic altinity creation and TLS for query service and also eager operator.
+00:34:02 [W] It's able to automatically provision certificates, but also renewed them the expire
+00:34:05 [W] From the usability standpoint.
+00:34:11 [W] Clients dropping so now there's a way how clients can notify the back end how much data they dropped?
+00:34:15 [W] We have also done a lot of security improvements.
+00:34:15 [W] So for example, Kafka basic altinity Cajun and TLS for query service and also eager operator.
+00:34:17 [W] It's able to automatically provision certificates, but also renew them expire from the usability standpoint.
+00:34:18 [W] We compiled and we distribute Jaeger for different architectures. So apart from
+00:34:19 [W] Linux and windows we edit arms 64 and PPC 64
+00:34:22 [W] The next topic is Strays DSL. And this is something that I was personally really excited about and I I worked on this so we wanted to make it easier for data scientists and
+00:34:38 [W] From Linux and windows we edit arm 64 and PPC 64.
+00:34:39 [W] The next topic is Strays DSL. And this is something that I was personally really excited about and I have worked on this.
+00:34:40 [W] So we wanted to make it easier for data scientists and devops people to basically run programmatic
+00:34:46 [W] Against Jaeger and to make this possible and simple we developed a trace DSL Trace domain specific language that is able to query data, but also extract features from the
+00:35:02 [W] and so these DSL is used in jupyter notebooks that connect to Jaeger query but also to cough cough or steaming processing and so the main use case for this is that sometimes if you want to
+00:35:18 [W] but this is the verification requires aggregating lot of data and this is just not possible in the UI because you cannot aggregate or you cannot manually investigate thousands of
+00:35:33 [W] Is in the user interface to really run such a such investigation. You have to write a piece of code that would do it for you.
+00:35:44 [W] The the next new feature is Trace quality metrics. So the same repository with the trace DSL. It also provides some support for for Matrix. This Matrix basically says, how
+00:36:00 [W] Or are your application is cemented?
+00:36:12 [W] So this is very crucial because if your environment is not well instrumented, you will not get the full power of the CVT tracing and the last new feature is re based
+00:36:18 [W] On opentelemetry so we have basically rebased all Jaeger back and components agent collector in gesture all in one on top of opentelemetry
+00:36:34 [W] So all Jaeger all these new components are basically opentelemetry collector and we just added storage functionality to this new component.
+00:36:50 [W] storage function ality to this new component
+00:36:51 [W] so on this slide, you can see the configuration of new Jaeger opentelemetry collector and what is different to the Upstream opentelemetry is that these components can store data to storage
+00:37:05 [W] Data to storage. So we see the section with exporters and with their we see Jaeger elastic search.
+00:37:11 [W] And we see that Jaeger elastic search which just you know, it's the standard elastic switch configuration.
+00:37:20 [W] And to make this very simple, we have made couple of decisions to to support simple upgrade from the current Jaeger components to this new set of
+00:37:36 [W] And so we support the current Jaeger configuration. So you can also configure this new component with the current Jaeger flags and current Jaeger configuration file.
+00:37:52 [W] There's a lot of remaining work. If you are interested to participate or see the progress you can subscribe to to Jaeger tracing / Jaeger repository and which watch for issues tagged with
+00:38:08 [W] States to participate or see the progress you can subscribe to to Jaeger tracing / Jaeger repository and which watch for issues tagged with Aria / Auto.
+00:38:10 [W] Okay, so what is on the road map?
+00:38:16 [W] So we will continue with.
+00:38:19 [W] Integration with opentelemetry and once opentelemetry collector reaches GA.
+00:38:33 [W] We will release these new set of components based on opentelemetry collector.
+00:38:34 [W] And we are also looking at scalable tale based sampling from opentelemetry.
+00:38:41 [W] if you want to learn more about Jaeger, there is Eagle tracing that iof site, but also block on the medium where we publish interesting topics related to Jaeger, but
+00:38:59 [W] to tracing in general
+00:39:03 [W] if you want to get in touch, the best place is probably the
+00:39:09 [W] the community Channel, but also GitHub and mailing list.
+00:39:15 [W] We also do the weekly Community meetings where you can connect and talk to us in person.
+00:39:26 [W] Okay, this is everything what I have prepared for today. And if you have any questions, feel free to ask them you chat.
+00:39:35 [W] Ok, so hello everybody.
+00:39:49 [W] And the first question is does the application has to be
+00:39:52 [W] instrumented with tracing API in order to benefit from Jaeger and the answer is basically yes, and no it really depends how the application is instrumented.
+00:40:05 [W] There are ways that application can be instrumented without modifying the code and also the ways that you have to include the tracing Library when you're building the application and compile it with that.
+00:40:20 [W] Where you can find more information about how the application can be instrumented different ways of instrumentations.
+00:40:39 [W] So it really depends what you prefer to run at the end.
+00:40:45 [W] The second question is what how does the tracing of rung of long running tasks work?
+00:40:58 [W] Will the library collect and accumulate all the data for the Tracy before sending or it will send a single trace point?
+00:41:08 [W] So this really depends how the task or the
+00:41:10 [W] The long running tasks or the method is also instrumented.
+00:41:20 [W] It can be done like in can report data just once once the task finishes or it can report some tracing data for
+00:41:32 [W] the parts of the logic that happens inside this method.
+00:41:39 [W] The next question is can Jaeger basically consume lakhs from other system and somehow merged in the UI.
+00:41:57 [W] The answer is right now.
+00:41:59 [W] once once the task finishes or it can report some tracing data for
+00:42:00 [W] the parts of the logic that happens inside this method.
+00:42:01 [W] The next question is can you Jaeger basically consume lakhs from other system and somehow merged in the UI?
+00:42:02 [W] The answer is right now.
+00:42:02 [W] No, however, there could be such an integration could be very simple and the locks from blogging system could be attached to to the span data if
+00:42:13 [W] There is for example trees ID or span ID in the locks or if those informations are missing than the correlation could be done while the timestamps.
+00:42:27 [W] Next question is Kenny Ager Trace message bus like rabbitmq.
+00:42:36 [W] Yes it can there is already I think instrumentation in the opentracing country organization on GitHub.
+00:42:43 [W] Where you can find no the instrumentation for rabbitmq clients for different languages.
+00:42:50 [W] The next question is how easy agar different to a p.m.
+00:43:01 [W] So traditionally APM
+00:43:02 [W] systems were instrumental obligations by using agents, which means that you didn't have to include the tracing libraries when you are building your application,
+00:43:19 [W] Message bus like rabbitmq.
+00:43:20 [W] Yes it can there is already I think instrumentation in the opentracing country organization on GitHub.
+00:43:21 [W] Where you can find no the instrumentation for rabbitmq clients for different languages.
+00:43:21 [W] The next question is how easy agar different to a p.m.
+00:43:22 [W] So traditionally APM
+00:43:22 [W] systems were instrumented applications by using agents, which means that you didn't have to include the tracing libraries when you are building your application,
+00:43:23 [W] Either of you mainly support libraries that you have to include to your class path when you are building them, so it's more intrusive but however, there are open source libraries that can instrument your code without
+00:43:35 [W] Them on your class path at the end from the functionality perspective.
+00:43:44 [W] I think some IPM Anders, they offer kind of the same the same tracing functionality, but they also offer more more functionality in terms of what is the
+00:43:56 [W] The system and Jaeger at the moment basically allows you to just browse the collected traces. It doesn't do any aggregation.
+00:44:10 [W] Well, it does some but it doesn't do much of aggravation.
+00:44:11 [W] Is there a road map of opentelemetry when support of lox is ready?
+00:44:23 [W] So in Jaeger, we are working on supporting opentelemetry as I mentioned in the roadmap.
+00:44:30 [W] We are rebasing Jaeger back and components on top of opentelemetry collector.
+00:44:35 [W] We don't know when that will be ready.
+00:44:38 [W] It's probably will happen. Once the opentelemetry collector is in final state, so
+00:44:41 [W] So first, we won version released and for the locks, I'm not sure it's better to ask in the opentelemetry community.
+00:44:52 [W] The next question is can you elaborate on tell based sampling?
+00:45:02 [W] What are the pros and cons?
+00:45:06 [W] So help pay be sampling is basically more intelligent sampling where you decide whether a trace is stored or should be stored at the end of the transaction
+00:45:17 [W] Collision because at the end you you have the full trace and you can decide whether to be stored or not based on the data you have collected.
+00:45:31 [W] So let's say there was an error and it's the error is something that you are interested in.
+00:45:38 [W] So you store that trays with had based sampling.
+00:45:43 [W] You don't have any context information at the beginning when you are making the tracing the sampling decision. So tell based.
+00:45:48 [W] Sampling is basically more intelligent in allows you to store the traces that contain some potentially very interesting information.
+00:45:57 [W] Okay, so these were all the questions and thank you very much for your attention and I will be available also on the cncf slack Channel.
+00:46:13 [W] So, thank you very much.
+00:46:15 [W] Are all the questions and thank you very much for your attention and I will be available also on the cncf slack Channel.
+00:46:49 [W] So, thank you very much.

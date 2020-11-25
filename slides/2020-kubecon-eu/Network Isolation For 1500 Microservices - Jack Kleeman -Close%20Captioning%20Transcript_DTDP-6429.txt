@@ -1,0 +1,252 @@
+﻿Network Isolation For 1500 Microservices: DTDP-6429 - events@cncf.io - Thursday, August 20, 2020 7:40 AM - 46 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:01:30 [W] Hi everyone, and thanks for coming.
+00:04:57 [W] My name is Jack. I'm here to talk about Network isolation for 1500 microservices.
+00:05:02 [W] So I'm talking about some work that actually did in my last company, which is a large banking startup in the UK.
+00:05:13 [W] I'm just going to try and refer to them by the word Bank from now on. So this company there are Cloud native from pretty much straight away very early in the Container Wars and they actually are now running a kubenetes cluster. That is about
+00:05:25 [W] Which I think is pretty mad one continuous cost of that entire time even possess it across the sea and I'm Ike raishin.
+00:05:32 [W] just pretty cool and they're running 1500 microservices that are almost all written and go so it's a very homogeneous platform which made my life a lot easier my work primarily on security, but also a lot of cool pufnstuf
+00:05:45 [W] So it's tough host of kubenetes running on AWS.
+00:05:58 [W] So by self-hosted, I mean that we are doing all of the management of it using easy to didn't use Q bad men. We didn't use any of the distributions and we didn't use any managed Services because essentially the platform for datadog of that stuff.
+00:06:02 [W] We also had a homegrown invoice icon servicemeshcon Cody is a demon sir, but we ended up using envoy's a demon set and then eventually went to end their containers and every single poddisruptionbudgets Lon control plane for that and finops.
+00:06:14 [W] Okay, we basically using Calico at cni-genie.
+00:06:20 [W] So you might have seen this picture before I tweeted a few months ago and it got a lot of attention.
+00:06:30 [W] What does this picture of well, this is actually what a bank looks like the dots are Services basically Microsoft versus and the lines are enforced networking rules between those services. So if you're interested in that book isolation, this is a pretty
+00:06:41 [W] For how that can look like a scale, but I know it looks really really chaotic and that's probably just because this isn't really a good representation of anything meaningful.
+00:06:51 [W] It's just a fun diagram that I like to show people I guess and with good tools we create order in the chaos, right?
+00:07:02 [W] So while this might look really complex this isn't necessarily something that needs to be in anyone's brain fortunately.
+00:07:04 [W] It's not in my brain and I'm not here to justify the whole concept of microservices good. Is this too many what I will say is banks are
+00:07:15 [W] Is it computers are fast?
+00:07:16 [W] So by banks are complicated.
+00:07:17 [W] I mean, you're not just looking at a database that describes the bank balance of everyone's account.
+00:07:23 [W] You're also looking at the employee management system.
+00:07:25 [W] You're also looking at a lending decision in system.
+00:07:28 [W] You're looking at a full support chat system that we built completely ourselves.
+00:07:30 [W] weren't using a lot of third parties and stuff like that. You'll see a diagram that have a lot of different stuff and they're tightly into linked which is actually powerful and by computers are fast. I mean, the latency is still fine. It's acceptable especially for a guy.
+00:07:47 [W] Product people don't expect to get that balance and five milliseconds.
+00:07:49 [W] We know the high frequency trading company, but instead people expect us to build features really really quickly and feature velocity is really important and an architecture like this actually allows us to employ hundreds of times a day to never bump into other people's code.
+00:07:59 [W] And I think that was really awesome. So I think this might be great for us.
+00:08:04 [W] We were using a lot of third parties and stuff like that.
+00:08:12 [W] You'll see a diagram that has a lot of different stuff and they're tightly into length, which is actually a powerful and by computers are fast.
+00:08:13 [W] I mean, the latency is still fine. It's acceptable especially for a banking product people don't expect to get that balance and five milliseconds.
+00:08:13 [W] know the high frequency trading company, but instead people expect us to build features really really quickly and feature velocity is really important and an architecture like this actually allows us to deploy hundreds of times a day to never bump into other people's code.
+00:08:21 [W] And I think that was really awesome. So I think this might be great for us.
+00:08:22 [W] So yeah, the lines are never closed and then forced by Network policies.
+00:08:28 [W] I'm just standard kubernative Network policies and obviously the dots are services and managing. These rules is actually really easy surprisingly easy. And that's kind of what I'm here to talk about is how do we design a system that manages rules like this so that it's safe, but also doesn't require
+00:08:30 [W] Is actually really easy surprisingly easy and that's kind of what I'm here to talk about is how do we design a system that manages rules like this so that it's safe but also doesn't require about toil and if you start your cluster off with default deny rules and you tightly skopets single
+00:08:32 [W] Try it into something that is more generic, but that would work great, but we actually start off with flannel and we didn't even have never policies.
+00:08:41 [W] So you kind of have to come to a system that already looks like this.
+00:08:42 [W] You just don't know it yet.
+00:08:46 [W] And then we need to type you specify the whole thing policies and that was really hot and keeping them up to date as also really hot.
+00:08:51 [W] So how do we get going on this well to start with just to play around with the idea of network policies and what the power might be for us.
+00:09:01 [W] We did some really basic things. So for new Services, we did namespace isolation essentially only allowing traffic from the same namespace.
+00:09:12 [W] The reason mainly that this for new Services is that we didn't have a way of proving that it was safe for all services.
+00:09:13 [W] So we just thought we'd do it from now on and then fix issues as they arise but if initially of cars on a new service and she usually called for an effects customers, so the problem with
+00:09:26 [W] Is the most of my computer was actually in the same namespace we didn't have team in space separation for various reasons.
+00:09:30 [W] So it doesn't really give a lot of security value.
+00:09:31 [W] This was kind of a test form and this isn't just a security problem.
+00:09:35 [W] You see also monitoring program.
+00:09:36 [W] don't actually know what connections are happening internally, you're not able to secure it because you don't know what they are and they as we saw in the diagram before this clearly complex. It's clearly something that's going to be difficult to determine accurately.
+00:09:50 [W] So the problem with this is the most of our computer was actually in the same namespace. We didn't have Team men stay separation for various reasons.
+00:10:03 [W] So it doesn't really give a lot of security value.
+00:10:03 [W] This was kind of a test for me and it isn't just a security problem is also monitoring program.
+00:10:06 [W] You don't actually know what connections happening internally you're not able to secure it because we don't know what they are and they as we saw in the diagram before this clearly complex. It's clearly something that's going to be difficult to determine accurately.
+00:10:10 [W] But from a security and regulation perspective the primary problem is as a lot of services that can move money.
+00:10:13 [W] We're a bank of the Lord that we ways the money can be moved and lots of services could talk to those Services even a little supposed.
+00:10:16 [W] It's a huge concern for us is a security team.
+00:10:17 [W] So huge primary concern for Regulators, you know, you want to be showing some isolation between things that handle employee management and things that handle money materials.
+00:10:20 [W] So that was a big concern and solving it was kind of a top priority the time instead of just identifying a list of
+00:10:29 [W] My sister needed high security.
+00:10:35 [W] That's a list of the kind of stale. We kind of wanted to think what the security that we want to attain.
+00:10:36 [W] What's the strict controls that we want and then can we make it generic and automatic and manageable enough that we could just apply to all services.
+00:10:36 [W] You know, why why I only have a few high security services.
+00:10:37 [W] Why not?
+00:10:39 [W] Just treat all your services like they are really dangerous and that actually means that we don't have to maintain really accurate lists of which services do scary stuff and which don't and that's where the nobility could really arise from if
+00:10:51 [W] got that wrong.
+00:10:51 [W] Do you want a total peace of mind with a generic solution that applies to all services?
+00:10:54 [W] So we started to think about how this might look like.
+00:11:08 [W] They're doing a single really strict Network policy and that applied to our banking lecture, which is kind of the core description of all transactions that fundamentally occurred across the whole business.
+00:11:13 [W] So that's a really important service and it's the kind of service that can literally invent money out of midair out of thin air if you get it wrong, so we obviously wanted to restrict that as much as possible and it actually worked fine.
+00:11:22 [W] It's rolled out safely and it worked fine for a long time, but we didn't have any illusions that we could scale this to another thousand servicemeshcon.
+00:11:26 [W] Of men are out of thin air if you get it wrong, so we obviously wanted to restrict that as much as possible and it actually worked fine.
+00:11:34 [W] It's rolled out safely and it worked fine for a long time, but we didn't have any illusions that we could scale this to another thousand Services.
+00:11:34 [W] First of all, one of the problems is that the only team has to review every new client.
+00:11:35 [W] So this is another policy that literally has a list of every label of services that are last call it and that list lives with the other manifest for the service which means it's owned by the Iranian team and they have to review everything and they actually
+00:11:48 [W] I wanted to get a review everything.
+00:11:50 [W] So this was helpful. But most of the time teams don't care about new callers better Services.
+00:11:51 [W] They would be spending a lot of time reviewing that in some cases.
+00:11:53 [W] So that's not very helpful in all cases.
+00:11:54 [W] We want that to be optional. Another problem is that this policy also has to allow things like Prometheus and up streams that have to call everything and that's not stable want to duplicate everywhere.
+00:12:06 [W] also we would just maintaining this manually we had some pretty basic static analysis to remind engineer's to update it but like fundamentally this was
+00:12:17 [W] Pretty scary magalix raishin. We needed to move to a declarative model for Rules by which I mean the fact that a service calls The Ledger is not really a property at The Ledger to property of the of the calling service.
+00:12:27 [W] We want to identify that securely and we want to be able to review it in some cases but it still should live with the calling service in the morning repo and if you maintain it as a property of The Ledger lead to all kinds of Educators the primary one being rollbacks.
+00:12:39 [W] So if you roll back for ledger to before one of the clients have access it, but you don't roll back the
+00:12:42 [W] Don't you have an assistant and that's very scary and I didn't even happen.
+00:12:50 [W] So it makes this very very difficult to deal with.
+00:12:53 [W] I need to meditate amount of pesticide something as simple as that and mostly we didn't really have a way to test policies like this.
+00:13:10 [W] So when we rolled out this policy we checked in mind only countless different ways thinking about every different way that something to call The Ledger.
+00:13:16 [W] I will check it against metrics and and then we basically just roll it out to one pod and check the connection errors.
+00:13:21 [W] Now those are as would have been retried so we knew that was essentially safe, but we can't do that 4,000 or services and that wouldn't always be safe in all instances.
+00:13:30 [W] So the first step towards moving towards a general solution is to take the basic static analysis that we had built and make it really generic and accurate as possible.
+00:13:42 [W] We turn this into a tool called RPC map sadly.
+00:13:49 [W] It's kind of very specific to the way that our PCS that like an AR platform, but I'm sure that you could write the same thing for grpc.
+00:13:55 [W] Obviously Mac would scan all of the important package is for a service and look for things to look like our PCS.
+00:13:57 [W] PCS. We have a list of exclusions for certain edge cases and then it will turn them into files called Rule files.
+00:14:01 [W] Reason the files are really awesome way of describing these links between Services instead of like a list of services me Mo file or whatever else is first of all that you can use code owners.
+00:14:16 [W] So a service like The Ledger you can essentially write a code owner on all the rules that allow song is called The Ledger and they would have the ability to then review new course, but that's not optional second of all you can use tools like find and graft to
+00:14:25 [W] S and determine what's allowed what connections are occurring?
+00:14:29 [W] that's really useful.
+00:14:39 [W] So I really like this approach of using files just empty files and down the line. We can even decide to add metadata police file. So the files could actually have some kind of text format inside them.
+00:14:40 [W] That would do things like allowing points specifically for most of you so that was really powerful.
+00:14:43 [W] I really like it.
+00:14:46 [W] it. What does this actually mean in communities land? Well, we have a deployment pipeline at this company which allows us to take the code in the mono repo and manifesting them on a repo package them up into a dark room.
+00:15:00 [W] Image and package them into the kubenetes manifests and then deploy that right.
+00:15:03 [W] So we decided that we wanted to compile these raw files into kubenetes poddisruptionbudgets service alleged a rule becomes bank.com /e Q SS Ledger equals true and having labels determine all the dependencies of a service is super
+00:15:14 [W] First of all, you can just list on Tom's the corporate merger in kubenetes, which is really useful very fun to do.
+00:15:25 [W] you can also redeposit label and determine all of its dependencies which is helpful and you can use it programmatically.
+00:15:30 [W] So for example, I employ control claim instead of giving you access or giving you configuration for all services and giving you a lot of expensive and point updates for that instead.
+00:15:39 [W] We just give you the ones that the labels say you're allowed to call and that's a massive performance optimization. You reduce the amount of anyway endpoints the assembly I like
+00:15:44 [W] Housing times and that massive increased latency. It's not a security control necessarily, but it is very effective for horse control.
+00:15:52 [W] But when things get interesting is obviously now that we have these labels we can use them in selectors in never policies. And these Noble qualities are now so simple they are almost identical for every single service instead of listing labels that are allowed to call a given service instead.
+00:16:08 [W] Select on all the parts that have a label saying. Yeah, I can call the legend and it makes the policy really simple and the other trick that we used is every pot that gets one of these nothing policies which obviously at first is none of them and eventually becomes
+00:16:23 [W] We also give it a label just Network policy true.
+00:16:31 [W] And now we have a label for everything that already has another policy and that's super powerful because the first metal policy for a pod is dangerous, it restricts inbound traffic, but the second metal quality for a pod can only increase its traffic so it's always
+00:16:41 [W] I saved right policies on things that already have parsec setting guaranteed safe operation.
+00:16:48 [W] And that means we can write Global policies so we can select on every poddisruptionbudgets.
+00:17:10 [W] Be useful for debugging obviously some services do unusual things.
+00:17:18 [W] They have a weird imbalance that weird ports.
+00:17:21 [W] They have no ports may be and in those cases.
+00:17:26 [W] We actually have customized packages. So the policy that you're seeing here would almost never actually be written down.
+00:17:33 [W] there be a base amount of first and it would apply to all other services but some Services would have patches on top of that allowing extra ports or allowing extra so label or whatever else and what's so cool about that is that you now have a programmatically describe the ball list of all the
+00:17:44 [W] So that'll be it.
+00:17:46 [W] And anyone who like me is how to manage a lot of microservices can attest to the fact that it's not really about the Thousand services that all look the same.
+00:17:53 [W] It's about the 300 services that do weird stuff in this project.
+00:17:56 [W] I spent ninety five percent of my time worrying about the web services. So having those written down in a programmatic format is so powerful and I would really recommend that to anyone.
+00:18:04 [W] So we were now ready to write these very service. And the question was how do we roll that out safely?
+00:18:10 [W] So the model works the source of information. The rule files is relatively reliable, but not all the inbound connections know like rbc's not all of them are even in the code base and even within the code base they're going to be else exceptions that obviously Marc Cohn determine things like
+00:18:30 [W] like if I build the servicemeshcon
+00:18:59 [W] But you can kind of packet again other and by one load, I mean you want to know what a policy would drop or what packets would be getting dropped with your current set of policies, but without actually being dropped this is actually really easy to do with color code.
+00:19:14 [W] You essentially want a policy that runs last after all of the policies and therefore more packets will only reach it if they are not already accepted and they're going to be dropped and then in that policy you want to log which means it'll so she go to the common log of full description of the
+00:19:27 [W] Has been dropped and you then want to allow the traffic.
+00:19:34 [W] So what that means is all packets will never be dropped, but they'll always be locked if they're going to be dropped.
+00:19:37 [W] So we call that a dry run policy and in Calico that's very easy to write we run this tool called kubevirt able to tailor it turns. It runs on every node. It tails the colonel logs and it turns these log lines into kubenetes events and turns them also
+00:19:50 [W] That makes it really easy to track what packets weren't being allowed. You can basically get the slack message for every single packet that gets dropped which is really awesome.
+00:20:05 [W] But well this goes wrong and where there's did go wrong is if you log a lot of packets because you're all that a really bad policy may be accidentally I didn't do this.
+00:20:14 [W] The colonel will be logging so much that you can essentially take down that looking on the coast that is not a modifying is not very easy to debug.
+00:20:18 [W] We spent a long time thinking this must be a diverse as fault.
+00:20:19 [W] No, it's not it's kind of my fault and some
+00:20:25 [W] Us so we sort of the think is logging Overkill like we don't need a log line for every packet.
+00:20:29 [W] We kind of just need to know the packets are being dropped as long as you know that it service is receiving traffic that we haven't specified.
+00:20:42 [W] You can usually figure out what the reason is you can go and look at the service what's weird about the service where might it be receiving traffic from but unusual the obviously map wouldn't notice and you could almost always figure out who they really need to know this amount of information.
+00:20:49 [W] It's very helpful to get things like Source IP and the port and stuff like that.
+00:20:54 [W] At from the packet information, but most of the time it's just we need it only if you can't figure out what's going on and that's rare.
+00:21:01 [W] So we wanted to know how many packets are hitting this policy being accepted by this policy. And for what pots
+00:21:03 [W] Fortunately, this is possible with Calico as well because Calico policies are just iptables rules. Right and I potatoes rules have counters and those counters can be striped using a Prometheus exporter and we wrote one of these is called Khao lak accountant is going to essentially every
+00:21:19 [W] Scrape it.
+00:21:23 [W] it'll do iptables save the past half a pack accounts and of determine which chains and those correspond to pods and which policies how many packets of the accepted and if you pop those rates, that's very straightforward.
+00:21:34 [W] So you have to actually use the Calico API and linbit to sort of turn these names that you see on the slide back into Padma aims of back and policy memes that's pretty easy to do.
+00:21:49 [W] And then after that you essentially have the rates for every policy for every pot in your entire platform and you also have the rates of package that actually being dropped to having been accepted by any policy and that is a very useful metrics to have no basically recommend that anyone
+00:21:59 [W] In Calico considers running this tool because it's currently powerful and it's probably easy to set up once we have that tool in conjunction with the logging for instances will be couldn't quite figure out what was going on.
+00:22:13 [W] We basically fully specify the whole system took about a month and by the end of the month. We were seeing Zero Drop packets every day. Every single one is going into slack Channel and they're basically just weren't very many.
+00:22:22 [W] investigated every single one so that point you can turn on enforcement and the way you do that is you just take a dry run policy.
+00:22:33 [W] Which is currently logging and allowing and instead you just knock so we're still getting this like messages when packets are going to be dropped, but you don't actually allow them anymore.
+00:22:39 [W] So they do actually get dropped and this was boring first time. We did it.
+00:22:46 [W] I mean it's meant to people right? It's such a straightforward change and it doesn't really change anything because it was affecting we knew there was a vector node packets, but it's probably one of the biggest step changes in the security of the platform that's ever happened because suddenly you're now in a scenario where an attacker that
+00:22:57 [W] Pardon our Network except for a few other positive supposed to be allowed to call if they do any kind of basic internal exploration, you know, send out some curls or whatever else. We are going to go slack message sport every packet that they send which is a difficult position for
+00:23:13 [W] EMS is packed.
+00:23:14 [W] So that was really awesome.
+00:23:17 [W] So it's about a year later now, I don't work there anymore.
+00:23:24 [W] But I have it on good authority that things are running pretty smoothly Engineers maintain their all files using up Seema oxime out usually means the think about of a very much and gets reviewed in the pull request and quite a few teams actually ended up taking advantage of the fact that you can set
+00:23:37 [W] Donors on all the rules for service and then review all new call us a lot of like payments teams some to do that like a standard practice when the writing a new sort of dangerous service and that's really awesome.
+00:23:50 [W] I'm glad we supported that we don't really see very many issues related to bad rules.
+00:23:58 [W] Obviously my catches most things staging cust catches all the things and metrics as well and system is incredibly tightly specified.
+00:24:04 [W] We got 13,000 rules or rule files in there mono repo. We've got 1,500 services. So that's a
+00:24:10 [W] eight services on average that you can reach out to and previously that number was 1,500. So that's a pretty incredible change.
+00:24:13 [W] So what's next well having spent a few months thinking about internal Network traffic and network isolation the obvious extension to that is what about traffic leaving the platform? And obviously the first thing we're going to tackle will do a lot of the time is pull down
+00:24:30 [W] Hello from elsewhere.
+00:24:34 [W] I mean get Harbor whoever else someplace new provider.
+00:24:39 [W] So we essentially want as many pots as possible to have no public internet access whatsoever.
+00:24:41 [W] We want to give them a story and maybe a hammer internal S3 buckets mean want to give them some Amazon apis.
+00:24:46 [W] We probably don't want to give them the whole internet we want to restrict that as much as possible. And then the services that can have public internet access. We don't just want to give them the whole internet.
+00:24:56 [W] We want to give them the websites the actually particular the DNS made special and there's a few cni-genie can provide this functionality.
+00:25:00 [W] And you can also do it with this Joe that we actually wanted something that tightly integrated with our existing never policy set up.
+00:25:06 [W] So you want to use the same rule files essentially and the same pod labels and then have the effect of instead of a strict and services. We restrict to external services and we create an operator for this.
+00:25:17 [W] It's called a press operator.
+00:25:20 [W] can look it up tiny bit CC x equals operator and I hope to talk about this in another coupon someday, but you might be interested in looking into it. It's really awesome.
+00:25:28 [W] And I'm sure that some people looking at this talk or hearing this talk will be thinking and we want to ask me about why didn't he use this to you?
+00:25:36 [W] Why don't you use me to tell us to forget just affirmative Etc Kuroko Network isolation is really the first step of a longer-term strategy, which will involve isolation on a program Point basis.
+00:25:49 [W] You can use the read an appointment at the right end point for the service and stuff like that. And there's loads of instances where the security network isolation is really compromised by the fact that the service has dangerous and points and safe and Pops. This hasn't been decided yet, but we were thinking pretty close to
+00:26:03 [W] By using a stereo.
+00:26:08 [W] It's very easy to translate our existing Network policy model into sort of History a language.
+00:26:10 [W] And obviously we already have an invoice.
+00:26:11 [W] I'd call servicemeshcon wouldn't be very difficult migration to move to another Envoy Sidecar servicemeshcon.
+00:26:31 [W] Troll as a base, and then it's additionally will be even more valuable to also have encryption of certificates and genuine authentication. So that's something that hopefully we can do the future.
+00:26:42 [W] And that's everything that we have time for.
+00:26:47 [W] Thanks so much for listening.
+00:26:50 [W] This whole talk is basically adapted from a blog post and you can read about that tiny little CC starts Network - isolation.
+00:26:56 [W] You can also follow me on Twitter to actually even and you can email me about this or My Future Self and that you am sure and save your questions and thanks very much. That's all.
+00:27:06 [W] Hi everyone.
+00:27:08 [W] Thanks for coming.
+00:27:10 [W] I hope everyone can hear me.
+00:27:11 [W] Okay, excetera.
+00:27:14 [W] I think most of the questions I've already answered but there's one left and it's probably someone that will come in while I answer so one from Kevin saying well my thoughts on using that word policies for traffic flow in and out of the cluster.
+00:27:26 [W] It with the egress operator that we worked on.
+00:27:33 [W] I think we started to realize that most attacks would involve some kind of egress or some kind of traffic leaving the platform to reach an attackers platform or obviously.
+00:27:45 [W] Yeah, if you're running like hybrid Cloud hybrid cloud or on-premise, it might be reaching other things.
+00:27:51 [W] So I think you know, my basic stance on this is that all traffic should be specified. I mean in practice you should have never policies for everything and you can start off with very generic ones that allow a lot of
+00:27:57 [W] Things and trying to get them down over time and that should include yeah things getting out of Cuba Nettie's and basically try and have as much destruction as possible.
+00:28:09 [W] Even if it's not necessarily a security priority. I think it is so valuable and I touched on this a little bit to have a programmatically queryable list of of things that are happening in your in your cluster that is provably true like, you know that this set of policies as a superset of the traffic that's
+00:28:21 [W] I think that's amazing and just for the kind of monitoring and kind of head space benefit of that.
+00:28:30 [W] I would advise it even if security since isn't a top priority.
+00:28:34 [W] But yeah, I would definitely be keen on using our policies for as much as possible another question from Gaston when using a steer the network policies for keep system and other name spaces aren't protected.
+00:28:45 [W] Yeah, I think we would never have planned to exclusively move everything over to the stove and just dump all this work that we've done. I think we would see it as and I think it's Joe to some extent recommends likes me to some usage of never policies and some areas
+00:29:01 [W] Is the name of the game and it's never acceptable to have with just one control and actually when you're dealing with Regulators in particular, it's never acceptable to just have one control.
+00:29:15 [W] So we would have layered is GOI on top of this to add and point level security and encryption and authentication power.
+00:29:21 [W] We wouldn't have removed what we already have. I think now we're policies like they're my favorite resource in the Holy communities.
+00:29:22 [W] They're so powerful.
+00:29:24 [W] I'm excited for the YouTube and I think that they have a lot of power already and yeah, I would really advise that. Yeah next question for roll.
+00:29:36 [W] What about English operator?
+00:29:37 [W] I don't really know what that would look like because it's already possible to have a lot of control over Ingress. You can essentially not allow pods to receive traffic on host Network. You can only allow it to happen through like so networking buses to or cni-genie you can
+00:29:47 [W] You know have a pi get ways for those things.
+00:29:53 [W] That's probably why I would recommend.
+00:29:55 [W] I don't know if it's quite the same solution the same thing just does not apply for egress generally all pods have Total Access to like the internet and that was the thing we were concerned about but certainly at this company it was not possible to reach a pod from external
+00:30:08 [W] Place you would have to go through some kind of software defined networking Versa and that had all the power that we needed question from other.
+00:30:17 [W] No fun time is right and egg.
+00:30:19 [W] How did you create the diagram the beginning really simple actually, so it's take the rule files. You run find to get a list of them.
+00:30:32 [W] said to turn the list of file names into dot file syntax. So you take the first part which is the name of the calling service and the last part which is the name of the recipient service and you put an arrow in between them and that snyk.
+00:30:38 [W] Now dot syntax.
+00:30:40 [W] Now.
+00:30:40 [W] You have a DOT file and use a piece of software called gephi which turns dot files into beautiful graphs. And then you do some sort of graph partitioning algorithm that sort of doesn't work very well, but it work. Okay, and that's how you do. It is super easy.
+00:30:55 [W] So this is the awesome thing about having these files next up how I thought about nsmcon segmentations.
+00:31:02 [W] I don't know what that is.
+00:31:06 [W] So clearly I haven't thought about it, but I would love to hear more if you can elaborate on that and
+00:31:08 [W] It is a possibility to use Q by B tables Taylor without switching from keeping a policy to Calico Network policies.
+00:31:20 [W] So first of all, you don't need to switch to color canonical policies.
+00:31:25 [W] You just need to have a single policy that logs everything and then allows everything the runs late and there's not currently possible to log using just communities policies. If you're already on Calico, it wouldn't be very difficult to create a PR against Calico or to Fork it specifically against
+00:31:35 [W] I could controllers which is a pretty simple controller you that would allow you to label a policy such that a it runs last and be a logs that would seems possible to do because you can definitely write a policy that allows everything the things you're missing are ordering and logging
+00:31:50 [W] You can trick the ordering thing with alphabetical naming.
+00:31:54 [W] I recommend that but yeah, it probably is possibly the other cni-genie swell.
+00:32:11 [W] cool
+00:32:16 [W] Probably my sounds gone.
+00:32:19 [W] As I'm back.
+00:32:21 [W] Yeah, sounds like it is.
+00:32:23 [W] Okay.
+00:32:23 [W] Great.
+00:32:26 [W] I was just saying about yeah, you do need a few cases of Calico other cni-genie might need it.
+00:32:39 [W] You need it to run last you need it to be able to log and you need it to affect all name spaces or you can create a policy of her name space if you need to or you can write a controller the does that for you but running last is often possible if you name the policy in a certain way and logging
+00:32:46 [W] And we at one point even for to color code to have this functionality will be decided in the end to use color code glove on your horses from Bart is obviously map required to serve the rules.
+00:33:02 [W] Yes. It is that that was a very much a homegrown thing.
+00:33:06 [W] It was passing our code to look for things that look like our rbc's they're not grpc and they create rules for you. You have to build something similar and if someone builds that fits grpc, then that would be incredible, but I don't know what I would look like. It's not required.
+00:33:17 [W] Color accounting clerk accountant is incredibly generic tool. It just looks at your color code rules turns them back into policy names and tells you what's going on.
+00:33:26 [W] It's really awesome.
+00:33:29 [W] It work will work for everyone using color code. So I really advise that and I think that's everything and I certainly other questions.
+00:33:35 [W] That was really fun.
+00:33:36 [W] Thank you, everyone.
+00:33:38 [W] cool
+00:33:40 [W] So I really advise that and I think that's everything and is there any other questions that was really fun?
+00:34:17 [W] Thank you, everyone.
+00:34:18 [W] cool

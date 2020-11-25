@@ -1,0 +1,468 @@
+﻿Go? Bash! Meet the Shell-operator: LOTY-6688 - events@cncf.io - Thursday, August 20, 2020 6:54 AM - 57 minutes
+
+Participant: wordly [W] English (US)
+Participant: wordly [W0] English (US)
+
+Transcription for wordly [W]
+
+00:01:13 [W0] hello, I'm and
+00:01:15 [W0] Take a knative and I'm a Solutions engineer.
+00:05:42 [W0] Take a knative and I'm a Solutions engineer.
+00:05:43 [W0] Hello.
+00:05:46 [W0] I'm Andrea Clemente of and I'm a Solutions engineer at plant.
+00:05:47 [W0] Hi.
+00:05:51 [W0] I am Dmitry story of I am CTO and co-founder of land.
+00:05:53 [W0] Yeah, we both work as planned.
+00:05:57 [W0] We don't want to waste your time telling you about what our company does but of course, we will appreciate it if you check our site.
+00:06:01 [W0] And we don't want to waste your time because today we are going to talk about yes. We are going to talk about Cloud native shell scripting. So let's talk.
+00:06:13 [W0] Yeah, let's do it before expanding on this notion of cloud native shell scripting.
+00:06:24 [W0] We'd like to talk about kubernative.
+00:06:28 [W0] Yes this platform that we all know and love from its wonderfully pi/2 well-thought-out programming patterns upon which the kubernative has built instead of working with low level system stuff such as configuration files
+00:06:39 [W0] Units or even containers we operate on a higher level of abstraction such high-level Concepts as deployment stateful set secret or even node are available to kubernative users when I think
+00:06:55 [W0] Bhai I imagine the file server having folders for each kind of object and objects are resources being Guillermo files on the server and it has simple HTTP API which allows us to do three
+00:07:11 [W0] Harbor first we can get a resource knowing its kind and it's name second. We can change the resource and what's important is that we can only store the object if it's valid, so if
+00:07:26 [W0] And what's important is that we can only store the object if it's valid, so if we try to put the object into the wrong directory or if it's just not formed object. The operation will be denied third.
+00:07:36 [W0] Or if it's just not formed object. The operation will be denied third. We can watch resources to do that.
+00:07:43 [W0] We asked the server and we immediately receive the same result as if we would use the get method but if the results changes we instantly receive a new version and if it changes again,
+00:07:54 [W0] It again and so on. So basically kubernative in some way is the mo file server with tree method.
+00:08:08 [W0] Of course, there are many others but we skip them. We just need those three, but the server except for storing information thus completely nothing and to put life
+00:08:19 [W0] We need controllers.
+00:08:22 [W0] The second most important fundamental thing in kubernative in my list.
+00:08:29 [W0] Generally.
+00:08:30 [W0] We have two types of controllers controllers of the first type read from kubernative process information using some logic and right back to the kubernative and controllers of the second type. They also read from the kubernative, but they
+00:08:44 [W0] And right back to the kubernative and controllers of the second type. They also read from the kubernative, but they change in some way the state of external world.
+00:08:51 [W0] Let's just quickly look into what happens when a user creates a deployment in kubernative.
+00:08:54 [W0] The deployment controller it's part of controller manager get this information and create the replica set. Then the replica set controller get the information and it creates two replicas two pods, but these
+00:09:09 [W0] Parts but these pots are not scheduled.
+00:09:13 [W0] So the scheduler get them scheduled them and write the ammos back but ablated having not filled in them.
+00:09:22 [W0] And then we have kubelet s' running on different nodes and that and they get their pods and update information in external world. But this time it's darker.
+00:09:32 [W0] And then what happens then?
+00:09:36 [W0] Then basically almost all the chain repeats, but in reverse order so kubelet checks status of containers calculate status of the Pod and reported back then
+00:09:52 [W0] that controller receives it update status of the replica said the deployment controller does the same and then user and if he watches receive final status or
+00:10:08 [W0] Later, if he doesn't watch so kublr net has is all about controllers acting together.
+00:10:21 [W0] And if you are going to automate anything you need to write controllers, but we all are sassette means aren't we and we all love Unix philosophy and we all are used to piping and she'll scripting so when
+00:10:33 [W0] Files in the directory.
+00:10:36 [W0] What do we all do all of course we use find and wc and when we want to find the process by name we use PS and grep and maybe an extra grip when we want to find top 10 IP addresses in the log.
+00:10:50 [W0] And maybe an extra grip when we want to find top 10 IP addresses in the log.
+00:10:51 [W0] We kept the log extract the second field because we know that it has an IP address then sort count unique values sort again and take the first 10 and that is our result.
+00:11:05 [W0] That's how we used to do things.
+00:11:09 [W0] And on one side kubernative said apt it to it very well. If you want to find most used images in our cluster we can use kubectl.
+00:11:13 [W0] oopsie TL and tell it to get all pods from all namespaces and extract the image field from them and then use the same approach as with logs sort count unique sort again and take the first ten but
+00:11:29 [W0] Should we do if we want to act on the Change Control us as I've told you and I think as we all knew kubernative is all about controllers and to be successful in the kubernative
+00:11:44 [W0] To be able to write controllers.
+00:11:48 [W0] So what we are trying to do is to implement a tool that will allow us to write controllers or you can call it operators simply and effectively but by using those methods we are used
+00:12:03 [W0] That means and we think we quite succeeded in that.
+00:12:09 [W0] Let's look at an example.
+00:12:14 [W0] We've got a kublr knative cluster with a default namespace and the Secret in it.
+00:12:19 [W0] also got a lot of other namespaces and some of them are marked with a special label. What we'd like to do is take our source secret and copy it into these namespaces some namespaces get added to the cluster later and some of them might have a
+00:12:30 [W0] If it has with like to take our source secret and copied into them as well.
+00:12:37 [W0] If a label is removed from a namespace.
+00:12:39 [W0] We'd like to remove the secret from it. If a source secret changes the like to propagate these changes into labeled namespaces, if a secret is removed from a namespace back,
+00:12:52 [W0] Like to immediately restore it but before we take a look at a minimum implementation of such a controller and shall operator, let's take a look at what she'll operator is showed greater a coil other workloads and coordinators is deployed in a pod in
+00:13:08 [W0] Got hooks directory into which we place executables written in bash in Python in Ruby.
+00:13:16 [W0] You name it?
+00:13:17 [W0] We named this executables hooks Shadow operator subscribes to kubernative events and objects. And if something of interest to us changes, they shall greater executes these hooks. Now. How does it decide
+00:13:33 [W0] This events and objects and if something of interest to us changes, they shall greater executes these hooks. Now. How does it decide what hook and when to execute to solve this problem a hook has two phases
+00:13:38 [W0] When to execute to solve this problem a hook has two phases when Shopper later starts each. It executes each hook with a config argument each hook outputs a camel with its configuration
+00:13:49 [W0] Operation phase passes each hook gets executed when the relevant tweeted event happens.
+00:13:58 [W0] It is executed without any arguments and it gets past a Indian context special Json about whether that will talk a bit later.
+00:14:11 [W0] Now if you use bash we highly recommend that you use shall leap which simplifies writing Hooks and Bash you'd want to implement two functions one for configuration phase in which you are put your beans in configuration and one for the noorali.
+00:14:20 [W0] Emily execution which contains your logic now, we've discussed what a hook is and how it subscribes to coordinate these events, but what objects are interested in we are interested in
+00:14:34 [W0] Source secret since we like to know when a changes and whether it exists or not, very interested in all our name spaces in the cluster to check whether they are label or not, and we are interested in this nation secrets to check whether they are
+00:14:50 [W0] Sort of secret.
+00:15:00 [W0] Let's start off with configuring a subscription to the source secret beating configuration for it is extremely simple we divide that we are interested in secrets in a default namespace with the name my secret once configured
+00:15:07 [W0] We hook will get executed if a sword secret changes and it will receive a binging context which has a name that we've configured and the full object.
+00:15:19 [W0] Next up the namespaces specify a kind namespace and also include a new field that's named Jacob filter. Now.
+00:15:29 [W0] What is the JQ filter?
+00:15:31 [W0] Let's get to the console and find out if it keeps it.
+00:15:35 [W0] He'll get namespace and output it in Json format and pass it through a simple JQ filter will get a new Json object that contains two fields that we are interested in.
+00:15:43 [W0] Once configured in such way a hook will receive a building context that contains an array of filter results for each name space that we in a cluster.
+00:15:58 [W0] This filter results will contain any spaces name and the Boolean value which describes very whether it has a label or not in previous example, we received a full source
+00:16:08 [W0] Renee this subject, but since we are we aren't interested in it.
+00:16:17 [W0] We can remove it with a keep full objects in memory false statement in bidding configuration, and then we'll be missing in building context last but not least destination objects destination Secrets
+00:16:28 [W0] Clinton has been using configuration and then we'll be missing in bending context last but not least destination objects destination Secrets the subscribe to all the secrets with the manage secret. Yes annotation label.
+00:16:33 [W0] All secrets with a manage secret. Yes annotation label and pass it through a jake filter which contains its secrets namespace and a resource version that we
+00:16:44 [W0] The annotation when create a been recreated destination secret we use resource versions and store it in The annotation of a destination secret to compare Secrets.
+00:17:00 [W0] we can compare Secrets byte by byte by why do so when kubernative already stores resource versions for us.
+00:17:04 [W0] If configured in such way a hook will execute when some of these objects change if any of these objects change it will receive three bending context that we've described previously.
+00:17:18 [W0] It will be like a small snapshot of a cluster using this information. We can devise a simple algorithm.
+00:17:30 [W0] We iterate over all namespaces and we check whether it has a label or not. If it has a label We compare ourselves resources version two destinations resource version and if they are similar
+00:17:40 [W0] Of a cluster using this information we can devise a simple algorithm.
+00:17:41 [W0] We iterate over all namespaces and we check whether it has a label or not.
+00:17:41 [W0] If it has a label We compare Source resources version two destinations resource version and if they are similar if they're the same then we have nothing to do and if they differ
+00:17:45 [W0] The same then we have nothing to do and if they differ then we execute cops it'll replace or create even in space does not have a label then we have to make sure that
+00:17:55 [W0] Even in space does not have a label then we have to make sure that no secret is present in the namespace.
+00:18:06 [W0] So we check if a destination secret if a destination object exists, we could see tell deleted and if it does not then we do nothing a batch employment ation is simple as well.
+00:18:10 [W0] We iterate over namespaces we check whether it has a label or not. And if it does we synchronize secrets and if it does we synchronize secrets and if it does not we delete
+00:18:23 [W0] secret the delete secret function contains three lines of bash we check whether a namespace has a secret and we deleted by Static name my secret when we synchronize secrets we compare the source secrets.
+00:18:35 [W0] Right over namespaces we check whether it has a label or not.
+00:18:36 [W0] And if it does we synchronize secrets and if it does we synchronize secrets and if it does not we delete secret the delete secret function contains three lines of bash we check whether a namespace has a secret and we
+00:18:37 [W0] Every Source version to destination Secrets source resource version that we've placed in an annotation and if they differ we construct a new object and we execute coops ETL
+00:18:51 [W0] To make sure that the destination secret is a carbon copy of a source one, as you can see, we've skipped some parts of a script you can see the full version on the URL below and that's how we've implemented
+00:19:07 [W0] Or in 35 lines of Hamill 20 lines and Bash and shallow perimeter that binds them. All together secret copying is not the only thing you can do with the shovel operator few more examples.
+00:19:22 [W0] Let's imagine deployment having three pots and this deployment parts of this deployment use config map for some configuration.
+00:19:31 [W0] They might use environment variables or they might Mount config map as a file, but that's not important.
+00:19:39 [W0] What is important is that when these pods were starting config map was in some State? Let's call it version 1 so all our points are running with this version.
+00:19:52 [W0] But if config map changes to another version pods will continue running with the old version.
+00:19:59 [W0] And what we usually do in such cases.
+00:20:04 [W0] Yes. Usually we add something to our pods template.
+00:20:09 [W0] Let's add The annotation with config map check some so now our deployment had this chick some in it and all the parts also have it.
+00:20:23 [W0] So when we change the config map, we should not forget to also update The annotation or we can use the shell operator and program who that will subscribe to the config map and change the checksum.
+00:20:35 [W0] When a user modifies the config map show operator notices the change and updates checksum and then the kubernative automatic happens kubernative removes one of the pods
+00:20:51 [W0] Waits while it becomes ready and then repeat the same with two other pots.
+00:21:03 [W0] So our deployment becomes fully in Sindh fully running with the updated config map.
+00:21:11 [W0] We are not going to delve into the code for such a kook but you can find the whole examples by following the link below. It should be like here or it probably will be bigger.
+00:21:18 [W0] So like here
+00:21:22 [W0] Okay another example.
+00:21:26 [W0] And let's jump back to the beginning to the slide with llamo file server.
+00:21:37 [W0] We should remember that kubernative zloz us.
+00:21:37 [W0] Not only use the object kinds that are embedded but it allows us to create our own kinds so we can create the kind with the name my scale database.
+00:21:49 [W0] why not and this kind will have only metadata only name and namespace. So basically
+00:21:56 [W0] we have our kubernative with our namespaces and we can create MySQL databases in them and we can use shallow crater to watch for resources of canonical database connect to the real Mezcal database
+00:22:11 [W0] list of databases between what we have in kubernative between the desired State and what we have in the muscular server the
+00:22:23 [W0] observed State between desired and observe State. Okay example number three or four?
+00:22:39 [W0] we want to monitor the cluster Network and one of these is to a to monitor the network. We know it from our previous sysadmin life is by using pink and to do that
+00:22:50 [W0] And one of these is to wait to monitor the network.
+00:22:51 [W0] We know it from our previous sysadmin life is by using pink and to do that we of course use shell operator and we subscribe to nodes and we only need the node name
+00:22:58 [W0] And we only need the node name and its IP address so we can go through the list of notes and just pink each of them, but I want to add a few things to this bending configuration first.
+00:23:10 [W0] I don't want the hook to be executed on any event.
+00:23:16 [W0] So I passed the empty array.
+00:23:23 [W0] So when nodes are added change deleted or whatever. The hook will not be executed.
+00:23:27 [W0] But then when it will be executed every minute, it will be executed every minute and every minute hook will receive the list of all nodes because we have subscribed to them.
+00:23:38 [W0] Okay.
+00:23:40 [W0] Let's that looks cool.
+00:23:48 [W0] I suppose but how do we report problems?
+00:23:49 [W0] How do we report packet loss.
+00:23:53 [W0] Let's look a bit into the code and find out.
+00:23:55 [W0] So we walk through notes extract nodes name and node IP address ping zhi node, and then we write permissions metric shall operator allows hooks to export metrics to Prometheus and all you need to
+00:24:10 [W0] Used to write to the file stored in path to the file is stored in an environment where we're variable, Matrix Path.
+00:24:20 [W0] And you should write the metric name what to do with it in this case.
+00:24:28 [W0] We increment a counter and add the labels you need that's basically eat. So I don't know how many lines of code but not many and you get simple network monitoring.
+00:24:43 [W0] Okay, I suppose now your imagination is running and you have in your mind at least a few things.
+00:24:55 [W0] you want to automate with shell operator or maybe even a dozen and probably that's time for us to finish, but I want to explain one last thing but extremely important thing without
+00:25:07 [W0] Feel comfortable with their sole operator.
+00:25:11 [W0] Kubernative show operator event happens Charles operator executes a hug and it's running but then another woman happens will show operator start another instance of the same hook.
+00:25:28 [W0] Of but what if five events happen simultaneously will show operator run all of them in parallel and what will happen to our resources to our memory CPU.
+00:25:41 [W0] How can we manage them?
+00:25:42 [W0] No, shell operator will not do like that shallow operator has queuing mechanism.
+00:25:52 [W0] So all events are put into the queue before being processed.
+00:25:58 [W0] Let's imagine we have two hooks and having two hooks our kubeedge.
+00:25:59 [W0] I'll have advanced forum for two hooks.
+00:26:04 [W0] first event is for one hook so it's executed and the event is passed to the hook and when it's done the queue proceeds three Nick's three next events.
+00:26:17 [W0] Not for another hook and they are popped out of queue and passed to the hook as a bunch.
+00:26:26 [W0] So hook receives the array of events the array of building contacts.
+00:26:30 [W0] Or this events can be even combined into a bigger one and we have been actually using this all the time through all the examples.
+00:26:45 [W0] The group filled is an responsible for grouping moreover.
+00:26:54 [W0] Two hooks are you can use to cues in one hook or create any combination you want and all you need to do is to add just one field into the building configuration if the cue name is
+00:27:14 [W0] Hook is just round in the default key on and this queuing mechanism totally solves all the resource management problems. A shallow operator has an older brother
+00:27:31 [W0] Adan operator, if you recall a shell operator subscribes to kubernative savants execute hooks, if something interesting happens, this hooks can change something in the carbonated cluster or affect something in an external world
+00:27:46 [W0] Place shallow crater with add an operator. We can bundle a Helm chart with it.
+00:27:56 [W0] Then the hooks that previously affected the qualities or the external world can set modify or delete values in the value store of an add-on operator if such a change is detected
+00:28:08 [W0] Operator executes Helm and passes it the helm chart and the value store. The rendered chart is applied to the kubernative cluster.
+00:28:19 [W0] If she'll operator is a collection of hooks that are triggered by events and add-on operator is the same thing plus Helm integration.
+00:28:31 [W0] OK, that's it for today.
+00:28:32 [W0] Thank you for your time. We hope you enjoyed it. We'll be happy to answer your questions right now, and we will be answering in the slack channel for the next few hours.
+00:28:43 [W0] And yes, just one thing.
+00:28:45 [W0] How can you try shallow crater?
+00:28:49 [W0] The easiest way is to open the shallot Rogers GitHub page and you'll find
+00:28:51 [W0] The getting started guide there and if you liked it, don't forget to start And subscribe to our YouTube channel. We just have started it and check out our other projects. I think you might find them useful.
+00:29:05 [W0] cm
+00:29:13 [W0] Hey, I'm be the first one to answer the first question that we got today question number three from me.
+00:29:29 [W0] Marta. I'm sorry if I'm mispronouncing the names or surnames and the question is what adventured advantage with this spring with tools like operator SDK available now, that is a good question.
+00:29:46 [W0] Operator SDK includes go integration Helm integration and and splint gration our first and foremost goal with the cello operator was to have an extremely low entry threshold in it.
+00:30:02 [W0] And that means she'll scripting languages.
+00:30:07 [W0] Of course JQ helps us enormously with parsing the Json files, but the goal was to create this simple configuration and executed on some changes in the kubenetes cluster.
+00:30:16 [W0] And if the operator is Decay has its opinions has its language buildings and Etc.
+00:30:28 [W0] You're basically free to do anything.
+00:30:28 [W0] Forget things if the hook gets executed just do whatever you'd like with it.
+00:30:41 [W0] and
+00:30:43 [W0] yeah, that would be it.
+00:30:46 [W0] That's it for me me tree.
+00:30:53 [W0] Hi, and the second question we want to answer today is from I okay.
+00:31:14 [W0] I will not say the name because I will mess it up.
+00:31:17 [W0] The question is can the controller be used to minimize the llamo needed in for example deployment. Llamo if I understood right?
+00:31:28 [W0] What you can do if is if you have like a typical applications and you need to deploy many of them. You can creat 0d customers first definition
+00:31:46 [W0] In some specific things about one installation of your typical application and then use just this Theory to like Mass install this application that's
+00:32:01 [W0] Okay, and next question from Andre Andre.
+00:32:11 [W0] Yeah, next question is number 8 and yeah, I will not read the name my apologies, but I will mess it up as well.
+00:32:24 [W0] Would the memory usage change based on how many things that the shell operator has to watch?
+00:32:29 [W0] Yes, it will but we've got a couple of teams stations that help with that. One of them was actually two of them was mentioned in the video.
+00:32:36 [W0] first one that Dimitri has talked about is the optimization that removes the events from the queue.
+00:32:43 [W0] If they are repeating the same thing happens in the client go Library if you've used the row client go wrong Library.
+00:32:56 [W0] It's called the Delta fif older and the second optimization is the field keep full objects in memory that allows us to
+00:33:08 [W0] Ignore story in the full object and store only the JQ filter of it if we are interested only in the single field or a couple of them.
+00:33:18 [W0] That's the answered me tree.
+00:33:21 [W0] Does an event trigger every replica and the answer is it depends? Usually we see if we subscribe to the deployment object and do not filter anything from it each change of this object will
+00:33:48 [W0] Event and Trigger probably your script execution, but you can use JQ filter to filter things you want to act on so on
+00:34:04 [W0] If the output of jakku changes the event will be triggered.
+00:34:17 [W0] So if you don't want to execute on each replica, so you can just ignore status field or status and some I don't remember the fields, but there are some ready and ready
+00:34:27 [W0] Types of things you can ignore them. And in this case, it will not be triggered or you can subscribe not to deployment but two replicas or two pods and do whatever whatever you need and the next question would be from
+00:34:43 [W0] Would be answered by Andrei and the question number would be 12 number 12.
+00:34:55 [W0] Question number 12.
+00:34:57 [W0] Hi.
+00:35:03 [W0] I'm you to shelter ater does it help with checking the secret change and restart wild with the new Secrets?
+00:35:04 [W0] Yes.
+00:35:04 [W0] You can do this you subscribe to Secrets you check whether it contains changed and you delete a pod or update an annotation in a pod template in a deployment or
+00:35:19 [W0] Set that when you can trigger a rolling update of a of a pod controllers. Like like I said previously yeah that that's how you can do this.
+00:35:35 [W0] There are a lot of examples in our repo you can go and check it out and ask us on the later how to do how to
+00:35:44 [W0] talk to do your case.
+00:35:46 [W0] That's it.
+00:35:49 [W0] me tree.
+00:35:49 [W0] That's mainly all the questions.
+00:35:57 [W0] I just want to quickly walk through some things. We answered in text first of all about multi arch support.
+00:36:07 [W0] Yes. We have this in plans. If you're interested, please subscribe to the issue and the the link to the GitHub issue is in the in the text.
+00:36:20 [W0] I know there are four pages of sorry.
+00:36:31 [W0] Yeah, we haven't been explained cane Pages aspect and we having sorry we haven't seen the other pages.
+00:36:47 [W0] Question number 13 config map sink is also done automatically periodically by kubelet but your app needs to do live reload the config also.
+00:37:01 [W0] Yeah. Definitely if you are able to write application in such a way that it will watch the file and on file change reloaded you're okay, but like if you're trying to make
+00:37:16 [W0] Solution it's a bit, you know harder so you can you can go with this approach we described.
+00:37:34 [W0] Andre can you answer the question number 20?
+00:37:52 [W0] I think it's very question number 20 salute and celebrate ER and add-on operator be monitored will buy Prometheus.
+00:37:56 [W0] Yes, they can be the hook the meat and meat re actually talked about it in his segment. You can write metrics in a simple format to a file the
+00:38:10 [W0] Pop is available via our a environment variable that you can access in your script. And if you write Matrix there you can they will be exported to the Prometheus if
+00:38:25 [W0] For you get Prometheus the clarity show operator, and we also export the servicemeshcon.
+00:38:47 [W0] I need three back to you.
+00:38:50 [W0] Okay. Thank you the single question.
+00:38:57 [W0] How can the hook grunts status be gathered?
+00:39:00 [W0] Actually the best way is to use Prometheus metrics and the second question any drawbacks because of bash used in shall operator.
+00:39:12 [W0] Yes, there are drawbacks. If you write a lot of code in bash, it might be, you know read once type of code and you will not be able to change it later. But that's only and if you are, you know
+00:39:22 [W0] if you are not over overcomplicate things you will be fine and
+00:39:31 [W0] The next question is question number 33 and do have a plan to run cybersecurity assessment and testing against the show operator.
+00:39:50 [W0] I think that we are running out of time.
+00:40:03 [W0] We would like to thank you all for your questions and a lot of people ask about presentation. Sorry, it's our fault. We forgot to upload the presentation, but this video
+00:40:14 [W0] libel in few weeks on YouTube and that the best way and we are try we will try to make pdf version of the presentation and also uploaded to platform for you
+00:40:30 [W0] Download thank you very much for your time.
+00:40:37 [W0] It was nice answering your questions.
+00:40:38 [W0] Thanks.
+
+Transcription for wordly [W0]
+
+00:01:13 [W0] hello, I'm and
+00:01:15 [W0] Take a knative and I'm a Solutions engineer.
+00:05:42 [W0] Take a knative and I'm a Solutions engineer.
+00:05:43 [W0] Hello.
+00:05:46 [W0] I'm Andrea Clemente of and I'm a Solutions engineer at plant.
+00:05:47 [W0] Hi.
+00:05:51 [W0] I am Dmitry story of I am CTO and co-founder of land.
+00:05:53 [W0] Yeah, we both work as planned.
+00:05:57 [W0] We don't want to waste your time telling you about what our company does but of course, we will appreciate it if you check our site.
+00:06:01 [W0] And we don't want to waste your time because today we are going to talk about yes. We are going to talk about Cloud native shell scripting. So let's talk.
+00:06:13 [W0] Yeah, let's do it before expanding on this notion of cloud native shell scripting.
+00:06:24 [W0] We'd like to talk about kubernative.
+00:06:28 [W0] Yes this platform that we all know and love from its wonderfully pi/2 well-thought-out programming patterns upon which the kubernative has built instead of working with low level system stuff such as configuration files
+00:06:39 [W0] Units or even containers we operate on a higher level of abstraction such high-level Concepts as deployment stateful set secret or even node are available to kubernative users when I think
+00:06:55 [W0] Bhai I imagine the file server having folders for each kind of object and objects are resources being Guillermo files on the server and it has simple HTTP API which allows us to do three
+00:07:11 [W0] Harbor first we can get a resource knowing its kind and it's name second. We can change the resource and what's important is that we can only store the object if it's valid, so if
+00:07:26 [W0] And what's important is that we can only store the object if it's valid, so if we try to put the object into the wrong directory or if it's just not formed object. The operation will be denied third.
+00:07:36 [W0] Or if it's just not formed object. The operation will be denied third. We can watch resources to do that.
+00:07:43 [W0] We asked the server and we immediately receive the same result as if we would use the get method but if the results changes we instantly receive a new version and if it changes again,
+00:07:54 [W0] It again and so on. So basically kubernative in some way is the mo file server with tree method.
+00:08:08 [W0] Of course, there are many others but we skip them. We just need those three, but the server except for storing information thus completely nothing and to put life
+00:08:19 [W0] We need controllers.
+00:08:22 [W0] The second most important fundamental thing in kubernative in my list.
+00:08:29 [W0] Generally.
+00:08:30 [W0] We have two types of controllers controllers of the first type read from kubernative process information using some logic and right back to the kubernative and controllers of the second type. They also read from the kubernative, but they
+00:08:44 [W0] And right back to the kubernative and controllers of the second type. They also read from the kubernative, but they change in some way the state of external world.
+00:08:51 [W0] Let's just quickly look into what happens when a user creates a deployment in kubernative.
+00:08:54 [W0] The deployment controller it's part of controller manager get this information and create the replica set. Then the replica set controller get the information and it creates two replicas two pods, but these
+00:09:09 [W0] Parts but these pots are not scheduled.
+00:09:13 [W0] So the scheduler get them scheduled them and write the ammos back but ablated having not filled in them.
+00:09:22 [W0] And then we have kubelet s' running on different nodes and that and they get their pods and update information in external world. But this time it's darker.
+00:09:32 [W0] And then what happens then?
+00:09:36 [W0] Then basically almost all the chain repeats, but in reverse order so kubelet checks status of containers calculate status of the Pod and reported back then
+00:09:52 [W0] that controller receives it update status of the replica said the deployment controller does the same and then user and if he watches receive final status or
+00:10:08 [W0] Later, if he doesn't watch so kublr net has is all about controllers acting together.
+00:10:21 [W0] And if you are going to automate anything you need to write controllers, but we all are sassette means aren't we and we all love Unix philosophy and we all are used to piping and she'll scripting so when
+00:10:33 [W0] Files in the directory.
+00:10:36 [W0] What do we all do all of course we use find and wc and when we want to find the process by name we use PS and grep and maybe an extra grip when we want to find top 10 IP addresses in the log.
+00:10:50 [W0] And maybe an extra grip when we want to find top 10 IP addresses in the log.
+00:10:51 [W0] We kept the log extract the second field because we know that it has an IP address then sort count unique values sort again and take the first 10 and that is our result.
+00:11:05 [W0] That's how we used to do things.
+00:11:09 [W0] And on one side kubernative said apt it to it very well. If you want to find most used images in our cluster we can use kubectl.
+00:11:13 [W0] oopsie TL and tell it to get all pods from all namespaces and extract the image field from them and then use the same approach as with logs sort count unique sort again and take the first ten but
+00:11:29 [W0] Should we do if we want to act on the Change Control us as I've told you and I think as we all knew kubernative is all about controllers and to be successful in the kubernative
+00:11:44 [W0] To be able to write controllers.
+00:11:48 [W0] So what we are trying to do is to implement a tool that will allow us to write controllers or you can call it operators simply and effectively but by using those methods we are used
+00:12:03 [W0] That means and we think we quite succeeded in that.
+00:12:09 [W0] Let's look at an example.
+00:12:14 [W0] We've got a kublr knative cluster with a default namespace and the Secret in it.
+00:12:19 [W0] also got a lot of other namespaces and some of them are marked with a special label. What we'd like to do is take our source secret and copy it into these namespaces some namespaces get added to the cluster later and some of them might have a
+00:12:30 [W0] If it has with like to take our source secret and copied into them as well.
+00:12:37 [W0] If a label is removed from a namespace.
+00:12:39 [W0] We'd like to remove the secret from it. If a source secret changes the like to propagate these changes into labeled namespaces, if a secret is removed from a namespace back,
+00:12:52 [W0] Like to immediately restore it but before we take a look at a minimum implementation of such a controller and shall operator, let's take a look at what she'll operator is showed greater a coil other workloads and coordinators is deployed in a pod in
+00:13:08 [W0] Got hooks directory into which we place executables written in bash in Python in Ruby.
+00:13:16 [W0] You name it?
+00:13:17 [W0] We named this executables hooks Shadow operator subscribes to kubernative events and objects. And if something of interest to us changes, they shall greater executes these hooks. Now. How does it decide
+00:13:33 [W0] This events and objects and if something of interest to us changes, they shall greater executes these hooks. Now. How does it decide what hook and when to execute to solve this problem a hook has two phases
+00:13:38 [W0] When to execute to solve this problem a hook has two phases when Shopper later starts each. It executes each hook with a config argument each hook outputs a camel with its configuration
+00:13:49 [W0] Operation phase passes each hook gets executed when the relevant tweeted event happens.
+00:13:58 [W0] It is executed without any arguments and it gets past a Indian context special Json about whether that will talk a bit later.
+00:14:11 [W0] Now if you use bash we highly recommend that you use shall leap which simplifies writing Hooks and Bash you'd want to implement two functions one for configuration phase in which you are put your beans in configuration and one for the noorali.
+00:14:20 [W0] Emily execution which contains your logic now, we've discussed what a hook is and how it subscribes to coordinate these events, but what objects are interested in we are interested in
+00:14:34 [W0] Source secret since we like to know when a changes and whether it exists or not, very interested in all our name spaces in the cluster to check whether they are label or not, and we are interested in this nation secrets to check whether they are
+00:14:50 [W0] Sort of secret.
+00:15:00 [W0] Let's start off with configuring a subscription to the source secret beating configuration for it is extremely simple we divide that we are interested in secrets in a default namespace with the name my secret once configured
+00:15:07 [W0] We hook will get executed if a sword secret changes and it will receive a binging context which has a name that we've configured and the full object.
+00:15:19 [W0] Next up the namespaces specify a kind namespace and also include a new field that's named Jacob filter. Now.
+00:15:29 [W0] What is the JQ filter?
+00:15:31 [W0] Let's get to the console and find out if it keeps it.
+00:15:35 [W0] He'll get namespace and output it in Json format and pass it through a simple JQ filter will get a new Json object that contains two fields that we are interested in.
+00:15:43 [W0] Once configured in such way a hook will receive a building context that contains an array of filter results for each name space that we in a cluster.
+00:15:58 [W0] This filter results will contain any spaces name and the Boolean value which describes very whether it has a label or not in previous example, we received a full source
+00:16:08 [W0] Renee this subject, but since we are we aren't interested in it.
+00:16:17 [W0] We can remove it with a keep full objects in memory false statement in bidding configuration, and then we'll be missing in building context last but not least destination objects destination Secrets
+00:16:28 [W0] Clinton has been using configuration and then we'll be missing in bending context last but not least destination objects destination Secrets the subscribe to all the secrets with the manage secret. Yes annotation label.
+00:16:33 [W0] All secrets with a manage secret. Yes annotation label and pass it through a jake filter which contains its secrets namespace and a resource version that we
+00:16:44 [W0] The annotation when create a been recreated destination secret we use resource versions and store it in The annotation of a destination secret to compare Secrets.
+00:17:00 [W0] we can compare Secrets byte by byte by why do so when kubernative already stores resource versions for us.
+00:17:04 [W0] If configured in such way a hook will execute when some of these objects change if any of these objects change it will receive three bending context that we've described previously.
+00:17:18 [W0] It will be like a small snapshot of a cluster using this information. We can devise a simple algorithm.
+00:17:30 [W0] We iterate over all namespaces and we check whether it has a label or not. If it has a label We compare ourselves resources version two destinations resource version and if they are similar
+00:17:40 [W0] Of a cluster using this information we can devise a simple algorithm.
+00:17:41 [W0] We iterate over all namespaces and we check whether it has a label or not.
+00:17:41 [W0] If it has a label We compare Source resources version two destinations resource version and if they are similar if they're the same then we have nothing to do and if they differ
+00:17:45 [W0] The same then we have nothing to do and if they differ then we execute cops it'll replace or create even in space does not have a label then we have to make sure that
+00:17:55 [W0] Even in space does not have a label then we have to make sure that no secret is present in the namespace.
+00:18:06 [W0] So we check if a destination secret if a destination object exists, we could see tell deleted and if it does not then we do nothing a batch employment ation is simple as well.
+00:18:10 [W0] We iterate over namespaces we check whether it has a label or not. And if it does we synchronize secrets and if it does we synchronize secrets and if it does not we delete
+00:18:23 [W0] secret the delete secret function contains three lines of bash we check whether a namespace has a secret and we deleted by Static name my secret when we synchronize secrets we compare the source secrets.
+00:18:35 [W0] Right over namespaces we check whether it has a label or not.
+00:18:36 [W0] And if it does we synchronize secrets and if it does we synchronize secrets and if it does not we delete secret the delete secret function contains three lines of bash we check whether a namespace has a secret and we
+00:18:37 [W0] Every Source version to destination Secrets source resource version that we've placed in an annotation and if they differ we construct a new object and we execute coops ETL
+00:18:51 [W0] To make sure that the destination secret is a carbon copy of a source one, as you can see, we've skipped some parts of a script you can see the full version on the URL below and that's how we've implemented
+00:19:07 [W0] Or in 35 lines of Hamill 20 lines and Bash and shallow perimeter that binds them. All together secret copying is not the only thing you can do with the shovel operator few more examples.
+00:19:22 [W0] Let's imagine deployment having three pots and this deployment parts of this deployment use config map for some configuration.
+00:19:31 [W0] They might use environment variables or they might Mount config map as a file, but that's not important.
+00:19:39 [W0] What is important is that when these pods were starting config map was in some State? Let's call it version 1 so all our points are running with this version.
+00:19:52 [W0] But if config map changes to another version pods will continue running with the old version.
+00:19:59 [W0] And what we usually do in such cases.
+00:20:04 [W0] Yes. Usually we add something to our pods template.
+00:20:09 [W0] Let's add The annotation with config map check some so now our deployment had this chick some in it and all the parts also have it.
+00:20:23 [W0] So when we change the config map, we should not forget to also update The annotation or we can use the shell operator and program who that will subscribe to the config map and change the checksum.
+00:20:35 [W0] When a user modifies the config map show operator notices the change and updates checksum and then the kubernative automatic happens kubernative removes one of the pods
+00:20:51 [W0] Waits while it becomes ready and then repeat the same with two other pots.
+00:21:03 [W0] So our deployment becomes fully in Sindh fully running with the updated config map.
+00:21:11 [W0] We are not going to delve into the code for such a kook but you can find the whole examples by following the link below. It should be like here or it probably will be bigger.
+00:21:18 [W0] So like here
+00:21:22 [W0] Okay another example.
+00:21:26 [W0] And let's jump back to the beginning to the slide with llamo file server.
+00:21:37 [W0] We should remember that kubernative zloz us.
+00:21:37 [W0] Not only use the object kinds that are embedded but it allows us to create our own kinds so we can create the kind with the name my scale database.
+00:21:49 [W0] why not and this kind will have only metadata only name and namespace. So basically
+00:21:56 [W0] we have our kubernative with our namespaces and we can create MySQL databases in them and we can use shallow crater to watch for resources of canonical database connect to the real Mezcal database
+00:22:11 [W0] list of databases between what we have in kubernative between the desired State and what we have in the muscular server the
+00:22:23 [W0] observed State between desired and observe State. Okay example number three or four?
+00:22:39 [W0] we want to monitor the cluster Network and one of these is to a to monitor the network. We know it from our previous sysadmin life is by using pink and to do that
+00:22:50 [W0] And one of these is to wait to monitor the network.
+00:22:51 [W0] We know it from our previous sysadmin life is by using pink and to do that we of course use shell operator and we subscribe to nodes and we only need the node name
+00:22:58 [W0] And we only need the node name and its IP address so we can go through the list of notes and just pink each of them, but I want to add a few things to this bending configuration first.
+00:23:10 [W0] I don't want the hook to be executed on any event.
+00:23:16 [W0] So I passed the empty array.
+00:23:23 [W0] So when nodes are added change deleted or whatever. The hook will not be executed.
+00:23:27 [W0] But then when it will be executed every minute, it will be executed every minute and every minute hook will receive the list of all nodes because we have subscribed to them.
+00:23:38 [W0] Okay.
+00:23:40 [W0] Let's that looks cool.
+00:23:48 [W0] I suppose but how do we report problems?
+00:23:49 [W0] How do we report packet loss.
+00:23:53 [W0] Let's look a bit into the code and find out.
+00:23:55 [W0] So we walk through notes extract nodes name and node IP address ping zhi node, and then we write permissions metric shall operator allows hooks to export metrics to Prometheus and all you need to
+00:24:10 [W0] Used to write to the file stored in path to the file is stored in an environment where we're variable, Matrix Path.
+00:24:20 [W0] And you should write the metric name what to do with it in this case.
+00:24:28 [W0] We increment a counter and add the labels you need that's basically eat. So I don't know how many lines of code but not many and you get simple network monitoring.
+00:24:43 [W0] Okay, I suppose now your imagination is running and you have in your mind at least a few things.
+00:24:55 [W0] you want to automate with shell operator or maybe even a dozen and probably that's time for us to finish, but I want to explain one last thing but extremely important thing without
+00:25:07 [W0] Feel comfortable with their sole operator.
+00:25:11 [W0] Kubernative show operator event happens Charles operator executes a hug and it's running but then another woman happens will show operator start another instance of the same hook.
+00:25:28 [W0] Of but what if five events happen simultaneously will show operator run all of them in parallel and what will happen to our resources to our memory CPU.
+00:25:41 [W0] How can we manage them?
+00:25:42 [W0] No, shell operator will not do like that shallow operator has queuing mechanism.
+00:25:52 [W0] So all events are put into the queue before being processed.
+00:25:58 [W0] Let's imagine we have two hooks and having two hooks our kubeedge.
+00:25:59 [W0] I'll have advanced forum for two hooks.
+00:26:04 [W0] first event is for one hook so it's executed and the event is passed to the hook and when it's done the queue proceeds three Nick's three next events.
+00:26:17 [W0] Not for another hook and they are popped out of queue and passed to the hook as a bunch.
+00:26:26 [W0] So hook receives the array of events the array of building contacts.
+00:26:30 [W0] Or this events can be even combined into a bigger one and we have been actually using this all the time through all the examples.
+00:26:45 [W0] The group filled is an responsible for grouping moreover.
+00:26:54 [W0] Two hooks are you can use to cues in one hook or create any combination you want and all you need to do is to add just one field into the building configuration if the cue name is
+00:27:14 [W0] Hook is just round in the default key on and this queuing mechanism totally solves all the resource management problems. A shallow operator has an older brother
+00:27:31 [W0] Adan operator, if you recall a shell operator subscribes to kubernative savants execute hooks, if something interesting happens, this hooks can change something in the carbonated cluster or affect something in an external world
+00:27:46 [W0] Place shallow crater with add an operator. We can bundle a Helm chart with it.
+00:27:56 [W0] Then the hooks that previously affected the qualities or the external world can set modify or delete values in the value store of an add-on operator if such a change is detected
+00:28:08 [W0] Operator executes Helm and passes it the helm chart and the value store. The rendered chart is applied to the kubernative cluster.
+00:28:19 [W0] If she'll operator is a collection of hooks that are triggered by events and add-on operator is the same thing plus Helm integration.
+00:28:31 [W0] OK, that's it for today.
+00:28:32 [W0] Thank you for your time. We hope you enjoyed it. We'll be happy to answer your questions right now, and we will be answering in the slack channel for the next few hours.
+00:28:43 [W0] And yes, just one thing.
+00:28:45 [W0] How can you try shallow crater?
+00:28:49 [W0] The easiest way is to open the shallot Rogers GitHub page and you'll find
+00:28:51 [W0] The getting started guide there and if you liked it, don't forget to start And subscribe to our YouTube channel. We just have started it and check out our other projects. I think you might find them useful.
+00:29:05 [W0] cm
+00:29:13 [W0] Hey, I'm be the first one to answer the first question that we got today question number three from me.
+00:29:29 [W0] Marta. I'm sorry if I'm mispronouncing the names or surnames and the question is what adventured advantage with this spring with tools like operator SDK available now, that is a good question.
+00:29:46 [W0] Operator SDK includes go integration Helm integration and and splint gration our first and foremost goal with the cello operator was to have an extremely low entry threshold in it.
+00:30:02 [W0] And that means she'll scripting languages.
+00:30:07 [W0] Of course JQ helps us enormously with parsing the Json files, but the goal was to create this simple configuration and executed on some changes in the kubenetes cluster.
+00:30:16 [W0] And if the operator is Decay has its opinions has its language buildings and Etc.
+00:30:28 [W0] You're basically free to do anything.
+00:30:28 [W0] Forget things if the hook gets executed just do whatever you'd like with it.
+00:30:41 [W0] and
+00:30:43 [W0] yeah, that would be it.
+00:30:46 [W0] That's it for me me tree.
+00:30:53 [W0] Hi, and the second question we want to answer today is from I okay.
+00:31:14 [W0] I will not say the name because I will mess it up.
+00:31:17 [W0] The question is can the controller be used to minimize the llamo needed in for example deployment. Llamo if I understood right?
+00:31:28 [W0] What you can do if is if you have like a typical applications and you need to deploy many of them. You can creat 0d customers first definition
+00:31:46 [W0] In some specific things about one installation of your typical application and then use just this Theory to like Mass install this application that's
+00:32:01 [W0] Okay, and next question from Andre Andre.
+00:32:11 [W0] Yeah, next question is number 8 and yeah, I will not read the name my apologies, but I will mess it up as well.
+00:32:24 [W0] Would the memory usage change based on how many things that the shell operator has to watch?
+00:32:29 [W0] Yes, it will but we've got a couple of teams stations that help with that. One of them was actually two of them was mentioned in the video.
+00:32:36 [W0] first one that Dimitri has talked about is the optimization that removes the events from the queue.
+00:32:43 [W0] If they are repeating the same thing happens in the client go Library if you've used the row client go wrong Library.
+00:32:56 [W0] It's called the Delta fif older and the second optimization is the field keep full objects in memory that allows us to
+00:33:08 [W0] Ignore story in the full object and store only the JQ filter of it if we are interested only in the single field or a couple of them.
+00:33:18 [W0] That's the answered me tree.
+00:33:21 [W0] Does an event trigger every replica and the answer is it depends? Usually we see if we subscribe to the deployment object and do not filter anything from it each change of this object will
+00:33:48 [W0] Event and Trigger probably your script execution, but you can use JQ filter to filter things you want to act on so on
+00:34:04 [W0] If the output of jakku changes the event will be triggered.
+00:34:17 [W0] So if you don't want to execute on each replica, so you can just ignore status field or status and some I don't remember the fields, but there are some ready and ready
+00:34:27 [W0] Types of things you can ignore them. And in this case, it will not be triggered or you can subscribe not to deployment but two replicas or two pods and do whatever whatever you need and the next question would be from
+00:34:43 [W0] Would be answered by Andrei and the question number would be 12 number 12.
+00:34:55 [W0] Question number 12.
+00:34:57 [W0] Hi.
+00:35:03 [W0] I'm you to shelter ater does it help with checking the secret change and restart wild with the new Secrets?
+00:35:04 [W0] Yes.
+00:35:04 [W0] You can do this you subscribe to Secrets you check whether it contains changed and you delete a pod or update an annotation in a pod template in a deployment or
+00:35:19 [W0] Set that when you can trigger a rolling update of a of a pod controllers. Like like I said previously yeah that that's how you can do this.
+00:35:35 [W0] There are a lot of examples in our repo you can go and check it out and ask us on the later how to do how to
+00:35:44 [W0] talk to do your case.
+00:35:46 [W0] That's it.
+00:35:49 [W0] me tree.
+00:35:49 [W0] That's mainly all the questions.
+00:35:57 [W0] I just want to quickly walk through some things. We answered in text first of all about multi arch support.
+00:36:07 [W0] Yes. We have this in plans. If you're interested, please subscribe to the issue and the the link to the GitHub issue is in the in the text.
+00:36:20 [W0] I know there are four pages of sorry.
+00:36:31 [W0] Yeah, we haven't been explained cane Pages aspect and we having sorry we haven't seen the other pages.
+00:36:47 [W0] Question number 13 config map sink is also done automatically periodically by kubelet but your app needs to do live reload the config also.
+00:37:01 [W0] Yeah. Definitely if you are able to write application in such a way that it will watch the file and on file change reloaded you're okay, but like if you're trying to make
+00:37:16 [W0] Solution it's a bit, you know harder so you can you can go with this approach we described.
+00:37:34 [W0] Andre can you answer the question number 20?
+00:37:52 [W0] I think it's very question number 20 salute and celebrate ER and add-on operator be monitored will buy Prometheus.
+00:37:56 [W0] Yes, they can be the hook the meat and meat re actually talked about it in his segment. You can write metrics in a simple format to a file the
+00:38:10 [W0] Pop is available via our a environment variable that you can access in your script. And if you write Matrix there you can they will be exported to the Prometheus if
+00:38:25 [W0] For you get Prometheus the clarity show operator, and we also export the servicemeshcon.
+00:38:47 [W0] I need three back to you.
+00:38:50 [W0] Okay. Thank you the single question.
+00:38:57 [W0] How can the hook grunts status be gathered?
+00:39:00 [W0] Actually the best way is to use Prometheus metrics and the second question any drawbacks because of bash used in shall operator.
+00:39:12 [W0] Yes, there are drawbacks. If you write a lot of code in bash, it might be, you know read once type of code and you will not be able to change it later. But that's only and if you are, you know
+00:39:22 [W0] if you are not over overcomplicate things you will be fine and
+00:39:31 [W0] The next question is question number 33 and do have a plan to run cybersecurity assessment and testing against the show operator.
+00:39:50 [W0] I think that we are running out of time.
+00:40:03 [W0] We would like to thank you all for your questions and a lot of people ask about presentation. Sorry, it's our fault. We forgot to upload the presentation, but this video
+00:40:14 [W0] libel in few weeks on YouTube and that the best way and we are try we will try to make pdf version of the presentation and also uploaded to platform for you
+00:40:30 [W0] Download thank you very much for your time.
+00:40:37 [W0] It was nice answering your questions.
+00:40:38 [W0] Thanks.

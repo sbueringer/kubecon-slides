@@ -1,0 +1,256 @@
+﻿Look Ma, No Pause!: RDDF-5402 - events@cncf.io - Thursday, August 20, 2020 11:54 AM - 156 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:06:39 [W] Hi everyone.
+00:11:01 [W] Welcome to our virtual trip cons knock. Look ma. No pulse.
+00:11:09 [W] I'm gonna tell on you and once you maintainer and I work for everyone, my name is Peter hunt.
+00:11:14 [W] also work for red hat and I'm a crowd maintainer and I also work on pop man. Come on another related Technologies.
+00:11:18 [W] Right, they can get started.
+00:11:21 [W] So what is pause so if you ever want docket psnr kubernative snowed, you must have seen a mysterious container running with a pause image for each one of your pods.
+00:11:35 [W] So if you take a look at the example on the slide, I am running two parts that DNS for and the dashboard part and there are two paws container one for each of them.
+00:11:43 [W] So today in this talk.
+00:11:44 [W] We're going to cover what the pause container is. What is it purpose the
+00:11:48 [W] History and finally how we can get rid of it to make our kubenetes spots slimmer.
+00:11:54 [W] So if you ever sung docket psnr kubernative snowed, you must have seen a mysterious container running with a pause image for each one of your pods.
+00:12:04 [W] So if you take a look at the example on the slide, I'm running two parts and again a spot in the dashboard part and there are two paws container one for each of them.
+00:12:05 [W] So today in this talk.
+00:12:05 [W] We're going to cover what the pause container is. What is it purpose the history and finally how we can get rid of it to make our kubenetes spots lenses.
+00:12:07 [W] Omer
+00:12:07 [W] So so what exactly is the pause container doing so so we can talk about how kubenetes portworx?
+00:12:10 [W] So kubenetes part consists of multiple containers that share Linux namespaces and are nested under a common parts cgroup the pause container holds a shared name spaces for the containers in a pod and it is referred to as a
+00:12:23 [W] doing so okay so we can talk about how kubenetes portworx so Cuban it is part consists of multiple containers that share Linux namespaces and are nested under a common parts cgroup the pause
+00:12:24 [W] And the kubenetes code base.
+00:12:27 [W] So on the right, you can see a picture of what a pot looks like when using cryo as your container on time. So you may have defined a container A and B in your party animal and then we have one infra container and then we have helper processes called
+00:12:41 [W] Audio male and then we have one infra container and then we have helper process is called Kahneman. So if you want to learn more about that, you can watch one of the cryo talks.
+00:12:47 [W] So now let's talk about the history of kubenetes PODS.
+00:12:59 [W] So q and it is was started After the containerd Revolution was brought about by talker Cuban. It is aimed to solve the problem of orchestrating containers across a cluster of nodes note this this was way before the container
+00:13:08 [W] Docker kubernative same to solve the problem of orchestrating containers across a cluster of nodes note this this was way before the containerd runtime interface of the cri-o was introduced to stoppard plugging in
+00:13:13 [W] So the cri-o was introduced to stoppard plugging and different container and times like you can do today with cry or containerd E. And one of the core kubenetes decisions initially was to give each pod unique IP address
+00:13:24 [W] Would you do that using just Docker containers well to do that. You can create and start a container have some custom code that joins the network name space of that container and give it a unique IP address and finally you
+00:13:40 [W] Joins, the network name space of that container and give it a unique IP address and finally you create and start the containers specified in your party animal to join the network name space of that container.
+00:13:47 [W] Congratulations.
+00:13:48 [W] So you have invented the pause container and that's how it came to be and initially it was referred to as the network container in the code base because that's all its job was at that point.
+00:14:02 [W] And then soon after it made sense to enable sharing IPC name space inside a pod to allow the containers in a pod to communicate using IP C Qs and shared memory.
+00:14:17 [W] So with that change the net container was renamed to the much more appropriate poddisruptionbudgets code base, so you can take a look at that pull request that made some of these changes to see the history and the discussions that happened back then
+00:14:29 [W] Lee support for sharing bit namespaces was added and at that point the job of the pause container became a bit more involved than just holding namespaces.
+00:14:44 [W] It was also responsible for reaping pits for all the containers in a pod basically acting is in it for the pod.
+00:14:48 [W] So now we talked about the purpose of the pause container and what it does.
+00:14:58 [W] So, why would we want to drop that container?
+00:14:59 [W] So there are a few reasons and let's talk about the reasons.
+00:15:04 [W] The first is that it uses of space for the binary and for the containerd. So on its own the pods container doesn't occupy a lot of space, but if you are starting a pause container for 200 pods on your know
+00:15:17 [W] Which could be used elsewhere?
+00:15:22 [W] So that's that's the first reason to drop pass.
+00:15:24 [W] The second reason it takes time to create the root filesystem create start Mount the pause container and so on and you can see a small micro Benchmark of that with and without and later on in the talk.
+00:15:40 [W] Peter is going to cover some more performance numbers and the final reason for dropping pause is to just get rid of the additional Process Management overhead, right?
+00:15:54 [W] We have code today to set up monitoring.
+00:15:56 [W] Our and clean up the post process. We have to keep tracking that the pause container is still running Cube. Let has custom code in the image g c code part to make sure that the pause Contemporary Images available.
+00:16:10 [W] if there's no such process, we just get rid of the process management and our goal. If you look at the two diagrams below is to get rid of the pause container now Peter is going to talk about how and in what situations we can get rid of the pause container.
+00:16:26 [W] We can't hear you Peter.
+00:16:34 [W] Yes.
+00:16:39 [W] All if you look at the two diagrams below is to get rid of the first container now Peter is going to talk about how and in what situations we can get rid of the pause container.
+00:16:49 [W] We can't hear you Peter.
+00:16:49 [W] Yes.
+00:16:50 [W] Hello. So we're going to first talk about how to drop the pods container and we for that we need three steps. The first step is we need to emulate the behavior of the nine.
+00:16:54 [W] this
+00:16:56 [W] Next.
+00:17:02 [W] Okay.
+00:17:03 [W] Sorry about that.
+00:17:06 [W] So first we need to emulate what the runtime does when creating a pause container. We need to create a new name space for the Pod. So luckily Linux supports find mounting namespaces.
+00:17:18 [W] So here in this diagram below. We have a little example. So unshare in Linux is great me a new name space and put my process inside of it.
+00:17:26 [W] So I want to share here. We're going to create a net namespace and then the next step is to bind Mount that.
+00:17:30 [W] Our new next namespace proc self nsmcon to a specified location bar one that one underneath that we have another process and that process is on sharing or joining in this case a specified net
+00:17:45 [W] Have another process and that process is on sharing or joining in this case a specified net name space here far run net1 so now both of these windows are in the same net
+00:17:53 [W] The second which was kind of discovered a little bit later is applying Cisco Dell. So Cisco toes and kubenetes are at a pod level. And typically you pass the Cisco totals to the creation of the pods container
+00:18:10 [W] The runtime configures them on behalf of the pot but here we don't have a runtime.
+00:18:18 [W] So we need to do it ourselves.
+00:18:25 [W] So the the time you do it is after you've unshared your pod need to write a file within you know, that within the unshared hierarchy process and then
+00:18:34 [W] Write to the file then for that namespace that Cisco has configured some Cisco examples are IP forward and message Mass. There's like twelve thousand tons of them the third step is you need
+00:18:50 [W] The pod containers use it so luckily run see allows you to configure the namespaces and sit inside of a config Json.
+00:19:06 [W] So here we have the two examples on the left. We have the old way of doing it or we have the proc hid entries for each of the types of namespaces that were sharing on the Pod level these polymers phases where created on behalf of the
+00:19:16 [W] When the pods container was created and now we're using the pit of the pods container to reference those namespaces.
+00:19:24 [W] and cryo the new way of doing it is referring to the file that was buying mounted.
+00:19:32 [W] So on the right, we have these different paths that are the by mounted locations of the newly created Run namespaces.
+00:19:41 [W] So we need someone to do this.
+00:19:44 [W] And so we created this binary which is called pin and S.
+00:19:47 [W] It's not pronounced pins.
+00:19:55 [W] So I've capitalized it's good, but it's pin and asked so that it currently exists in the cryo tree and it was inspired by IP nests commands to create new network name
+00:20:03 [W] Commands to create new network name spaces, but also a little bit on the inspiration came from the go.
+00:20:10 [W] uh go length, which was written for a container networking and as package we exec pin and S from cryo because been an S is written in C and cry as written and go and
+00:20:25 [W] Runtime fusses with the way that namespace is Works a little bit.
+00:20:33 [W] So you need to like lock.
+00:20:33 [W] you need to create a new Go-Go routine and then lock the OS thread so that the runtime doesn't interrupt it and then do all of your specific operations and unlock it upon leaving it.
+00:20:48 [W] Whereas see you just call and share and called Mount it's much more direct so we decided it would be easier and
+00:20:56 [W] you know more convenient to do in C. So we exact from cryo and then so pin and S on chairs its own namespace create a new one by Mountain into a specific location then returns cryo take oh and
+00:21:11 [W] After and sharing it configures this this cuddles and then it returns cryo takes those new amounts of namespaces and hands them to the new container and boom. We did it pause drop problem solved for
+00:21:27 [W] However, we still have the last case The Faded pit namespace.
+00:21:34 [W] So when you create a priori a new pit namespace, you're given pit one with in that pit namespace and then one has a couple of special responsibilities.
+00:21:47 [W] It's responsible for reaping all of the children with in that pit namespace from the Colonel's process table. So for this case the Pod level pin namespace we need to keep some process to do the reaping.
+00:21:58 [W] Otherwise the all of the containers and all of the child processes within that pen name space will leak are there called Zombie processes? And we need some sort of zombie antidote there.
+00:22:14 [W] What about having one of the containers be did one with in the pit namespace, you know say we have two containers in our pot and nginx container and some sidecar container.
+00:22:25 [W] Why not have the nginx containerd just do the reaping and everything? Well number one, we'd have to ensure ordering.
+00:22:28 [W] In the pit namespace we'd have to make sure that the paid one within the pit namespace exits after everything else to actually be able to do the raping of all of its children or else it's children become zombified also. We're not totally positive
+00:22:43 [W] Pick one with in the pit namespace, you know say we have two containers in our pot and nginx container and some sidecar container.
+00:22:45 [W] Why not have the nginx containerd just do the The Reaping and everything?
+00:22:45 [W] Well number one, we'd have to ensure ordering the pit namespace.
+00:22:46 [W] We'd have to make sure that the pit one within the pit namespace exits after everything else to actually be able to do the raping of all of its children or else it's children would become zombified also, we're not totally positive that every containerd.
+00:22:48 [W] Owner has reaping capability so that you actually have to you know specif there's some code that you need to call to actually wait for all of your children to exit and that reaps them from the process table.
+00:22:59 [W] So, you know, Joe schmoe container may not have the reaping capabilities and ultimately the pods container already does all of this.
+00:23:10 [W] We already make sure that the pods container is the first one to enter the Pod and the last one to leave. So it has pit one and it beeps all of the children processes within the container.
+00:23:17 [W] And it has reading capabilities already.
+00:23:19 [W] It has since pit namespaces were introduced.
+00:23:20 [W] luck so unfortunately, you know, we can't drop a pause container for this one case the pit namespace case, but luckily most most containers have a private pit namespace, which means they're they create one a new one for each new
+00:23:35 [W] That the pods container is the first one to enter the Pod and the last one to leave.
+00:23:36 [W] So it has pit one and it beeps all of the children processes within the container and it has reaping capabilities already. It has since pit namespaces were introduced.
+00:23:37 [W] luck so unfortunately, you know, we can't drop a pause container for this one case the pit namespace case, but luckily most most containers have a private pit namespace, which means they're they create one a new one for each new
+00:23:40 [W] Tufin namespace is the default.
+00:23:40 [W] So it's only when a user specifically specifies.
+00:23:43 [W] Okay. I need a pod level namespace.
+00:23:46 [W] Can we not drop the pasta container?
+00:23:52 [W] So let's talk a little bit about cryos Journey from you know, the original way to the new world of dropping the pause container.
+00:24:00 [W] So we started out configuring pods with namespaces via the proc entry for the pit of the pods container as
+00:24:06 [W] we saw in the diagram showing the two different namespace configurations for the newly new container.
+00:24:14 [W] config Json that was represented the option with the pods container, which was the original option then to add support for Kata containers.
+00:24:26 [W] We added an option manage Network.
+00:24:26 [W] Nsmcon.
+00:24:36 [W] By the time cryo was had its initial release and that allowed Kata PMS to work.
+00:24:46 [W] So now you can run cry out across and box inside of a Kata p.m.
+00:24:47 [W] Later.
+00:24:51 [W] We added the option manage and its life cycle to be able to configure most other names faces.
+00:24:55 [W] So the manage nsmcon, we had a security vulnerability say about a little bit less than a year ago. Now that was discovered where
+00:25:06 [W] Some stale state in it and this happened through some weird interactions with um killer and then the the container could join a namespace that was not related to its paws
+00:25:26 [W] To mitigate this we have created, you know manage and it's life cycle to pin all of the other namespaces and that was introduced and cryo 117.
+00:25:41 [W] The security vulnerability was also mitigated in a couple of other ways.
+00:25:50 [W] So it's you don't need to set manage and its life cycle to be mitigated but it is, you know the final nail in the coffin to defeat that vulnerability and finally for performance. We use the infrastructure already created from an agenda.
+00:25:56 [W] Lifecycle mainly pin in s and then we reconfigured some things in cryo to drop the infrared where we are pushing for that to make it in for cryo 119 which releases with coupon 19.
+00:26:11 [W] Structure already created from an agenda its lifecycle mainly pin an S.
+00:26:13 [W] And then we reconfigured some things in cryo to drop the infrared where we are pushing for that to make it in for cryo 119 which releases with coupon 19.
+00:26:15 [W] So let's look at a road map.
+00:26:15 [W] So as mentioned we have we're targeting experimental support for dropping the pods container In Crowd 119.
+00:26:27 [W] And after that we're also going to investigate using poddisruptionbudgets an right now Padma man for Padma in pods. It also has a an infra container to hold the
+00:26:37 [W] Mental support for dropping the pods container In Crowd 119. And after that we're also going to investigate using poddisruptionbudgets S in Padma man right now Padma man for Padma
+00:26:39 [W] God so we're going to investigate using pin and Nats for that case as well as well as for rootless Padma man.
+00:26:50 [W] There's a user name space that every container is put into and we're going to look at maybe having pain enough to configure that as well.
+00:26:52 [W] Finally. We're planning on having pin namespaces and drop-offs beats the default soap in namespaces are we're shooting for the default to be in 119 and then eventually cycle out the
+00:27:05 [W] A version of a pod in a couple of releases and then a couple of releases after that. We'll hopefully drop pods container and nearly all situations unless absolutely needed.
+00:27:21 [W] So now let us go to a demo.
+00:27:23 [W] All right.
+00:27:31 [W] So here we have a local kubernative cluster running.
+00:27:39 [W] So see here where we're going to start off with cryo running with dropping the pods container not dropping the pods container.
+00:27:47 [W] So we're gonna start off with the pods container with the old proc way of doing things.
+00:27:54 [W] So right now so we have no pods.
+00:27:55 [W] Let's create a pod.
+00:27:57 [W] So we have to poddisruptionbudgets.
+00:27:59 [W] It's called they just have a slightly different name.
+00:28:04 [W] Hello, and hello to all they are is an Alpine container that runs top we can thank Padma and for generating these yeah most for me because it's annoying.
+00:28:14 [W] So let's start. Let's run this K apply.
+00:28:19 [W] Hello there. Yeah my flock created.
+00:28:22 [W] So the first thing we can check as we have our hello containerless.
+00:28:28 [W] Running let's use pry cuddle to find the pot ID for cry out.
+00:28:34 [W] A slightly different name. Hello. And hello to all they are is an Alpine container that runs top we can thank Padma and for generating these yeah most for me because it's annoying.
+00:28:36 [W] So let's start. Let's run this K apply.
+00:28:36 [W] Hello.
+00:28:37 [W] So yeah my flock created.
+00:28:37 [W] So the first thing we can check as we have our hello containerd running. Let's use
+00:28:37 [W] Spry cuddle to find the pot ID for cry out.
+00:28:38 [W] So here we have this.
+00:28:39 [W] hello container pot ID is 3a6.
+00:28:47 [W] So let's look at this pod. Is this pause container and run see strimzi list got for this ID and here is our pods container. We can we know this because we can do status.
+00:28:55 [W] Inner pot ID is 3a6.
+00:28:58 [W] So let's look at this pod this pause container and run to see strimzi list.
+00:28:59 [W] I've got for this ID and here is our pods container. We can we know this because we can do status cry o potty that's scope.
+00:29:01 [W] And here we have this pause binary note this pid' 247 freaky.
+00:29:06 [W] To that will be important later.
+00:29:10 [W] So let's look at the pause containers config blob which is specified.
+00:29:18 [W] So this is passed directly to run C and notice here.
+00:29:27 [W] We have not specified any locations for the Pod but instead have asked runcie to create us new name spaces for each of these name spaces for the pod.
+00:29:30 [W] Now we're going to look at our container. So I cuddle.
+00:29:36 [W] Yes.
+00:29:40 [W] So here is the container.
+00:29:40 [W] Hello.
+00:29:43 [W] Let's look at it in systemd.
+00:29:46 [W] So here we have our simple top running.
+00:29:51 [W] Looking at it that are config blob.
+00:30:02 [W] Notice here.
+00:30:09 [W] If we remember our pit value, we have the proc pit and SS the net namespace that runs he created for the Pod that cry.
+00:30:16 [W] Here we have our simple top running.
+00:30:26 [W] Looking at it that our config blob notice here.
+00:30:27 [W] If we remember our pit value we have the proc pit and that's net. So this is the net namespace that runs he created for the Pod that cry.
+00:30:28 [W] I'll then took from the pause took with respect to the pause containers pit and passed it down to run C to create and to
+00:30:30 [W] In creating a container use that Network namespace.
+00:30:32 [W] Same with IPC and UTS.
+00:30:32 [W] So let's try a different way. Let's do it with
+00:30:34 [W] managing and as life cycle and dropping the in for container.
+00:30:48 [W] And so we're gonna create our new pod new and improved hello to so we have hello
+00:30:54 [W] And so we're gonna create our new pod new and improved hello to so we have hello to
+00:30:57 [W] pods
+00:31:00 [W] so notice we have hello to hear.
+00:31:05 [W] This is our ID.
+00:31:09 [W] Let's do a run see list and look for our Paws container.
+00:31:12 [W] Well, we have no pause container. We ask that you drop it.
+00:31:13 [W] Of course we did.
+00:31:19 [W] So in in this situation, we've dropped the pods container and there's no config law that we're keeping associated with it.
+00:31:24 [W] All we've done is have pin and S create the namespaces.
+00:31:25 [W] So let's look Instead at the
+00:31:30 [W] For hello to you can show it's running as cryo and it's our Top Pot.
+00:31:41 [W] Looking for its config blob.
+00:31:47 [W] Let's take a look at it.
+00:31:50 [W] So here notice, we have our newly our newly formatted namespace path. So this was a namespace that was unshared from Pain and S. And then we have we configured The Cisco toes and mounted the
+00:32:06 [W] This location and then cry I took that location and pass it down to the newly created container.
+00:32:16 [W] And now the container is operating within the pods namespaces.
+00:32:22 [W] And any old process can unshare into I copy it and it will process can share into this container like so and now we're in the pods namespace.
+00:32:36 [W] hello, which is different from the host name space.
+00:32:43 [W] So and we can also show it exists we have to
+00:32:46 [W] Got her on symlinks.
+00:32:50 [W] So here we have the net namespace mounted on the host.
+00:32:53 [W] So we're going to talk a little bit now about the performance differences.
+00:33:00 [W] So here we have a script.
+00:33:04 [W] that was run.
+00:33:09 [W] So here it's just creating a hundred unique pods waiting for them to be done being created and then removing the pods. I there's actually a typo here that I miss that all these
+00:33:19 [W] From the hostname space so and we can also show it exists.
+00:33:21 [W] We have to get her on symlinks.
+00:33:21 [W] So here we have the net namespace mounted on the host.
+00:33:22 [W] So we're going to talk a little bit now about the performance differences.
+00:33:22 [W] So here we have a script that was run.
+00:33:23 [W] So here it's just creating a hundred unique pods waiting for them to be done being created and then removing the pods. I there's actually a typo here that I missed it. All these podcasts
+00:33:25 [W] Done in the background so weight is waiting for all of the children to be created.
+00:33:31 [W] So the we have all of those pods created and then we wait and we remove them all and Iran. So we did that a hundred times for one run and then we ran each of those hundred
+00:33:39 [W] Times to see and then average the time difference to see can get a kind of an idea of the performance comparison.
+00:33:50 [W] This is simply with respect to runtime.
+00:33:53 [W] So here we have some results we use multi time to compile and do all the math for us.
+00:34:04 [W] So the first one is with the pause dropped and the second one is with keeping the pause now a couple of things to note so notice how the real the user in the system for both of them are.
+00:34:12 [W] Really pretty similar and that's expected cry cuddle just makes a request to cryo crowd oohs all the actual work and then returns a response to cry cuddle. So time won't be calculating the user in the system for the actual operation
+00:34:25 [W] The user in the system for both of them are actually pretty similar and that's expected cry cuddle just makes a request to cryo crowd oohs all the actual work and then returns a response to cry cuddle.
+00:34:27 [W] So time won't be calculating the user in the system for the actual operation because that's happening in cryo not cry cuddle, and we're only doing time on cry cuddle.
+00:34:33 [W] the only metric that we really get is with the real time. Unfortunately, the real time is, you know a little bit it's
+00:34:40 [W] not like the most accurate because it accounts for Colonel interrupts and everything.
+00:34:49 [W] But you know, I run it a couple of times and there has been a little bit of variation, but ultimately there is a savings in runtime.
+00:34:57 [W] There's also the Savings in overhead which we have we don't show here but if nine hundred kilobytes for every pause container and say, you know macstadium hundred pods on a node.
+00:35:04 [W] That means we have two hundred Meg's.
+00:35:08 [W] Our our pods container all of the pause containers on the Node which you know isn't a ton but all of that could be better used by, you know, the workloads instead of the infrastructure.
+00:35:22 [W] So dropping the pause container fix that and also we're saving on all of the code that would go through to create the pause container.
+00:35:35 [W] We're saving on the Run see exact we're saving on a condom on paying attention to the pods container accounting for when it is variously gets killed all of
+00:35:37 [W] These different things totally avoided all we're doing is we're mounting a file passing that file to run C. And that's like the majority of our pot creation.
+00:35:48 [W] You know isn't a ton but all of that could be better used by, you know, the workloads instead of the infrastructure.
+00:35:57 [W] So dropping the pause container fix that and also we're saving on all of the code that would go through to create the pause container.
+00:35:57 [W] We're saving on the Run see exact we're saving on a condom on paying attention to the pods container accounting for when it is variously gets killed all of these different things totally avoided all we're doing is we're mounting a file passing that file to run.
+00:35:59 [W] Run C and that's like the majority of our pot creation.
+00:36:00 [W] So thanks everyone for joining us.
+00:36:03 [W] Yeah, if you have any questions, yeah, and also if you have questions, but are not watching live then you can always reach out to us and the cryo channel in the kubernative slack
+00:36:14 [W] well
+00:36:16 [W] yeah, if you have any questions whether democracy yeah, and also if you have questions, but are not watching live then you can always reach out to us and the cryo channel in the kubernative slack
+00:36:18 [W] Q
+00:36:20 [W] Hey everyone.
+00:36:32 [W] Sorry about the demo issues will follow up on the coupon runtimes Channel within asking about once we create it so it'll be in a little bit but
+00:36:40 [W] Yeah.
+00:36:42 [W] Are there any questions that are not related to the fact that our demo didn't run?
+00:36:49 [W] There's one question on the Cuban. It is slack that why don't we use IP metas. So the response is like IP in a tennis only handles and network name space.
+00:37:13 [W] So we wrote this custom to pin in us that can handle all the namespaces and also we don't want to stomp on the system directory. So we allow you to customize the directory in which the namespaces are print.
+00:37:23 [W] And on the topic of the demo, so we've been told that it will be fixed in the on-demand version of the talk.
+00:37:48 [W] Yeah, I'm not sure if we'll get ya the on mandor.
+00:37:56 [W] I'm not sure how to work in the for that but yeah, we'll post it and try to get that demo at you guys.
+00:38:02 [W] Sorry about that y'all.
+00:38:04 [W] Okay, there aren't any more question. Well, thanks for tuning in to the TOC books.
+00:38:27 [W] Thanks, everyone.

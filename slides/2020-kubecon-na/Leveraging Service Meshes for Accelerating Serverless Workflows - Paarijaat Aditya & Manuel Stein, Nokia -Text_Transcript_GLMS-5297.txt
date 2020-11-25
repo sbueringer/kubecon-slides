@@ -1,0 +1,182 @@
+﻿Leveraging Service Meshes for Accelerating Serverless Workflows: GLMS-5297 - events@cncf.io - Thursday, November 19, 2020 5:42 PM - 29 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, my name is Manuel and I'm here with my colleague pichette in this presentation.
+00:00:03 [W] We want to take a look at serverless workflows and how using servicemeshcon reduce their completion times.
+00:00:08 [W] Would be stored for the platform to use it and we also need to specify what triggers our code. This may be a scheduled execution reaction to arbitrary cloudevents a request from a mobile apps from our shops Factory site.
+00:00:20 [W] Just anything that could trigger the code the serverless platform handles those triggers and managers deployments autonomously function as a service means that the platform creates containerd instances equipped with runtime and an event Loop that calls the function for every triggered processes.
+00:00:35 [W] So the developers would never have to think about servers again.
+00:00:39 [W] But naturally developers.
+00:00:41 [W] don't just write one function. The may be plenty of functions involved in application large and small to produce the desired results.
+00:00:48 [W] Of course over time. It gets more complex. So we would organize the work into reusable function code when we put the functions in the order of execution.
+00:00:56 [W] There might be some branching conditional invocations mapping.
+00:00:59 [W] However handling a single trigger causes a couple of actions to be invoked all of which we'd want the platform to manage and run for us and this is what we'd like to call a serverless workflow.
+00:01:09 [W] Like any modeling approach the serverless workflow captures the process in a common notation so developers and domain experts can agree on a formal definition a serverless workflow composers multiple invocations it specifies the order of executions and a control flow and it puts all
+00:01:24 [W] casein and a shared context depending on the workflow language invocations may be called action steps or tasks the flowmill be represented as a task graph of a flowchart or state chart data maintained in the context of workflow are called
+00:01:30 [W] Raw data, the cncf has given serverless workflow sandbox project to create a Community Driven workflow language that meets our requirements AS application Developers.
+00:01:28 [W] And I think the foundation is the perfect environment to create a vendor neutral specification.
+00:01:32 [W] If you'd like to know more about the work stopped by the project boots or visit serverless workflow dot IO the workflow language is independent from the runtime implementation of the platform and we asked ourselves.
+00:01:44 [W] How can our platform achieve fast workflow completion from a workflow?
+00:01:48 [W] Active the platform does two things that are on the critical path.
+00:01:51 [W] We need to pass control from one action to the next and we need to pass along the workflow context.
+00:01:57 [W] This talk is organized as follows first.
+00:02:01 [W] I'm going to talk about our decentralized design approach and for ways to deploy Con kubernetes in search for the fastest and most flexible communication and second. My colleague Peridot is going to discuss how we can group functions to avoid most of the communication and still be able to balance
+00:02:16 [W] We allocate on the cluster followed by Design to dynamically control the rebalancing.
+00:02:21 [W] To run workflows we could do a central workflow engine that is patches invocations to function workers.
+00:02:27 [W] We want our workflows to complete fast, but that way we'll always have a centralized component that is on the communication path of all our workflow executions, and it could easily become a bottleneck that we would need to scale separately.
+00:02:39 [W] So instead we're using a decentralized set up this way. We can hand over control directly between instances and we can pipeline workflow and vocations workflow control logic is evaluated at each instance.
+00:02:51 [W] Let's explore four options to deploy this on kubernative.
+00:02:54 [W] Our first pattern are just plain microservices.
+00:02:58 [W] We could use kubernative deployments and expose them as services to pass control from one step to another we can simply use service requests.
+00:03:06 [W] The event Loops here have to be implemented as asynchronous apis to hand over control and not interlock the services to Benchmark this we've set up a series of five steps and we've traced the time to hand over control between every step of the
+00:03:20 [W] Flo
+00:03:23 [W] implementation since a cloudevents was one kilobyte of random data the chart shows a box plot for each of the steps with the time measured between making the service request and receiving it at the next step the median time for transmission across all steps is only
+00:03:38 [W] Our next option is Canady serving using stos inquest every Canadian service deploys with a Q proxy connective serving uses a gateway to accept connections for running service. The request goes through the Gateway and Q proxy before it hits our runtime
+00:03:44 [W] we can redirect requests even when there are no deployments which means Canadians can scale the deployment to zero instances and spin up cold ones when there is no demand this also allows for traffic splitting for example to migrate load between revisions of a service
+00:03:47 [W] And comes with a cost and latency.
+00:03:50 [W] We've measured again our series of five steps and the time it takes to hand over one cloudevents with one kilobyte of data.
+00:03:55 [W] The implementation is the same only now we're using kinetic services that have already running instances and no code starts in this case half of the deliveries take about two milliseconds or less.
+00:04:07 [W] Canadian serving introduces some latency, but we've also moved to a solution that can scale to 0 and that can split traffic for revision management basically using a servicemeshcon to so let's take a look at the third option Canady preventing has been around for two years and provides
+00:04:22 [W] Late binding event sources and event consumers one of these Primitives to fit Define a message passing topology is the sequence.
+00:04:27 [W] It's a simple pipeline that automate the creation of channels and subscriptions. When we trigger a sequence, each stage makes synchronous calls to the destinations and the result is used for the next invocation.
+00:04:38 [W] This makes it pretty easy for developers to use it also provides multiple technology bindings, for example, there's an in-memory implementation and that's binding in a cup car binding available for channels.
+00:04:49 [W] We've used the in-memory Channel implementation that handles the communication our in our scenario with a single pot.
+00:04:56 [W] But message passing almost always uses a store and forward pattern and we would expect this to add some latency.
+00:05:02 [W] So let's take a look at the benchmarks.
+00:05:04 [W] We've measured it sequence of five stages with Blaine kubernative services. So we're using simple deployments for our run times.
+00:05:12 [W] Again, we're measuring only the time it takes from the event leaving the service until its arrival at the next service.
+00:05:18 [W] And again, we're using cloudevents with one kilobyte of data interestingly.
+00:05:23 [W] We found that with the in-memory channel the time between the second last and the last stage in a sequence always has a much higher latency.
+00:05:30 [W] But since we're looking at the median of all deliveries here that doesn't make much of a difference 50% of all the event deliveries take one point four five milliseconds or less or one point four milliseconds if we left out the last step.
+00:05:42 [W] The coupling and late binding of the Eventing sequence and the ability to scale to 0 and migrate between revisions of a kinetic service.
+00:05:46 [W] Let's look at the numbers again.
+00:05:49 [W] We're measuring a sequence of five stages only here. We're deploying Canadia services. And again, we're measuring the time. It takes for one kilobyte cloudevents to be passed from one service to the next.
+00:06:00 [W] 50% of all the event deliveries take four point five nine milliseconds or less or four points.
+00:06:06 [W] We seven milliseconds if we left off the last step now, let's compare the four options and let's also take a look what happens when we transfer larger events the combination of Eventing and serving at a median of 4 and 1/2 milliseconds 4 kilobyte of data, but for two megabyte 50%
+00:06:22 [W] Most 90 milliseconds or less the venting sequence alone invoking basic Services requires 60 milliseconds to pass on to megabyte of event data.
+00:06:25 [W] Kennedy serving without inventing channels delivers the event from one instance to the next with a median of fifty four milliseconds.
+00:06:32 [W] And of course basic Services achieve the best figure here with the median overhead of 40 milliseconds to pass on to megabyte to the next service when we look at even larger data sizes will find that the linear Trend continued we can see that the absolute
+00:06:47 [W] one instance to the next with a median of fifty four milliseconds and of course basic Services achieve the best figure here with the median overhead of 40 milliseconds to pass on to megabyte to the next service when we look at even larger data sizes will
+00:07:31 [W] This increases with larger data sizes, which would be due to the storm forward communication pattern when brokering messages.
+00:07:41 [W] to summarize this part we can state that every additional interaction adds latency, whether it's a proxy or message broker boxing hdb transactions is faster than using a store and forward button, which is especially noticeable with large data
+00:07:56 [W] Want to use communication features like complex routing or message queues. It's always better to separate control from data.
+00:08:03 [W] And we've also got a feeling now how much latency each of the solution causes my colleague powerjet will now present how we can avoid transferring data completely by grouping functions while still being able to balance the load across allocated resources.
+00:08:19 [W] Thank you Manuel.
+00:08:20 [W] So till now we have looked at communication mechanisms that can be used to communicate between functions of a workflow.
+00:08:27 [W] We looked at how the overheads of these mechanisms increase as we try to transfer more data between the functions and we also measured that calling the function directly with the data versus a store and forward approach is actually better from a latency.
+00:08:42 [W] actions of a workflow we looked at how the overheads of these mechanisms increase as we try to transfer more data between the functions and we also measured that calling the function directly with the data versus a store and forward approach is actually
+00:09:04 [W] Eventually, we are trying to look for ways to reduce the overall completion time of a workflow and another factor that affects the completion time of a workflow is how you package the functions of a workflow together.
+00:09:18 [W] Essentially how you group the functions together in all the previous approaches which manual presented there was an implicit assumption that all the functions were running in different containers or poor than that are not explicitly sharing resources.
+00:09:33 [W] Now this Choice can affect the workloads completion time particularly when there is significant data that needs to be transferred between F1 and F2. And in this case either F5 directly calls a remote instances.
+00:09:47 [W] F2 with the data or it calls it by reference by first writing the data locally and then sending a reference and then F2 pulls it or it could write to a global data store and then F2 pulls from there and we have measured the workloads completion time of this.
+00:10:03 [W] approaching an experiment as we increase the size of data that needs to be transferred between the function and the legend here the file ref means that we are passing data by reference and then pulling it and data called means that we are calling the functions
+00:10:18 [W] Payload of the data now.
+00:10:21 [W] What is interesting here in in this approach in this graph rather?
+00:10:26 [W] Is that what happens when you compare this approach with an alternate one where both F1 and F2 are residing within the same container or a pot that is explicitly sharing resources.
+00:10:39 [W] Now here F1 either directly sends data to F2 or via reference but to a local instance of f 2 and here you can see you can clearly see that there is a difference between both these approaches and
+00:10:55 [W] Data local is performing better.
+00:10:43 [W] Now.
+00:10:44 [W] This is not very surprising because there's a lot of research that indicates that we should try to put compute and data together to speed up.
+00:10:53 [W] So what I want to indicate here at a high level is that there are certainly benefits to be gained. If we were to Simply relax the assumption that all functions need to reside in different containers, but instead package
+00:11:09 [W] Of a workflow together inside a single container and potentially we can package all the functions of a workflow inside a single container to speed up the overall workflow execution time.
+00:11:14 [W] And this strategy can work. Well as long as the container has enough resources to handle all the incoming workflow requests.
+00:11:24 [W] But now you're also dealing with a larger unit of deployment which is a workflow with multiple multiple functions that need to be scheduled together and balancing load in this strategy can become tricky consider a situation where you have multiple
+00:11:40 [W] The workflow available and now there is a request going through the top container which causes one of the down stream functions f 2 to start doing some heavy work the top container may continue to request more.
+00:11:48 [W] Sorry continue to accept more requests as the initial part of the workflow may not be aware of congestions happening Downstream in the downstream functions, particularly if the workflow structure is more complex than that is shown here.
+00:12:04 [W] But now that we have admitted this request in this container our choice of staying local would continue to push the request down locally potentially degrading the completion time of all the requests going through this container.
+00:12:19 [W] now even though we have admitted the request we can potentially redirect or rebalance this request internally from the middle of a workflow to a remote instance of F2 if that is not loaded and that way we can still
+00:12:34 [W] Additional resources if they are available elsewhere or we can even create resources on the Fly.
+00:12:32 [W] What I'm trying to indicate here is that when we group functions together and then treat that as a deployment unit one may have to dynamically decide between keeping the requests local
+00:12:47 [W] treat that as a deployment unit one may have to dynamically decide between keeping the requests local versus sending some requests down remotely to other instances of down stream
+00:12:52 [W] some requests down remotely to other instances or down stream functions and other containers and this situation can change dynamically depending on the load and this makes the load balancing more tricky
+00:13:07 [W] But if you now also have to transfer data between functions while rebalancing a request to a remote container here. This request will now have to take the hit of pulling the data first in F2 and then processing it and
+00:13:22 [W] Affect the completion time of this rebalanced request. So we did an experiment to try that out. And what we had was that there were already two requests that are concrete concretely being processed by the top container and now a
+00:13:35 [W] Arrives at the same container now, we make a choice between pushing this request down locally within the same container or calling a remote instance of F2 so that we rebalance this request while pulling this data.
+00:13:47 [W] And then we measure the completion time of this third request and what we find interestingly here is that the situation is completely reversed.
+00:13:57 [W] Even even under load and depending on your applications as the size of the data is increasing to be transferred between the functions.
+00:14:08 [W] It might still turn out to be better to send this third request remotely and take the hit of pulling the data than to push this request down in the local instance of the container.
+00:14:22 [W] So overall what I want to say is that co-locating multiple functions of a workflow inside a single and container can actually accelerate workflow completion time, and we should certainly take advantage of that but treating workflow as a unit of
+00:14:37 [W] early under load will also require internally rebalancing workflow executions from somewhere in the middle of a workflow, which you may not know beforehand where that needs to happen or this situation can also change dynamically
+00:14:50 [W] The kitchen mechanism that you as a serverless platform developer tools for communicating between functions should be flexible enough to support these use cases.
+00:14:47 [W] The mechanism should ideally provide dynamically reconfigurable routing at runtime without having to modify the core logic of your application.
+00:14:57 [W] It should also provide the possibility of Pine Green observability to monitor the situation and should also support configurable load balancing strategies.
+00:15:07 [W] Oh geez, without your application logic having to do all that now fortunately, we don't have to do all of this from scratch.
+00:15:17 [W] There is measured as Envoy haproxy already provide most of these functionalities for microservices and we could adapt this to our use case essentially a servicemeshcon the communication on behalf of a service
+00:15:32 [W] Large set of tools to do that effectively such as retrying load Balancing Act of health checks between services and all this can be configured at runtime via a centralized control plane.
+00:15:41 [W] So when say when service one is trying to call service to service one simply hands over the request to the local Envoy proxy that is running as a sidecar the proxy on behalf of service one load balances
+00:15:57 [W] replicas of service to while providing facilities such as retrying an active health checks this load balancing can also be configured dynamically via the control plane to say something like that now 70% of the
+00:16:02 [W] To should go to this specific replica instead of a purely round robin manner or we can even have more complex load balancing policies. Which Alma why already provides?
+00:16:09 [W] so we feel that servicemeshcon has Envoy is a nice choice of communication mechanism that can be adapted to our use case where there are multiple functions of a workflow co-located inside a single container
+00:16:24 [W] It would provide a dynamically configurable and unified communication mechanism for both intra containerd and Inter container communication.
+00:16:30 [W] So now when F1 wants to call F2, it would simply hand over the request to the local Envoy proxy which would which could be configured to pass down all requests to the local instance of F2 to begin with?
+00:16:46 [W] And if now there is back pressure exerted by the local instance of f to save via 503 status responses to multiple health checks, then the control plane could intervene to reconfigure the proxies to now only
+00:17:01 [W] Local Envoy proxy which would which could be configured to pass down all requests to the local instance of F2 to begin with?
+00:17:05 [W] And if now there is back pressure exerted by the local instance of f to save via 503 status responses to multiple health checks, then the control plane could intervene to reconfigure the proxies to now only sends a
+00:17:54 [W] It's locally and eighty percent of requests should go to remote instances of F2 and this situation can change again depending on the load conditions and may require further reconfiguration.
+00:18:08 [W] So this way we can see how we can leverage these servicemeshcon.
+00:18:38 [W] With rebalancing but actually conducted in this kind of a setup with the envoy proxy redirecting invocations from F1 to F2 either locally or remotely to other replicas of F2 running and other containers.
+00:18:54 [W] So overall in this presentation, we explore different communication mechanisms for function to function Communication in serverless workflows, and we measured their overheads.
+00:19:03 [W] We also measured how co-locating functions of a workloads and accelerate work for completion time.
+00:19:08 [W] We looked at the load balancing challenges this approach creates and the need for dynamic workflow execution rebalancing.
+00:19:15 [W] We also presented how a servicemeshcon act as a unified enabler for this dynamical rebalancing situation while also being leveraged.
+00:19:24 [W] Overall in this presentation we explored different communication mechanisms for function to function Communication in serverless workflows, and we measured their overheads.
+00:19:33 [W] We also measured how co-locating functions of a workloads and accelerate work for completion time.
+00:19:38 [W] We looked at the load balancing challenges this approach creates and the need for dynamic workflow execution rebalancing.
+00:19:44 [W] We also presented how a servicemeshcon act as a unified enabler for this dynamical rebalancing situation while also being leveraged for look.
+00:19:54 [W] Galatea where communication and we have already instantiate some of these ideas and Concepts in our open source serverless platform that we are developing at Nokia Bell Labs called connects micro functions, which provides workloads support as a first class citizen
+00:20:16 [W] We instantiate some of these ideas and Concepts in our open source serverless platform that we are developing at Nokia Bell Labs called K. NYX micro functions which provides workloads support as a first class citizen.
+00:20:28 [W] We already accelerate workflows by co-locating all the functions of a workflow inside a single container and then load balancing externally between replicas of these complete workflow units.
+00:20:40 [W] We also provide a k native and in STO based implementation where our workloads
+00:20:45 [W] close a package sk- services and currently within the container hosting the workflow functions.
+00:20:52 [W] We provide a custom local message bus for communicating between functions, but we are moving towards utilizing the envoy proxy that comes packaged with sto to be used for intra container communication as well and then further utilizing the servicemeshcon.
+00:21:07 [W] Ocean with a control plane to provide Dynamic workloads balancing with locality aware communication.
+00:21:14 [W] So do check us out at connects dot IO and our GitHub repository, which is K next - micro function / GN X where we are actively developing these ideas and also check out our slack
+00:21:29 [W] function / GN X where we are actively developing these ideas and also check out our slack Channel and you can also find the code for all our Benchmark experiments shown in this talk also at our GitHub repository KNX -
+00:21:34 [W] men shown in this talk also at our GitHub repository KNX - micro functions / workflow meshmark
+00:21:42 [W] So with that we finish this presentation and we thank you for your attention and we are happy to take questions now.
+00:21:56 [W] Welcome already have our first question.
+00:22:01 [W] So one was asked about whether this presentation will be available and If you're not familiar with the entire platform, you can go to the breakout sessions and then scroll down to the ones that have already been presented and
+00:22:16 [W] Out whether this presentation will be available and If you're not familiar with the entire platform, you can go to the breakout sessions and then scroll down to the ones that have already been presented and live streamed to watch them on demand
+00:22:40 [W] Demand for the entire time of cube Khan, and then also after Cube Khan these videos will be made available on YouTube after a couple of days or weeks.
+00:22:52 [W] yeah, so the next question is that how does the downstream service determine whether to return 503 in a health check is that a programmatic health check Implement within the downstream container and the yes, we that is how we plan to do to
+00:23:07 [W] Want to go check?
+00:23:10 [W] Chris is something the function is a service platform would be expected to implement this part of the event Loop that is deployed with the function code unless of course someone wants to deploy their own services.
+00:23:26 [W] containers as part of this mesh
+00:23:27 [W] when the next question we get is whether we can could comment on the trade-off between node local but local and containerless Bill events.
+00:23:39 [W] Okay.
+00:23:40 [W] Yeah, it's in generals are ya know local support local and containerless kle watching the hierarchy looking at the the latency of communication, of course in containerless.
+00:23:53 [W] Kle you can do tricks like going through in memory and doing ipc's to hand over control between processes text shared memory and then the pot has of course, it's
+00:24:08 [W] Device, but between part local and node local there is not much latency to be expected since it actually depends on what the networking you see and I plug in is so
+00:24:21 [W] if you have the cube proxy managing your servicing locations, then you're going probably sue if you have one of the later releases so the EPF filter that is pretty fast and it's indistinguishable from
+00:24:30 [W] You have one of the later releases.
+00:24:31 [W] So the EPF filter that is pretty fast and it's indistinguishable from being part local support local and non-local doesn't make much of a difference. That's my
+00:24:43 [W] My idea, okay.
+00:24:50 [W] Then what is of course interesting is?
+00:24:54 [W] When to go across notes, so when what comes with the pot is the resource allocation and that actually with the container itself.
+00:25:05 [W] So when you're exhausting the memory in a single container, that's when you probably have to decide to go to another instance or when you could have application Level measurements.
+00:25:19 [W] For example, the queue lengths if you want to observe that or other ways that
+00:25:24 [W] determine if you're exhausting the resources that you have allocated locally and then then making the decision of where to dispatch the event might also be due to whether you have
+00:25:39 [W] You probably have to decide to go to another instance or when you could have application Level measurements.
+00:25:48 [W] For example, the queue lengths if you want to observe that or other ways that determine if you're exhausting the resources that you have allocated locally and then then making the decision of where to
+00:26:30 [W] Cluster a different side different top of the X which entirely so this all depends, of course on the networking topology and set up.
+00:26:43 [W] Project. Would you like to take the next next one?
+00:26:48 [W] Yeah, so the next is a you co-locating workloads in the same container same board or the same node.
+00:26:54 [W] So at least in what we are experimenting with is to First bundle up functions together with in the same container along with the custom message bus and so yeah, that is the that
+00:27:09 [W] Love co-locating functions together and then between the between the replicas of these workflows running as containers.
+00:27:19 [W] You can load balance requests right now.
+00:27:25 [W] And currently in RK knative based implementation.
+00:27:28 [W] This container is packaged as a kid knative service. So yeah, I mean then there is this entire workflow inside a single part.
+00:28:03 [W] We'll give it a couple more seconds to.
+00:28:09 [W] Wait for questions, like the cube con. You questions took a while to come through also it sometimes it takes a while to type them and I found that
+00:28:25 [W] Before we go to talk really was a lot to digest at once since although it's about the trade-off between whether resource allocation making decisions to load balance.
+00:28:28 [W] And then this this is a complex scheduling problem that we're trying to solve with control plane your stake here. So yeah.
+00:28:56 [W] Oh, thank you for your comment Mitch.
+00:28:58 [W] appreciate it. And thanks everybody for attending our session if there are no more questions now, then I'd like to go to refer you to the slack channel the cncf S like hashtag
+00:29:14 [W] SQL Kang - dad - serverless and we'll be there for follow-up questions.
+00:29:11 [W] And if you watch the video on demand later to recap and want to ask this question, please which out on slack will add the entire time of Kube Khan.
+00:29:23 [W] Thank you.
+00:29:24 [W] Thank you very much.
+00:29:25 [W] Thank you.

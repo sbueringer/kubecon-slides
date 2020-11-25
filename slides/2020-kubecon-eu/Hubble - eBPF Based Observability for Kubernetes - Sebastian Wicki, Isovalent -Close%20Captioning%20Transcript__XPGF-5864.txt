@@ -1,0 +1,285 @@
+﻿Hubble - eBPF Based Observability for Kubernetes: XPGF-5864 - events@cncf.io - Wednesday, August 19, 2020 7:39 AM - 50 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:05:51 [W] All right.
+00:05:54 [W] Thanks for tuning in.
+00:05:54 [W] I'm Sebastian.
+00:05:56 [W] I'm a software engineer at ISO valent the are a security and networking company who is building Hubble, which I'm going to talk about today and selenium.
+00:06:07 [W] And so the talk today is about Hubble and EPF based observability too low for kubernative.
+00:06:11 [W] So what does observability in kubernative mean? What are the kind of questions that Hubble tries to answer kubernative is is kind of a complex piece. So from different perspectives that can be different questions that we might want to ask.
+00:06:27 [W] So if I'm an application developer, I would for example like to know what kind of services my application is depending on I would like to know which HTTP endpoint tsarevitch grpc or Kafka calls are being made from my application.
+00:06:40 [W] We might want to ask so if I'm an application developer, I would for example like to know what kind of services my application is. Depending on I would like to know which HTTP endpoint tsarevitch grpc or Kafka calls are being made
+00:06:42 [W] To know the performance characteristics of these calls if our operations persons.
+00:06:49 [W] I might have a different set of questions.
+00:06:50 [W] I want to ask the my tool. So I found my operations person. I might be more interested in the network communication.
+00:06:57 [W] I want to know if the network communication is failing and if it is failing I want to know the reason why is it a problem with the application?
+00:07:04 [W] Is it problem with the network? If it is a problem with the network?
+00:07:08 [W] I would like to know why and on which layer this problems occurred.
+00:07:11 [W] And if I'm a security person I might have a different set again that I would like to have answered.
+00:07:26 [W] So for example, if I have a kubernative cluster, which has network network policy is enabled I would like to see if these Network policies are being enforced and what connections are being dropped if there is services that are being accessed by outside
+00:07:36 [W] Or that are connecting to outside entities.
+00:07:40 [W] I would also like to know what services are being accessed and but outside entities are being accessed.
+00:07:47 [W] So these are the kind of questions that Hubble tries to answer and Tool it it has chosen to implement to implement its functionality is EPF.
+00:07:59 [W] So I briefly want to talk about EPF what it is and how we use it.
+00:08:05 [W] So if UPF stands for extended Berkeley packet filter, it's a Linux kernel feature that allows you to attach small programs to the Linux kernel in a secure and efficient manner.
+00:08:16 [W] I will again in the briefly explain what this means in more detail in a second.
+00:08:28 [W] So if UPF allows us to attach programs to The Colonel on various attachment points, so on the slide here, I have an example program.
+00:08:30 [W] That is invoked Whenever there is a outgoing packet on a certain interface so I can attach this this program for example on the socket layer and the Never There is a new packet going out on that interface. This EPF program will be
+00:08:46 [W] On various attachment points.
+00:08:47 [W] So on the slide here, I have an example program.
+00:08:47 [W] That is invoked Whenever there is a outgoing packet on a certain interface so I can attach this this program for example on the socket layer and the Never There is a new packet going out on that interface. This EPF program will be
+00:08:49 [W] Event driven mechanism and this sample program here at written in C, but it will be compiled to bytecode this example program will extract the ethernet and IP header.
+00:08:57 [W] and then display us the source and destination IP address of this packet as well as the
+00:09:05 [W] protocol of the payload that is being transported.
+00:09:09 [W] And while ppf originates in the in the networking space, it has been extended to support quite a few other attachment points so we can for example also attached ppf programs to system calls.
+00:09:26 [W] This is a common use mechanism for example to implement sandboxing or we can inspect system calls and maybe block or even rewrite them if needed and the kernel also has some additional capabilities as well to inspect userspace
+00:09:39 [W] But there's also layers deeper down in the network stack where we can access ppf probes and these days you can even push down BPF programs to the network card and the network card will invoke your BPF program whenever it sees a new packet.
+00:09:54 [W] So, why would we want to use this technology in Hubble iot want to use this technology for observability?
+00:10:04 [W] And the biggest reason is that it is completely transparent to the application.
+00:10:05 [W] The application doesn't know that EPF is being used at all.
+00:10:10 [W] So this means you don't have to modify the application which is important, especially when they are troubleshooting issues that you have never seen before where it could not modify the application ahead of time to make sure we cover that use case EPF is also because it's Dynamic it has a minimal
+00:10:22 [W] Whilst at all.
+00:10:23 [W] So this means you don't have to modify the application which is important, especially when you're troubleshooting issues that you have never seen before where he could not modify the application ahead of time to make sure we cover that use case EPF is also because it's Dynamic it has a minimal overhead
+00:10:24 [W] You can attach probes only even beneath them and you can enable and disable them whenever you want to get deeper visibility EPF is already widely available.
+00:10:34 [W] So there's a few large scale users.
+00:10:35 [W] I have a few names are on the slides that were already using it in production and quite large clusters, and it's also vital available on Moscow providers. So Hubble, for example, only requires Linux 4.9 to run.
+00:10:50 [W] If you are interested in more interested more in EPF and its history and how I came along I highly recommend you check out the coupon talk by my coworker Daniel.
+00:11:04 [W] He's also one of the ppf subsystem maintainers and the Linux kernel as well.
+00:11:06 [W] So how would you use in EPF program?
+00:11:14 [W] I have a small example here on the slide.
+00:11:19 [W] So if you have programs are typically loaded by a user space agent.
+00:11:20 [W] This is a user space program that is taking the C program.
+00:11:27 [W] So we have the Z program there in the middle that we want to attach in this case to the socket layer of the Linux kernel.
+00:11:34 [W] So what the agent does is it will take to see program and compile it to bytecode and then load the bytecode so
+00:11:38 [W] Oh EPF is always bytecode similar to for example how JavaScript works so despite code is then loaded into the kernel. And the first thing the colonel does is verify that this byte code does not do anything dangerous by that.
+00:11:50 [W] The coupon talk by my coworker Daniel. He's also one of the ppf subsystem maintainers and the Linux kernel as well.
+00:11:55 [W] So how would they use in EPF program?
+00:11:56 [W] I have a small example here on the slide.
+00:11:56 [W] So if EPF programs are typically loaded by a user space agent.
+00:11:57 [W] This is a user space program that is taking the C program.
+00:11:58 [W] So we have the Z parameter in the middle that we want to attach in this case to the socket layer of the Linux kernel.
+00:12:01 [W] So what the ancient does is it will take this C program and compile it to bytecode and then load the bytecode. So EPF is always by
+00:12:02 [W] Hold similar to for example how JavaScript works so despite code is then loaded into the kernel and the first thing the chronosphere defy that this byte code does not do anything dangerous by that. I mean that it terminates so it kind of block the kernel and that it doesn't crash
+00:12:16 [W] Postal access once we know that this program is safe and kind of Crash the kernel level done optimize it using a just in time compiler which will take the bytecode and emit machine code which is basically as optimized as a kernel
+00:12:17 [W] Socket layer of the kernel and once we have attached the ppf program it will get invoked for each in this case outgoing packet that for example, a process will tell em it by using the senses too cold.
+00:12:31 [W] So whenever there is a there's a sense as to call the packet will be processed by the Linux kernel and we will be informed about each outgoing packet and this and you can then either decide so for example log it for Observer ability purposes, but we can also Implement
+00:12:45 [W] Fireballs or other policies nice feature about ppf is that these programs that the attached to the colonel they can have state and the state is managed by what we call ppf Maps.
+00:12:58 [W] There's different kinds of maps available the kind of most common one is a basic hash-table, but there's other one like ring buffers that we can use to stream events.
+00:13:11 [W] And so this is used to communicate with our user space agent that loaded us into the into the kernel and the PDF map can be used for transferring of stackrox.
+00:13:16 [W] They too can be used for configuration.
+00:13:19 [W] So for example, we can add filter lists to the program using EPF Maps, but it's also used to send down events from the ppf program to the agent and the agent can see what about the ppf program is currently seeing and doing
+00:13:32 [W] So two technologies that use EPF quite heavily to implement networking on kubernative are psyllium and Hubble and the two are the two come together.
+00:13:48 [W] So psyllium is is in its core as cni-genie taner networking interface, which means that it implements the part-to-part network connectivity on your kubernative cluster.
+00:13:57 [W] It is the piece of software that was that is responsible for forwarding your pasta pot traffic, but psyllium has a futurewei
+00:14:03 [W] Additional features on top of that such as for example service based load balancing so it comes with a cube proxy replacement which completely replaces the cube proxy.
+00:14:16 [W] No part and load balancing implementation, but LM also has additional features like it supports kubernative Network policies, which means that we can enforce that are traffic rules.
+00:14:32 [W] We can we can block certain parts from communicating with each other and Salim also provides note to note Interruption Hubble volume kind of manages the network connectivity in our thoughts cluster Hub allows us to observe it and more so
+00:14:43 [W] The network observe observability part of psyllium and it can produce things like service.
+00:14:55 [W] Dependency Maps. It has a troubleshooting API that we can use to to dive deep into what's currently going on and it also provides us with mechanisms for to obtain metrics and to do monitoring.
+00:15:01 [W] So Hubble and psyllium are quite intertwined.
+00:15:09 [W] We released a preview of Hubble late 2019 where we release the basic functionality of metrics and the command line tool as well as a preview of our graphical user interface.
+00:15:22 [W] This was built for selling bonds six so and cinnamon seven, we open sourced the UI and psyllium 1/7 is the first release of psyllium to also contain additional.
+00:15:33 [W] Specifically designed with Hubble and mind so it supports visibility notation and it also gives Hubble more metadata about the trace events that it emits.
+00:15:42 [W] In March, we had our first kind of proper release where we also provide some APA stability and psyllium 0.5 is also the last release that we support for Silliman 7, which is kind of Hubble and psyllium are kind of
+00:15:58 [W] Because in psyllium one point eight, which was reliable, which was released in June 2020 the integrated Hubble and psyllium even closer together.
+00:16:12 [W] So the Hubble API is now directly integrated into the cilium agent which allows us much much better performance and the release itself also had a bit more stability improvements in terms of the UI and stability Improvement in terms of in terms of the UI and
+00:16:23 [W] Hubble Cedar Point Six also comes with initial support for Hubble relay, which allows you to do cluster vitess.
+00:16:33 [W] So how does Hubble uz B PF as I've mentioned before and Stadium 1.8 Hubble and Salem are both part of the same user space process this element, which is responsible for submitting EPF programs to the colonel
+00:16:50 [W] it Hubble and silly marble both part of the same user space process the selling agent, which is responsible for submitting EPF programs to the colonel to implement all the features that have mentioned so
+00:16:55 [W] It's all the features that I've mentioned so psyllium attaches ppf programs to all kubernative pods that are in the system or on the local node.
+00:17:02 [W] And it subscribes to the kubernative API to be informed about kubernative resources such as existing parts existing Services notes that have been added to the Clusters and of course Network policies that still needs to enforce.
+00:17:18 [W] So it takes this data obtained from the community say pi and writes them into ppf Maps which are then accessed by the EPF EPF data path.
+00:17:29 [W] path. So if a part wants to connect to either a pod on the same node or two
+00:17:32 [W] Entities on a remote node, it will have to go through the EPF data path.
+00:17:40 [W] And so the EPF data powerful take the incoming connection will inspect the packages see if it has to do some local ancing. So it will access the service map to find service back and front ends, maybe rewrite the packet, even it will
+00:17:52 [W] Do so it will check the source and destination IP and see if these are known identities which is important for policy enforcement.
+00:18:00 [W] So policy enforcement in the policy map.
+00:18:06 [W] We will see better the source identities allowed to access this destination identity.
+00:18:14 [W] And while the data path is working it will emit trays and drop and policy events at certain points in a code and these events are also pushed into a PDF map the event BPF map which is a
+00:18:22 [W] Omit trace and drop and policy events at certain points in a code and these events are also pushed into a PDF map the events ppf map, which is a ring buffer, which is read by a Hubble
+00:18:26 [W] Is read by a Hubble instance running inside the cilium agent. So this Hubble instance will collect these networking events store them in a historic buffer and expose it via grpc
+00:18:37 [W] It via grpc and metrics and these can then be accessed by other Harbor components such as the clients that we have like the graphical user interface and also Prometheus.
+00:18:46 [W] So to see a bit more details of this behalf, wi which is the graphical user interface which will give you service.
+00:19:00 [W] Dependency Maps. I will have a demo later with the UI to see how it actually looks like in practice.
+00:19:09 [W] The UI also allows you to display flows filter flows. So you can you can only see a subset of flows if you're interested and it also is able to display you'll sell your network policies.
+00:19:13 [W] The command line interface is a bit more for a bit more advanced troubleshooting.
+00:19:20 [W] So it gives you all the details the details that are available in a flow the you can filter the output quite extensively.
+00:19:28 [W] We have quite a few filters that are implemented and comment line utility also has a Json output that you can use to that you can use for scripting and so these are the kind of to the to troubleshooting tools that we have but we also provide metrics.
+00:19:42 [W] Metrics for both operations and application monitoring purposes.
+00:19:48 [W] I will later show a bit more how they work and what they provide but basically they can be used in your typical graph Anna and Prometheus stack to monitor things going on in your cluster.
+00:20:03 [W] So the Apple API, how does it how does it provide table API provides access to recent flows that occurred in the cluster typically its 4K events that are stored in each node, but this is configurable.
+00:20:20 [W] You can also stream currently ongoing flows as well.
+00:20:24 [W] You can submit filters and only see the flows which match the filter or you can exclude flows based on the filter and Insulin 1.8. We also added a new feature for a cluster by disability. So the plate
+00:20:36 [W] is re implemented by this componentconfig will relay which you can talk to and it will push down the filters to all the different notes to make sure that you can you can find all the flows occurring in your cluster and as I've mentioned
+00:20:49 [W] by both the CLI and the UI
+00:20:52 [W] So what what does the what does the API provided details?
+00:20:59 [W] It has a view information that are obtained directly from the EPF data path. So flowmill the data such as ethernet IP headers TCP facts, but also things like HTTP and DNS traffic as a I will show that in a second. It's annotates
+00:21:13 [W] information such as part names labels service names no names and if available it will also match the domain names and we'll show you the domain names of either the source or destination
+00:21:29 [W] Flowmill n't and the also attach a few silly on based information such as security identities drop reasons and politics policy verdict decisions.
+00:21:43 [W] So in the in the screenshot there you see how the CLI looks like so we have a small for pot example. This is stolen from the cilium getting started guide and we see that we can use Hubble observed as you lie to filter
+00:21:55 [W] So in this case, I'm doing a class equals X Wing label filter to only see events from part emitted matching this filter and the invoke it in follow mode, which means we'll see all the life flows and this example, we see that the X-Wing part is
+00:22:10 [W] To do a to do a DNS lookup is either some Port 53, which is UDP traffic and this is Then followed by the HTTP request to an outside entity. In this case.
+00:22:24 [W] It's a apparently accessing this knative come. So we see the full TCP connection including the shutdown as well.
+00:22:35 [W] And at the bottom there are be see how it looks like if the pot if a part is accessing something which it is not supposed to so in this case the excellent part managed by the rebels is trying to access to death storageos.
+00:22:41 [W] Our which is managed by the Empire and the Empire has installed a policy that does not allow this flow to go through.
+00:22:50 [W] So how plan firms us about this drop as well.
+00:22:51 [W] Old information that I've showed you in the previous slide is information obtained directly from the EBP of data path, but Hubble can go deeper if you opt into our second is ability.
+00:23:08 [W] We can also see more details. So what this will do is that psyllium if we if we annotate a part. So in this example the annotate to Tie Fighter pod with a disability notation, which says that we are interested in outgoing traffic.
+00:23:21 [W] Outgoing HTTP traffic on Port 80. So as soon as we do this psyllium built transparently insert the proxy between the part and all outgoing and points.
+00:23:30 [W] And this then allows Hubble to observe.
+00:23:37 [W] Proxy in this case.
+00:23:47 [W] So we have support for HV DNS TLS Kafka, but the Android proxy can also be extended with different protocols and you can then access this data from from Hubble as we can see in the screenshot.
+00:23:56 [W] there. We are using the CLI to filter.
+00:23:59 [W] Based on the so we're filtering from the Tie Fighter pod, which we just annotated and we tell it to only display us HTTP request is HTTP responses, which have status code 200 and the output is as Jason.
+00:24:14 [W] So using JQ, we can actually then parse this Jason and in this case, I'm just extracting the else have an information and you see all the metadata that Hubble has access to which is things like the latency but also details like which your elbows accessed and the HTTP headers. So in this case you
+00:24:32 [W] That the request was apparently made by curl.
+00:24:34 [W] So this is what the API can do but as I mentioned Hubble also provides metrics. So these are based on the openmetrics format Hubble exposes a metrics and point and each node, which then can be scraped by Prometheus.
+00:24:48 [W] There is a ton of built-in metrics that I'm not be able to show all of them today, but we have metrics for HTTP details.
+00:24:59 [W] So the L7 visibility details can also be integrated to metrics.
+00:25:02 [W] We have metrics for DNS requests and responses. We have metrics for
+00:25:03 [W] P Flags, we have metrics for icmp and many many more.
+00:25:09 [W] So this is what the API can do but as I mentioned Hubble also provides metrics. So these are based on the openmetrics format Hubble exposes a metrics and point and each node, which then can be scraped by Prometheus.
+00:25:12 [W] There is a ton of built-in metrics that I'm not be able to show all of them today, but we have metrics for HTTP details.
+00:25:13 [W] So the L7 visibility details can also be integrated to metrics. We have metrics for DNS requests and responses. We have metrics for TC.
+00:25:14 [W] EP Flags, we have metrics for icmp and many many more.
+00:25:15 [W] We also provide dashboards for Accra Ghana. So you can just use our example dashboards to to try this out and the metrics can be enabled and disabled on a metric biometric basis and it's also quite easy to write new metrics as well.
+00:25:22 [W] You can just use our example dashboards to to try this out and the metrics can be enabled in to the disabled on a metric biometric basis and it's also quite easy to write new metrics as well if you want to
+00:25:27 [W] This is kind of the overall overview of Hubble.
+00:25:32 [W] So let's let's see how it looks like in action.
+00:25:33 [W] So what I have here is a kubernative cluster running psyllium and Hubbell, so we have three no cluster running cilium.
+00:25:44 [W] And as well as Hubble and Hubble.
+00:25:47 [W] Relay, and UI and if you check the status Outpost, but of psyllium, we will see that we can access or that Hubble is enabled and that we can also access metrics as well.
+00:26:00 [W] So in this class driver now Access Wi-Fi standard port forwarding already ahead of time.
+00:26:09 [W] So we now we see the help of UI. This is how it looks like it displaces a service map for this.
+00:26:13 [W] This is an example application and it generates the service map only by the flow events emitted by Hubble.
+00:26:25 [W] So in this case, we see an application which is kind of a job portal where we have recruiters which are posting applicants and we have a job posting part, which is
+00:26:31 [W] New jobs and listing them and people applying to jobs.
+00:26:35 [W] Both why you're an API which on the back and then access elastic search you have a crawler, which is crawling Twitter to find CVS and kind of information and loads them into a Kafka topic which Kafka as we know also needs to keep her so we kind of see the
+00:26:51 [W] Application which is kind of a job portal where we have recruiters which are posting applicants and we have a job posting part, which is creating new jobs and listing them and people applying to jobs.
+00:26:53 [W] Both why you're an API which on the back and then access elastic search you have a crawler, which is crawling Twitter to find CVS and kind of information and loads them into a Kafka topic which Kafka as we know also needs to keep her so we kind of see the
+00:26:56 [W] Oh quite quite easily and they also see which end points are being accessed.
+00:26:57 [W] Thanks to all time disability. We have the policy Doom so we can see that there's two policies one on the elastic search and one of the crawler part and so for the crawler we seem to have a policy for egress or outgoing traffic and we see that the
+00:27:10 [W] His only allowed to access Twitter and to loader pot at it it that it needs to access and the TNS for Kube DNS as well.
+00:27:24 [W] So this make sure that the crawler put on the accesses the network connections that it is supposed to and we see indeed in the service map that we only have flows going to Twitter and the loader. So now let's try to see what happens
+00:27:33 [W] To access an entity which is not part of the of the policy which will be bugged by the policy.
+00:27:49 [W] So in this example, I'm now Cube Colour into a drone report and the Maxis incur a request to the cilium that iot amine, and we will see that after three seconds.
+00:27:54 [W] will time out because the policy doesn't allow it and indeed we can double check this by using the Hubble CLI. So I will ask for drop flows for the crawler pot and we'll see that we
+00:28:04 [W] we have policy denied events coming in.
+00:28:08 [W] You can also see this in the UI.
+00:28:13 [W] So in the UI we have to flow view as well. And if you refresh it or refresh the page here, we will see that the drop the flow will also occur. If you filter by crawler pot. We can see the drop flow there as well.
+00:28:24 [W] So this is kind of the UI and the service map and information it provides another thing that Hubble provides our metrics.
+00:28:36 [W] So on the second tab there, I have Griffon already up.
+00:28:39 [W] These are the metrics that Hubble provides so we can for example see the general metrics that Hubble produces.
+00:28:44 [W] We see the amount of flows per second per node.
+00:28:48 [W] We see what kind of flow types that we have. We see also things like Drop reasons and so forth. So these are all chatbots.
+00:28:55 [W] We can also see virt race events are being minted and here for example, you have the drop reason and if you look really closely you can see that there has been a slight increase in policies policy tonight drop reason, which is exactly the flow that we just try to Omit on the pod.
+00:29:18 [W] We also see other information like TCP icmp UDP information.
+00:29:26 [W] So there's a ton of macstadium can collect.
+00:29:29 [W] I'm not going into details here right now, but there should be something for both application operations and security persons here.
+00:29:35 [W] So let's take a look at another seven metric. So these are HDPE metrics being collected in the whole cluster.
+00:29:50 [W] So this is all HTTP metrics for all the HTTP traffic in the cluster that we have visibility into so we see things like methods we see that most requesting to be successful.
+00:29:57 [W] So almost no 500s and we also have latency information.
+00:29:59 [W] So we see the medium latency which seems to be below 10 milliseconds and you have to tailor and say which in this case starts
+00:30:07 [W] Look a bit weird, right?
+00:30:09 [W] So entertai latency we seem to have these bikes and if we if we look closely we see that there's this is pocket based.
+00:30:16 [W] So we see that the up to 200 millisecond bucket seems to have quite a few spikes that are occurring maybe every 30 seconds or so.
+00:30:25 [W] So there seems to be a performance problem with our application.
+00:30:28 [W] So let's start to investigate.
+00:30:37 [W] The the way, I will investigate this is using the Hubble CLI using the Json output.
+00:30:52 [W] So this is a check we re which will sort the all HTTP and requests by latency and the only showing the maximum latency for each URL.
+00:30:58 [W] And so we see here that indeed that there's two endpoints job and fines and Court API, which seem to have quite a high latency while the rest here. It seems fine.
+00:31:10 [W] There's only two end points that have this really weird highlight High maximum spacing.
+00:31:15 [W] So since this is on the corner Pi, let's start investigators so we can filter by recent traffic. So for the last three minute we want to see all traffic for the coredns pi part. I'm using a label filter here, and I'm just using last to kind of be able to grab the output.
+00:31:28 [W] So this is the Hubble output again.
+00:31:34 [W] We see all the all the events emitted by the court of appeals and I grabbed for the end point.
+00:31:38 [W] So here's the request that seems to have only two millisecond latency.
+00:31:38 [W] That's fine.
+00:31:46 [W] And if I go to the next one, I now see there is a yeah, there is now a request which has a hundred and six milliseconds latency.
+00:31:51 [W] So this is one of the degraded requests so we have the requests coming in up there and then a hundred milliseconds later.
+00:31:56 [W] see the response going out at the bottom.
+00:32:02 [W] Right there. So let's see what happens in between
+00:32:03 [W] To kind of be able to grab at the output.
+00:32:04 [W] So this is the Hubble output again.
+00:32:04 [W] We see all the all the events. I made it by the court of appeals and I grabbed for the end point.
+00:32:04 [W] So here's the request that seems to have only two millisecond latency.
+00:32:04 [W] That's fine.
+00:32:06 [W] And if I go to the next one, I now see there is a yeah, there is now a request which has a hundred and six millisecond latency.
+00:32:07 [W] this is one of the degraded requests so we have two requests coming in up there and then a hundred milliseconds later. We see the response going out.
+00:32:11 [W] Out at the bottom right there. So let's see what happens in between
+00:32:12 [W] You seem to have a bit of a bit of unrelated traffic for from the from the proxy.
+00:32:15 [W] This is fine. The TCP flux would find nothing nothing too conspicuous here.
+00:32:21 [W] So this is just just a request coming in from the proxy and being being sent to the court a pi.
+00:32:25 [W] But then we see we see on this line here.
+00:32:33 [W] We see the coredns pi trying to access memcache D. So it seems to seems to be using caching and we see that the TCP flax indeed for the response are reset. So this collection is being dropped.
+00:32:41 [W] So it seems like the core API is unable to access the cache for some reason and we see then the elastic search requests going out to the backend to to fetch the information from from the back and instead of cash.
+00:32:54 [W] To be flax indeed for the response are reset.
+00:32:54 [W] So this connection is being dropped.
+00:32:54 [W] So it seems like the core API is unable to access the cache for some reason and you see then the elastic search requests going out to the backend to to fetch the information from from the back and instead of cash.
+00:32:55 [W] catch the instances so I have copy pasted the
+00:33:00 [W] The domain for the memcache tea service so I can again write the CCL. I can write a filter when I say show me all the traffic to this domain and this will show me all the traffic to the domain.
+00:33:14 [W] And we see that there's a few different connections. But all from the Caribbean now, I'm doing a second request as well, which will get rid of the of the name resolution and just show us the door eyepiece.
+00:33:33 [W] And so here we don't have the annotations anymore.
+00:33:34 [W] This is just the raw data.
+00:33:40 [W] But if you look at this we see these either requests the resets being emitted there. And so if you look more closely you can actually see that the reset only seems to occur on IP portworx.
+00:33:48 [W] 23 the other of the other the other destinations like Point 25 and point 24 seem to be fine.
+00:33:59 [W] So let's quickly double check.
+00:34:04 [W] What kind of ips are associated with this domain so we can filter by the next request and indeed we see that we have three IPS associated with the memcache and one of these IP is the top 23, which
+00:34:14 [W] IP points 23 the other the other the other destinations like Point 25 and point 24 seem to be fine.
+00:34:16 [W] So let's quickly double check.
+00:34:16 [W] What kind of ips are associated with this domain so we can filter by the natural question indeed.
+00:34:17 [W] We see that we have three IPS associated with the memcache and one of these IP is the top 23 which seems to be behaving really really strangely.
+00:34:18 [W] Lee
+00:34:18 [W] So let's um, let's let's see if we can reproduce this.
+00:34:25 [W] Let's see if there's really a problem.
+00:34:31 [W] So now I'm Q calling into the core API part and I'm just accessing the IP directly on the memcache Deport and if we act if we execute this command we should see whether or not we can access.
+00:34:39 [W] Memcache team and indeed.
+00:34:42 [W] It seems to fail for this particular instance.
+00:34:44 [W] So let's try a different one the other one started. So we have established a root cause now that indeed Point 23 seems to be an accessible.
+00:34:56 [W] So we have let's check again. We have three back ends for the memcache D.
+00:35:01 [W] And so we've established that there seems to be a problem with one of these one of these nodes and we can we can check that and in this case, of course, I
+00:35:08 [W] Know what the reason is because this is a demo that I prepared.
+00:35:15 [W] So let's SSH into the into this instance and see what's going on.
+00:35:17 [W] So I will SSH into this faulty memcache d-pod and show me the list of containers that are currently running or have been stopped.
+00:35:30 [W] So if I use Docker PS on that instance, I see that there is indeed a memcache t that has been turned off an hour ago almost so that would explain why we see dropped connections so I can now
+00:35:38 [W] D and so we've established that there seems to be a problem with one of these one of these nodes and we can we can check that. And in this case, of course, I I know what the reason is because this is a demo that I've repaired so
+00:35:46 [W] Generous up again.
+00:35:48 [W] We can now verify better the connection works. So again, I'm using Cube call directly access to part and now two instances up.
+00:35:54 [W] So a few minutes later we can now check again how things are so we still have access to the memcache.
+00:36:00 [W] D that seems to work fine. And if we now check the metrics and refresh you will see that now that we have fixed the memcache D back-end traffic is healthy and formant as expected.
+00:36:12 [W] So this has been a Showcase of Hubble.
+00:36:21 [W] I hope you have understood what Hubble can provide for you and what you can do. If you want to try it out yourself, please do so on the URL on the slides here.
+00:36:33 [W] We have a getting started guide which will guide you through a few examples as well and Hubble of course is open source. So, please feel free to check out the source to open the PRS and issues.
+00:36:42 [W] So yeah. Thanks a lot for your attention.
+00:36:47 [W] And goodbye.
+00:36:48 [W] Are right. So thanks a lot for watching.
+00:36:57 [W] We do have a few minutes for more additional QA.
+00:37:06 [W] I already tried to answer some during the talk in the chat, but I will now also answer kind of the most common ones here in the in the in the Q&A session if you have more questions afterwards,
+00:37:13 [W] To drop me a message either on the cue cards lack or also, make sure to join the cilium slack.
+00:37:21 [W] This is psyllium delay or / slack for especially for more details technical questions.
+00:37:26 [W] So yeah an answer that that came up or a question that came up quite quite often is D question better.
+00:37:39 [W] better. It is mandatory to have cilia messy. And I in order to use Hubble and what this means for things like
+00:37:45 [W] running Hubble on cloud providers like gke or AWS
+00:37:50 [W] And so the the the answer is is that yes, you will need to deploy psyllium as a cni-genie use Hubble.
+00:38:01 [W] The two are really tightly coupled.
+00:38:05 [W] However psyllium as eni is able to chain with other ci/cd swell, so you can actually use psyllium on top of the cheek a in top of JK or on top of the AWS cni-genie.
+00:38:20 [W] T for Hubble but the actual part apart traffic is Stan handled by the AWS CLI through example.
+00:38:31 [W] So yes, it is time to see Liam, but yes, you can also run psyllium with other cni-genie, lol.
+00:38:34 [W] Came up is whether we can also use deploy Hubble for VMS and paramedic workloads.
+00:39:00 [W] And the question here is kind of or not yet.
+00:39:01 [W] So psyllium has recently gained in the latest didn't release we have changed the ability to use host firewall rules. So you can now protect hosts using same as well. And this also means that silly.
+00:39:14 [W] Umm, we'll get traffic can observe the traffic on a VM.
+00:39:21 [W] So this is something we're actively working on in tylium, and Hubble will gain will gain the the workloads as well or Hubble will take be able to see this will be able to see the
+00:39:33 [W] Tttt data produced by VMS and thermal workloads as well.
+00:39:40 [W] But this is something that's currently being worked on in in psyllium.
+00:39:45 [W] So yeah, I think the other questions I've already answered in text.
+00:39:52 [W] There has been a question about security. So I didn't really talk that much about security. It's of course you can use Hubble and and Dumpty Dumpty the events in your see more or
+00:40:09 [W] Security Focus tool as well. If you have more questions in this regard, please reach out to us on the slack.
+00:40:18 [W] I think this is kind of a more detailed question where that they use case might be a bit more but we have to discuss the use case first better is something but that is in scope for Hubble or not, but generally speaking the absolutely also
+00:40:32 [W] T observability especially like the network security policy monitoring that we have in psyllium is one this one use case that I've demonstrated The Talk.
+00:40:46 [W] All right. I think this answers almost all questions that we have.
+00:41:06 [W] I will follow up with the rest here in the platform. And again, please feel free to reach out to me on slack.
+00:41:15 [W] This is either the cncf slack or also the syllabus like I will be available in both the D channel on the cncf slack is the cube conops our ability Channel.
+00:41:22 [W] And yeah, thanks a lot for attending and enjoy the rest of you come. Thank you.

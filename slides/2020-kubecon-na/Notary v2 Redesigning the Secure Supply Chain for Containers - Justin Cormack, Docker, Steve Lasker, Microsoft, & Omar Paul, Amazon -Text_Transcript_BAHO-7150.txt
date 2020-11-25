@@ -1,0 +1,271 @@
+﻿Notary v2: Redesigning the Secure Supply Chain for Containers: BAHO-7150 - events@cncf.io - Wednesday, November 18, 2020 4:57 PM - 34 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, welcome to keep Colin.
+00:00:02 [W] We're here today is talk about nature EV to redesign the secure supply chain for containers.
+00:00:09 [W] Conference so Omar is even more of a problem actually had while y'all doing this but not while we're doing this. Anyway, anyway, it's great to be here and let's let's get let's get started
+00:00:27 [W] Hello out we end date.
+00:00:16 [W] I'm Justin Commack.
+00:00:18 [W] I'm an engineer at dark hair.
+00:00:19 [W] I'm also an 8-3 maintainer and a member of the cncf technical oversight committee.
+00:00:24 [W] I work a lot with security and cncf how I'm really interested in all the bits of how security fits in with containers, but I'm also I've been working for you know for five years now at darker.
+00:00:36 [W] I've been very much embedded in the hole.
+00:00:38 [W] do we do containers? How do we make them better space?
+00:00:42 [W] Every container has a bit of Justin and so I'm Steve Lasker. I work at Microsoft on the Azure containerd Registries for a CRM.
+00:00:52 [W] Cri-o.
+00:01:12 [W] As well as artifacts and other things that we do in their oci, so it's very fun to be able to continue to work on this with just it in others.
+00:01:20 [W] I'm as a product manager with register a cri-o straight Amazon. So he's also really heavily involved in the whole registering container ecosystem. So it's a good team. We've got just a frame
+00:01:35 [W] This is really about supply chain security and why it's important the way I like to tell the supply chain security story is back in the good old days before the whole Cloud thing happened. You had
+00:01:49 [W] Firewalls and actual cables you plugged in and you knew that if the computer was plugged into this cable, it will get this network and straightforward things like that, but everything is software now and if an attacker can just modify your software
+00:01:52 [W] Absolutely anything to do with the infrastructure and connect the computer to a different computer rewire things were a wired networks rewire connections rewire TLS certificates rework, you know change absolutely everything and so
+00:02:05 [W] Re-watch a lesser. Typically it's very well, you know change absolutely everything and so your code suddenly starts to really matter and it really matters that the right code gets into production and the someone hasn't come along and made any modifications to it
+00:02:17 [W] Any modifications to it and that your K is got you know Security checks, and and the you understand how everything gets from source code into production and make sure the right bits get into production Supply
+00:02:32 [W] growing not patio is a famous one from 2018 caused billions in damage, you know brought down all of companies supply chain attack indirectly via a you know
+00:02:47 [W] Piece of cake accounting software. I mean probably a state level attack, you know, these things are important. And so we want these we want protections against these in the container ecosystem because like more and more people are shipping more millions of things really containers and this
+00:03:00 [W] Important are you containers are effectively become the next virtualization stack. We keep on moving up the stack from physical machines to Virtual machines. And this is just the next way to get bitched best first better virtualization.
+00:03:11 [W] It's got to be secure and actually many ways. We have opportunities to build better practices than with VMS. I think that's one of the exciting things back United not only is it in a way.
+00:03:23 [W] I'm like there are potential risks because everything software but actually the fact that everything software means it's more
+00:03:28 [W] Or mutable there's a lot we can do the artifacts are more manageable.
+00:03:32 [W] We've got a better ecosystem around them than VMS if I ever did so I think there's a real opportunity to do this really really well with containers and that's what's really exciting about. The content is not the fat as a container is the fact that we can build better infrastructure around these things.
+00:03:49 [W] I'm a bit of history about know this is naturally V2 had a notary V1 start where it where were we notary V1 was an implementation of the update framework, which is a kind of cool name.
+00:04:04 [W] It's tough to its friends as the update framework adapted to Containers.
+00:04:09 [W] It is appropriate to came out of NYU.
+00:04:10 [W] Yeah, it's New York tough, you know the New York stuff CMD it was based originally around the security problem of Linux package Repose such as apt or
+00:04:25 [W] Early language package repressors mpm, but it was originally and the work came out of studying what went wrong with you know, your package manager turned out it was bunch of security issues serving up fake packages and complaining that your
+00:04:30 [W] Turned out he was a bunch of security issues serving up fake packages and complaining that your package is nginx when it's not serving up replay attacks having have an old package and saying it's a new one.
+00:04:38 [W] just deleting baggages from mirrors and saying that there aren't any updates as package to keep people on an insecure version changing dependencies between packages mixing and matching different and so on so there's a whole
+00:04:54 [W] Independent and and so on so there's a whole set of papers around what these threats were and so the idea was to kind of take these take these ideas and models and apply them to Containers was the original idea
+00:05:08 [W] project and back in 2015 and we worked at darker with the NYU people had invented tough, and there's Giant cncf in 2017 as one of the
+00:05:23 [W] The quarterly project in cncf along with the TUF specification itself, which is also a cncf project but there was a kind of a bunch of issues. I think 2015 was an awful long time ago in the land the world of containers.
+00:05:36 [W] That was back when basically when I started working in this space actually was not involved with this originally. It just been launched when I joined darker. I think my first doctor Khan was in Barcelona and I think that's where the launch was
+00:05:50 [W] Yeah, we gave over a newbie case for signing their containers as I understand it are prize.
+00:05:52 [W] I think I still have mine but back then containers in production were really knew we didn't really know what all the issues were.
+00:06:02 [W] didn't have a kind of feel for exactly what the workloads we're going to be like, you know, the whole way that people actually work with containers was still in flux. I think there was
+00:06:15 [W] a bunch of design mistakes.
+00:06:16 [W] We talked about some of them in the merits but now the security needs are really really important and getting this absolutely right is important and you know, we've had time to reflect on what the best practices are and where we're going with containers and where we want to be here in the next five years.
+00:06:36 [W] Bunch of issues to fix the first one really is the notary was added as a sidecar, you know, not not not excited Karen they can end the exactly containerd sense, but it runs on the side of a registry. It basically
+00:06:51 [W] It's a base its own server and that was quite good for just chipping it without modifying itself and without changing stuff, but it's actually we've really developed since then. I kind of whole
+00:07:05 [W] This actually we've really developed since then. I kind of whole registry knative ecosystem. I'm is Steve. You can talk more about that. You've been involved a lot of that recently as well, haven't you?
+00:07:05 [W] Yeah, but it's the the there was so much value in the work that was done in Registries in the abstraction models that when we started looking at other artifacts that we needed to manage and deployment such as how manned we started this project as to how to
+00:07:20 [W] Models that when we started looking at other artifacts that we needed to manage and deployment such as how manned we started this project as to how to kind of stuff it in that the more we were doing that, you know Singularity
+00:07:37 [W] I that the more we were doing that, you know Singularity came up say hey, we'd also like to use a registry seen AB was starting there was some questions around terraform and others and be like, can we just leverage this common infrastructure so that it
+00:07:52 [W] So that it works across all clouds because we can't really ask the helm team to build a Helm CLI that's unique to Azure. It needs to work across all Registries.
+00:08:02 [W] So I went down the so CI are two facts approach and what was really nice about that is it's just there's so many things that we can now leverage that Global Production resilient infrastructure, including putting signatures in and you know where we talk about the
+00:08:17 [W] Rich that Global Production resilient infrastructure including putting signatures in and you know where we talk about the sidecar like who cares about the implementation details the problem is that was leaking out and if I pulled
+00:08:32 [W] Patient details the problem is that was leaking out and if I pulled an image without notary enabled I would get one set of you know artifacts images at the time and if I turned it on and get a different one, so it just created.
+00:08:47 [W] This very end user poor experience and one of the biggest problems that was you couldn't actually move the signatures from one registry to another that's kind of one of the key scenarios. We see is I have a pub something.
+00:09:01 [W] It's on some public registry.
+00:09:03 [W] I need to bring it in my private registry.
+00:09:05 [W] So I have control over you know that content whether it be via Nats or making sure that I can nothing changes on me the second shows a move. How do I prove that this thing that I've got in my private registry is the same thing. It wasn't.
+00:09:17 [W] Originally, so those were some of the key problems that we just had to overcome to make this thing usable. It just so happens that the artifacts approach allows us to do that because if every major registry and supports artifacts, then we'll be able to support signatures as well.
+00:09:32 [W] And it's are in addition to the that being I mean, I think in a way that's been our number one requirement the way through but I think there's a whole bunch of requirements are really important about usability and usage with that. We haven't had a lot of people using notary V1.
+00:09:47 [W] We've had a lot of complaints about usability issues with and IV I put a separate thing about observability in understandability and debugging these are kind of related those difficult to see what the state of the world is what the
+00:10:02 [W] And it's are in addition to the that being I mean, I think in a way that's been our number one requirement the way through but I think there's a whole bunch of requirements are really important about usability and you search with that. We haven't had a lot of people using notary V1.
+00:10:15 [W] We've had a lot of complaints about usability issues with and IV, I put a separate thing about observability in understandability and debug an easy kind of related though. It's difficult to see what the state of the world is. What the
+00:10:30 [W] on Sand all very good at telling you what the signatures that there are there are and why for example why it's complaining you can't sign something and
+00:11:14 [W] If you know things go wrong, it's very difficult to debug the state of the world because the tool things really not not very good from this point of view and in particular.
+00:11:27 [W] there's a kind of there's a tendency to fail if to fail closed which is the right thing to do when some signature check fails, but that actually means it's hard to see it doesn't give you a good explanation of why that happened which is
+00:11:42 [W] Makes it very difficult for people to see what's going on because if something something has expired so it doesn't check something else.
+00:11:49 [W] Were you expecting?
+00:11:50 [W] its? Jagan? You don't know what's gone wrong. So you don't know how to remediate and the security model is not widely understood which I think is is a partly an explanation problem. And partly I think
+00:12:05 [W] Marvel in our heads of what actually signing is for a not very clear and I think we need to explain that really more clearly, but there's also some fundamental security issues that really are not addressing this there's tofu one.
+00:12:16 [W] Stuff. It's basically Trust on first years and it's harder than model with nature. Eveyone as used.
+00:12:20 [W] I'm just it's not actually a requirement of notary.
+00:12:22 [W] It's a requirement of all bit of the darker and darker trust implementation in particular, but it's also the way at the end effectively the only implementation so it's kind of the way it is used is that when you pull a container,
+00:12:37 [W] but it's also the way at the end effectively the only implementation so it's kind of the way it is used is that when you pull a container it'll pull the signatures and checked and the first time in the same way as this is H does and it says do you want effectively
+00:12:54 [W] Isn't tekton the first time in the same way as this is H does and it says to you what effectively as it says.
+00:13:00 [W] Do you want to use this house key, but for containers this doesn't work very well because a lot of times you're pulling containerd.
+00:13:07 [W] It's basically it's a it's an ephemeral server.
+00:13:10 [W] It's always first use and so that is something that's changed a lot right since when we dug our first started this project years ago. We didn't really think about the serverless kind of model where every time a containerd
+00:13:23 [W] has pulled it's a clean pristine environment that the clouds kind of hand you so you only pay for what you use we were very focused on, you know, vm's would come up then they'd have lots of cached images and that was OK you kind of build up some state, but we
+00:13:39 [W] To this ephemeral client model where every time where of the containers run it's like brand-new.
+00:13:44 [W] Yeah.
+00:13:44 [W] Yeah, it becomes a challenge and I and people are actually doing this for security reasons because having clean start is actually a good way of keeping making sure that yeah, everything's refreshed attackers are all those things that there's actually good.
+00:13:57 [W] mean, I think the ephemeral thing is actually one of the great things we've actually managed to do and that's good. But it basically does affect security models of things that assume long-term stain and we have to adapt
+00:14:09 [W] to that model
+00:14:11 [W] So, how are we getting there with V2?
+00:14:17 [W] We started really at Cube con a year ago.
+00:14:22 [W] Originally.
+00:14:23 [W] We had a meeting with darker and Amazon and Microsoft on the underside and San Diego on one of those rainy days and rainy San Diego, but and then we had a series of meetings back when you could have meetings
+00:14:39 [W] Over and then press the timer in January. I think I've ever even though I think we had we had a few meetings in person, which was actually really great.
+00:14:41 [W] Lots of people involved NYU with the people have been working on Taff IBM Red Hat VMware those more jfrog all sorts of other people have been involved.
+00:14:55 [W] So it's a very broad Harbor Harbour sis.
+00:14:58 [W] Well, yeah.
+00:15:03 [W] So it's been a really great Community if they can coming together to really work out as a community what everyone wants we had hoped it would finish sooner.
+00:15:15 [W] I think growing consensus is actually really difficult for specially for I mean things like signing and supply chain security are complicated and
+00:15:27 [W] And trying to get over an aligned with understanding what each other's problems are and what the kinds of solutions that we want to explore our and why things are not working. Now.
+00:15:42 [W] And I think that that that to take a long time.
+00:15:38 [W] I think we were a bit slow down by the covid thing and and just you know, generally when I think we aren't we are making progress now, I'm kind of pleased with the progress we've made in the last few months, but it's I think it's
+00:15:53 [W] Is you can always be optimistic and things that things will happen fast, but it's just difficult sometimes, you know, it's just and we just blend everything in covid in 2020.
+00:15:53 [W] We just want to get past 2020 as fast as possible.
+00:15:55 [W] I mean we do want to get this right we don't and we want to lay down a framework that everyone's happy way that we don't want the community to fragment because we don't want people saying this doesn't work for us.
+00:16:08 [W] for us. We're just going to be something else. We want one solution that works for everyone's use case.
+00:16:12 [W] Isis and so we've been very inclusive and drove those get as many people in as possible who are doing things now or got to interest because it really I think having everyone doing the same thing and having interoperable tools is really really important.
+00:16:27 [W] Having everyone doing the same thing and having interoperable tools is really really important.
+00:16:29 [W] Yeah, I mean if an image can't move between clouds and between Registries on-prem different clubs and so forth then we failed so, you know, we have to make sure everybody's on board. Everybody agrees.
+00:16:41 [W] It meets them scenarios everybody needs and then we're good.
+00:16:46 [W] Yeah, no big deal and you know this kind of highlights that what we've also some of the problems we've talked about.
+00:16:54 [W] About is multiple the multiple signature problem, which has an effect in a number of different ways.
+00:17:01 [W] So we like to try to have fun is some things can get way too serious.
+00:17:05 [W] So we have, you know a company we just use a fictitious webassembly.
+00:17:10 [W] org creates this net monitor software.
+00:17:12 [W] isv kind of product where they're building it in their environment and they create a key that they're not critically they create a signature with their key and they sign it they could then post that.
+00:17:25 [W] Content on Docker Hub as a curated location but Acme Rockets as this company that wants to consume the softer. They don't know who haven't networks are but they trust Docker so doctor certifies that content so great.
+00:17:39 [W] Okay, I will now use that.
+00:17:40 [W] So if I go to doctor I will actually see two signatures one from dr. Of one for web and networks. And then the Acme rocket team can bring that software in as they bring the net monitor software into their environment.
+00:17:54 [W] The lonely bringing stuff they trust from Docker Hub.
+00:17:57 [W] You'll test to make sure it works in their environment because it's not just the first time it wouldn't be able to get updates. And then if it passed those tests, they will add a third signature which is the Acme rocket signature.
+00:18:10 [W] So now when they try to move it to their production environment actually don't care about the other signatures, they only will put things in production that has an Acme Rockets, you know validation on it. So you can kind of see this progression of flow. Where the
+00:18:25 [W] Stark's all the way over and you know way Upstream if you will moves into another environment the signatures move with it. The signatures are added the add additional at a station but the digest and the tag
+00:18:31 [W] the add additional attestation but the digest and the tag of that original software never change so that when it goes into a curry Rockets we can you know can continue to add signatures to it as we go
+00:18:42 [W] I'd signatures to it as we go.
+00:18:43 [W] So that's like a the major model of what we're trying to do and support this workflow. But as yeah, I mean there's a lot of detail and that doesn't cover like how does you know, how does the end users have policies
+00:18:58 [W] That doesn't cover like how does you know how does the end users have policies for they trust who but we you know, which bits of you know, which key is attached to what how do we deal with one of the problems with knative E1 has
+00:19:14 [W] One of the problems with nature eveyone has is that they were too many keys and there was a huge proliferation of them. And so we need to arrange keys and manageable but not too extreme weight.
+00:19:24 [W] And so there's all sorts of issues that follow on from from these scenarios that we're going through.
+00:19:34 [W] We've made a lot of progress with storing signatures in Registries.
+00:19:39 [W] I think I mean we one of the claims here has been to have a very generic signature model.
+00:19:46 [W] We don't want to just consider a signatures to being something that's specific for notary V2. It's like signatures are something that could be used for other security
+00:20:01 [W] We want to have a generic solution. But there's we had one requirement that really is. One of the things is actually meant that we've looked at actually making registry changes.
+00:20:11 [W] So there's this question about n line versus detach signatures really the way to understand that is like is the signature part of an object. And therefore as Registries are content addressable part of its content hash because either
+00:20:26 [W] Actually part of the Jason manifest of the object or its referenced from the Jason manifest of the object.
+00:20:26 [W] And so if you want to change the signature, you actually have to change the object and then in the registrants, you means you have to retag the object. Now a lot of people don't like the ri tagging model in Registries a lots of Registries are
+00:20:41 [W] Egg models where tags are immutable and can't actually be changed.
+00:20:44 [W] Once that been one second has been shipped to the registry.
+00:20:46 [W] And so that's that was a big we don't want we don't want re tagging we want to be able to add another signature for a different purpose.
+00:20:54 [W] Like, you know, I bring in an object and it's signed by so it's a bunter it's signed by canonical.
+00:21:01 [W] That's great.
+00:21:02 [W] But I also want to add a signature as part of my work flows, but I don't want to do anything.
+00:21:09 [W] You know, I don't want to chain.
+00:21:11 [W] I want any code that is looking for genuine a bun to 1404 from the Ubuntu Source not to have any issues that actually this content doesn't look like genuine a bunch of us got a different hash.
+00:21:23 [W] Oh, I have to look at her.
+00:21:24 [W] I see that the hash it out actually like it's actually an additional signature is not a problem.
+00:21:29 [W] It's still genuine 20. So these kinds of concerns meant that we been actually proposing a major change in register.
+00:21:39 [W] is to add extra apis which where you can basically have a detached signature which basically just means the signatures in a separate document but not just detector has in a separate document but as in there isn't a pointer
+00:21:54 [W] Extra apis which where you can basically have a detached signature which basically just means the signatures in a separate document but not just detector as in a separate document.
+00:22:03 [W] But as in there isn't a pointer to it from the registry object instead. There's a point of from the signature to the registry object and we want an API that can actually Traverse that
+00:22:15 [W] backwards and that's a real significant register change because register is don't do things backwards right now.
+00:22:23 [W] Therefore it's only the reverse not upwards.
+00:22:34 [W] There's actually I think potentially other interesting use cases for this type of model. But anyway, so the moment we're doing work,
+00:22:45 [W] actually putting that into the socket distribution registry reference client and this back and so because I think that there was enough demand for this that it was
+00:23:01 [W] My days registry changes around that so that's a kind of substantive change.
+00:23:04 [W] One of the one of the exact interesting and one's about that is your people have these deployment manifests whether it be a kublr mo, you know a Helm chart or just even a Docker file that references
+00:23:20 [W] external attack and there's you know tag locking semantics and so forth and even darker lock is some projects that are out there the challenges if we to add another signature in the Akron rocket scenario, for instance if that
+00:23:30 [W] As if we to add another signature and the Acme Markets scenario, for instance if that digests has to change for that tag that kind of breaks the workflow.
+00:23:38 [W] So that was you know, a big piece to this.
+00:23:41 [W] So for the demo we can show what we're at on the current prototype.
+00:23:46 [W] So just to talk about I'm right.
+00:23:48 [W] started by stopping every kind of months ago. Now these are not in any way meant to be like final things do not use and but these are
+00:23:58 [W] our kind of worked examples to show how things how things work how we putting things together how we're experimenting with things in the kinds of things so that people can see them and but they're not take they're not just totally fake these actually
+00:24:14 [W] it's the actual work behind the scenes and there's actual things in Registries and their signatures and Registries and all the formats and so on a documented and they're all in the end the PRS that these correspond to so it's it's pretty
+00:24:29 [W] It's very real price typing not just mock up.
+00:24:34 [W] So there's nothing I personally use will take a look.
+00:24:38 [W] We have nothing locally on the machine.
+00:24:40 [W] So what I want to be able to do is, you know sot build and sign. So what I'm going to do is just make things a little bit simpler and I'm going to set an environment variable for our image.
+00:24:53 [W] We've got this registry and V2 dot actual websites dotnet and it's hosting the changes that we've been proposing to the distribution doctor distribution of distribution Speck.
+00:25:04 [W] so now what I could do is I can say Doc rebuild - tea and our image and what that's going to do is just take this Docker file from helloworld and just add something to it really super simple
+00:25:20 [W] and
+00:25:21 [W] it's not helpful Dot.
+00:25:24 [W] Oh, thank you Minor Detail.
+00:25:28 [W] So now we can see that.
+00:25:30 [W] I've got my image and that's great.
+00:25:33 [W] And there's that image.
+00:25:34 [W] Now. What I want to do is I want to assign it I you know, I need to enable the notary workflow.
+00:25:40 [W] I'll say Docker notary - - enabled and what we're doing here is where the knative you note saving this configuration, and now you'll see
+00:25:54 [W] We've got this for our initial prototype or we have just been able trip. So now when I want to sign this thing
+00:26:06 [W] I'm going to say Docker notary sign and I give it the key for the Azure websites net key and the cert for these two and then I'm signing this image.
+00:26:17 [W] So will generate the Manifest because we were signing a manifest and we output this JWT token.
+00:26:25 [W] That's what's the the oci artifact.
+00:26:28 [W] That is the signature that we want to push to the registry.
+00:26:31 [W] But we don't want users to have to think about pushing and pulling signatures independently.
+00:26:37 [W] We want to build it into the experience.
+00:26:40 [W] So I'm going to log into the registry and when I do Docker push
+00:26:45 [W] Because we're using this darker plug-in, right?
+00:26:41 [W] We didn't actually change the docker API Docker CLI yet.
+00:26:45 [W] We using a darker plug-in that we're routing this to so now we're just going to be able to do is push the actual image and we're going to push the signature.
+00:26:53 [W] It's just an additional component and then when I want to do a dock or pull the let's get rid of our images first.
+00:27:05 [W] Ask you will get rid of those.
+00:27:10 [W] I do a Docker pull.
+00:27:14 [W] I have not configured anything yet.
+00:27:16 [W] So it's going to go look because I have notary enabled says hey, I found a signature but you don't have any of those keys.
+00:27:24 [W] So by the fact that I don't have any Keys local that match it is by definition going to fail. So I don't have anything to enable this. What I do is I put the reference to the key
+00:27:39 [W] Notary V2 as your website's search and save that and now because I have that key locally.
+00:27:34 [W] It's going to look up signatures found a signature and it's a valid signature.
+00:27:40 [W] So now I am going to be able see I have now found our image.
+00:27:47 [W] So that's the Prototype right?
+00:27:50 [W] We're talking about prototypes from end-to-end will continue to experiment with this and decide if what experiences
+00:27:57 [W] as we like, how do we validate this with things like Opa and then figure out the next steps?
+00:28:03 [W] I'm so going back.
+00:28:06 [W] Yeah, so what's interesting in just two was kind of talked about this before is everything related to how do I want to store things in Registries?
+00:28:16 [W] It's more than just images and Helm charts and seen abs and opa oppas and why isms and other things I want to be able to store signatures and have a movement.
+00:28:28 [W] In fact, I want to be able to put styra fication objects signatures on any of those things.
+00:28:33 [W] Well, I also need to know well who signed the signature what get commit was associated with it?
+00:28:39 [W] What was the sick?
+00:28:40 [W] When was it added and so forth?
+00:28:42 [W] So we and once we're doing this reverse look-up on hey, I'm looking for this thing.
+00:28:49 [W] For finding these things and that's been kind of a lot of the feedback as well as like if you're going to make a change to our Registries.
+00:28:49 [W] Let's make sure that I don't have to make yet another change for the next thing and the next thing the next thing yeah. So there's the typical problem of a generic tools that will enable us to do more more good things in future.
+00:29:01 [W] Yeah, the generic apis in the generic tools.
+00:29:03 [W] That'll do that.
+00:29:04 [W] So we are definitely making sure that we're doing a canonical balancing of the boiling the ocean.
+00:29:10 [W] Which will never happen and forces a small pond.
+00:29:13 [W] So we're trying to make we feel good about the progress thus far and these prototypes help helps us take your chances for instance.
+00:29:23 [W] how many assistants so what I'm looking up signatures for an artifact don't make me download all of them.
+00:29:35 [W] I want to download only the signatures for their that match a certain criteria.
+00:29:41 [W] So that's the kind of things that were looking at so next steps ready.
+00:29:45 [W] We're coming home with prototyping. We're doing a lot of work around Key Management as a separate working group on that.
+00:29:50 [W] We need to consolidate recommendations that are into the requirements then get agreement on the directions from these prototypes and make sure there's actually other prototype something one. We're showing that are going on as well.
+00:30:02 [W] What I'm looking up signatures for an artifact don't make me download all of them.
+00:30:01 [W] I want to download only the signatures for their that match a certain criteria.
+00:30:06 [W] So that's the kind of things that were looking at.
+00:30:08 [W] So next that ready Wake County home with parts of typing.
+00:30:13 [W] We're doing a lot of work around Key Management as a separate working group on that.
+00:30:16 [W] We need to consolidate recommendations that are into the requirements then get agreement on the directions for these prices.
+00:30:24 [W] Types and make sure there's actually other prototype something what we're sharing that are going on as well.
+00:30:28 [W] So and so and then we have to check everything against our threat modeling that we did earlier on and then gets production next year, which will be great for fun.
+00:30:40 [W] So if you just it's just let's just get past 2012 California attorneys will be nice and secure.
+00:30:46 [W] So come and join us.
+00:30:48 [W] We have weekly meetings GitHub notary cncf.
+00:30:54 [W] As we have slack as they're sort of central source of where everything is.
+00:30:59 [W] thanks very much and see you soon.
+00:31:04 [W] Thanks.
+00:31:13 [W] Hello.
+00:31:15 [W] Hi folks.
+00:31:16 [W] I'm so hello.
+00:31:17 [W] We've only we've only got a couple of minutes. So come to the cube con to maintainers Channel or the nature ev2 Channel than the slack for if we don't get around to all your questions
+00:31:35 [W] Hello.
+00:31:37 [W] Hi folks.
+00:31:38 [W] I'm so hello.
+00:31:40 [W] We've only we've only got a couple of minutes. So come to the cube con to maintainers Channel or the nature ev2 Channel than the slack for if we don't get around to all your questions
+00:31:58 [W] And I wanted to jump on one of them.
+00:32:01 [W] What is the notary V. Where do we find more information?
+00:32:08 [W] Just kind of a bucket.
+00:32:09 [W] There's a GitHub repo for the notary project github.com. Notary project and all of the projects are under their requirements is kind of like the core one.
+00:32:22 [W] That was a question about how this relates to the red hat simple signing and it's going to say that we're trying to produce something that's standardized across everywhere the but should
+00:32:38 [W] Usability is really important with nature Evita. We're not going to ship something that's hard to use.
+00:32:43 [W] So we're hoping that because it's widely adopted and standardized across the community that we should defragment the signing landscape rather than increase fragmentation.
+00:32:55 [W] So we we hopefully we can resolve that issue and can converge over on on one model over as this comes out.
+00:33:07 [W] When you have question about every tag, I was a CEO are going up.
+00:33:12 [W] We see a bunch of vendors and providers building various solutions.
+00:33:17 [W] They don't meet the goal of moving between clouds.
+00:33:20 [W] You can't take it from Docker Hub.
+00:33:21 [W] Move it into AWS move it into Azure won't get up wherever so that's why we're building this effort is to make sure it works uniformly across all clouds, and you're not tied to a specific vendors implementation.
+00:33:36 [W] This question about links the slide. Sorry, I will update and to shed after this.
+00:33:40 [W] Sorry.
+00:33:42 [W] I totally forgot to do that.
+00:33:43 [W] I will do that.
+00:33:45 [W] There's great about Hardware identity.
+00:33:50 [W] That is a long question which we can talk about. I think offline Burgers.
+00:33:56 [W] I think we've probably got a couple of seconds left as a question mark 3 tagging images will signatures be retained.
+00:34:02 [W] Signatures are attached to object.
+00:33:59 [W] It's in Registries and there's been a very strong consensus that we want signatures to be separate items in Registries that the point at the blobs
+00:34:14 [W] UK says they point at the blobs.
+00:34:07 [W] Yes, they would be they would be still attached if you re tag the image because they're pointing at the blob but there's a lot of detail than that. We're still working out in these kind of oci specs and but the aim
+00:34:22 [W] You should as a very strong demand that signatures should be able to be added after images are created and added on afterwards rather than being part of the musical content of the image.
+00:34:34 [W] Although there are a couple of use cases for that as well. But so we've been working on a model with pointers in Registries that point backwards two signatures that you can find which would definitely work in that situation.
+00:34:48 [W] Except so thanks. Thanks folks.
+00:34:54 [W] You will see you over in slack. Thanks for attending.
+00:34:57 [W] Yeah.

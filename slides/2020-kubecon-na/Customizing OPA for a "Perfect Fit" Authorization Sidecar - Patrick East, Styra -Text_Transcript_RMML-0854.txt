@@ -1,0 +1,467 @@
+﻿Customizing OPA for a "Perfect Fit" Authorization Sidecar: RMML-0854 - events@cncf.io - Friday, November 20, 2020 5:43 PM - 50 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Welcome, this is customizing Opa for a perfect fit authorization sidecar.
+00:00:06 [W] Tweeted me if you have questions or want to get in touch.
+00:00:10 [W] So let's start this off with a little bit of like base knowledge.
+00:00:14 [W] Hopefully everyone here knows about the policy agent knows what it is.
+00:00:17 [W] Otherwise, the session will be very confusing for you.
+00:00:20 [W] Um, if you don't pause now go look at the URL come back when you're ready just to make sure we're all on the same page John purpose policy engine.
+00:00:30 [W] most people use this as a library or HP server. The use cases were kind of talking about today a little bit is more in the sidecar model where
+00:00:40 [W] If your application requests come in to it and then running on the same host whether that's like, you know, like literally like a Linux host.
+00:00:47 [W] It's another service or like kubernative use.
+00:00:50 [W] It's just that I container in your pod.
+00:00:52 [W] You have like Opa running. The application makes a local host call through the HTTP API to Opa comes back. You know, usually it's something like is it aloud or give me reasons why it's tonight or something like that.
+00:01:07 [W] Door opens perfect.
+00:01:00 [W] Usually that's okay fine.
+00:01:02 [W] He said when it isn't this a lot of like requests that come in for for like the opening teeners for custom built-in functions or like new new functionality.
+00:01:13 [W] That's not there in the language.
+00:01:14 [W] So something we hear about from time to time is like I have this authorization use case.
+00:01:20 [W] case. I'm using these jobs and I need some special behavior to get my keys there, you know using their own kind of like homegrown sysdig.
+00:01:27 [W] System or for like the demo.
+00:01:29 [W] I'm going to show here.
+00:01:30 [W] I'm using AWS z0.
+00:01:32 [W] But you know and it's the problem is that they've got like they've got the keys somewhere.
+00:01:38 [W] It's remote.
+00:01:39 [W] They can't just hard code it in their policy.
+00:01:41 [W] They rotate whatever.
+00:01:42 [W] I mean any just the right error handling caching for my special system.
+00:01:47 [W] So the solution obviously is just added to Opa, you know, this is like, it's a problem. I have it's problem other people probably have so let's make it part of the language.
+00:01:58 [W] That's great.
+00:01:59 [W] You can file an issue.
+00:02:00 [W] We have a lot though. And you know, like the problem is that you're going to find some pushback usually for like we don't necessarily want Opa to you know, be kitchen sink have have everything.
+00:02:16 [W] Be like balanced with the the amount of overhead for like pulling in additional libraries.
+00:02:14 [W] How many people are going to use it was going to maintain it.
+00:02:18 [W] So unfortunately, you'll see a lot of pushback on issues for for new extensions to the language for built-ins, especially if it's somebody's you know, like special service they have and it's like, you know, it's sort of a one-off thing.
+00:02:33 [W] What's the answer obviously, you know screw it.
+00:02:27 [W] I'm gonna go make my own Opa with my own built-ins.
+00:02:29 [W] So the behavior that we want for this demo.
+00:02:33 [W] Well the example use case that we're going to talk about is that I wouldn't be able to fetch keys from a remote URL.
+00:02:42 [W] We're going to look at the open ID configuration.
+00:02:45 [W] It's a well-known path.
+00:02:46 [W] Pull it down check and see if there's a key right specified in there. There is going to go download it. Otherwise it will fall back to trying this other.
+00:02:54 [W] just like well-known key set URL
+00:02:58 [W] If you guys are familiar with Opa and writing policies, you're probably like hey Patrick, that's dumb.
+00:03:03 [W] You can just use HP since two things.
+00:03:06 [W] First of all, it's the demo don't read into it too much. Second thing is that like this is like a legitimate problem for for are handling with each piece and it's not always so easy in the Rego policy to get kind of like exactly the right
+00:03:22 [W] Check and see if there's a key right specified in there. There is going to go download it. Otherwise, it will fall back to trying this other just like well-known key set URL
+00:03:30 [W] If you guys are familiar with Opa and writing policies, you're probably like hey Patrick, that's dumb.
+00:03:35 [W] You can just use HP since two things.
+00:03:38 [W] First of all, if the demo don't read into it too much second thing is that like this is like a legitimate problem for for are handling with each piece and it's not always so easy in the Rego policy to get kind of like exactly the right
+00:04:53 [W] For the error handling as well as like caching and other things plus it's a lot of complexity that you're going to put in your regular policy that like you may or may not want to actually deal with their like it. Sometimes it is easier to just write some of this stuff as like built-ins with like
+00:05:09 [W] Some of this stuff as like built-ins with like a little bit of like a knative like general-purpose programming language versus like policy language because like frankly like fetching something from a URL is not necessarily what like a policy language is designed to do.
+00:05:24 [W] So first of all, go read the docs if you ask me on slack how to add something to Opa.
+00:05:30 [W] I will point you to this URL most people though read it and are like, oh crap. This looks hard. Like it's it's, you know, wall of text that leads you right into a bunch of go code and go code isn't always like the easiest to get started with
+00:05:46 [W] Most people though read it and are like, ah crap.
+00:05:49 [W] This looks hard. Like it's you know, wall of text that leads you right into a bunch of go code and go code is in the ways like the easiest to get started with so now, you know the fear sets in you're like wait I have to extend
+00:06:10 [W] Now as you know the fear sets in you're like wait, I have to extend Opa the sucks.
+00:06:14 [W] I'm going to need to make a custom image. I can't just use like the OPA one anymore.
+00:06:18 [W] I have to let go linkerd is like stir like build tools and stuff.
+00:06:23 [W] Plus I have more code like I don't have, you know still like for Copa the sounds like a headache to manage but like in practice good news.
+00:06:33 [W] It's actually really easy piss. There's not that much code.
+00:06:36 [W] I think it's like three lines.
+00:06:37 [W] I'll show you in a minute, too.
+00:06:39 [W] To like just get the base like forked not even for it, like customized Opa entry point the dependency management. Sorry easy, you can go module. So you don't have like a separate Fork. You don't have to like sink your Opa with like you don't get
+00:06:54 [W] Base like forked not even forked like customized Opa entry point. The dependency management is really easy. You can go module. So you don't have like a separate Fork. You don't have to like sink your Opa.
+00:07:06 [W] It's like you don't get histories and also their stuff you really just like when you're ready and want to update to a different version of opa you just like, you know, go get that version upgrade it and as far as like the tools and like having
+00:07:21 [W] Opa you just like, you know go get that version upgrade it and as far as like the tools and like having like golang and all that and Custom Image, it's really easy to make your own these like multistage like use the golang image
+00:07:36 [W] You put in your, you know, whatever companies blessed base image that you know secured team has decided.
+00:07:42 [W] is okay and just copy the binary into it.
+00:07:44 [W] It's really like a I'll show an example of one.
+00:07:47 [W] They're super straightforward.
+00:07:50 [W] So let's get this started all you have to do to get your custom version of opa off the ground start a new project, you know getting it Go modern it sort of like basic, you know starting point for most going apps.
+00:08:05 [W] And the like actual implementation of this all you have to do is call that commands a troop command execute.
+00:08:11 [W] That's the the like main entry point that Opa uses for its own CLI.
+00:08:15 [W] This will give you access to basically everything open can do and it lets you then control like any other stuff that you want to do on top of opa. So let's let's take a second and go look at some code.
+00:08:31 [W] I have a project started.
+00:08:32 [W] This is that main function we're just looking at there's not a lot to this.
+00:08:37 [W] I'll show you the like actual usage in a minute dockerfile. I promised I'd show you guys this to all you need to do is pick like a you know, going version that you're comfortable with.
+00:08:51 [W] I use 115 just it's like the latest as if this is recording this it's like the latest stable I think but doesn't matter Opa is pretty compatible.
+00:09:00 [W] With most versions that are like relatively modern and then you just go build your Opa and space and making an Opa + + binary and then pick whatever base image you want and copy Opa in and this will behave just like the regular
+00:09:15 [W] So you can slide it in use it with kubeedge man, whatever.
+00:09:17 [W] It doesn't really matter.
+00:09:18 [W] It'll you know, just work so back to our main dot go.
+00:09:25 [W] Let me get the terminal up and prove that this does in fact work.
+00:09:29 [W] So I've got a project here.
+00:09:31 [W] I'm just gonna go run may not go.
+00:09:36 [W] Let's do a little compile compilation step here.
+00:09:39 [W] So it's yeah, we got takes a second when you're running with like go run versus like building and running the binary but this should look familiar. This is the OPA like command entry point.
+00:09:49 [W] You've got everything here.
+00:09:50 [W] So I want to run and like open the server.
+00:09:53 [W] Why'd you run - s and you know, there we go.
+00:09:57 [W] So this is our customized Opa off the ground running ready to go if you need to control the OPA version you have the go.
+00:10:06 [W] Jewel so
+00:10:09 [W] If you're not familiar with these essentially in here you have a requirement for dependency on Opa whenever you want to change which Opa version you're using just just update this and you know, pull in the latest code you get all the changes features
+00:10:24 [W] So that's really pretty easy to manage. It's not much harder than setting the the OPA version in like your yeah Will manifest somewhere.
+00:10:24 [W] So we've got our base version.
+00:10:26 [W] You might be wondering. Hold on. Where's my built-in?
+00:10:29 [W] How do I do that? There's three steps.
+00:10:33 [W] So the first thing I have to do is decide on a signature.
+00:10:35 [W] This is for compile time for Opa to be able to do like type-checking ensuring that like nobody has conflicts in Define some other like rule that has like the name that conflicts or something like that
+00:10:50 [W] Opa to be able to do like type-checking ensuring that like nobody has conflicts in Define some other like rule that has like the name that conflicts or something like that as well. As for the runtime. We have to have
+00:11:02 [W] Time we have for that of the implementation of our function, you know have code that that actually does what we want to do for the built in the last piece is pretty crucial.
+00:11:11 [W] So you have to register the built-in using one of these functions that I'm showing here on the right you have to do this before you start Opa. So like in our main function we do that that executes on the the entry point. So we need to do is
+00:11:27 [W] Just stir and then call the entry point execute.
+00:11:30 [W] So let's go.
+00:11:31 [W] Look at that.
+00:11:32 [W] little more kudo
+00:11:36 [W] we go.
+00:11:37 [W] I'm going to cheat and jump to a version that already has this implemented save us all time.
+00:11:48 [W] Okay, so I may not go it's been updated to now have a built-in start register function.
+00:11:55 [W] This thing is a function that I added spilt into package is new.
+00:11:59 [W] It's part of the the example code that I'm showing.
+00:12:01 [W] I like this kind of pattern basically just to minimize what's in the main function.
+00:12:07 [W] We don't want to do too much in here.
+00:12:08 [W] There's no reason that you couldn't have your entire built-in everything in this one file, but it becomes a little unwieldy over time. So I've got another built-ins
+00:12:18 [W] So I'm going to put the built-in in the implementation for it. Our built-ins package.
+00:12:25 [W] We have the the one function here.
+00:12:27 [W] This is the one where calling in Maine the call here is the one that we saw on the slide a minute ago.
+00:12:33 [W] We're calling built in one. The one just means there's one argument.
+00:12:38 [W] argument. There's a handful of them or a dynamic one if you have you know, like variable list of arguments.
+00:12:45 [W] The Declaration here.
+00:12:48 [W] This is that that signature that I was talking about.
+00:12:50 [W] So in here we're going to Define what the function is called.
+00:12:53 [W] The Rego code that will you know, like be the function in this case.
+00:12:56 [W] I'm picking custom that fetch J WK s the actual like signature portion of this is a little bit cryptic take a look at the the OPA like AST package documentation and
+00:14:09 [W] Welcome, this is customizing Opa for a perfect fit authorization sidecar.
+00:14:16 [W] I'm Patrick East openfaas are always find me on the open policy agent slack user name is Patrick East nothing exciting and it's my Twitter handle.
+00:14:27 [W] Feel free to tweet at me if you have questions or want to get in touch.
+00:14:31 [W] So let's start this off with a little bit of like base knowledge.
+00:14:35 [W] Hopefully everyone here knows about the policy agent knows what it is.
+00:14:38 [W] Otherwise, the session will be very confusing for you.
+00:14:41 [W] Um, if you don't pause now go look at the URL come back when you're ready just to make sure we're all on the same page John purpose policy engine.
+00:14:52 [W] most people use this as a library or HP server the use case we're kind of talking about today a little bit is more in the sidecar model where
+00:15:01 [W] If your application requests come in to it and then running on the same host whether that's like, you know, like literally like a Linux host.
+00:15:08 [W] It's another service or like kubernative use.
+00:15:11 [W] It's just that I container in your pod.
+00:15:13 [W] You have like Opa running. The application makes a local host call through the HTTP API to Opa comes back. You know, usually it's something like is it aloud or give me reasons why it's tonight or something like that.
+00:15:28 [W] It's to be a pi to Opa.
+00:15:14 [W] It was back. You know, usually it's something like is it aloud or give me reasons why it's tonight or something like that.
+00:15:19 [W] Good news is for that model open.
+00:15:23 [W] perfect. Usually that's okay fine except when it isn't there. So there's a lot of like requests that come in for like the opening Tanner's for custom built-in functions or like like new functionality.
+00:15:38 [W] That's not there in the language. So something that we hear about
+00:15:41 [W] From time to time is like I have this authorization use case.
+00:15:45 [W] I'm using these jobs and I need some special behavior to get my keys.
+00:15:48 [W] There's you know, using their own kind of like homegrown system or for like the demo. I'm going to show here.
+00:15:55 [W] I'm using a lot z0, but you know, it's the problem is that they've got like they've got the keys somewhere.
+00:16:03 [W] It's remote.
+00:16:04 [W] They can't just hard code it in their policy.
+00:16:06 [W] They they rotate whatever. I need any just the right error handling caching for my special system.
+00:16:13 [W] So the solution obviously it's just added to Opa.
+00:16:16 [W] You know, this is like it's a problem.
+00:16:18 [W] I have its problems other people probably have so let's make it part of the language.
+00:16:22 [W] That's great.
+00:16:24 [W] You can file an issue.
+00:16:25 [W] We have a lot though. And you know, like the problem is that you're going to find some pushback usually for like we don't necessarily want Opa to you know, be kitchen sink have have everything.
+00:16:40 [W] It's got to be like balanced with the the amount of overhead for like pulling in additional libraries.
+00:16:48 [W] Unfortunately, you'll see a lot of pushback on issues for for new extensions to the language for built-ins.
+00:16:54 [W] Especially if it's somebody's you know, like special service they have and it's like, you know, it's sort of a one-off thing.
+00:17:02 [W] So what's the answer obviously, you know screw it.
+00:17:06 [W] I'm going to make my own Opa with my own built-ins.
+00:17:09 [W] So the behavior that we want for this demo. Well the example use case that we're going to talk about is that I wouldn't be able to fetch.
+00:17:17 [W] CH keys from a remote URL we're going to look at the open ID configuration.
+00:17:24 [W] It's a well-known path.
+00:17:25 [W] Pull it down check and see if there's a key or I specified in there there is going to go download it.
+00:17:31 [W] Otherwise it will fall back to trying this other just like well-known keyset URL if you guys are familiar with Opa and writing policies, you're probably like hey Patrick, that's dumb.
+00:17:43 [W] You can just use HP Simmons two things. First of all, it's done.
+00:17:48 [W] Don't read into it too much. Second thing is that like this is like a legitimate problem for for are handling with each piece and it's not always so easy in the Rego policy to get kind of like exactly the right behavior for for the
+00:18:03 [W] It was like caching and other things plus it's a lot of complexity that you're going to put in your regular policy that like you may or may not want to actually deal with their like it. Sometimes it is easier to just write some of this stuff as like built-ins with like a little bit of like a knative like
+00:18:07 [W] Magic versus like policy language because like frankly like fetching something from a URL is not necessarily what like a policy language designed to do.
+00:18:07 [W] So first of all, go read the docs if you ask me on slack how to add something to Opa.
+00:18:13 [W] I will point you to this URL most people though read it and are like, oh crap. This looks hard like it's you know, wall of text that leads you right into a bunch of go code and go code isn't always like the easiest to get started with
+00:18:29 [W] Now as you know the fear sets in you're like wait, I have to extend Opa the sucks.
+00:18:31 [W] I'm going to need to make a custom image. I can't just use like the OPA one anymore.
+00:18:35 [W] I have to learn goaling.
+00:18:38 [W] I was like straight like build tools and stuff.
+00:18:39 [W] Plus I had more code like I don't, you know, don't like for Copa the sounds like a headache to manage but like in practice good news.
+00:18:50 [W] It's actually really easy. There's there's not that much code.
+00:18:53 [W] I think it's like three lines.
+00:18:54 [W] lines. I'll show you in a minute, too.
+00:18:56 [W] To like just get the base like forked not even forked like customized Opa entry point. The dependency management is really easy. You can go modules.
+00:19:06 [W] So you don't have like a separate Fork. You don't have to like sink your Opa with like you don't get histories and also their stuff you really just like when you're ready and you want to update to a different version of opa you just like, you know, go get that version upgrade it
+00:19:22 [W] Far as like the tools and like having like golang and all that and the Custom Image.
+00:19:18 [W] It's really easy to make your own these like multistage. Like he's the golang image to build and then you put in your, you know, whatever companies blessed base image that you know secured team has decided is okay and just copy the binary into it.
+00:19:32 [W] It's really like a I'll show an example of one.
+00:19:35 [W] They're super straightforward.
+00:19:37 [W] So let's get this started all you have to do to get your custom version of opa off the ground start a new project, you know getting it Go modern it sort of like basic, you know starting point for most going apps.
+00:19:52 [W] And the like actual implementation of this all you have to do is call that commands a troop command execute.
+00:19:54 [W] That's the the like main entry point that Opa uses for its own CLI.
+00:19:58 [W] This will give you access to basically everything open can do and it lets you then control like any other stuff that you want to do on top of opa. So let's let's take a second and go look at some code.
+00:20:14 [W] I have a project started.
+00:20:16 [W] This is that main function we're just looking at there's not a lot to this.
+00:20:21 [W] I'll show you the like actual usage in a minute dockerfile. I promised I'd show you guys is to all you need to do is pick like a you know, going version that you're comfortable with.
+00:20:35 [W] I use 115 just it's like the latest it's a it's a recording this sleep least able to think but isn't the matter Opa is pretty compatible.
+00:20:44 [W] With most versions that are like relatively modern and then you just go build your Opa and Schism making an Opa + + binary and then pick whatever base image you want and copy Opa in and this will behave just like the regular
+00:20:59 [W] This you can slide it in use it with kubeedge man, whatever.
+00:20:59 [W] It doesn't really matter.
+00:21:00 [W] It'll you know, just work so back to our main dot go.
+00:21:07 [W] Let me get the terminal up and prove that this does in fact work.
+00:21:12 [W] It's got a project here.
+00:21:14 [W] I'm just going to go run may not go.
+00:21:19 [W] It's doing a little compile compilation step here.
+00:21:22 [W] So it's yeah, we got takes a second when you're running with like go run versus like building and running the binary but this should look familiar. This is the OPA like command entry point.
+00:21:32 [W] You've got everything here.
+00:21:33 [W] So I want to run like Opa the server.
+00:21:36 [W] Why'd you run - s and you know, there we go.
+00:21:39 [W] So this is our customized Opa off the ground running ready to go if you need to control the OPA version you have the go.
+00:21:49 [W] Jewel so
+00:21:52 [W] if you're not familiar with these essentially in here you have a requirement for dependency on Opa whenever you want to change which Opa version you're using just just update this and you pull in the latest code you get all the changes features
+00:22:07 [W] ground running ready to go if you need to control the OPA version you have the go module so
+00:22:11 [W] If you're not familiar with these essentially in here you have a requirement for dependency on Opa whenever you want to change which Opa version you're using just just update this and you pull in the latest code you get all the changes features
+00:22:41 [W] So that's really pretty easy to manage. It's not much harder than setting the the OPA version in like your yeah Will manifest somewhere.
+00:22:51 [W] So we've got our base version.
+00:22:53 [W] You might be wondering. Hold on. Where's my built-in?
+00:22:56 [W] How do I do that? There's three steps.
+00:22:59 [W] So the first thing I have to do is decide on a signature.
+00:23:02 [W] This is for compile time for Opa to be able to do like type-checking ensuring that like nobody has conflicts in Define some other like rule that has like the name that conflicts or something like that
+00:23:17 [W] Runtime we have fit of the implementation of our function, you know have code that actually does we want to do for the built in the last piece is pretty crucial.
+00:23:26 [W] So you have to register the built-in using one of these functions that I'm showing here on the right you have to do this before you start Opa so like in our main function we do that that executes on the the entry point.
+00:23:38 [W] we need to do is register and then call the entry point execute. So let's go look at that.
+00:23:48 [W] little more code
+00:23:51 [W] Again, I'm going to cheat and jump to a version that already has this implemented save us a little time.
+00:24:03 [W] Okay, so I may not go as been updated to now have a built-in start register function.
+00:24:10 [W] This thing is a function that I added spilt and package is new.
+00:24:14 [W] It's part of the the example code that I'm showing.
+00:24:16 [W] I like this kind of pattern basically just to minimize what's in the main function.
+00:24:22 [W] We don't want to do too much in here.
+00:24:23 [W] There's no reason that you couldn't have your entire built-in everything in this one file, but it becomes a little unwieldy over time. So I've got a
+00:24:32 [W] Built-ins package for I'm going to put the built-in in the implementation for it. Our built-ins package.
+00:24:40 [W] We have the the one function here.
+00:24:42 [W] Updated to now have a built-in start register function.
+00:24:41 [W] This thing is a function that I added spilt in. This package is new.
+00:24:46 [W] It's part of the the example code that I'm showing.
+00:24:48 [W] I like this kind of pattern basically just to minimize what's in the main function.
+00:24:53 [W] We don't want to do too much in here.
+00:24:55 [W] There's no reason that you couldn't have your entire built-in everything in this one file, but it becomes a little unwieldy over time. So I've got another built-ins package for I'm going to put the built-in in the implementation for it.
+00:25:09 [W] Our built-ins package. We have the the one function here.
+00:25:13 [W] This is the one where calling in Maine the call here is the one that we saw on the slide a minute ago.
+00:25:20 [W] We're calling built in one. The one just means there's one argument.
+00:25:24 [W] There's a handful of them or a dynamic one. If you have you know, like variable list of arguments the Declaration here, this is that that signature that I was talking about so in-toto
+00:25:37 [W] Here we're going to Define what the function is called.
+00:25:40 [W] So this is the name.
+00:25:41 [W] This is like literally the string inside of the Rego code that will you know, like be the function in this case.
+00:25:48 [W] I'm picking custom dot fetch day. Wks the actual like signature portion of this is a little bit cryptic take a look at the the OPA like AST package documentation, and there's a ton of examples
+00:26:03 [W] MC1 if you have you know, like a variable list of arguments the Declaration here this is that that signature that I was talking about. So in here we're going to Define what the function is called.
+00:26:17 [W] So this is the name this is like literally the string inside of the the Rego code that will you know, like be the function in this case.
+00:26:26 [W] I'm picking custom dot fetch J WK s the actual like signature portion of this is a
+00:26:33 [W] Little bit cryptic take a look at the the OPA like AST package documentation. And there's a ton of examples in there for all the built-ins in the language. If you get confused on how to do one of the more kind of complicated signatures this lots of examples in there.
+00:26:47 [W] This one's pretty straightforward.
+00:26:49 [W] We're saying that there's arguments of a single string type and a return of a single string type.
+00:26:57 [W] The last piece for this registration is pointing to the implementation implementation is a function not too complicated. You get it a built in context.
+00:27:08 [W] This thing's pretty cool.
+00:27:09 [W] I'll talk about it in a second and your arguments. So in this case our argument single one, we translate it from the the AST like the the Rego type to a just a regular going string
+00:27:28 [W] In the language, if you get confused on how to do one of the more kind of complicated signatures this lots of examples in there.
+00:27:34 [W] This one's pretty straightforward.
+00:27:36 [W] We're saying that there's arguments of a single string type and a return of a single string type.
+00:27:42 [W] The last piece for this registration is pointing to the implementation implementation is a function not too complicated you get it a built in context.
+00:27:55 [W] This thing's pretty cool. I'll talk about it in a second.
+00:27:59 [W] And your arguments. So in this case our argument single one, we translate it from the the AST like the regular type to a just a regular going string for our
+00:28:14 [W] We're going to prepend some well-known paths to it, like literally like, you know that well known in the in the URLs just noticed a bug and this one look at that fixing bugs as we go doing it live.
+00:28:29 [W] So we have our base URL argument.
+00:28:32 [W] We're going to be returning back a single AST term.
+00:28:35 [W] So this is going to be our key.
+00:28:38 [W] We're going to we're going to turn it back as a string. The built-in context is pretty cool.
+00:28:44 [W] So make sure that you take advantage of this all the built-ins get called with this context on it.
+00:28:51 [W] There's a cache that lets you cash values so you don't have to recompute things as much.
+00:28:57 [W] The the nice thing here being that like if in some policy evaluation this this function gets executed or evaluated more than once you don't have to do the work for it each time.
+00:29:07 [W] You can have a consistent result every time don't worry about if you had like maybe errors or something like that.
+00:29:13 [W] So what we're going to do first thing is just check and see if this we already have this in the cache. If we do then we're going to just return back whatever was cashed. Don't worry about it, like assume it was valid.
+00:29:27 [W] If we don't find something in the cache, we're going to go off and fetch the code fits the key.
+00:29:34 [W] I'm going to skip over some of this code.
+00:29:36 [W] I don't think it's super interesting.
+00:29:37 [W] Basically.
+00:29:39 [W] Maybe errors or something like that.
+00:29:41 [W] So what we're going to do first thing is just check and see if this we already have this in the cache. If we do then we're going to just return back whatever was cashed. Don't worry about it, like assumed it was valid if we
+00:30:28 [W] If it's there we try to parse out the the URI if it's not, you know, if we if any of that fails we fall back to this just like default well-known J. WK s thing all of this is sort of a hypothetical, you know workflow.
+00:30:42 [W] It doesn't really like these usually you kind of have one of the other something but for the sake of example, so we're going to do the last part here is that we're going to fetch the URI for the key.
+00:30:58 [W] Whether that's the one that we found out of the config or just the one that we're guessing and then return back the the value as a string one thing here is another other bug in the code.
+00:31:08 [W] So we need to add it back to our context cash.
+00:31:15 [W] So cash is defined earlier and
+00:31:23 [W] our string so
+00:31:28 [W] when we do this we're gonna have is
+00:31:35 [W] a
+00:31:37 [W] New string term which we're going to save in this in the cache.
+00:31:41 [W] That way we can just blindly return it later. And then we're going to turn this the this is going to be the string of the key the the actual value that comes back out of the function in radio and we use this and then the last bit here is
+00:31:57 [W] Failed we're going to fall through you notice is a lot of like Eric and Nell.
+00:32:00 [W] So we're only like half a happy path like checking our way through this stuff.
+00:32:05 [W] So there's any errors we're going to fall through and return back undefined undefined being there's no error and there's a nil value for the it's t term result.
+00:32:16 [W] This makes it really easy in the the like policies that are calling this code to do you like are handling and it's a reason about like
+00:32:25 [W] when you when you do like a rule for like validate that the key was okay, if part of that is fetching the the key then if it comes back as undefined that rules can be undefined, you know, your allows step
+00:32:41 [W] Handling and it's a good reason about like when you when you do like a rule for like validate that the key was okay, if part of that is fetching the key then if it comes back as undefined that
+00:33:00 [W] Calling to get this key that will also be undefined.
+00:33:03 [W] So like it should Bubble Up and kind of a pretty like saying way it's easier to reason about highly recommend using this is like your kind of default pattern.
+00:33:13 [W] Okay.
+00:33:16 [W] So anyways got this implemented.
+00:33:18 [W] Let's go look and see when we run this on the terminal.
+00:33:24 [W] we're gonna run this one in the the repple just for example purposes and what we'll be able to see is that our function is
+00:33:35 [W] Recognized and it was about the syntax of it. So if we try to pass in like one, two, three, it's telling us. Hey you give us a number but as expecting string and on return back as string like this is this is invalid.
+00:33:47 [W] you can't do that.
+00:33:48 [W] So like there we go. We've verified that our signature is being registered correctly.
+00:33:53 [W] Now, let's try and fetch with an actual string the the URL little work and sure enough we get back something that looks good. This is like the key for
+00:34:04 [W] my devops your account here.
+00:34:06 [W] Feel free to steal this URL play with it.
+00:34:09 [W] It will leave it up for a while, but there's nothing Secret in there.
+00:34:13 [W] It's just a demo one.
+00:34:15 [W] So yeah, so there we go. So our buildings working we've now extended the language we have this new custom function.
+00:34:25 [W] We're all set now.
+00:34:27 [W] A decision Vlogs for Opa people like it but they don't always like having to have like a special server for it or something.
+00:34:34 [W] So, you know a lot of times they'll have some other cool infra.
+00:34:37 [W] Let's say hypothetically he's got Kafka running.
+00:34:40 [W] He's got a sweet production cluster, you know you much prefer to just dump all your decision logs into it.
+00:34:46 [W] So, yeah, let's do it.
+00:34:47 [W] Why not? What we're going to do is make a new plug-in.
+00:34:51 [W] open plugins are pretty straightforward. You need to define a plug-in name and a snyk.
+00:34:57 [W] Structs you implement the plug-in interface with your struct.
+00:35:02 [W] And then you have to have a factory that instantiates your plugin.
+00:35:05 [W] None of these are too complicated start/stop reconfigured exactly what they sound like the factory validate is essentially you're given like a raw chunk of the OPA config and it's up to you to parse it and decide if
+00:35:21 [W] You're not so it makes it really flexible. You can have is complicated of config as you want without having to like do any any sort of like config registration or anything like that with Opa and then the last piece here is
+00:35:20 [W] Again, same pattern as the the built-in function you have to do this before action, like executing the OPA entry point.
+00:35:20 [W] So let's go. Look.
+00:35:23 [W] I have some code set up for this should be easy.
+00:35:26 [W] We will.
+00:35:29 [W] Jump Ahead to a version actually has the plug end.
+00:35:35 [W] Save us a little time.
+00:35:37 [W] So I notice here.
+00:35:41 [W] I've got a new package called plugins. I've got some changes in the main dot go plugins are register using the same pattern as I did with the built-ins where I want to I want to try and minimize main code.
+00:35:53 [W] So let's go look in our new package in here.
+00:35:58 [W] here. We have a register.
+00:36:00 [W] I split out into a separate package for the logger.
+00:36:04 [W] So we have a plug-in name defined for it and a factory to instantiate it.
+00:36:10 [W] The plug-in name is important to go to look in the logger here so that the plug-in name for us right now is cockpit logger.
+00:36:20 [W] This thing is is actually kind of like you almost think of it as part of like API for Plug-In or something because it's going to be the string that shows.
+00:36:29 [W] Shows up in the configuration and it's going to be as far as like other plugins ability to find your plug-in and use it.
+00:36:37 [W] You have to configure them like this thing.
+00:36:40 [W] It's you should pick something and not change it.
+00:36:42 [W] It's like Dharma creation implications. If over time you change the plug-in name for something.
+00:36:48 [W] So anyways, like I said before we've got our plug-in name, we have our actual struct.
+00:36:55 [W] This thing's got a manager reference You're Gonna Want to hold onto that you get it as part of the factory initialization step. We have a mutex that we use to protect our config.
+00:37:08 [W] During reconfigure and then we have our config which in this case for the Kafka plug-in. We're gonna have a host and a topic.
+00:37:17 [W] So this is just telling it where it should publish information the factory nothing too exciting, you know, it returns a new instance of the logger.
+00:37:27 [W] The only thing that's maybe of Interest here are the plug-in statuses.
+00:37:32 [W] So the plug-in manager has API calls on it to set the plug-in status again this
+00:37:38 [W] You know, the plug-in name gets used everywhere.
+00:37:40 [W] So you're going to want to use this as extensively as you can in your plug-in to give accurate information back.
+00:37:48 [W] This is exposed via like the health and status apis for Opa.
+00:37:53 [W] The only thing that's maybe of Interest here are the plugins statuses.
+00:37:47 [W] So the plug-in manager has API calls on it to set the plug-in status again this the plug-in name gets used everywhere.
+00:37:55 [W] So you're going to want to use this as extensively as you can in your plug-in to give accurate information back.
+00:38:03 [W] This is exposed via like the health and status apis for Opa. So you want to make sure that like if your plug-in is in a bad State and you you need
+00:38:13 [W] To like get Opa to stop getting request for authorization.
+00:38:18 [W] You have to make sure to set your plug into an error State and make sure that your health probes and other things like that are configured to look at plug in hell, so don't don't skip these they're important.
+00:38:29 [W] they're relatively new. So if you have if you seem like older plugins or your like you have built an older plug in these might be a new API for you. I'd recommend going and adding them.
+00:38:44 [W] The last piece here is actually like being a decision logger. So there's a little bit more to the plugins to actually be a decision logger.
+00:38:54 [W] You have to be a plug-in, but you also have to implement this log API for us.
+00:39:00 [W] It's going to be you know, you're getting a context you get a event object which is like the the decision and then we want to basically send that to Kafka. So if we go back to the code, I'm going to jump ahead.
+00:39:12 [W] To a version with this log function implemented to use Kafka.
+00:39:20 [W] And we go take a second for the idea to catch up. Our plug-in the structs now includes a pointer to a cough get producer.
+00:39:30 [W] We're using just the confluent coffee would go Library. Nothing to you, too fancy there when we start up we're using our config now, we set up a config saying that our bootstraps server is going to be that host
+00:39:45 [W] Event object which is like the the decision and then we want to basically send that to Kafka. So if we go back to the code, I'm going to jump ahead to a version with this log function implemented to use Kafka.
+00:40:03 [W] And we go take a second for the idea to catch up. Our plug instructs now includes a pointer to a cough get producer.
+00:40:13 [W] We're using just a confluent coffee to go Library.
+00:40:17 [W] Nothing to you, too fancy there when we start up we're using our config now we set up config saying that our bootstraps server is going to be that host option that we provide.
+00:40:31 [W] When we start and stop we start to produce are we close it on stop on reconfigure.
+00:40:37 [W] We actively stop and start it again setting the the state's appropriately.
+00:40:42 [W] And then for log, then you know like as expected we're going to take the the event we're going to use its built-in like Json marshalling stuff.
+00:40:52 [W] The syllabus will give us a string.
+00:40:55 [W] That's basically the same payload that you get with the HTTP decision log service and we're going to just do like produce on our producer with this we're going to specify the topic that was configured
+00:41:10 [W] Use its built-in like Json marshalling stuff the syllabus will give us a string.
+00:41:16 [W] That's basically the same payload that you get with the HD P decision log service and we're gonna just do like produce on our producer with this we're going to specify the topic that was configured
+00:41:32 [W] Thrown into that topic anybody can receive it.
+00:41:35 [W] And that's pretty much it the only consideration that you might want to think about when you do these decision loggers is whether you want to do it asynchronously or not.
+00:41:45 [W] So if you do a synchronous one you make sure that that decision is is logged before the decision is like return back to the client, right? So somebody says is this allowed you have it's sort of up to you and your
+00:42:00 [W] And is logged before the decision is like return back to the client, right?
+00:42:05 [W] So somebody says is this allowed you have it's sort of up to you and your internal policies. Most people want to have that decision logged before the client gets back.
+00:42:15 [W] Yes or no, the reason being that if they get back, yes, but they weren't supposed to if you lost that log somewhere you may not know what happened. So it's look at security. Let's say like Risk, but
+00:42:28 [W] Really you're going to want to make this like a synchronous thing.
+00:42:31 [W] So when we do the produce we sit here and wait on the delivery Channel until we make sure that it worked and if there was an error, then we go ahead and return that back versus returning back.
+00:42:43 [W] No are if there's an error in the log the server will actually return like a 500 or something back to the client.
+00:42:51 [W] It won't it won't give back a you know, like okay status with the result. So there we have it. We have our plug-in should be
+00:42:59 [W] Let It Go
+00:43:01 [W] Let's run this thing.
+00:43:02 [W] The first thing we have to do is configure it.
+00:43:07 [W] So let me set up a confidant llamo real quick. We have here the decision log plug-in configured to use our Kafka plug-in and we have Kafka plugin plugin settings.
+00:43:22 [W] It's plugins all the way down.
+00:43:24 [W] Um, the the topic we're going to set to open the host is going to be Local Host anynines eat, too.
+00:43:30 [W] I'm just using the like Kafka QuickStart thing look running locally. So if you Google that like you follow the instructions there you'll have the same setup that I do and now when we run Opa
+00:43:45 [W] I to use that config use it in debug mode run it as a server.
+00:43:45 [W] We should see this thing up and running.
+00:43:50 [W] There we go.
+00:43:51 [W] And now if I make a request to Opa, okay.
+00:44:06 [W] - might spell
+00:44:09 [W] Your yeah, do you want data? So this is going to trigger a decision log event and we can see in our debug log that yeah delivered the topic or delivered to the OPA topic we
+00:44:24 [W] At over here.
+00:44:19 [W] I have a script queued up we go.
+00:44:23 [W] So we're going to read from the the topic as a consumer and pointed the same server and we will see that yes, indeed.
+00:44:34 [W] There it is.
+00:44:35 [W] There's our decision so success we're now logging into Kafka.
+00:44:42 [W] Let's go back to slides.
+00:44:46 [W] Because surprise surprise we have another requirement.
+00:44:49 [W] So we have this thing as a sidecar.
+00:44:52 [W] We want it to be lightning fast.
+00:44:53 [W] We don't want to sit here and wait.
+00:44:55 [W] I was HDPE Json overhead, you know, like come on.
+00:44:58 [W] Let's slow.
+00:44:59 [W] Well, that's why not use grpc and the answer is like yeah, why not?
+00:45:04 [W] Let's do it.
+00:45:05 [W] So, how are we going to add a new API to this?
+00:45:09 [W] You might be thinking to yourself? Like okay, we can have built-in function. But like that's weird. That's not losing weight the right way.
+00:45:15 [W] It well, the answer is a plug-in.
+00:45:18 [W] Yeah, we have one, but you can have as many as you want. So let's keep doing it.
+00:45:24 [W] Let me jump to the cube and I will skip ahead to our base plugin.
+00:45:35 [W] now
+00:45:39 [W] what you'll notice I've just added a new directory here API in our plugins.
+00:45:45 [W] Everything kind of looks about the same.
+00:45:39 [W] and then in here in our API, I'm defining a prodyna buff, you know like API definition here for a oxy or authorizer service with a not Z AP i-- it takes in a request
+00:45:54 [W] Ring jot and returns back a Boolean.
+00:45:44 [W] Yes.
+00:45:45 [W] No, so super streamlined, you know as minimal as we can get here generated the the, you know, like boilerplate code that comes from that with the regular Doling wrote above stuff.
+00:45:56 [W] Our plug-in looks very similar.
+00:45:58 [W] We Define our plugin named we haven't config structs this time.
+00:46:04 [W] We only need a like host like a address to listen on. So this is going to be what where we set our like TCP listener for the grpc API.
+00:46:14 [W] We have our service trucks, which is our plugin.
+00:46:18 [W] Same, you know usual gang's all here.
+00:46:20 [W] We got the plug-in manager of got our lakhdar config. The new parts are the little bit of boilerplate we need for doing the implementation of the authorizer API as well as a pointer to a grpc server that we're going
+00:46:36 [W] So start function is you know, you probably imagine we start the grpc server.
+00:46:40 [W] I'm not going to go too far into this code. But you know, the it's all it's all available online.
+00:46:45 [W] So feel free to dig in take a look. The important part here is the actual implementation of that API.
+00:46:54 [W] So we have this grpc API endpoint for Ozzy. The thing we get in is going to have J booty on our request. We're supposed to be
+00:47:03 [W] Turn back a Boolean but then like wait, how do we evaluate the policy?
+00:47:10 [W] The good news is that there's this pretty good like Opa API documentation for how to evaluate policy is so here we go.
+00:47:17 [W] I jump the code ahead a little bit fast forward.
+00:47:20 [W] We're going to use the Rego package.
+00:47:22 [W] We're going to do like a prepare for evil.
+00:47:24 [W] evil. I'm going to evaluate our input, you know, we already got that figured out. We're going to expect the jadibooti as part of our requests. So that's you know, we're just going to wrap that
+00:47:33 [W] Put it in a map. So that openness that deal with it and evaluate but wait, there's no policies right when you do this this Rego dot new you have to tell it which policies to use and like say you had external data or
+00:47:49 [W] Suddenly like you don't have any of that right?
+00:47:43 [W] So what do we do?
+00:47:45 [W] Do we need to like parsec bundles in our Plug-In or something? The answer is
+00:47:52 [W] No, what you need to do is use the plug-in manager.
+00:47:55 [W] So there's a little snippet here in the docs that I think a lot of people skip over the manager.
+00:48:01 [W] Let's see here gives plugins access to engine would components like storage.
+00:48:06 [W] So the pro tip main takeaway manager dot store is that's that's where the policies are.
+00:48:12 [W] That's the good stuff.
+00:48:12 [W] So let's go pack and Implement that.
+00:48:18 [W] There we go.
+00:48:20 [W] See if are fast when you cheat and use git checkout.
+00:48:24 [W] Okay, so our Otzi function now same thing.
+00:48:29 [W] We've got our input.
+00:48:30 [W] a little bit of typing to work around but nothing new same query and now we start a storage fat transaction. We use the manager store.
+00:48:43 [W] When we construct our real object, we're passing in the store the transaction and the compiler.
+00:48:50 [W] So this is a cool step if you do this and you're using bundles in the background, so you won't have to recompile. It will use the compiler that's already available.
+00:48:58 [W] It's done like on the background thread. So it's not part of like your evaluation, you know like hot path.
+00:49:05 [W] Once we have this we're ready to go we can evaluate this thing is going to have all the policies that are loaded from bundles from the CLI from the HTTP API. If somebody's pushing policies and opa you'll still have access to them this way so
+00:49:07 [W] The last piece here is that we do need to call the decision logger.
+00:48:58 [W] What would do there's a log API very similar to the one that we implemented but you just have to get a reference to that plug-in. So it's start what we do is go look it up.
+00:49:10 [W] So this goes back to the plug-in name and kind of part of that like a pi you use those names to look up plugins on the manager again, you know managers kind of the key to being able to do this once you have that reference to the plug-in weaveworks.
+00:49:24 [W] Just stash a copy of it on our server plug in and use it in evaluation to do the decision logs.
+00:49:33 [W] logs. So the end result here is that we're going to have a grpc API that takes in a job.
+00:49:40 [W] It doesn't evaluation logs it to Kafka and then returns it back.
+00:49:47 [W] So let's go ahead and
+00:49:52 [W] jump back to the slides here.
+00:49:53 [W] So thank you.
+00:49:55 [W] All of this is available on GitHub. It all works.
+00:49:58 [W] I sort of skipped over the demo for time, but feel free to grab the code and run. It should have no problems.
+00:50:05 [W] Thank you.

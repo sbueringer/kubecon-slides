@@ -1,0 +1,276 @@
+﻿SIG Scheduling Deep Dive: KKHB-9477 - events@cncf.io - Tuesday, August 18, 2020 7:45 AM - 80 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:03 [W] Welcome to seek scaling deep dive.
+00:00:07 [W] My name is a loogie Condor.
+00:00:08 [W] I work at Google and in this session is also joining me Mike name from Red Hat.
+00:00:18 [W] So we're going to talk a little bit what we do at six scheduling and we are going to present you what we've been working on for the past few releases.
+00:00:28 [W] And this includes a cube scalar and newer project, which is the the scheduler.
+00:00:34 [W] So sick scheduling is the silver sponsible for the components that make both placement decisions.
+00:00:49 [W] That is when you create thoughts in your cluster.
+00:00:57 [W] Our components are able to detect which notes are capable of running switch pot and among all the candidates.
+00:01:02 [W] It can select they can select the best candidate according to certain
+00:01:04 [W] in Pretoria
+00:01:06 [W] so our leads are away one from IBM and Abdullah from Google and our main projects as you might guess one of them is keep scheduler and
+00:01:21 [W] And we have a couple of more projects which are under active development as well such as the D scheduler which is a component that tries to rebalance pots or reposition pods according to different criteria.
+00:01:36 [W] And we have a newer repository, which is this color plugins.
+00:01:47 [W] This is an incubation project for new scaling behaviors that we don't yet want to have in the main scheduler, but we might in the future.
+00:01:54 [W] These are the features. We want to highlight for gives Keller.
+00:02:01 [W] We're gonna Jump Right In
+00:02:03 [W] the first of them is the skeletal framework.
+00:02:10 [W] This is mostly a refactoring for us as core developers.
+00:02:17 [W] It facilitates extensibility and also collaboration, but for other developers, it can facilitate to create their own customer schedulers.
+00:02:24 [W] You can you can think of different scaling features that are required to scale a pot and these features are contained in plugins. The plugins would Implement different extension points
+00:02:43 [W] In different stages of scheduling as you can see in this diagram.
+00:02:55 [W] have several extension points, which are grouped into cycles each cycle correspond to a different routine.
+00:02:58 [W] So these scanning framework was developed during several releases, but it was a 117 when we actually started using it for our core features
+00:03:14 [W] Is 118 you could configure it more easily. We're going to talk about configuration a little bit.
+00:03:22 [W] later, but in 119, we also have had some recent changes.
+00:03:30 [W] For example, we have moved the permit extension point from The Binding cycle to the schedule in cycle, and this is to allow certain permit plugins to avoid
+00:03:42 [W] Asians
+00:03:44 [W] we have also merged the reserve and Reserve extension points into a single one.
+00:03:52 [W] This is to reduce configuration birding for Gloucester operators.
+00:04:01 [W] And the last feature is the new post filter extension point the post filter essential point.
+00:04:11 [W] It only runs if this color failed to find any suitable candidates and it's suitable notes for your pod.
+00:04:14 [W] And the intention is that the post filter plugin would act in the cluster to change change it with some way so that the the pot can be scheduled for example our only
+00:04:29 [W] Also filter plugin is preemption, which is a it was an existing feature for a long time, but we have refactor it into this plug-in. And what what preemption does is very easy for
+00:04:44 [W] He just if your pot has higher priority than existing parts this part might be removed my be evicted to make space for this pod is higher priority, but you can
+00:05:00 [W] Or you can create your own field your plugins to do to implement different behaviors for the scheduler.
+00:05:08 [W] And here comes in again the scheduling the new scale in plugins repository. As I said, this is an incubation. You should project where we
+00:05:21 [W] well incubate plugins before they are ready for production use.
+00:05:26 [W] And as I said, the the the framework is centering Center in developers, whereas for class or operators.
+00:05:44 [W] This looks as simply as scaling profiles.
+00:05:47 [W] So this is a cluster.
+00:05:48 [W] I mean facing API and what they can do is disable default plugins enable custom plugins and maybe reorder them. This could be important for
+00:05:59 [W] for filtering
+00:06:01 [W] But our most recent feature, well not that recently introduced it in 118 as Alpha the multiple profiles capability.
+00:06:14 [W] This allows a single Cube scalar binary to act as different scalars.
+00:06:24 [W] Use by using the scheduler name that is existing API quite old from 1.6 or so and in one I think we have graduated these
+00:06:46 [W] Team, we have graduated these API to Beta here in the right. You can see one such configuration. For example in this in this configuration.
+00:06:56 [W] We have two profiles.
+00:06:58 [W] One of them is simply named default scheduler and it has no configuration meaning that it will run with the default plugins.
+00:07:09 [W] And as a sample we have put here a no scoring scheduler. So basically scheduler that does no score.
+00:07:15 [W] And it will just select the first note. It finds so you can see that we have disabled. We have used star here to disable all the Press Corps and score plugins.
+00:07:28 [W] Topology aware but spreading is a new scaling feature that we implemented as plugging and it has part of the core Cube scheduler.
+00:07:48 [W] Basically when you have different failure domains such as zones or node, or maybe if you're running on Prem you might have your rack or you switch.
+00:07:57 [W] Basically the diesel this feature allows you to spread your pods among all those domains such that you have you can guarantee higher availability.
+00:08:08 [W] What's going to be scheduled so then a preemption could happen or maybe if you have cluster of the scalar you can have an outer scale.
+00:08:25 [W] Or scale up or you could be soft meaning that the scheduler will try to do its best to satisfy this criteria.
+00:08:37 [W] But if it can even still place the pot but you might not have the best balance.
+00:08:47 [W] So and one new feature we introduced in 118 is that you could also set a default will default cluster level default.
+00:08:56 [W] Each will be applied to all the positive a long-term service or replica set such that you can have some kind of automatic spreading and in in 1892 in we
+00:09:11 [W] This to GA and we've been working in 118 in in getting this score.
+00:09:19 [W] really influence scaling so so that you can actually
+00:09:25 [W] With your soft constraints you can actually have very good at spreading.
+00:09:30 [W] But if you don't want such such a strong spreading you can also use the max Q feel to control this these strengths here on the right. You can see one one ball spec which uses
+00:09:46 [W] But if you don't want such such a strong spreading you can also use the max skill feel to control this these strengths here on the right. You can see one one ball spec which uses
+00:09:48 [W] You can see that we have one one constraint with a Max Q of to these these constraints defined four zones and it's a hard constraint.
+00:10:04 [W] You can see the Do Not schedule if you cannot satisfy the condition and as any as most as several other apis, you can define a label selector to to
+00:10:14 [W] Bots are affected by by this constraint.
+00:10:20 [W] And this is some work we do continuously.
+00:10:34 [W] We are always working on getting our algorithms to run faster to use less resources.
+00:10:41 [W] Let's APL calls Etc such that we can continue to meet our latency goals in 117.
+00:10:54 [W] We focused in vanilla workloads.
+00:10:56 [W] that is workloads that don't use any specific specialized skill in features such as Affinity or or the new world spreading API.
+00:11:07 [W] So these workloads in this workloads.
+00:11:13 [W] We obtain a 2.5 x latency Improvement and this Improvement is actually what allowed us at Google to achieve 100 pots per second in 15K notes.
+00:11:25 [W] Or plasters with 15,000 nodes.
+00:11:30 [W] We have also improved.
+00:11:38 [W] We also improve the latency of specialized features such as profanity here.
+00:11:41 [W] We have also improved.
+00:11:45 [W] We also improve the latency of specialized features such as profanity here.
+00:11:45 [W] We actually obtain a very big boost.
+00:11:46 [W] We achieved 24x Improvement for for preferred affinity and seven times for require an affinity.
+00:11:51 [W] In 118 and 119 we focused on again.
+00:11:57 [W] This is specialized features.
+00:12:03 [W] We even improve the finiti further we achieve to 2 times Improvement in latency.
+00:12:10 [W] And as we were preparing to graduate put what apologist pretty to GA. We're also working on on its latency, and we also obtained a tube 2x Improvement.
+00:12:18 [W] and now these these spreading this feature is if you're familiar with the Legacy selector spread priority this new plug-in is equivalent in
+00:12:32 [W] Speed but as I said earlier, it has much stronger spreading guarantees.
+00:12:41 [W] In one anything beyond we want to focus on preemption.
+00:12:50 [W] to make it faster to to either preamp faster or skip it if we already know that preemption is not helping.
+00:13:00 [W] And we also want to focus on the effect of unscalable parts.
+00:13:11 [W] Once your cluster has a lot of unscalable pots. It can affect the latency of the scheduler.
+00:13:15 [W] So we want to really solve that.
+00:13:16 [W] Next Mike is gonna present what's new in the disc odor?
+00:13:23 [W] Mike
+00:13:25 [W] thanks Otto.
+00:13:33 [W] My name is Mike game.
+00:13:34 [W] I work a lot with the scheduling Sig and I'm also one of the currently active contributors to the D scheduler project.
+00:13:47 [W] If you're not familiar with the D scheduler, it's actually a sub-project that's been around for a couple of years, but it's recently started to gain a lot more traction and a lot of interest from new contributors and people that are finding that
+00:13:57 [W] Their use cases and basically what it does is the problem that you have with the scheduler is that it will take a new pod and put it onto the cluster based on the series of defined plugins.
+00:14:13 [W] Once the part is scheduled nothing happens to counteract for that in case the state of your cluster changes.
+00:14:27 [W] So say if a pod gets scheduled on to a node and then later on that node gets some sort of taint or label gets applied to it.
+00:14:37 [W] That doesn't match the Affinity that the Potter jelly had nothing will happen but that but the D scheduler is a tool that will run periodically either as a job.
+00:14:45 [W] Job, or it can run and in a control Loop and it'll periodically look at the state of the cluster and look at the pods and make sure that they match what they should and if they don't it'll evict those pods. So safe poddisruptionbudgets.
+00:14:59 [W] Node like the example that I gave and a new label gets applied to that know that doesn't match Affinity the D schedule.
+00:15:10 [W] We'll see that in a victim it so we've had a lot of improvements on a recently. Just trying to make it more reliable and accessible to new users. Anyone that's interested in contributing to it is
+00:15:23 [W] I'm going to go over a couple of the changes that we've done so far in 118 119.
+00:15:35 [W] So the first thing that we did was we have now decided on aligning the D schedulers releases with upstreams releases. So that means that we're going to be tagging release branches
+00:15:45 [W] Scream release schedule. So this means that you'll know what version of kubernative study scheduler is compatible with if you're running it and it also helps us track the past three
+00:16:01 [W] That is that we want to support with it. So you can kind of know that if you're running the 119 based version of the D scheduler that should work with 118 117 and 116 as well.
+00:16:17 [W] So that is what we're able to track a lot easier with these matching tags.
+00:16:26 [W] And it also gives us a more regular release cycle to make sure that we're updating to the Upstream dependencies making sure that everything is compatible in that you can grab the latest D scheduler and run it in.
+00:16:32 [W] the latest kubernative Network
+00:16:34 [W] Another part of that is that we've published some production containers for anyone to consume. You don't need to build your own D scheduler. Now if you just want to use the default that's available.
+00:16:49 [W] These are published on GC cri-o and they'll be tagged with the matching release numbers so you can grab this and run it in your cluster without having to build the D scheduler yourself.
+00:17:01 [W] It makes it a lot easier to run.
+00:17:04 [W] So the next thing that we did was we've added a couple new strategies the full list of available strategies for the D scheduler is on the readme for the repo.
+00:17:18 [W] I've mentioned a couple of them so far.
+00:17:20 [W] That's available.
+00:17:31 [W] These are published on GC.
+00:17:31 [W] cri-o and they'll be tagged with the matching release numbers so you can grab this and run it in your cluster without having to build the D scheduler yourself.
+00:17:32 [W] It makes it a lot easier to run.
+00:17:33 [W] So the next thing that we did was we've added a couple new strategies the full list of available strategies for the D scheduler is on the readme for the repo.
+00:17:35 [W] I've mentioned a couple of them so far.
+00:17:36 [W] This is no no definity pot of finiti.
+00:17:37 [W] There's strategies that will move if you have duplicates of PODS running on a node and you want to spread those out more. It'll try to evict some of those duplicates and hopefully they get real
+00:17:42 [W] Scheduled on to a different table. So it keeps your availability up but the new things that we added in 118 119 are these three strategies here one will remove pods that have too many restarts.
+00:17:50 [W] So this can be helpful.
+00:17:57 [W] If you have pods that are constantly crash looping for some reason and you want to get in there and evict those pods maybe to kick them onto a new node that has better availability for them.
+00:18:04 [W] Maybe they're crash looping because they're having trouble connecting to some mounted Network volume on one node, but once it gets evicted it goes out to the new node, and then it works for that's what this job does and that takes two parameters
+00:18:19 [W] Are constantly crash looping for some reason and you want to get in there and evict those pods maybe to kick them onto a new node that has better availability for them.
+00:18:21 [W] Maybe they're crash looping because they're having trouble connecting to some mounted Network volume on one node, but once it gets evicted it goes out to the new node, and then it works for it. That's what this job does and that takes two parameters.
+00:18:22 [W] Consider for eviction and also whether or not the in it container restart should be factored into that.
+00:18:35 [W] The next strategy that we added is a pod lifetime strategy which just removes pods that are over a certain number of seconds old.
+00:18:42 [W] So that's pretty self-explanatory.
+00:18:50 [W] If you have long-running pods and you want to evict those in favor of newer pots try to get new pods into the system. That is what that is for.
+00:18:52 [W] The third one that at the time at this time is in progress, but we're targeting is for the 119 really cycle is a topology spread strategy which matches the topology spreading plug-in that although mentioned
+00:19:09 [W] If your topology becomes uneven at some point while the pods are running it's going to go through and try to work on or try to evict those paths that will hopefully be rebalanced in the way that you want your strategy.
+00:19:25 [W] So important thing to note about the D schedulers that it doesn't look at. It doesn't try to reschedule any of the pops what it's doing is strictly evicting us that don't match what they should and then
+00:19:41 [W] It's up to the scheduler and the those pods open and controllers to recreate those pods. And it's the it's optimistic that the scheduler will put them back where they need to go.
+00:19:51 [W] So having these matching strategies is very helpful or keeping a cluster balanced actively and I'll come back to that in a minute with something else that we were talking about for future improvements with the D scheduler
+00:20:06 [W] Is like I'm like I says here we are always looking for new ideas and new strategies that can be added to the D scheduler like the scheduler. There's
+00:20:17 [W] infinite number of ways that you can imagine that you might want to come up with a strategy for how your cluster should be balanced or how that could be violated and what you want to do to address that so any new ideas
+00:20:32 [W] His for them are welcome in the repo and any new contributors also, very helpful.
+00:20:39 [W] So long after those changes, we have a couple miscellaneous improvements to the repo.
+00:20:53 [W] One of those is that we just finalized we're going to be publishing a Helm chart automatically with our release.
+00:21:01 [W] So this will be easier for people who are consuming Helm charts to publish or to run some 2D scheduler.
+00:21:07 [W] They will be able to grab those from our GitHub repo would be published with GitHub Pages.
+00:21:09 [W] Make it a little easier to deploy.
+00:21:10 [W] Another thing that we're adding is the ability to run the D scheduler selectively on pods based on their labels or a specific name spaces as something that we've had people ask for I just want to run the D scheduler to keep this one
+00:21:25 [W] Instead of running it having it affect my whole cluster.
+00:21:37 [W] That's what these will provide for you. And another thing that were looking at in the future is being able to control what priority based on a priority class threshold.
+00:21:44 [W] Go for eviction, too. So if you want to exclude a certain number of PODS based on your custom defined priority class, you'll be able to do that in the future. This is something that we're working on in progress.
+00:21:59 [W] Currently it only excludes pods that are system critical based on priority class.
+00:22:10 [W] There are various number ways that you can also exclude pods, but these are just some of the other ways that we're making a configurable.
+00:22:17 [W] We also updated the D scheduler to be based on go 114.
+00:22:21 [W] that's with keeping line with upstream and 119. We added some issue templates to GitHub so that new users can more effectively proposed issues.
+00:22:31 [W] Sprint raise up bugs and we can communicate better with how to resolve those and then we just had some berries quality of life improvements to the code some re factors one of those being that we've improved the logging we've
+00:22:44 [W] Ability to see why pods were evicted in the logs as well as raising events, when pods are evicted that specifically say it was evicted because it violated the Pod Auntie Affinity of the node or whatever
+00:23:00 [W] And various other code refactor, 's that are too small to mention here, but definitely improve the readability and the ability for people to contribute to the code.
+00:23:16 [W] Looking ahead.
+00:23:17 [W] We've got some plans that we don't contribute or continue improving the code-based one of those as we're looking at our API to configure the D schedulers strategies. We want to make that a little easier.
+00:23:32 [W] To configure and make it a little more extendable for users to add in new strategies. Another big thing that we get asked a lot that we've seen. A lot of people requesting is the ability for it to be based directly on
+00:23:46 [W] There's plugins and use that in the use that code to be able to make its D scheduling decisions.
+00:23:56 [W] And that's something that we're definitely looking at appreciate any help that people will be willing to join them.
+00:24:07 [W] One of the big blockers for that right now is the ability to easily import the scheduler plug-in code.
+00:24:14 [W] It's pretty tied into the rest of the Upstream core kubernetes code base.
+00:24:17 [W] So part of the task that we're taking on is trying to go through where the plugins are tied in and where we can break those dependencies so that you can more easily import just the packages that you need to get certain plugins or all of the plugins without
+00:24:32 [W] Of k8s IO / kubernative that's something that we're working on and there's issues in six scheduling Upstream that you can find and help out with that if you'd like.
+00:24:44 [W] But those are all of the main improvements that I have for the scheduler.
+00:24:53 [W] Yeah, I don't know.
+00:24:57 [W] That's all I had Aldo. Did you have anything else? That's all from my side as well?
+00:25:01 [W] Thank you for joining this session.
+00:25:06 [W] Yep.
+00:25:13 [W] Okay, so we are now life in the QA.
+00:25:23 [W] We have a few questions here.
+00:25:27 [W] Let me take the first one.
+00:25:28 [W] There is was there wasn't there a plan to implement a finite policies that are enforced during execution.
+00:25:40 [W] For example required during scale in required during execution is the descaler a substitute for that. So let me answer first from the cube scalar perspective.
+00:25:53 [W] In general.
+00:25:57 [W] um
+00:26:02 [W] There is was there wasn't there a plan to implement a finiti policies that are enforced during execution.
+00:26:03 [W] For example required during scale in required during execution is the descaler and substitute for that. So let me answer first from the cube schedule perspective.
+00:26:05 [W] In general.
+00:26:05 [W] Yeah, this this this option has been discussed in the past and there is racing immediate pressure for it.
+00:26:08 [W] So we are not not doing it in the next release or unless there are contributors that coming but but these there is a problem here because
+00:26:22 [W] Is this in immediate pressure for it?
+00:26:23 [W] So we are not not doing it in the next release or unless there are contributors that come in but but these there is a problem here because
+00:26:24 [W] Require that the keep scheduler and starts watching running pots, which it doesn't today. But but the API is not just about the scheduler. It can be enforced by other
+00:26:39 [W] As for example, we have we have a fiction that is done from from the cube latest well for deliberations, for example, so it is possible that that we could implement this feature
+00:26:55 [W] Once he becomes more.
+00:26:58 [W] Of a main project in in kubernative Iron - Mike you want to add something?
+00:27:08 [W] Yeah, pretty much exactly what you said.
+00:27:11 [W] It's come up a couple times before and I think in the past when I have seen it come up people tend to point to the D scheduler for it.
+00:27:22 [W] I think that if you run the D scheduler, you'll basically get that behavior right now. If you're looking for the required during scheduling required during execution, but it's not
+00:27:28 [W] Like I said in the presentation of the scheduler is MM watching pods all the time.
+00:27:35 [W] It's running on whatever interval you're setting. So sort of like how the scheduler would need to start watching pads all the time to get this perfectly the D scheduler will probably get you close enough if you're looking for
+00:27:47 [W] Let's go to the next one.
+00:27:55 [W] Do you think about potential integrating these scaling into the scheduler?
+00:28:04 [W] I don't know if this has been discussed before but basically I get this as putting in as a separate routine instead of a separate binary Mike.
+00:28:12 [W] Yeah, I've heard people ask about it before it.
+00:28:24 [W] I think it goes back again to look just like what we were just saying about you know, if the scheduler was going to be watching pods. It's
+00:28:25 [W] Kind of taking the opposite behavior in the scheduler. So would have to run as like a separate routine or maybe be a separate binary, but it depends on how you want to Define integrating it into the scheduler.
+00:28:40 [W] Don't think right now. There's too much looking at it and we were trying to get some of the scheduler actually integrated into the D scheduler by getting those plugins and making them available to be imported and used the D sketching strimzi.
+00:28:55 [W] Reggie so in that way the D scheduler is kind of a weird implementation of a scheduler and away on its own. So I don't know if we're really gonna be looking at moving D scheduling into the scheduler anytime soon.
+00:29:10 [W] I just don't think many people have pushed too hard for it.
+00:29:21 [W] Yep.
+00:29:23 [W] But on the other hand.
+00:29:27 [W] It's also good to have some separation.
+00:29:32 [W] So for you for more opportunities of failover.
+00:29:38 [W] This kind of goes with the next question.
+00:29:44 [W] What was the reason behind starting a different project for this scheduling instead of starting off by setting the scheduler?
+00:29:49 [W] Well, there is first of all the ability to iterate fasters if you have separate project you can incubate
+00:29:58 [W] I'm putting in a separate.
+00:29:59 [W] It's a repository and people can contribute faster because this carrier is old.
+00:30:08 [W] You don't want to you don't want to break it.
+00:30:11 [W] You don't want to break people's clusters they update. So it's safer to to start a separate project and and even better for this kind of thing where you have a separate.
+00:30:23 [W] Totally separate routine that needs to start so it was safer in the in that sense.
+00:30:31 [W] Anything but yeah, and then and tagging out to that the he said that people can contribute a lot faster to the D scheduler as a separate project.
+00:30:48 [W] We're not so strictly tied to kubenetes release Cycles, even though we try to keep them lined up, you know code freezes and stuff.
+00:30:54 [W] We can be a little looser on and just you have a faster iteration that people can contribute to
+00:31:02 [W] yes, there's a project progress is it could actually be more in line with with we stable releases, but but it could always stay as a separate
+00:31:19 [W] He have a faster iteration that people can contribute to.
+00:31:20 [W] Yeah, so as a project progress is equal actually.
+00:31:21 [W] Be more in line with with we stable releases, but but it could always stay as a separate project just like classical descaler. For example.
+00:31:22 [W] This is another question things for updates.
+00:31:32 [W] What do you think is the most exciting challenging problems for planetscale in today?
+00:31:43 [W] I'm gonna say basically two things one is scalability.
+00:31:47 [W] There is a lot of people in the community asking for.
+00:31:53 [W] For some contention a mentioning The Talk this problem of mine schedule parts that affect the scaling so that's one is hard because there are so many events happening in the cluster.
+00:32:10 [W] Scheduling that's one is hard because there are so many events happening in the cluster.
+00:32:11 [W] both both removed or pots terminated and
+00:32:15 [W] or nodes new notes or remove nodes. So it's not easy to come up with a with a strategy to re re tripods that are pending and another
+00:32:31 [W] is
+00:32:33 [W] Batch scheduling basically scale Liam's multiple Parts at the same time because they have a tight relationship.
+00:32:48 [W] So that one can only start without the other that is hard because this color today looks at a single proton a time.
+00:33:01 [W] So we are that's a problem some contributors are looking at and and they are already experimenting with plugins in a
+00:33:04 [W] In the scaling plugins repository and their iterating there as well.
+00:33:10 [W] Yeah batch scheduling is definitely one of the bigger ones that we've been trying to crack for a while and the scheduler plug-in framework is let people more people try to take out that challenge.
+00:33:26 [W] I know it's apologia we're scheduling is also another thing that we have the default topology spreading plug-in that you talked about in the presentation, but I know that there's a lot of people trying to work on their own
+00:33:40 [W] Scheduling is definitely one of the bigger ones that we've been trying to crack for a while and the scheduler plug-in framework is let people more people try to take out that challenge.
+00:33:42 [W] I know topology aware scheduling is also another thing that we have the default topology spreading plug-in that you talked about in the presentation, but I know that there's a lot of people trying to work on their own
+00:33:43 [W] I think that there's an entirely separate topology aware scheduling channel in the Kate slack where people are working on really interesting solutions to it and pop in there every now and then to see what's going on, but gets a little over my head.
+00:33:56 [W] Yeah, what's the next one?
+00:34:02 [W] Is there a memory type of we're scanning available example coredns his nose with DRM versus no Sweet Pea pme.
+00:34:14 [W] pme. Mram is Ram Etc. Another I'm well aware of there is some discussion about no topology. So if you have a
+00:34:26 [W] numa notes that they start discussion there is already started and I imagine this problem would be kind of similar, but I haven't seen any discussions around this.
+00:34:38 [W] Yeah, I would say the same thing.
+00:34:44 [W] It's pretty much a pneumo. We're scheduling has been some friends closest that people have talked to you about that, but not very much beyond that.
+00:34:53 [W] The next question to you like yeah, the next one is saying there's the weird problem of trying to pull in scheduler code to have better default strategies in the D scheduler.
+00:35:12 [W] What's this A consideration that was made during the start.
+00:35:20 [W] That the scheduler configures it's plugins.
+00:35:29 [W] So really once we got the switch to the scheduler framework with plugins the consideration of bringing those plugins into the D scheduler started to come up right away.
+00:35:42 [W] So we have been thinking about that for a while, but it wasn't a main driving force of developing the framework as far as I'm aware, although but it's something that we want to make easily
+00:35:56 [W] Now so that's just a nice side effect.
+00:36:01 [W] And now we are kind of using that to drive breaking out these plugins.
+00:36:05 [W] We have the scheduler plugins separate repo that I think we're going to try to move some plugins to eventually or at least it's an incubator and repo for new plugins now.
+00:36:14 [W] something that we're that we've considered thought about
+00:36:19 [W] as we mentioned in to talk there is also a huge drive to clean up the dependencies basically try to bring the core part of the algorithms
+00:36:37 [W] Very positively that is easier to to import from other projects, which is that this this is less of a problem.
+00:36:48 [W] There are no more questions.
+00:37:00 [W] Looks like that's it.
+00:37:06 [W] How much time do we have left?
+00:37:13 [W] Yeah, yeah.
+00:37:16 [W] This is a looks like we're actually just about a little over our time actually.
+00:37:26 [W] Okay, so if so, we are there are stuck.
+00:37:32 [W] Yep. If you have any extra questions composed in there and we're gonna answer.
+00:37:39 [W] You pour in the to coupon maintainer track select channel for cncf. And then also obviously Sig scheduling regular Kate Slack.
+00:37:51 [W] Thank you.
+00:37:58 [W] This was great.
+00:38:01 [W] Hope it was informative.
+00:38:02 [W] And yeah, thanks for coming.

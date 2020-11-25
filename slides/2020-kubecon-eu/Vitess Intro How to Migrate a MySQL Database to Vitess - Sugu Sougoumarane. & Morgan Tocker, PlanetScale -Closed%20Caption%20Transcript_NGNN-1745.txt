@@ -1,0 +1,256 @@
+﻿Vitess Intro: How to Migrate a MySQL Database to Vitess: NGNN-1745 - events@cncf.io - Tuesday, August 18, 2020 8:30 AM - 68 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:01 [W] So hello and welcome.
+00:00:05 [W] My name is Morgan.
+00:00:07 [W] We're also joined by Subaru for answering questions.
+00:00:10 [W] We're both maintained as a vitess sugu as well as the co-creator of the test and founder of planetscale planetscale provides Commercial Services for participate.
+00:00:19 [W] So today's talk is an intercession on the test.
+00:00:26 [W] So let's start with an intern.
+00:00:30 [W] The test is a cloud native massively scalable database tier applications.
+00:00:34 [W] It looks like it's MySQL actually under the hood.
+00:00:37 [W] It is MySQL server tests orchestrates MySQL makes it highly available makes it scale horizontally by adding new service.
+00:00:47 [W] This is a feature. That's obviously not available in standard MySQL.
+00:00:52 [W] And really allows you to operate in a cloud native way.
+00:00:57 [W] And it's released as open source.
+00:01:00 [W] It's a cncf project. So just some quick stats of a bit of a test with started it 2010 at YouTube.
+00:01:09 [W] I believe it went to production in 2011 and now fast-forward to 2018 and Beyond its the cncf project and it's a top-level graduated project with over 200 contributors 10,000 stars
+00:01:22 [W] It hope and the current version is potest version 7 or at least current version by the time that you see this video.
+00:01:31 [W] We are planning to release it later today.
+00:01:38 [W] There's 18,000 commits behind the tests and the best way to be able to get support for the tests is by going to the slack Channel and slack itself is a user and contributor to vitess which we will get to
+00:01:47 [W] my next slide
+00:01:49 [W] So it started YouTube I mentioned that fact but now vitess is used in many places.
+00:02:01 [W] It's used by slack.
+00:02:01 [W] It's used by JD.com JD operates the largest protest cluster that we know about which is thousands of tablets will get to that terminology in a second better tablet is the basic unit of
+00:02:16 [W] Within vitess square cash app Pinterest HubSpot, your many of these names you're already familiar with pure for developers familiar with GitHub, but there are there are several levels of others as well.
+00:02:31 [W] think one of the interesting thing to point out while we're on this slide is that the adopt is also maintainers and contributors. So if we highlight on this slide,
+00:02:41 [W] That the companies that are employing active maintainers slack Pinterest HubSpot muzzle Square.
+00:02:56 [W] We value a lot from their contributions. So I think you know I come from a database background.
+00:02:59 [W] a difference between you know, when a product is created by a product company and when it's really embraced and contributed to by an active team that has to solve real-world problems. So, you know, I think we very much benefit.
+00:03:13 [W] In terms of making sure that the right metrics and wanted there's the visibility into the operating of a system and the right bugs are fixed.
+00:03:22 [W] So we thank these companies very much for their adoption and for their leadership in maintaining the tests.
+00:03:28 [W] So I'm going to click back to this slide quite a bit because they think it explains a lot about the tests of a test is a distributed system.
+00:03:43 [W] it's got more moving pieces than a regular MySQL and there's some terminology to learn to really benefit and understanding the tests and we'll use this terminology when we get to really the meat of this talk which is to explain
+00:03:56 [W] We would migrate from MySQL some the left hand side.
+00:04:00 [W] We can see here's your application and your application optionally but typically in a cloud knative architecture, it will route through a load balancer to connect to a VT gate server VT gate
+00:04:15 [W] Say component of the test so you can think of it as like a proxy.
+00:04:21 [W] It's a little bit more sophisticated than that our proxy / router.
+00:04:29 [W] that will act like it's a MySQL server, but it can retrieve the data from multiple MySQL service under the hood to be able to scan a gather or re piece together the daughter
+00:04:40 [W] For multiple shards or segments of your data to be able to return queries to your application. So a VT gate server speaks the MySQL protocol you speak to VT gate
+00:04:55 [W] like it's the MySQL server with a MySQL connector and you can keep using the same connectors in your application that you're already using and then it's rats that query underneath to a set of shots,
+00:05:10 [W] Which are going to be using MySQL.
+00:05:14 [W] So the shots here, they're comprised of tablets.
+00:05:26 [W] This is the basic unit of data that we have in inve tests. And the tablet has a MySQL server. You can use MySQL has made by the MySQL team at Oracle.
+00:05:32 [W] You can use marietv. He's becoming a server in a different mode of operation, which we'll get to as well you could even use amaz on IDs or
+00:05:41 [W] that's what you would like to use.
+00:05:42 [W] And the shots store the underlying data in these petitions or segments of data that vitess recommends. You keep fairly small about 250 gigabytes in size.
+00:05:57 [W] So it's easy to be able to scale and add capacity as you need to
+00:06:01 [W] so the state is stored in these shots vitess can manage those servers to make sure that you've got replicas and you've got high availability and if one fails it can kind of make another one step up and
+00:06:16 [W] And take over that the other information to point out in this slide here is that this some metadata that is used to wrap to the the current shock for each each piece of data, and this is stored in something. We call a
+00:06:31 [W] The server topology server.
+00:06:35 [W] This is a abstract concept.
+00:06:42 [W] There's no technology coolest upper server you get to basically take your pick of if you want to use it CD.
+00:06:46 [W] That's the most common these days in Cloud native architectures, but console and zookeeper also supported and the only other piece that I haven't described on this slide is that there's management GUI code VTC TLD,
+00:06:58 [W] Which can make those changes to the topology for you on your behalf, but it's not an active part of serving.
+00:07:09 [W] So loving detail on this slide.
+00:07:11 [W] And as I said, I will flip back to it as we're describing various Concepts, but for now, I want to summarize it as VT gate is the MySQL proxy that routes into your tablets, which is where
+00:07:24 [W] You're storing your daughter and there is a bit of terminology to learn to really understand participate.
+00:07:29 [W] Okay, so next slide meaty gate we mentioned this to say this proxy a point that I want to stress that that maybe I didn't quite on the last slide. Is that even though your system is distributed
+00:07:47 [W] VT gate does present it like it's a single MySQL server like what you're used to so your data might be split up in multiple MySQL service, you know a table might actually exist in 10 different
+00:08:02 [W] Todd's you will see it like it's one table and know basically just retrieve that daughter as it needs to it speaks my skill protocol. It speaks most of the my skill dialect will get a little bit into the details
+00:08:17 [W] Talk about a migration but your key space has a new term to introduce here, which is like a vitess database. They can be either shot at or Uncharted when you operate in Uncharted mode, basically almost
+00:08:33 [W] Everything is supported in terms of SQL syntax. If you operate in a shot at mode, there are some additional restrictions on which SQL is supported.
+00:08:44 [W] Okay key spaces and shots key space is it's kind of like my score - gokul's the schema or does database to use that term would be a little bit ambiguous there because
+00:09:03 [W] how the data is actually stored in MySQL is if it's shotted every server would have a database the test uses these abstract term that the makes it a little bit easier to understand but it's like a logical grouping of tables
+00:09:18 [W] And tables are stored in Sean's shots contain are replicas or multiple tablets. One of them will be a primary and then they'll be typically replicas
+00:09:33 [W] Are the only instances of shots?
+00:09:40 [W] We typically recommend that you run with at least three copies of each shot just to make sure that you have high availability when you're choosing your shouting scheme and you're shouting design. I did throw out that vitess.
+00:09:51 [W] Likes to aim for coming from a database background.
+00:10:00 [W] What I would say is fairly small shots at 250 gigabytes a piece.
+00:10:10 [W] You know, I know from my experience of operating MySQL that it's well with a well optimized system fairly possible to have terabytes eyes database instances, but the reason why the tests are recommends, this is it's very easy
+00:10:15 [W] Easy to be able to do a failover.
+00:10:22 [W] So typically of a shot fails or a server fails you want to be able to recover that within about 10 or 15 minutes to Spire restoring the data to somewhere else on your network and if you aim for about this 250
+00:10:32 [W] Let's eyes that seems to be about right to make sure that you can achieve that if you pick a larger size then you know, you run into risks like while you're during recovery. You could have a follow-on failure.
+00:10:47 [W] It's not an actual restriction that participation has to be able to do that. Another thing for operating, you know, a large scale system is that you want to make sure that no user can kind of impact the other
+00:11:00 [W] Is this too much?
+00:11:02 [W] So you do get some natural fencing or basically a boundary on blast radius if you do pick smaller sizes of shots, so that no individual user can kind of take over
+00:11:15 [W] The whole system's that's another nice property that using a scalable system provides over a monolithic system, which you may be familiar with if you're coming to this talk from a traditional database space.
+00:11:30 [W] Okay.
+00:11:33 [W] So tablets tablet is the basic unit of work in a vitess cluster.
+00:11:43 [W] I did mention you can use any MySQL server flavor.
+00:11:46 [W] You can also use what we call an unmanaged tablet and we will use part of that as part of our migration strategy where you can say vitess you don't manage the active replication Health monitoring and things like that.
+00:11:58 [W] Just treat this as like a MySQL instance to reach out to
+00:12:01 [W] and this is useful as sort of like an entry point to be able to get into the test, but I would say most users are using the fully-managed scenario where the test is offering High availability and active monitoring of
+00:12:16 [W] Two of the tablets in the cluster.
+00:12:23 [W] So tablet is comprised of MySQL and a v t tablet process.
+00:12:25 [W] This is just a sidecar process that monitors and recites the MySQL server that needs to be able to do that.
+00:12:32 [W] Okay, so architecture diagram. We have VT Gates. We have tablets and we have as I said optionally a load balancer a couple of things to point out here that we'll get to later as well
+00:12:48 [W] having these extra layers of the load balancer and the VT gate you may find that although the test has very similar performance characteristics to mySQL because it is MySQL when it executes the query
+00:13:03 [W] It does add additional hops be able to get to what MySQL so in terms of regressions.
+00:13:13 [W] is one thing you may notice that you may see slightly higher latency if you move your application to the test.
+00:13:18 [W] Okay, so let's talk about our plan.
+00:13:26 [W] So we want to move from using MySQL to mySQL with protest on top.
+00:13:35 [W] would we go of that achieving that well my three sort of thought areas into the main focus would be on the queries that I execute to they work with for tests.
+00:13:48 [W] Does my application tolerate the tests performance characteristics that are a little bit different we just mentioned that and then the third one is, you know, very cautiously and operations the software is perfect.
+00:14:04 [W] We have to have a plan to be able to back out if we can and actually I'll add to it we have to have ability to sort of test it in a safe way and production without going, you know, completely a hundred percent.
+00:14:18 [W] Good test on day one. So this is the scenario that we're going to talk about and the test does have a very good answer for each of these points.
+00:14:27 [W] So to start with with testing out queries with the test.
+00:14:35 [W] There is a program called BT explain so you can actually grab a copy of your queries and just run them with protest but this is sort of a nicer way to be able to do it.
+00:14:51 [W] So what I would do is I would start with my MySQL server.
+00:14:55 [W] I would enable the slow query log and I would set the long query time to zero seconds.
+00:15:02 [W] This captions all queries not just so queries and I would probably try and get
+00:15:07 [W] Some sample that's representative of production load. So maybe half an hour or so.
+00:15:11 [W] And then when I have this log file level my queries, obviously, it's going to be very large.
+00:15:18 [W] It could be several gigabytes.
+00:15:24 [W] I want to be able to reduce that log file down to get just basically unique queries.
+00:15:29 [W] So the prepared statement form of a query without the values in it.
+00:15:32 [W] And this is what this program called PT query digest will do its part of the percona toolkit. So what I often find when I do this is in a production application there might be 50
+00:15:43 [W] You need queries that I use to access MySQL.
+00:15:50 [W] They're definitely some scenarios where it might be more than that particularly. If you have some sort of query Builder or em, the order generates queries for uses. You might have thousands but let's
+00:16:01 [W] Typical case we may have 50 queries that we end up with once we reduce them through this PT query digest program.
+00:16:15 [W] Then what we want to do is we want to pipe the output of that PT query digest program, which will give us a smaller file of queries through the teks plane
+00:16:23 [W] You know, there's some details to throw in here. If you're using just an Uncharted key space, I would expect that. This would be fairly straightforward.
+00:16:39 [W] You should find that that all of the queries are are working particularly with the tests 7 and above as it has support for
+00:16:44 [W] Session context something that was missing earlier. But if you use a shot at Key space actually the way that you shot your tables which you specify in some encoding V schema
+00:16:59 [W] Effect which queries is supported. So VT explain can accept a v schema and a schema to make sure that it validates with those settings that this list of queries is possible.
+00:17:15 [W] So we take explain in a nutshell here.
+00:17:25 [W] I say VT explain with this schema, which is my MySQL ddl and this V schema and with two shots, will this SQL query work and then I will get some information to say yes, here is how it works.
+00:17:38 [W] So I'm not going to specifically cover the shotting in this this talk, but I think it's an interesting sequitur to very briefly touch on how you choose to shout your database, you know often you're going to be
+00:17:55 [W] Modeling it on how the data is accessed.
+00:18:03 [W] So if you're a SAS application, you may be shotting by the tenant to say that for this individual tendon, you know, I want all of the data to kind of reside together in what we would adopt these term say clustering which is a bit
+00:18:12 [W] Then biggest term so what a cluster that the user data all together, so get very efficient queries.
+00:18:18 [W] How you do that though?
+00:18:22 [W] They're awesome some variations where that might be a good idea or might be very bad idea. If you tend to have very large or lopsided distribution of tenants. So I'm you know, that's use the example of slack where
+00:18:36 [W] Individual slacks should be very large in the individual tenants.
+00:18:45 [W] It might actually be better to shot on the tenants Tenon.
+00:18:49 [W] So the individual slack channels rather than the the slack deployment and I think the best way to get an answer for this is to join the slack channel for the test and say Here's how I plan to show how do you have any experience?
+00:19:00 [W] I will note though. One of the interesting things about the test is it does make it very easy to be able to reshot if you've designed if you've decided there's a better way to lay out your data and that you can kind of change the scheme and reshot to it
+00:19:17 [W] different way of laying out your data, you know the alternatives to using something like the test is you may actually change your applications that it manages the shoddy and if you do this, I think it's very hard to kind of change the scheme over time often,
+00:19:31 [W] You don't incorporate this into your design that there could be some problem.
+00:19:36 [W] So interesting segue, but that's that's foot back to to our migration.
+00:19:46 [W] So we validated their queries work with BT explain and we get no errors and it looks like we're ready to proceed forward.
+00:19:56 [W] Oh almost there might be some some scenarios that are hard to test.
+00:20:03 [W] Maybe you might find that you've tested today's queries and your validated them and there's something else that's in production and
+00:20:07 [W] We have to make sure that we have that ability to back out.
+00:20:15 [W] This is basically just the first level in chick to know that our test vibration is going to be successful.
+00:20:17 [W] So I would say that I run this in Dev. I run this in QA.
+00:20:27 [W] I make sure that I catch the typical gotchas as well as things that might be, you know coming through and Devon production that we might not catch.
+00:20:35 [W] We might not have got a very indicative sample of our slow query log file and production.
+00:20:46 [W] So you might have some specific reports that run on the first day of the quarter that might not have been captured and I think this is
+00:20:48 [W] Very hard to have a hundred percent certainty. All of this is sort of building towards the confidence to make sure that we we know that the test is likely going to be a big a good fit for application, but you may find that
+00:21:03 [W] You know just through many moving pieces that there will still be some queries that you might have to fix this you migrate.
+00:21:10 [W] Okay. So let's go to the second pot which is to make sure that we can survive the added latency the test requires at least one more Network all to go through that VT gate to go to mySQL.
+00:21:27 [W] If we use the load balancer as well, which I said is a common deployment scenario in Cloud native applications.
+00:21:38 [W] You've got two more hops. So the scenario where this is going to hurt the most is if we're doing a lot of queries, you know to load an individual web page.
+00:21:42 [W] If we imagine that our application is web app. So there's this pattern called n plus 1 goes by many names, but that's the one that I call it where you've got a while loop and inside the loop. You're doing queries
+00:21:58 [W] Relatively accessing your individual values for this row that we're analyzing. So you've got a while loop 100 rows and then you've got a hundred queries for each of those back to the database,
+00:22:13 [W] I think that very often those queries when they get to mySQL.
+00:22:18 [W] They're basically free they might take you know, 0.1 or 0.01 of a millisecond to execute on MySQL.
+00:22:32 [W] But I think to design a system I use the back of the napkin math that it's about 1 to 2 milliseconds to get to mySQL and back.
+00:22:36 [W] So if we can imagine that we've got a hundred queries that it's taking, you know, a hundred milliseconds plus a little bit of small bit on top.
+00:22:51 [W] Once we add two more Network hops we're looking at three hundred to maybe more milliseconds for that that while loop and this might be sufficiently enough that it could actually impact your
+00:23:02 [W] Your application I tend to think that this impacts the badly design applications that the most so maybe this is an opportunity to fix your happen at the same time.
+00:23:16 [W] Generally, you'll eliminate that querying in the while loop by sort of like batch retrieving it before you do the while loop maybe with a big enclosed in a query to my school
+00:23:29 [W] If you can't do that that's pretend for example that you've got a while loop where the results of the previous query impact the next query you may have to use some sort of parallelism to be able to reduce this latency. But latency is something that you should
+00:23:44 [W] Keep in mind in your evaluation or your validation of protest. So unique to the test by any stretch, you know, if you're evaluating other distributed databases. This was the test.
+00:23:59 [W] I think they're all going to suffer a very similar problem to this and that they do have more components and more hops to be able to get to the data.
+00:24:05 [W] Okay, and then the sort of third part of this story is that everything's looking good so far. But how do we do this in a safe way that makes sense for Ops teams and a good practice with the point changes
+00:24:23 [W] Is that you should use a canary?
+00:24:27 [W] So if you can just deploy to 5% of your application rather than a hundred percent.
+00:24:37 [W] This is generally fairly hard to do with stateful Services because they saw modifying data often.
+00:24:42 [W] It's done with you know, deploying new versions of your application. But as we observed when we look at that architecture diagram and put the back up in a second a lot of vitess has actually state
+00:24:53 [W] Ellis the state is stored in MySQL.
+00:24:56 [W] So it is possible to deploy the test sort of like on the side and Route some of your application through the test and the rest of it directly to my SQL to be able to do that that validation and we have problems we can just roll back to regular my school.
+00:25:10 [W] As required, so typically what I'm doing when I first started out with five percent is a minute operating the test and making sure that it reacts the way I expected to so is the CPU load acceptable,
+00:25:26 [W] You know, maybe it's got logging and make sure that it's not filling up discs through those those log files.
+00:25:34 [W] I look for errors in my application.
+00:25:41 [W] Look for errors in both MySQL and protest logs and I stopped ramping up that blue to eventually getting to a hundred percent.
+00:25:44 [W] So let's look at that on the diagram first.
+00:25:51 [W] was to throw out my architecture diagram again and say these pieces in the middle V. Seagate is stateless the top our server. Is your choice of n CD or zookeeper.
+00:25:58 [W] / that's where the state is stored Services managed to Outsource and get out of that problem of storing State there and then inside of the shots using my skill to be able to store that that state so this makes vitess inherently.
+00:26:10 [W] You're having the building blocks to make a very scalable system. You can just add VT gates to add capacity and you can scale by adding shots to add capacity and that say full service as well.
+00:26:24 [W] The VT Gates don't even know really about each other. They just completely independent.
+00:26:29 [W] Okay, let's talk about the canary don't deployment on seven architecture diagram a different perspective of that previous slide.
+00:26:43 [W] So we have our application server on the left still and then our day one deployment.
+00:26:48 [W] We're at day 0 deployment is that all of our applications were directly talking to my school?
+00:26:59 [W] can do is we can have five percent of our application service or application speak to VT gate.
+00:27:01 [W] Which routes to V T tablet which uses an unmanaged external MySQL and this is where I would start out.
+00:27:10 [W] So this is a few ways that you can do this.
+00:27:12 [W] Maybe your application has a configuration file for the database server. It speaks to you may have to change whole servers to go to an individual protest or MySQL, you know, not many
+00:27:25 [W] Kayson's can roll the dice to say, you know 5% of connections here here.
+00:27:31 [W] So that's kind of what I've done on this architecture diagram if you have trouble doing this as well in your app because you don't have many application service.
+00:27:42 [W] What you could also do is you could put a sidecar proxy on the application service and then you can basically pick five percent of of connections and say that you're out through VT gate and the rest go to existing MySQL.
+00:27:53 [W] said, if it looks like it's healthy, I'm Kris that
+00:27:57 [W] Um five percent twenty thirty percent and then eventually it a hundred percent.
+00:28:07 [W] It looks like it's not then I have a very easy way to be able to switch back to rounding directly to my SQL.
+00:28:14 [W] So I'll goal is to get to a hundred percent because we won't be able to take advantage of protest till we get there because we won't be able to shop these tables if we did that the existing applications that are connecting directly to mySQL.
+00:28:22 [W] I just going to be really confused, but we should find
+00:28:25 [W] We should be able to validate in a production way that you know, there's no added latency.
+00:28:34 [W] There's a new query areas and then we basically just keep ramping things up to we get further along.
+00:28:40 [W] Okay.
+00:28:47 [W] so let's talk about the end of phase 1 is when we get to this magical goal of a hundred percent where we have all applications going to be T gate to see their version of MySQL
+00:28:56 [W] And then from there, what I would typically do is I would recommend that you move from using your existing MySQL server to using MySQL server that's managed by protest.
+00:29:09 [W] So we have now a tablet that's that's set up on my slide where we have a MySQL server with that BT tablet process. And then I want to what I want to be able to do is move the data from my existing
+00:29:21 [W] In server live soar, like an online migration from my existing server to vitess and vitess actually supports the ability to copy this data open. It has a knative workflow that it calls move tables.
+00:29:36 [W] It's part of a feature called the your application.
+00:29:42 [W] Basically, it'll just follow the replication stream.
+00:29:50 [W] So something called binary logging needs to be enabled on that existing MySQL server copy that data over to this new vitess server. And then when it gets to a hundred percent, you just have very small blip of
+00:29:57 [W] where there's tables will be inaccessible while it catches up to the last part of replication and then your VT gate knows that it has to kick to this to this set of VT tablets instead
+00:30:11 [W] To be able to get the data for these tables said last operation.
+00:30:19 [W] This is what we call a switch to have a move tables and then we have a switch to be able to cut over and we like the term switch because it's like flicking a switch that final operation should be very safe and not so
+00:30:32 [W] It's to make things completely live just a few requirements on the source to be able to do. This is not actually the defaults in older versions of MySQL.
+00:30:47 [W] They are the defaults in MySQL 8 and above which is a little bit newer. I would say, you know, most vitess uses the using my skill 5-7 just for a little back there, but you know many of migrating even from for older versions and
+00:30:59 [W] It works pretty well, you know, we in database terms used that terminology online to say it. It's on online migration.
+00:31:11 [W] It doesn't affect really you read operations or your ride our operations of the database. It just copies in the background while operations is still happening.
+00:31:17 [W] So we end up to this phase where we've copied all of our data and now it's in the tests managed tablets.
+00:31:27 [W] And then we're able to change the VT gate to say that now it should go to our negatively managed for test to be able to get access to that data.
+00:31:38 [W] From this point we're able to do new development.
+00:31:46 [W] Basically, we can stop shouting uh system. We cannot start adding new tablets. If we need to be able to do that. We can manage this vitess cluster without VT C TL gooey.
+00:31:56 [W] we're completely in the tests at this point. So if you were choosing to back out the time to do this because when you're at that five percent fifty percent, but the data is actually still in my scope format. So of the new being
+00:32:09 [W] Shot it. If you do want to change you do have that ability protest doesn't really present you any any lock in.
+00:32:16 [W] Okay.
+00:32:18 [W] So our Setup Wizard we migrated a legacy MySQL that was treated as one shot of key space.
+00:32:30 [W] I'm vitess terminology would say that that was a tablet server that was externally managed and a new set up is that we have a protest tablet that's Uncharted.
+00:32:38 [W] We can still join queries between tablets and each key space, you know, even when we move to shotted it's recommended to keep updates contained within a single key space just in vitess sysdig.
+00:32:48 [W] Design in that it doesn't want you to do a two-phase commit to be able to do updates. So we didn't talk about us shouting design in this talk, but I did sort of allude to it as you design things off when you're designing based on the Tenon or something like that
+00:33:04 [W] If you want to learn more about the tests and particularly about this workflow, we have some very good user guides on the vitess website.
+00:33:19 [W] The one in particular that I'm basing a lot of this talk on is something called the unmanaged tablet guide which shows how to set up the tests against a MySQL server.
+00:33:28 [W] That's not going to be managed by protest and you can use this if you want to use a protest against something like RDS or or Cloud SQL.
+00:33:32 [W] And with that let's open for questions.
+00:33:38 [W] So super and I will be on the line.
+00:33:40 [W] Thank you very much for joining us today, and please ask away.
+00:33:42 [W] All right.
+00:33:59 [W] There are a few questions that we answered interactively.
+00:34:00 [W] Maybe we can read out the answers of one of them that let's see.
+00:34:08 [W] Good talk about the
+00:34:11 [W] there is I'm looking for a good one to answer since we are very short on time.
+00:34:21 [W] Somebody one is a good one.
+00:34:27 [W] What's the minimum number?
+00:34:28 [W] Yeah, but it's the test and a whole night.
+00:34:30 [W] You answered it.
+00:34:30 [W] I'll let you answer that again.
+00:34:35 [W] I knew you would it's a quiz question.
+00:34:39 [W] So I we have V T tablet VT Gates and the VTC TLD.
+00:34:42 [W] Those are the three main components needed for running a vitess cluster.
+00:34:52 [W] You can actually run you can actually serve queries without a VTC TLD to serve queries.
+00:34:57 [W] You need only the VT get component and the VT tablet componentconfig.
+00:35:00 [W] aunt
+00:35:01 [W] There's the other one which is actually a very good question that was about we implemented a kubernative topo server, but we deprecated Helm after that and we did not
+00:35:24 [W] Port that implementation to the operator, it's something that we just didn't think about because but it is less important about which Topo server you choose because the whole idea of the operator is that it's
+00:35:39 [W] Pilot we should just run for yourself run by itself.
+00:35:45 [W] So you shouldn't have to worry about what it does underneath to store the Topo but if there are use cases where there is strong reason where somebody would want to use the kubernative
+00:35:57 [W] When it sees itself as a topo server, it's something that we can add support for but this is the first time I'm hearing this question and that's also one of the reasons why we never thought about it because it's the operator works. So well right now as it stands
+00:36:13 [W] Yeah, do you want to take on the proxy SQL select one as the last question? Sure. So there's a question about how does VGA compared to proxy SQL and my answer was actually think that proxy SQL probably does better in performance, but the
+00:36:35 [W] In parts of that is how much will it better and actually both will add latency and I think I'm generally more concerned about latency and in migration path. It should be equal there.
+00:36:49 [W] You may need to run more VT Gates versus proxy sequence, but because it's stateless it's fairly easy to be able to do that.
+00:36:56 [W] Yeah, and we tested obviously a more comprehensive solution. So if you don't need all the features of it s I would actually send you to its proxy SQL because it's more lightweight.
+00:37:10 [W] Awesome.
+00:37:16 [W] I think we're at time.
+00:37:20 [W] I don't know if mother is gonna jump in and kick us out.
+00:37:21 [W] Thank you for coming.
+00:37:23 [W] Yeah. Thank you.
+00:37:25 [W] You would have seen a reminder pop up on screen PC as at office hours.
+00:37:29 [W] hours. I think it's starting in about 20 minutes time.

@@ -1,0 +1,367 @@
+﻿Expanding Serverless to Scale-out Kubeflow Pipelines: RGMR-6110 - events@cncf.io - Tuesday, August 18, 2020 8:29 AM - 70 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:01:13 [W] Hello everyone.
+00:01:21 [W] My name is Eran. I'm going to present this time online on this topic of how to essentially extend kubeflow, which is the machine learning framework on top of kubernative how to extend it and simplify it using
+00:01:32 [W] Technologies and make it scalable and and easy to first few words on myself. I'm around. I'm CTO and co-founder for a company called the Quasi.
+00:01:45 [W] we're delivering automated data science platform oriented towards production based on kubernative and also incorporates kubeflow is part of it.
+00:01:55 [W] So before I talk about kubeflow and and serverless and let's examine, what are the real challenges that we're trying to tackle?
+00:02:05 [W] So today what you see in most organizations machine learning is still pretty much in the research environment research environment. People take up few CSV files Excel spreadsheets, you know, the upload some data run notebook
+00:02:19 [W] Jupiter or something like that run some analysis on the data and based on that they run some training and generate models in some cases taking those models and put them behind and HTTP endpoint and serving those
+00:02:35 [W] The challenge is really when you were going to a real application think about applications do fraud detection real-time recommendations things that do predictive maintenance, etc. Those are real pipelines and machine learning
+00:02:50 [W] Is just a component within this Pipeline and also needs to perform fast in reasonable performance with high level high availability and scalability and and all the tributes of a production system.
+00:03:05 [W] So what we see is that they need to move from this research environment to stack where you have real-time ingestion from a variety of sources, whether it's through ETL process from operational databases streaming
+00:03:18 [W] From you know transaction feeds laud Etc integrating with external API, which may extend our data set quite a bit pushing it all into analytics engine this analytic engine does
+00:03:33 [W] A preparation it scale usually on a lot more data than what you would build in your own notebook.
+00:03:43 [W] Sometimes terabytes of data versus you gigabytes on an in-memory notebook.
+00:03:48 [W] Once you've done that you need an automated system to run various experiments training with different sets of parameters with different algorithms referring to it as sort of Auto email and those things generate machine learning
+00:04:00 [W] rules that are served using real-time interactive microservices and those microservices may get event as through HTTP or through streaming like Kafka or kinases Etc, but
+00:04:15 [W] So I need to get some real data that is very much aligned with the data we use for / for training.
+00:04:23 [W] So we need data preparation also for the productization part for disturbing part. And once we've done that, we also need a monitoring essentially a feedback loop to monitor. Our models detect drift in our Model Behavior and sometimes do
+00:04:36 [W] Automated retraining or formation of an samples changing weights and and other things to mitigate loss of accuracy in our in our models. Now. The main challenge is today that those are usually two different departments in an
+00:04:51 [W] Ization, there's one group that builds data science products or models.
+00:05:00 [W] There's a different group that price to productize all of that and that in many cases involve refactoring the entire set of code and project takes forever, you know, according to analysts more than 80% of the project just fail flat
+00:05:11 [W] This transition of century rewriting everything recomposing it, you know, taking python code changing it to spark and Scala sometimes moving code to see and go to make it higher performance
+00:05:26 [W] Using different paradigms.
+00:05:30 [W] So that's one of the major challenges where we need to address know if you think about what is the basic element of basic elements that data scientists write their code in a notebook and in many cases they take their code and they
+00:05:43 [W] Very long notebooks that comprised of different steps in the workflow, like writing a single sanction that read some data and then some some things that generate charts and some things that generate a training set and then
+00:05:58 [W] Running some validation all within the same jumbo notebook. And finally I running some serving within the notebook.
+00:06:12 [W] So the first thing we need to think about is how to transform those and notebooks into microservices that we can later use as part of a kubeflow pipeline or an orchestrated workflow Bill,
+00:06:22 [W] and that's the first Challenge and that may involve some work also on the data scientist part to break down these go to modular functional building blocks, but that's the first thing that we need to think about
+00:06:38 [W] And once we were feeling okay, we've created this piece of code that needs to go into production as a training logic or feature preparation logic or Ensemble logic, etc.
+00:06:53 [W] Those are all the steps that it needs to go through from just having a python code to having a production worthy micro service that's automated in production. So, for example, we need to take the code and add the
+00:07:09 [W] Dependencies and packages to it and build a Docker container out of our code with run scripts and parameters and arguments and all of that which are not intuitive for too many data scientists the next thing
+00:07:23 [W] Is very challenging is how do we take a code runs on a single process single container and we distribute that because we have a lot more load more data or a bigger computation problem to solve. We want to leverage the
+00:07:39 [W] The benefits of kubernative is of scaling out the resources to essentially break that piece of code into smaller pieces that work in concert to generate a bigger to address a bigger workloads.
+00:08:07 [W] Immense people don't necessarily think about parallelism about potentially incorporating caching Technologies.
+00:08:17 [W] So they don't just go and read the data on every request.
+00:08:24 [W] sometimes gpus make a lot of sense and we need to incorporate libraries for kudo Aya and maybe change our code to support gpus and Etc, but when we have a code, which is
+00:08:34 [W] Hannibal performance package. The next thing we have to start thinking about is observability monitoring, but it's not just monitoring in the traditional sense of kubernative and microservices of CPUs memory Etc.
+00:08:48 [W] We need to Monitor and log everything. We need to monitor the experiments that we're doing the data that's generated with the experiment the code that was used in order to generate the experiment Etc. Because there is a big portion of liability and
+00:09:02 [W] Dependability as part of every machine learning project.
+00:09:07 [W] We run a project. We generate some results.
+00:09:09 [W] We want to be able to go back to the same experiment or we launched something to production.
+00:09:15 [W] We had some issues with how we predict outcomes. Someone Sue's us in a court of law.
+00:09:21 [W] We need to be able to explain what we've done. And what was the what were the models and how we train the models and make sure that we haven't done any mistake in that so the monitoring and observability part in machine learning.
+00:09:34 [W] In is much more extensive than what it is when you're talking about standard microservices and the other aspect is security, of course, the security has many faces data security API security
+00:09:46 [W] Role-based Access Control access to credentials and secrets for external databases and services and so on and the final piece in order to make this work flow not service Engel or one time flow, but something
+00:10:02 [W] Can reiterate then go on and on is automation.
+00:10:08 [W] We're all familiar with ci/cd in the notion of computation computation and coding we have to apply a similar approach of ci/cd and gitops for machine learning.
+00:10:20 [W] We need to build workflows that incorporate machine learning workflows.
+00:10:28 [W] There are slightly different than our usual see I work flows because they require a lot more computation and there's a lot more data involved.
+00:10:31 [W] In machine learning for workflow.
+00:10:38 [W] This is really where kubeflow comes into play and we'll talk about it.
+00:10:41 [W] And obviously we need to think about continuous deployment rolling upgrades Canary deployments A/B Testing Etc.
+00:10:50 [W] Usually this part from the development to productization is the biggest park in every project.
+00:10:59 [W] So there are some companies where I work with them and it takes them like 12 to 18 months with the original project to
+00:11:02 [W] blowing into production and it's very essential that we try and automate those processes one of the technologies that we're going to show you how it's pretty significant can bring significant advantages
+00:11:17 [W] Serverless because this is essentially what serverless technologies in general do allow you to bring code. They automatically do the packaging. They have inherent scaling out.
+00:11:27 [W] They do the instrumentation and in some cases the automation.
+00:11:39 [W] We need to add some other significant Parts which are missing from traditional serverless, which are around performance and parallelism and data statefulness and also more specific, you know tracking and observability
+00:11:44 [W] You for machine learning?
+00:11:48 [W] we'll see how those thing take effect.
+00:11:50 [W] So first, what is a mlops it for? We dive into an envelope servers in tation.
+00:11:59 [W] We all know what devops is essentially.
+00:12:02 [W] This is according to the traditional definition is essentially combining development and operations to work together and try and solve the main business challenges.
+00:12:15 [W] So mlperf pretty much the same just embedding all the aspects of data engineering and data science into the process. So it's not just developers and operations.
+00:12:21 [W] It's developers data scientist and Engineers Etc.
+00:12:26 [W] They need to collaborate.
+00:12:31 [W] One of the key challenges is not everyone is a programmer or a devops guy in this world because data scientists. They don't have necessarily all the software practices that and software Engineers have and we need to be
+00:12:41 [W] mindful of that and try and simplify not necessarily Forest the animals and Docker fires on the data scientists, but try and speak their own language when represent them apis and tools to work with
+00:12:53 [W] so let's before we dive into the solution.
+00:12:57 [W] Let's look at the typical use case.
+00:13:01 [W] This is a use case that we've deployed on several places.
+00:13:04 [W] There's also a git repo that you can see here which has a full example with all the services.
+00:13:17 [W] So if we're looking at this is a predictive maintenance pipeline, how would it look like so predictive maintenance Piper who would accept data from two separate sources usually or more
+00:13:23 [W] Operational database that gives us information about devices entities Etc.
+00:13:37 [W] And we may have streaming data usually in a form of a Kafka stream that arrives in tell us information about like Telemetry data device updates alert Etc. What we need to do is essentially ingest all of that data the
+00:13:44 [W] Operational data coupled with the streaming and transactional data and throw it into a road data bucket Road at a bucket could just be a shared file system with parquet files or CSV files could also be something slightly more
+00:14:00 [W] Richard like a data warehouse, but the first thing we need to do is Place everything in this serve raw data bucket.
+00:14:11 [W] The next thing we want to do is essentially start taking those roll features and convert them to something meaningful that we can run training on.
+00:14:21 [W] So we may need to join various datasets to extend the knowledge. We may need to aggregate things into buckets of time like hourly average number of events. You know, what's the time from the last error to the
+00:14:32 [W] Recent Terror and all sorts of what is referred to as features in machine learning.
+00:14:38 [W] So it's requires serverless wrong and in high performance analytics capabilities and then we have a new data set which is usually a single table unlike the source which could comprised of multiple table and we have a saying essentially a single denormalized
+00:14:49 [W] people which is rho going in through a training logic, but even before going into a training logic, we need to sanitize those features and if we have thousand features, maybe we don't really need to train on thousands of features again,
+00:15:04 [W] More computation power it's going to have skewing in the model. If you are not going to learn based on the right features.
+00:15:18 [W] So the next thing is to go and filter and and auto detect what are the meaningful features and and leverage those and maybe scale those to the right degree. Once we have those prepared features.
+00:15:27 [W] We may need to go and run training and the training will generate a model. This model will be later used for
+00:15:34 [W] Or for serving but also before we use that model. We want to validate it using different smaller data set at the we sent you splitting the entire data to a training set in a validation set and
+00:15:49 [W] We generate this model.
+00:15:54 [W] We take this model and validate it actually performs.
+00:15:56 [W] And what's the accuracy? If it doesn't we may need to go back and forth and tune this entire pipeline now once we have a model, we're not done.
+00:16:05 [W] This is really what we just covered is the model creation part, which is covered nicely with with kubeflow with the extension of what we've discussed essentially moving the individual steps in the pipeline to reusable.
+00:16:19 [W] Performance scalable function will see the architecture in a minute and the next piece in the in the puzzle is essentially running serving.
+00:16:34 [W] And so we take the data we take the model.
+00:16:39 [W] We can't just stay with the model. We have to bring data because remember what the serving logic does is essentially takes a set of parameters and set of features and Ransom mathematical functions and produces a result. So
+00:16:50 [W] The requests coming from the user doesn't contain all those features.
+00:17:00 [W] So what we would need to do is essentially take data from some operational data bases in real time and bring it into the serving engine and this is usually done for some sort of an API service or an enrichment service
+00:17:09 [W] And it against the model and respond back to the user now. Once we've done that it's not we're not done yet.
+00:17:20 [W] We need to monitor the behavior of our model through some survey tracking system.
+00:17:25 [W] How do we know that our model keeps on performing and is accurate or we want to be able to monitor?
+00:17:30 [W] Maybe there is misbehavior in the performance aspects may be glitches, but also does it lose accuracy or do we see different data?
+00:17:40 [W] Than what we expected.
+00:17:44 [W] So all the data from the serving which is also high performance.
+00:17:45 [W] So this is streaming data is going to go into other microservices that monitor the behavior of our model and based on that. They may trigger events.
+00:17:58 [W] They may write it to a Time series data base and visualize it in like ravana.
+00:18:00 [W] They may also record some data into serve batches and then there is another set of tools that make compare the the inferencing logic
+00:18:08 [W] The interesting data with real reference data in a delay, you know, let's assume we predict something but in a day from now will actually know if it happened or not if our prediction was true so we can compare our predictions with the real
+00:18:24 [W] Results and this way you also have another way of analyzing it for model behaves properly.
+00:18:33 [W] And if it doesn't we can trigger something to fix it retraining bringing on data changing the logic of are serving and samples Etc.
+00:18:42 [W] So this is how usually you'll see that this pipelines work again, you can see that it's not trivial and this is a predictive maintenance pipeline. It will be the same problem with other Solutions and if you
+00:18:55 [W] Add things like deep learning and neural networks.
+00:18:58 [W] It may even get complicated.
+00:19:02 [W] There are many applications where there is more than one model in a single application.
+00:19:06 [W] So those things may get even more complicated.
+00:19:06 [W] Okay. So before you tear your hair is out. The most important thing is you can start you seen there are a lot of different moving components in this system and are a lot of different software projects
+00:19:23 [W] That you can choose from but the right way is essentially to try and take an echo system which completes the most of the building block in the puzzle.
+00:19:37 [W] For example, if your take some tools that were designed for a do but along with some tools that were designed for kubernative.
+00:19:44 [W] He's and some tools in a cloud provider and they don't work with each other you end up essentially doing a lot of integration by yourself. So one of the nice things here is that
+00:19:53 [W] At kubeflow is a mechanism.
+00:19:56 [W] Where is a essentially a framework?
+00:19:59 [W] It's not compared to complete or comprehensive.
+00:20:02 [W] But at least it's something that can glue a lot of other things around it.
+00:20:08 [W] And this is part of the things I'm going to show is how to extend kubeflow with, you know, monitoring with serverless functionality with automobile and other capabilities and making it a server and end-to-end machine learning framework.
+00:20:20 [W] Okay, so essentially what we want to show is complete pipeline where we fit in data, we do their preparation.
+00:20:33 [W] We accelerated training. We deploy an application.
+00:20:37 [W] We monitor the application in order to do all of that together.
+00:20:40 [W] We have to also have some baseline of data that moves around this entire fabric.
+00:20:49 [W] how would the solution look like if we're opening that through the pipeline? So we need three.
+00:20:51 [W] The first layer we need data the data need to have few attributes first. It needs to be relatively fast because we're not talking about archival data.
+00:21:03 [W] We're talking about data in the move.
+00:21:04 [W] We're building a pipeline one microservices writes data the other Microsoft Azure service reads data, if it's takes too much time. There were going to have a delay in many cases.
+00:21:19 [W] We're doing distributed computing like in training or sometimes in in analytics. So we want to have shared data. We want all those things to work together.
+00:21:22 [W] Weather and maybe Shuffle some data around between those microservices.
+00:21:28 [W] We need sometimes streaming data.
+00:21:32 [W] We need some key value stores for real-time data.
+00:21:34 [W] We may need time series data in order to log all sorts of Matrix.
+00:21:38 [W] So this is where we need data and it needs to be fast secure and also a version.
+00:21:45 [W] So if we run multiple experiments we can also go back into specific experiment and see Andre contract that from the data we have the next
+00:21:52 [W] There is microservices.
+00:21:59 [W] Okay, and those microservices this is a simplistic view of those Microsoft Services.
+00:22:00 [W] We need we need services that ingest data from ETL from streaming from scraping from http apis.
+00:22:09 [W] We need data preparation.
+00:22:11 [W] Function that will do analytics whether it's bad to real-time or stream processing to join Aggregates plate and do all sorts of manipulations on data.
+00:22:24 [W] So it's going to be ready for the training then we need to run training logic again with usually distributed Frameworks, whether it's machine learning or deep learning and here we may also want to incorporate something referred to as
+00:22:36 [W] Amateur tuning so run the same experiment on many different permutations and we want to Leverage The Power of kubernative scheduling lots of containers.
+00:22:50 [W] So not necessarily all the permutations right on one container.
+00:22:50 [W] We can run multiple containers each set of containers will run different set of parameters and then converge or combine all the results to a single serve best result and there is also an aspect of Auto amount which is essentially
+00:23:05 [W] I think variety of algorithms that are just parameters and running all those in serverless gang and choosing the best algorithm note that we always have to store all the data because even though the machine chose one preferred algorithm.
+00:23:20 [W] I want to look back and read perspective and see which model preferred how perform the how and maybe even choose not only the best algorithm or the best model. But the three best models out of a list of a 10 or trainee
+00:23:35 [W] And once we have that we need to run validation and then deployment now each individual step is a micro service.
+00:23:50 [W] So if we're going to essentially go and create a micro service and a kubenetes deployment or kubernative job for each one of those we're gonna run out of steam very very quickly.
+00:23:57 [W] So the general idea is instead of going and running and creating Docker files and llamo files and and kubernative CR DS and all of that for each individual step. We want to have more of a
+00:24:05 [W] serverless mindset.
+00:24:07 [W] We want to write some code provided minimal description.
+00:24:13 [W] I want something else to build those services for us.
+00:24:14 [W] We did the animals with the container is with the docker images with the dependent packages with the consideration of the route scaling and all the aspects of logging and monitoring.
+00:24:28 [W] just want to provide some code and let someone else deal with that and this is really where serverless technology will come in very handy and finally when we have all those
+00:24:35 [W] Will steps we need to orchestrate them and we can we want to create an end-to-end Pipeline and this is where kubeflow and other tools are going to be useful.
+00:24:46 [W] So a typical stack would look like something like that.
+00:24:53 [W] So you have the data layer.
+00:25:00 [W] Remember we mentioned a lot of times. We need real time access from micro service to other microservices from microservices to get obtain features that are more dependent, you know require low latency access
+00:25:09 [W] Same time. We need as access to Big Data in the form of files Object Store data warehouses Etc.
+00:25:19 [W] So we need to have a layer in a quasi.
+00:25:20 [W] We have our own real-time a multi model data layer, which is serving file object tables and other interesting formats in very very high performance and along with again object files external
+00:25:34 [W] Databases then we have kubernative and are many manage kubernative options out there. And on top of it, you need all of those variety of services to make a comprehensive solution and probably more that are not short listed here.
+00:25:49 [W] Like spark and tensorflow and if you're doing sequels or something like Presto and for machine learning you need like psychic Learn Python virgin and the w**** vote is a way to distribute deep learning jobs and dusk is
+00:26:05 [W] Learning Etc and Jupiter is a man. It's notebook. So you need to install a bunch of services on your kubernative cluster and make sure they all work in our solution again.
+00:26:20 [W] It's a managed offering so you don't need to have all the hassle.
+00:26:22 [W] It just works out of the box.
+00:26:25 [W] We are suffering from the integration.
+00:26:25 [W] Not you and then you have a set of tools for pipeline orchestration now race kubeflow and kubeflow is mainly serve a graphic execution kubeflow pipe.
+00:26:36 [W] Plan is a graphic solution and attic it is missing a lot of other aspects that we need like feature store like Auto mlperf.
+00:27:06 [W] That can work with kubeflow for tracking experiments, but also can work on a standalone machine or just trying individual step in the pipeline.
+00:27:20 [W] So and also we'll talk about the gaps and what you need to do.
+00:27:23 [W] So, this is really where another tool called mlperf is filling up those gaps by orchestrating a lot of the workloads and automating and making it really really friendly to data scientists not to devops or MLA engineers.
+00:27:35 [W] the the one of the key Solutions in the as the what we recommend is working with serverless function because we mentioned before the one of the biggest challenge is moving from code to like a production artifact,
+00:27:53 [W] So of scaling Performance Tuning instrumentation logging monitoring security hardening. So one of the ways to do it is essentially leverage code and to production with serverless Technologies and for that there are several
+00:28:09 [W] He leveraged code and to production with serverless Technologies and for that there are several technologies that we're supporting and or part of the open source and nucleo is one of the highest performance very mature
+00:28:17 [W] is one of the highest performance very mature serverless framework over kubernative more than 3,000 stars on GitHub used by many Enterprises and there's also a my run which is more for batch computation and I'll show
+00:28:28 [W] X so one of the major advantages of nucleo that Beyond being a standard serverless is very very high performance.
+00:28:38 [W] It's using a real-time kernel.
+00:28:46 [W] It runs about hundred times faster than things like Amazon Lambda a trans about 10 times faster than most other serverless Frameworks over kubernative cluding KF serving and some of those it stateful so it can actually work with data
+00:28:53 [W] Stateful so it can actually work with data and you abused and things like that in the function, which is very essential for machine learning.
+00:29:03 [W] And also one of the nice thing is it's glue. It has glueless integration to kubeflow. So you can essentially create a graph of computation where the individual steps are functions essentially serverless function and there is a marketplace where you actually
+00:29:14 [W] Most of the functions for auto mlperf aiming for training for data preparation for future analysis for hooks to get and slack and things like that.
+00:29:30 [W] So you just can put a bunch of components on a canvas and get a nap pipeline up and running very quickly again, one of the main challenges of serverless that is very event driven.
+00:29:42 [W] So one of the things that we see is that we want the benefits of serverless.
+00:29:45 [W] Which is resource elasticity automated deployment and automated operation. But we want to extend it to New workloads that are more like data preparation and training for jobs can be tens of minutes or hours where
+00:30:00 [W] Alors distributed the workload is not by load balancing or you know serve servicemeshcon.
+00:30:09 [W] It's rather through data partitioning data shuffling reduction hyper parameter shuffling, you know, things like that which are different Technologies and also must be stateful because if I'm processing data
+00:30:22 [W] Tributed database or distributed file system is the Angkor for moving data around between those individual containers another major difference in jobs and data preparation. And training is instead of
+00:30:37 [W] You know as an event, we are actually passing data.
+00:30:42 [W] We're creating a pipeline with parameters and data that feed each other.
+00:30:55 [W] You know, we have data set output of one step feeding and data as an input data set for another step like data preparation creating a data set and training consumes that data set.
+00:31:01 [W] So we need to have a new serverless approach which has those attributes and this is where we've created a new framework essentially just for
+00:31:08 [W] that
+00:31:09 [W] So part of what we refer to as a murmur on which is open source again relatively new but very very powerful solution.
+00:31:17 [W] It has several layers.
+00:31:22 [W] The serverless engine is essentially one layer. It also has a lot of higher-level automation layers.
+00:31:30 [W] And so the general idea is that it auto scale is allows you to scalable to do scalable Computing over multiple Frameworks.
+00:31:35 [W] can create a serverless function of spark of dusk of MPI job, you know a lot of different cri-o.
+00:31:39 [W] These are orchestrated by Emily brontë. So you can essentially create distributed computing and MRI knows how to break the work and control the distributed job Etc.
+00:31:52 [W] Another interesting piece is that it has Auto tracking features.
+00:31:58 [W] It also scales the louder to scalable to do scalable Computing over multiple Frameworks.
+00:32:08 [W] You can create a serverless function of spark of dusk of MPI job, you know, a lot of different cri-o DS are orchestrated by Mo run so you can essentially create distributed computing and Emeril knows how to break the work and
+00:32:09 [W] It runs over multiple Frameworks. Another interesting thing is, you know, there are other Frameworks for hyper parameter in kubernative is like khatib and others, but then you need to manually go and integrate them and if we have
+00:32:23 [W] Here the knows how to run many different permutations already distributed.
+00:32:33 [W] The only missing piece is having something that knows how to create those permutations and track them.
+00:32:36 [W] This is actually built into a mirantis OU don't need a separate project for hyper Rama parameters and you all have automail built in into the solution so which is new there's no automail solution on top of kubernative besides
+00:32:48 [W] Okay. Now where's does it fit so kubeflow is something that kubeflow project has two main things or three main things one is to probe pipeline.
+00:33:03 [W] We says this orchestration capability and then you have the operators like MPI job or distribute tensorflow and others which you can also install by yourself and there's also managed and notebook. So but the most interesting piece
+00:33:17 [W] Pipeline which is based on Argo engine distributed workflow engine and it allows you to essentially run a graph the challenges with kubeflow.
+00:33:29 [W] It's very oriented towards devops.
+00:33:36 [W] It's not designed for actual data scientists to work with it and data scientists, like simple things that are very very simple.
+00:33:44 [W] They don't understand Docker containers in many cases or yeah moles and they don't want to build Jason's that build artifact for them like you would do in traditional kubeflow. They want to make things.
+00:33:48 [W] Things very very intuitive and simple in their own domain of expertise.
+00:33:54 [W] So so what am I ran and nucleo providers the way to essentially automate the code to creation of serverless functions from code?
+00:34:05 [W] It delivers all the integration are on data access and parallelism that allows you to do distributed training GPU acceleration and other features that are not built in and it does end-to-end tracking of everything codex.
+00:34:18 [W] You shouldn't data versioning Etc all in a serving a graph that you can actually just play around and move around between the different aspects.
+00:34:27 [W] So how does it all work if I'm looking into it from flow perspective take this data scientist. What you want to do is build something in his own notebook or is owned by charm or this code still it doesn't know kubernative sore doesn't care about
+00:34:44 [W] GPU acceleration and other features that are not built in and it does end-to-end tracking of everything code execution data versioning Etc all in a serving a graph that you can actually just play around
+00:34:46 [W] So the first thing we wanted to make sure is that whatever we're building can work in a standalone and that's part of the challenges with kubeflow. If you want to run kubeflow stuff, you have to run it with in kubernative and we didn't kubeflow you cannot
+00:35:00 [W] Instrument and do the tracking and all of that from your notebook.
+00:35:05 [W] without kubernative sent a ch2 it so the first thing that we want to do is essentially just import an SDK and allows someone to run from within his notebook and still get all the experiment tracking and all the data lineage
+00:35:21 [W] Done automatically for us at the same point we've divided our code and we feel it's ready for just running it as a container on the cluster say we don't want to build and and all those things.
+00:35:37 [W] We just want to say run but this time on the cluster so essentially just a symbol and single line saying not locally but in the cluster what it will do is essentially automatically packages your code throws it into the cluster builds
+00:35:50 [W] a bills to see our DS for the various runtimes that are supported like, you know kubernative job or spark or dusk or any of the other ones runs it and you still get the full tracking even while you're running this job
+00:36:05 [W] Sir, now note that this tape. We don't really need a pipeline.
+00:36:11 [W] We just want to run a single step of let's say training. We want to test validate see that it works and the later on in the process. We want to turn it into a pipeline.
+00:36:26 [W] So this once we've committed our code into a repository like it then we want to take those pieces of code and just put them in a layout or a pipeline and this way run the entire pipeline. So someone else or the
+00:36:36 [W] same guy can just take all those components build a pipeline and execute that through kubeflow or mlperf p is the other nice thing is that you don't really necessarily need to make it interactive.
+00:36:51 [W] You can make it as part of an automated.
+00:37:00 [W] See I just like you would with any other see I product so essentially you can commit something into a git repositories you put the hook in your committee repository and I can show you a demo in a minute. We have a
+00:37:06 [W] Full-blown demo for that so you commit something into the repository then that generates a trigger a moron goes build the entire kubeflow pipeline for it and you know connects all the dots that data and everything runs
+00:37:21 [W] And tracks all the information about the the pipeline execution with the pipeline execution terminates records everything right it back into the poor request as a notation in the pull request and Frozen slack
+00:37:37 [W] With the summary over your execution.
+00:37:41 [W] So this way you can move a very quickly from just developing some code on a notebook testing and individual microservices seeing how it works running an entire Pipeline and even putting your pipeline is part of a complete
+00:37:55 [W] Earth
+00:37:57 [W] and then if you were thinking about the entire process what we have is a for example, we have a branch we take we create we create a branch out of the like development Branch.
+00:38:13 [W] We run some code locally in our environment.
+00:38:17 [W] We converted to a function using a single command.
+00:38:21 [W] We test it on the cluster of see that it works.
+00:38:25 [W] Maybe we're missing some packages or maybe we misconfigured something we go back fix it and
+00:38:29 [W] That's we're done with the development.
+00:38:32 [W] The next thing is we need to think about integration.
+00:38:34 [W] We're trying to pull request that changes we've made this change goes into some inspection in a we can have Automation in most git repos of like examining the python code no flake and Blake and all those tools
+00:38:48 [W] Mouse on your own test scripts, once it passed the basic test.
+00:38:57 [W] We won't run a complete machine learning pipelines using kubeflow.
+00:39:02 [W] So this is where we can just integrate that with pull request command could pull requests comments as we've done and when and then once the pipeline runs and you get the accuracy and you get everything you can merge the
+00:39:12 [W] And even request for a deployment.
+00:39:16 [W] Once we finish the integration we want to go and run the continuous deployment.
+00:39:24 [W] This is where we make create a tag of our repository deploy the models and the code that goes along with that maybe feature engineering and some other aspects deploy that in a canary once it's
+00:39:37 [W] A minute everything is well.
+00:39:42 [W] We're going to promote that in two hundred percent of the traffic and monitor keep on monitoring the service Behavior concept drift Etc.
+00:39:54 [W] So this is usually the one of the ways of implementing that to tell you that most organizations are already working this way.
+00:40:04 [W] way. It's sort of still evolving but the ones that have managed to move into this process are becoming more agile and can drive a lot more.
+00:40:09 [W] Work with less people.
+00:40:14 [W] So that's without end and this brings a lot of value.
+00:40:20 [W] So people can build pipelines much faster and the pipeline's could be more interactive more online.
+00:40:28 [W] One of the examples is this work with one of the customers that we've done is take for fraud prevention application. The original solution was using Hadoop where you have a database you extract
+00:40:35 [W] Then using ETL into their where else you run some queries on a daily data warehouse and then have our servers and doing prediction using in our model and writing back, you know, identifying the fraud a Content blocking those four other
+00:40:50 [W] This process is very bad to rented very manual very complicated. If you've worked with Hadoop and all of those Frameworks and instead we want to move it into micro service architecture, which will buy us. Two things first
+00:41:05 [W] Faster deployment process everything instead of three or four months deployment for every change.
+00:41:14 [W] It could actually be continuous or every week we can or a couple of weeks. We can drive a change. The second is we don't want to have such a huge delay because everything is like battery in it.
+00:41:24 [W] We move I want to move to something more online.
+00:41:33 [W] So the change that we've applied the same she to gather the information from the server the database server directly as a stream.
+00:41:37 [W] Mmmmm, so you run serverless functions using nuclear that essentially crunch the stream in real time nuclear listens only about 13 different streaming protocols. Kafka rabbit Canisius pops Etc.
+00:41:50 [W] So you can just listen on Kafka or rabbit in this case do a real-time analysis because it stateful again so it can do things like real-time analysis of data write it in to combine online and offline feature store.
+00:42:04 [W] you can also run things like spark to do batch analytics on that feature store and extend the features even further looking at the bigger retrospective or bigger time window and and then periodically for example on a daily basis you
+00:42:20 [W] The model training process using psychic learn that extract a feature set training set of a bunch of features run the training generates a model file and then you have inferencing function which in this case
+00:42:35 [W] Staff to work in a stream because there's no HTTP request the data which is written is essentially generating a stream and the stream is consumed by the inferencing function which identifies the fraud and then just
+00:42:50 [W] Based on the fraud just blocks the account.
+00:42:53 [W] So in this process we have taken a process that was 40 minutes to identify the fraud into more of a continuous pipeline which and knows how to identify fraud within 12 seconds to significantly faster couple of
+00:43:07 [W] It's faster. And but the other main advantage is that each one of those steps here is a micro service or a serverless function where in order to deploy a new version.
+00:43:21 [W] The only thing I need to do is change a little code and push deploy or go to an API call and say deploy or even through CD continuous deployment tools just do the deployment automatically this way we are much more
+00:43:33 [W] Efficient so with that let me show you a short demo of all this thing is really running in reality.
+00:43:44 [W] Okay, so let me share my screen.
+00:43:49 [W] Okay. I hope it's visible now.
+00:43:58 [W] Okay.
+00:44:08 [W] So what I'm opening here is a notebook. This notebook is going to show me how I can build a full pipeline.
+00:44:13 [W] So this pipeline it's all fully documented. But the general idea is I have a function in this case again.
+00:44:27 [W] We said we want to take those jumbo notebooks and try and construct them in a way using certain functions and not just like straight code. So I have some function which
+00:44:30 [W] Is generating some fake data set this is using the iris dataset and once it finishes, we want the function to log data set to essentially log an artifact of type data set essentially a data frame.
+00:44:45 [W] Him and this logging effect will essentially record everything in a database track lineage track statistical behavior of the data set and all those things behind the scene.
+00:44:56 [W] So this context event that's part of the function execution can carry many different things. It can help gave us access to secrets and and other things so at a certain point, we also may want to package all those functions.
+00:45:10 [W] She's under a logical project.
+00:45:17 [W] But then what I need to do is just execute this function now I can just go and execute this Irish generator function myself.
+00:45:27 [W] But what we're doing here is we are running it under a rapper that runs the execution it's running our function and since you're wrapping it up, why do we want to wrap the execution because we want to record everything that goes in and goes out into the
+00:45:36 [W] Function into a database and you can see that once I am running this function.
+00:45:42 [W] I also see some nice widget that shows me that the trend the name, you know how long it took and bunch of labels even even a what I can actually see the data that was generated by
+00:45:56 [W] By that function. Okay.
+00:46:00 [W] Sorry.
+00:46:01 [W] So I can just run in this generates data set the iris dataset.
+00:46:10 [W] If I really want to see the data set also in track it I can also click the URL will open a separate UI for it.
+00:46:17 [W] The next thing we want to do is we'll register that will convert it into a micro service.
+00:46:21 [W] Essentially.
+00:46:22 [W] I promised you a single line of code.
+00:46:27 [W] So there is a single line of code that converts my code into a function essentially into a microservices into a service function now.
+00:46:34 [W] a function object I can use for example register that in my project or do other things with that now I generate some data set and now I want to take that data set and run analysis against that data set so I may write the code for analysis,
+00:46:47 [W] But then I need to package a new container and put a lot of libraries in it and build the animals and dr. Files instead.
+00:46:56 [W] I can just go and grab a function from a Marketplace called described which is running analysis on my data set and showing me the behavior of each one of the features of my data set because I don't really know how it works.
+00:47:10 [W] I can just ask for documentation.
+00:47:15 [W] I going to see the full documentation of that function and now I want to run.
+00:47:19 [W] This function on my data set. So I have a data set that I just generated in my notebook and I want to run something that analyze the data set in my notebook.
+00:47:28 [W] So in order to do that, I need to run this function called describe because I wanted to analyze data from my notebook.
+00:47:37 [W] I need to mount it over a shared file system.
+00:47:40 [W] So the notebook and the job will see the same data.
+00:47:44 [W] So there is something in kubeflow called modifiers and this is using our cluster file.
+00:47:47 [W] but you can also use NFS or PVC in order to share data between different containers and then I want to run this function with a set of parameters and input so I want to input of
+00:48:02 [W] My data set that ones.
+00:48:06 [W] I just generated in my notebook to be used as an input for this task for this analysis tasks and I'm running it. Now this time there's a magic here.
+00:48:14 [W] It's actually not running on my notebook.
+00:48:15 [W] Although it.
+00:48:16 [W] Looks like it's running on my notebook.
+00:48:19 [W] You see that actually allocated pods to run this job and also responded with a bunch of interesting results so I can just go and look in my directory.
+00:48:30 [W] remember it's a shared file system. So everything lands back.
+00:48:34 [W] Back into my own directory and I could just go and look at all those nice charts which were generated by this analysis job so I can look at the histograms of the data.
+00:48:47 [W] I can look at you know, the feature correlation and all those things all this analysis doesn't have to burden my own container. Another nice side effect is that those containers are allocated dynamically, so I don't have to have up front
+00:49:01 [W] Through payment on those VMS or containers like in many services.
+00:49:14 [W] the resources will get allocated dynamically, and if I need you to use for those services and I register as part of the requirements, but automatically allocate the GPU and they allocate the GPL when it's done.
+00:49:20 [W] So it's very important.
+00:49:22 [W] It saves a huge amount of cost. Now after running this I want to create a complete pipeline pipeline Chrome prize of classification logic essentially.
+00:49:31 [W] Inning and then validation logic then I want to deploy a service the endpoint the serving function and once I deployed the string function, I want to test that serving function to say that has the right performance latency
+00:49:46 [W] It's Sarah so I can just go in and pick a bunch of those functions already from our library.
+00:49:55 [W] You don't need to write them whether it's all open source is part of it.
+00:49:56 [W] There is a good crapo hosting all those functions for automail and did engineering and others and now I create a kubeflow pipeline.
+00:50:08 [W] So this looks like a kubeflow pipeline. The main difference is that instead of having a kubeflow pipeline of kubeflow operators? You have a kubeflow
+00:50:16 [W] Pipeline of serverless functions which are automatically converted to like a good flow pipeline operation.
+00:50:24 [W] So I'm just going to take those individual functions that I have. I can have built functions. I can do an analysis function, you know, again ingestion function analysis function a training function without
+00:50:38 [W] Mel which runs all those very a variety of protocols and algorithms and then I need to have a validation function that validates the output model and the testing set of that model and finally I want to deploy
+00:50:53 [W] Serving function, so it's not just for the training.
+00:50:57 [W] I can actually build a real-time pipeline using this engine and I can test my real-time Pipeline with another so I Incorporated data engineering machine learning pipeline. NCI pipeline all in assert in a single workflow.
+00:51:11 [W] And then I just run this simple python code.
+00:51:16 [W] Here locally, and I see all the results of the pipeline once it's complete brought back into my notebook.
+00:51:26 [W] I actually don't have to go into kubeflow and examined the results.
+00:51:31 [W] Although I can just go and see all those results in kubeflow.
+00:51:45 [W] This is part of our managed platform, but any other kubeflow also work, so the other nice thing is that all the artifacts are automatically recorded if I go to the training I see all the artifacts.
+00:51:47 [W] It's a servant serverless function generates automatically recorded also for the data analysis and know all those nice widgets. And this is where it actually deployed a new Clio function for real-time serving
+00:52:02 [W] And then we use the tester to test the performance of that serving function so we can actually see the latency.
+00:52:10 [W] We see that it's a run 11 milliseconds.
+00:52:18 [W] So it's really decent performance. Obviously, we haven't tried to optimize your anything.
+00:52:21 [W] So you have the full control now, all of those things that I did are also recorded in MLB rhyme so I can just go into this yo and Emigrant doesn't care where you're running the job whether it's running.
+00:52:32 [W] Enoch in kubeflow as a separate job within the notebook.
+00:52:38 [W] It sees all the variety of jobs, you know, they can be grouped by name or by kubeflow workflow and then I can just go and look into each one of those jobs, you know, we can see what's running we can see actually see the code
+00:52:51 [W] Commit of that code and see the actual code if we want we can look at all the artifacts that were generated in each one of those steps.
+00:53:04 [W] We can look at the logs in real time.
+00:53:06 [W] This one didn't really have a log. Let's move to the training function if the training functions include Auto amount or hyper parameter tuning you can actually see all the individual results and then it auto selects based on your criteria.
+00:53:20 [W] Best result to move into the next step of the pipeline. So the Autumn and the hyper parameter tuning is built into this framework.
+00:53:32 [W] You don't have to go in and use another framework just to get this thing.
+00:53:44 [W] And also you have a way to manage everything, you know, the functions the artifacts that jobs are going to be a new UI very soon. And again, everything is on is on GitHub.
+00:53:48 [W] The other important thing is those functions which I generated.
+00:53:51 [W] Look now is not limited to http.
+00:54:25 [W] You can essentially go and add any trigger you want, you know Kafka rabbit Kinesis Grand whatever you can configure a lot of things like the resource resources auto-scaling minimum maximum
+00:54:34 [W] Is volumes, you know everything that you can think of the kubernetes can do could be abstracted using new Clio and again this can this function was actually generated from a notebook.
+00:54:49 [W] I have a notebook here this serving notebook see this function which I can write in a notebook at just when I when I feel I'm ready after I tested this notebook have one thing to do is just say
+00:55:04 [W] Function deploy, this will automatically create the function for me or taking that function and embedding it as part of a complete workflow. Another cool cool thing about those function is
+00:55:19 [W] It also supports a bi gateways and canaries and all those things so you can go and create a Gateway new API Gateway, which allows you to, you know, authenticate an endpoint and create.
+00:55:34 [W] Canaries, you know saying multiple functions and give different percentage to each one of the functions and buy all the things that we monitor our also written to permit you to Sandra find all the statistics of functions jobs
+00:55:49 [W] Surfing so think about how much work we've saved you with those serverless framework.
+00:55:58 [W] So all the logging monitoring auto-scaling regardless of how you want to scale whether it's dusk or nuclear or spark or any other architecture all the tracking with all the linkage of all this tracking and artifact and job.
+00:56:11 [W] All of that is fully automated.
+00:56:16 [W] So that means that you can turn project that could have been consuming tons of devops and developers and take months. You can just implement the same project within weeks and everyone will be happy because you have all the instrumentation
+00:56:28 [W] The best performance you can think of Etc. And so with that that's my session welcome any questions or or comments?
+00:56:43 [W] You can also a, you know, find me in LinkedIn or Twitter and I'm happy to talk to anyone of you if possible.

@@ -1,0 +1,235 @@
+﻿What You Didn’t Know About Ingress Controllers’ Performance: SDKQ-9996 - events@cncf.io - Wednesday, August 19, 2020 7:32 AM - 57 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:03:46 [W] Hello.
+00:12:22 [W] Thank you for joining online to our virtual Cube Corner presentation about the interest controllers.
+00:12:34 [W] My name is Mika linen from Intel and I'm here with my colleague is more posting and I we've been part of we've been working on kubernative saint-cloud knative for the past two years now, and we are here to talk about
+00:12:41 [W] Hello.
+00:12:42 [W] Thank you for joining online to our virtual Cube Corner presentation about the interest controllers.
+00:12:43 [W] My name is Mika linen from Intel and I'm here with my colleague is more posting and I we've been part of we've been working on kubernative saint-cloud knative for the past two years now, and we are here to talk about
+00:12:44 [W] Form and advanced EP features to worry of square kubernative is usages. And today we are going to be talking about kubernative in
+00:13:00 [W] At today we are going to be talking about kubernative is in English controllers and how some of the work that we've been doing can be used to enhance the interest controllers performance.
+00:13:11 [W] Be used to enhance the interest controllers performance.
+00:13:13 [W] I hope we are able to bring you some new stuff as our presentation topic what you did not know about kubernative English controller performance implies with that.
+00:13:24 [W] Let's get started with our presentation.
+00:13:27 [W] The agenda of of the presentation is as follows.
+00:13:37 [W] So we're going to start with a basic overview of what this kubernative is in English.
+00:13:43 [W] And also we're going to be talking about very briefly talk about the performance metrics commonly used to measure the performance that the beef of our presentation
+00:13:52 [W] The rest and also we're going to be talking about very briefly talk about the performance metrics commonly used to measure the performance that the beef of our
+00:13:54 [W] The is about the Ingress controllers optimization and in particular we are going to be taking a closer look into how TLS
+00:14:08 [W] Taking a closer look into how TLS in English controllers can be optimized and we are taking a look into TLS offloading and assume chronosphere.
+00:14:33 [W] With when using kubernative CPU manager with the English controllers, and then at the end of the presentation, we have a short call to action for both English controller users and English controller Developers.
+00:14:50 [W] Let's look in first look into what what is kubernative in English.
+00:15:00 [W] So the job of kubernative Ingress is pretty pretty important.
+00:15:13 [W] Basically, if you want to expose your services running inside your cluster to external users.
+00:15:15 [W] need to be able to configure routes from the external world to the services running in your cluster.
+00:15:21 [W] And kubernative Ingress is basically responsible for for doing that that work in in particular kubernative singers controller and and the underlying English. Proxy is responsible
+00:15:36 [W] Or external traffic to your to your services a typical kubernative English setup is is as follows.
+00:15:52 [W] So you have a kubernative English controller running on your notes or in your cluster that listens to you listens to the kubernative say Pi server for for certain objects in a
+00:16:05 [W] Outs or in your in your cluster that listens to to God listens to the kubernative say Pi server for for certain objects in a particular tekton kubernative Ingress object specifies.
+00:16:10 [W] the routes from the external world to the services in inside your cluster and then English controller is responsible for configuring the underlying Ingress proxy.
+00:16:22 [W] To take those interests object defined routes do the underlying a proxy server or Ingress proxy configuration with that the external traffic
+00:16:38 [W] Routed through the inverse proxy to your services in society your cluster.
+00:16:46 [W] Hmm as we can see there are very many implementations of of kubernative in English controllers.
+00:17:01 [W] I have taken a list of the Ingress controllers and the API Kata is from from the kubernative website when looking at the list of Ingress controllers
+00:17:13 [W] At almost all of them can be grouped into three different buckets based on what these the Ingress proxy that is being used by the
+00:17:29 [W] And those three buckets and the tree Ingress proxies most of you know this by name Envoy and nginx and in respiration Envoy nginx and and haproxy.
+00:17:44 [W] sorry and in fact the rest of our presentation kind of focuses on
+00:17:53 [W] on optimizing the underlying interests proxy English proxy servers and not dangerous controllers control estimate themselves, but we're going to be looking into some of the optimization
+00:18:10 [W] underlying infrastructures
+00:18:13 [W] looking at that the common performance metrics commonly used to see how well that the proxy is are performing.
+00:18:29 [W] We've been using these two they believe these are like very very common commonly used out there.
+00:18:37 [W] So maybe metrics like bandwidth.
+00:18:39 [W] how many how many connections from the external world you're in English content Ingress proxy can't
+00:18:45 [W] Take and then also that the latency like how many milliseconds it takes to process the external?
+00:18:54 [W] Request and hand over the result back to the client.
+00:19:00 [W] Looking at areas or looking at that the conflict knobs that you can tune to get the performance right in a kubernative cluster. There are very many very
+00:19:21 [W] And we don't have time in this presentation to walk you through all of them.
+00:19:30 [W] In fact.
+00:19:31 [W] we are only going to be talking about or focusing on on TLS handshakes and what can be done with the TLs handshakes to optimize Ingress controllers performance
+00:19:47 [W] Hand over to is more to talk more about handshakes.
+00:19:51 [W] Yeah.
+00:19:51 [W] Thanks if you go to the next slide.
+00:19:54 [W] Here we can see a performance flame graph.
+00:20:01 [W] So a performance planning graph is made by this statement was made using this Linux to Perth as the as the base for sampling an Envoy proxy server when it was actually like handling a huge influx of new
+00:20:12 [W] Farmers flame graph so I perform a splendid graph is made by this statement was made using this Linux tool perf as the as the base for sampling an Envoy proxy server when it was actually like handling a huge.
+00:20:14 [W] Questions and answering to every single one of them with the hdp status code 200.
+00:20:18 [W] And the horizontal lines are the the functions and then the vertical Flames that you can see they are the call graph. So they show that which function of been called from which
+00:20:34 [W] if we
+00:20:36 [W] color the graph a bit bit more than we can see what what parts parts of consuming CPU Cycles during during to request handling so we can see that some some amount of of
+00:20:52 [W] The HTTP requests and and creating connections. But but main main cause of of like CPUs Cycles being spent is TLS handshake and
+00:21:08 [W] the others
+00:21:10 [W] Connection has two parts.
+00:21:17 [W] first is the handshake which is a symmetric public key cryptography and then the data transfer doing symmetric cryptography using a key which is being agreed, but putting the handshake and the symmetric part the
+00:21:29 [W] The bulk transfer is and public encryption is pretty fast.
+00:21:39 [W] So it's already fast and then the theaters libraries such as openssl and boring-ass include the others they do support AES instructions.
+00:21:42 [W] Which is a way to do Hardware acceleration on the processor itself for the Symmetry group. So it is fast, but are symmetric group to the handshakes?
+00:21:53 [W] They are slow and we found out that receiving new HD disconnections is is what CPUs cycles that are really a spent.
+00:22:03 [W] So how do we make the other Sanchez faster?
+00:22:11 [W] So the first option is to tweak the Crypt of parameters so we can use TLS 1.3 which produces one round trip or we can choose our Cipher Cipher which is which is fasted for example, the
+00:22:22 [W] so if they are faster than error said because of the shoulder key length, typically
+00:22:28 [W] But this may not be always feasible because they also like many other other factors like like affecting the cipher Suite selection or the or the cryptographic parameters then performance.
+00:22:44 [W] But we can also like actual that Crypt operation spice by actually like off-roading with them to an external hardware accidental.
+00:22:53 [W] It's the up several ways of doing this. One of them is is.
+00:22:59 [W] Or let's say that that you can either like accident is individual cryptography operations, or you can like add a bunch of them together and then process them all all at once using something which is
+00:23:15 [W] single instruction multiple data type of type of operations
+00:23:20 [W] and different theaters libraries, they have different ways of actual like handing and in those those cryptography operations over over to external external processing and
+00:23:34 [W] for example openssl has a concept called openssl engines and an openness of engine is a it's just a shared Library which the openness the library then opens and users and calls the function from that engine
+00:23:49 [W] handle the processing and then it's after this engine to actually like then do whatever it needs needs to in order to do this Hardware acceleration of the cryptographic operations, and it's
+00:24:05 [W] Also look pretty common that if you do it only actually only one instruction then the amount of time spent doing that maybe very much comparable to the time spent doing the doing the same operation.
+00:24:20 [W] So just on the CPU, but the real benefits come into play when you have a multiple multiple crypto operations, which you are then like processing in parallel on the on the special hardware and for that
+00:24:34 [W] and Shake processing
+00:24:36 [W] and I think not Diaz is a library mode.
+00:24:50 [W] I mean traffic on the on the network wire. It looks exactly like the same same for both symptoms elastic most mods, but the difference is the first synchronous TLS course when you do a handshake color called let's say
+00:25:00 [W] It's the control goes to that.
+00:25:05 [W] Terrace library than the pricing is done there. And then when it's all done check is done then the 200 function returns.
+00:25:13 [W] but on the other hand in discussion from steals mode, the the function returns immediately and then the handshake processing goes on some varied background and when it's done there is Library cause a call back back to the main
+00:25:29 [W] Don't immediately and the handshake processing goes on somebody's background. And when it's done there is Library cause a call back back to the main process telling that now now the handshake is done.
+00:25:32 [W] And of course the benefit benefit is that during the time that the pricing is going on in the background. Then the CPU is actually like free to do other things such as process more incoming requests and the
+00:25:48 [W] And the problems in this approach. Is that how do we get the English proxy servers to support a synchronous handshakes?
+00:25:58 [W] And then how do we get this excavator Hardware resources to this app this controller so that they can be used properties.
+00:26:04 [W] And answer. The first question is that we are adding this Asian theater super to the underlying proxy servers by just modifying them to do that.
+00:26:19 [W] And for example in the openssl case the good news is that if there isn't an open SL engine available, which is capable of assuming most operations, then that then the operations for back to being synchronous so
+00:26:31 [W] And for example in the openssl case the good news is that if there isn't an open SL engine available, which is capable of a synchronous operations, then the then the operations for back to being synchronous.
+00:26:33 [W] So there is no change to that operation in that case. And second thing we do is that we had super to English controls configuration so that they actually like like can set the proxy is to this assume chronosphere mode.
+00:26:44 [W] and here's an example of
+00:26:51 [W] English controller containerd image which has this openssl engine so part of what we need. What we do is that we add the engine the engine Library there the image and then we have this this crypto
+00:27:07 [W] Abstraction layer the library which then uses.
+00:27:14 [W] uses. It was stuck some hardware and then we configure the proxy proxy to use use the openssl engine in case
+00:27:19 [W] and what is the status of TLS offloading for them for the common proxies then here we see that haproxy.
+00:27:31 [W] Is maybe the most most complete with its super for aging aging operations?
+00:27:41 [W] So it has super throw pencil engines.
+00:27:44 [W] There's no need to recompile it for so that you can just eat this means that you can just add the overlay to the to the contrary image and then you can already configure configure haproxy.
+00:27:56 [W] From the from the Ingress configuration to support as if not the else process for Envoy.
+00:28:08 [W] There's a there's a community maintained branch which has open as a super and this this one has pretty much the same function of this haproxy does butter by Mainline
+00:28:21 [W] Sounds like has a big difference like problem problem domains there.
+00:28:25 [W] Then when does it make sense to offload crypto operations? So first question is that you need to identify if your workload.
+00:28:38 [W] Workloads English controlled actually is cpu-bound. Meaning that when you add more CPU resources.
+00:28:48 [W] It returned turns out that your throughput increases.
+00:28:49 [W] Or the latency latency decreases.
+00:28:56 [W] So this means that you actually like have something to gain by having having more CPU speed for other purposes then find out if you having a lot lots of new incoming new HTTP connections new here means that they must be
+00:29:08 [W] You actually like how something to gain by having having more CPUs freed for other purposes then find out if you having a lot lots of new incoming new HTTP connections new here means that they must be coming
+00:29:09 [W] Separate client because the other supports a function called reusing reusing the same same script already agreed rip the parameters.
+00:29:24 [W] So if a same client calls the same same server again, they can just reuse existing existing connection.
+00:29:28 [W] No new handshake is required like examples of cases where there could be like a lot of new HTTP connections is that if you have let's say a swarm of iot devices or
+00:29:36 [W] or lots of mobile apps apps calling to your system.
+00:29:41 [W] Then we see that the biggest benefit benefit can be gained from Exodus. And if you're doing it on a pretty low CPU core account.
+00:29:58 [W] This is due to the reason that if you have a huge number of CPU cores, then you probably are not going to benefit from the acceleration of the accident itself tends to be a bottleneck.
+00:30:06 [W] But if you have a limited number say eight CPU cores like like for your for your English proxy Tenten you may see may see a benefit from the
+00:30:14 [W] from the harbor activation of the others handshakes and here is a graph it's not it's not our numbers numbers, but and it uses a certain version of nginx with certain versions of openssl,
+00:30:27 [W] Listen, if you're doing it on a pretty low CPU core account.
+00:30:29 [W] This is due to the reason that if you have a huge number of CPU cores, and you probably are not going to benefit from the acceleration of the accident itself tends to be a bottleneck.
+00:30:30 [W] But if you have a limited number say eight CPU cores like like for your for your English proxy Tenten you may see may see a benefit from the from the hardware acceleration of TLS handshakes and here is a
+00:30:34 [W] Graph, it's not it's not our numbers numbers. But and it uses a certain version of nginx with certain version of open SSL, but it shows that there is this sort of
+00:30:36 [W] Shows that there is this sort of this performance benefit which can be can be hard with this this configuration.
+00:30:37 [W] Using this Intel quick assist Hardware acceleration for TLS and with that I'm handing over back to me.
+00:30:46 [W] yes, so I'm going to show you a couple of examples how to configure kubernative English to use some of the advanced TLS techniques that it is is not is not talked about we're
+00:31:03 [W] haproxy based in Ingress controllers and the first example shows you how to enable haproxy invest to use
+00:31:15 [W] a crypto accelerator device called Intel quick assist to offload ttls processing to a dedicated Hardware on the on on the previous slide.
+00:31:32 [W] We already saw that in order to get your English controller deployment container image to support the hardware features. You need to have
+00:31:44 [W] It is saw that in order to get your English controller deployment container image to support the hardware features. You need to have an open SSL
+00:31:46 [W] Engine added to your content container in in this particular example.
+00:32:00 [W] We are using open SSL q8e engine for that and the the it Acuity engine then depends on the cavity Hardware abstraction layer libraries to talk to the underlying Hardware.
+00:32:05 [W] those two things we need to add to our haproxy invest container image first, but then in order to use devices in kubernative cluster, yugabyte.
+00:32:15 [W] You also need to have kubernative device plug in running on your cluster. The device plug in is basically responsible for registering custom resources to your cluster.
+00:32:30 [W] The things we need to add to our haproxy invest container image first, but then in order to use devices in kubernative cluster, you also need to have kubernative device plug in.
+00:32:32 [W] To be able to provide Hardware resources allocated Apple Hardware resources to kubernative scheduler and then when and as our kubernative Ingress controller wants to use Hardware resources
+00:32:46 [W] Unless we need to have a customized Ingress deployment to request that the hardware resources from from from the API server, basically, so we need to customize or change a little
+00:33:02 [W] English controller deployment to to get those resources requested but we also need to change a little bit the device that the the English controller configuration.
+00:33:18 [W] tell haproxy to use
+00:33:22 [W] the underlying the the underlying engine.
+00:33:29 [W] Do to enable the hardware or floats. So with that the kubernative Ingress for haproxy.
+00:33:39 [W] We need to add a config conflict map conflicts snippet to tell the Ingress controller to configure haproxy to use hsl engine off load and the async mode
+00:33:52 [W] Vic convict map conflicts snippet to tell the Ingress controller to configure haproxy to use hsl engine off load and the async mode and another example
+00:33:54 [W] Another example is still continuing with the with an haproxy based in English control. But this time we are running git engine a little bit differently so it can also be run
+00:34:07 [W] Depending on dedicated Hardware accelerator, but we're using another mode of of the qad engine called the RSI multiple for the RS are multi puffer. And the async openssl
+00:34:24 [W] you can do with that is that it is possible to asynchronously queue up to 8 in the individual or a say operations and then process them in parallel using the
+00:34:39 [W] using the Denis avx-512 instructions and multi buffer implementation provided by the IPP Crypt of library from
+00:34:55 [W] Controller configuration perspective it is essentially the same.
+00:35:06 [W] So we need to tell the Ingress controller to configure haproxy to use the SSL engine and the async mode but we all what we also need to do and make sure is that haproxy
+00:35:17 [W] of the async mode, but we all what we also need to do and make sure is that haproxy that uses the RSO multi puffer feature Lambs on the nodes that provides
+00:35:24 [W] of the puffer feature lamps on the notes that provides the resistance the necessary avx-512 features in the CPU capabilities and
+00:35:34 [W] Get the nose labeled correctly when using kubernative signal project called no not feature discovery.
+00:35:48 [W] that is basically automatically able to label the nodes. Yeah, according to the CPU CPU ID or CPU instructions that features and that label we need to add to our kubernative English
+00:35:59 [W] Make sure that the node selector gets the denote selector gives us the deployment or get make sure that the haproxy gets run on the right notes with the right
+00:36:15 [W] Alright 1010 about some some other other like possibility of doing tuning the English performance.
+00:36:35 [W] So this is about like like some some kubernative side possibilities such as the city manager and then we have talking to talk about the beat that how to how to fine-tune find you on them the proxy.
+00:36:45 [W] Then I'm about to CPU manage and kubernative is a feature in kubelet and the idea idea is that you can have a turn turn shipments of own and have a static policy and and after that if you have a guaranteed.
+00:37:00 [W] Guaranteed put this video contractor having this integer like asked from from like the resource requests and limit for the CPUs.
+00:37:16 [W] Then it means that it will get this this full full CPU cores to run on and this in turn means that there will be less last is this cash crop issues and there will be less this CFS
+00:37:28 [W] And we found out that the running running your your body and guaranteed mode and turn your serum and thrown it in some cases. It will affect her performance performs a lot in a positive way, but the performance impact depends on the other workloads running on
+00:37:44 [W] This is due to the fact that the sort of the cash problems and then the then the CFS throttling happens happens when there are many many workloads competing the same resources.
+00:38:00 [W] So you need to try try out out. If you have have a noisy noisy neighbors running the same nodes to see if the if the CP Mentor can help you with them with the performance there then about
+00:38:13 [W] It proxy settings. So the Ingress Ingress practice sometimes fail to Auto detect the resources available to them in a controlled environment because the the hardware auto-detection things like for example that how many CPU
+00:38:29 [W] The heart of a Tarleton education things like for example of how many CPU course you have.
+00:38:34 [W] They are meant to be run on bare metal or virtual machines only and this means that for example, if you have a larger bit 100 CPU cores, but you're running in a content with only two CPU cores assigned to it.
+00:38:45 [W] it. Then it means that the number of your worker try to maybe like like badly wrong this may have a performance impact.
+00:38:52 [W] And with that, let's go to call to action.
+00:38:56 [W] Okay, so to summarize our presentation with a couple of cold call to action items. So we did not provide any Silver Bullet.
+00:39:06 [W] can I improve the performance of your kubernative Z English controller, but one thing that we can say is that
+00:39:16 [W] Analyze your workloads to see where the weather performance bottlenecks are and in what is important there?
+00:39:28 [W] Is that see if there are opportunities to do some some over offloading. So we talked about how how TLS for instance could be offloaded to to a dedicated accelerator
+00:39:40 [W] How they can be processed how the TLs handshake for instance can be processed in in parallel to optimize the performance and then we looked into the support
+00:39:56 [W] and then we looked into the support in Barrios in English controllers and in particular the Ingress proxies how how some of the TLs offloading and
+00:40:07 [W] Offloading and DLS assume processing is supported and we kind of identified a couple of gaps in in that area.
+00:40:20 [W] So for the Ingress control developers who look into if the how to fill in kind of feeling fill in those gaps that we are discussed and identified in interest in this presentation.
+00:40:30 [W] There are areas to improve the certainly as as as we discussed.
+00:40:38 [W] Without I think we're done.
+00:40:42 [W] So thanks for listening.
+00:40:43 [W] Thanks a lot.
+00:40:44 [W] So hello.
+00:40:59 [W] Hello everyone. So so let's let's go to the questions you have.
+00:41:01 [W] Let me see if I can publish.
+00:41:04 [W] Publish them Southern.
+00:41:06 [W] So the first question from all about it was about this. I believe this these numbers which we saw in this in this.
+00:41:20 [W] When we had the short term latency and tender than the true but numbers and I think believe it was about Envoy numbers, but those were just for example only so I don't even remember the exact exact setup on which they
+00:41:36 [W] Publish them Southern.
+00:41:37 [W] So the first question from all about it was about this. I believe this these numbers which we saw in this in this.
+00:41:38 [W] When women we had a short latency intended than the true but numbers and I think believe it was about Envoy numbers, but those web just for example only so I don't even remember the exact exact setup on which they
+00:41:40 [W] We just wanted to point out that these are these are the these are the values that you might be interested in.
+00:41:43 [W] Wider question in general was about the hardware Hardware availability like you questions. Like how do I know if my my platform has the hardware accelerators
+00:42:02 [W] the b**** of the openfaas service providers provide provide Tech with the acceleration and first of all
+00:42:18 [W] Check whether your payment our system has the hardware available.
+00:42:24 [W] These are like PCI devices.
+00:42:34 [W] So it is possible to check for instance fields to prepare LSP ci/cd to see whether that has the crypto acceleration Hardware available.
+00:42:40 [W] I'm not aware of any public internet service providers providing the access.
+00:42:48 [W] access
+00:42:52 [W] Access to that to the hardware at least that as of as of today and one final question about the hardware.
+00:43:03 [W] Actually raishin availability was about how to get the same.
+00:43:10 [W] With with with some known Intel Hardware. So we dem we basically talked about this open SSL and engine concept. So if there are other platforms with
+00:43:26 [W] And there is like an equivalent openssl engine provided for it to the same mechanisms, which would then apply?
+00:43:34 [W] Okay, I think are not published.
+00:43:43 [W] published all the other questions, so hopefully everybody will be able to able to see see them and
+00:43:50 [W] and and
+00:43:54 [W] yeah, I I'm not sure if make already answered this but how can we check if I'm not have Harbor theorists accelerators 10. Then this note feature Discovery should be the tool to to tell you tell you that so it
+00:44:11 [W] I believe that that should indicate indicate the label the nodes nodes if you have any any already known Hardware accelerators running there.
+00:44:21 [W] and
+00:44:25 [W] Again, the question that could you please clarify whether you need specific Hardware were for crypto offloading to be supported then I guess I can start and answer is that is that it depends if you want to use this
+00:44:43 [W] Do you need specific Hardware work for crypto offloading to be supported?
+00:44:44 [W] Then I guess I guess start and answer is that is that it depends? If you want to use this CPU acceleration, then your CPU might already have have the features of will be order will be CPUs which have the features there.
+00:44:50 [W] Then your CPU might already have have the features are will be order will be CPUs which have the features there.
+00:44:57 [W] there. But some Hardware accelerators are like add-on add-on cards or add-on features not present on every system.
+00:45:00 [W] one question was about
+00:45:07 [W] this assume chronosphere mode with the nginx of open-source assume TLS supported by nginx open source, so that I believe is not to quoted by the open source versions of of the nginx.
+00:45:24 [W] San Leandro asks that what amount of traffic do you get to justify Hardware accelerators?
+00:45:35 [W] So again here to answer is that it depends?
+00:45:45 [W] So if you have lots of lots of traffic, then it then it makes more sense to to have Hardware acceleration.
+00:45:54 [W] But it also like depends on how you want to use your course CPU cores for but if you want to do something something with them, then you might benefit from having a this axial Vector for this cryptography available.
+00:46:00 [W] So what what else?
+00:46:04 [W] I already missed when I was publishing at which we can mix already already answered. So Mica if you see see something which is not not yet answered than just.
+00:46:18 [W] Point it out.
+00:46:20 [W] I think there's
+00:46:22 [W] one question about the choice of the Ingress proxy. Is it better to use Envoy instead of nginx to overcome latency? Because as you said Envoy supports assume chronosphere
+00:46:41 [W] so I I believe assume chronosphere itself doesn't necessarily bring you the Predator petal latency, but if you can do the computation offload dedicated crypto Hardware then
+00:47:09 [W] might help with the latency and then as as we discussed the open source versions of the Ingress proxy is currently Envoy
+00:47:26 [W] Proxy Upstream versions support the assume canals TLS and Hardware of load using either the boring SSO private key methods or the the openssl engine.
+00:47:41 [W] Yeah, and I think that's also that the answer to this question from course meant that is the still sound check but among specific to some part of our proxy that so it's like specific to the to the TLs libraries and the way they are used.
+00:47:58 [W] Like how well you can access right?
+00:48:08 [W] And then those libraries they do implement the cryptography operations.
+00:48:14 [W] So it's I believe that all the modern Library style already have pretty good reference reference implementations of the crypt operations.
+00:48:17 [W] but
+00:48:21 [W] I believe I believe vision of wrap up and we can continue in slack on the performance Channel answering to the to the questions.
+00:48:34 [W] So we will be setting up a talk specific thread. So let's let's follow up the conversation in slack and my side at least thanks for joining the call and thanks for listening.

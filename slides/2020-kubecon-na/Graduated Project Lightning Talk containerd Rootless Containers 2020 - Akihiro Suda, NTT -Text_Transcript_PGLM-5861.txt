@@ -1,0 +1,529 @@
+﻿CNCF Graduated Projects Lightning Talks: PGLM-5861 - events@cncf.io - Tuesday, November 17, 2020 2:57 PM - 70 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hey everyone, my name is Joe Elliott and we're going to talk about getting started with jaeger today. This presentation is mainly aimed at people who are you know, getting started maybe building their first production cluster.
+00:00:12 [W] You've already set up a perfect concept and you're wondering kind of what it takes to get this into production or maybe you're just interested in tracing a general see if it's something that's worth doing for you all and you want to know what your car looks like and kind of how Jaeger is
+00:00:28 [W] So who am I let's start with that real quick.
+00:00:32 [W] I'm a Jaeger maintainer.
+00:00:33 [W] I work at Groupon to Labs primarily on are tracing infrastructure and internal projects and when I'm not wrangling my children or sitting at the keyboard, I like to get around my city a little bit see the city on on my bike.
+00:00:45 [W] Jaeger is the most popular distributed tracing back end open source is a cncf graduated project and originally it was created at
+00:00:58 [W] and open source by Uber.
+00:01:01 [W] I think it began about 2015.
+00:01:04 [W] And before we get into the actual architecture, I want to talk a little bit about what a trace is because you know kind of what a trace is and how traces are generated kind of inform how the actual back and works. So understand what traces
+00:01:20 [W] Some reason why the backend why that the Jaeger ingestion pipeline is the way it is.
+00:01:23 [W] So this is a trace from low-key and this particular Trace represents a single request.
+00:01:31 [W] So this is one request to 35 milliseconds to get through the loci or to be right to be answered by Loki.
+00:01:38 [W] mean, it's passed through a number of different applications and services so you can see there's like these green bars low-key Gateway at the top and then query front-end orange and then Loki queers these blue ones all over the place.
+00:01:50 [W] these spams kind of represent maybe like a single functional or logical unit inside of our application and the application each process and there's lots of these of course are going to be generating spans and have all this data like when they started and when they ended some other metadata,
+00:02:05 [W] Of course, they're going to create these bands are going to off load those into the Jaeger kind of ingestion pipeline.
+00:02:11 [W] So all of these different applications going to be creating spans pushing them into Jaeger bigger has to then absorb all these bring them in put them somewhere and prepare them for querying and so we'll talk a little bit about how that looks and
+00:02:26 [W] Why it's built the way it is.
+00:02:29 [W] This is the architecture. So given that in mind we have all these applications, right and all these applications are going to then be pushing all their spans into the agent from the client into the agent the client itself to start
+00:02:44 [W] Are it's on this side this side. The client itself is a party applications like a library or a framework that you bring into your application to create these bands and offload them to Jaeger.
+00:02:57 [W] There's lots of different application or Frameworks and language supported like cop popular ones like go and Java node Ruby. So all these different popular Enterprise languages have support for jaeger or Jaeger has support for them perhaps
+00:03:12 [W] and you create these bands in your applications using client, which is then offloaded to the agent where the agent is positioned is important.
+00:03:19 [W] We'll talk about that a little bit in a second kind of there's a lot of options about where you put the ancient agent in relationship to your application the agent then moves them over to the collector piece The Collector then has to make a choice about I'm sorry.
+00:03:33 [W] It doesn't make a choice you make a choice about how to set up your pipeline.
+00:03:36 [W] You can either at this point point it directly at a back-end database.
+00:03:40 [W] You can use this Kafka in gesture optional kind of piece and we'll talk about some of the choice there why you would choose to use this so agent or sorry client in my application to the agent layer to The Collector optionally Kafka and then an adjuster.
+00:03:56 [W] And then our back-end database and then the Jaeger query piece, which we won't really talk about much bigger period query piece just speaks directly to your back-end database.
+00:04:06 [W] So, how am I going to deploy this I'd say there's three probably popular options here.
+00:04:12 [W] Helm a lot of people like Helm it's great. It's great applications. Great way to deploy things to kubernative use the operator.
+00:04:18 [W] Mainly I believe maintained by JP is an excellent choice for deploying Griffith for deploying Jaeger and then there's the custom option as well.
+00:04:28 [W] Just however you all want to do it. So maybe you just have custom llamo.
+00:04:32 [W] Maybe they're just gonna get somewhere. We use Json that actually at Griffon a to deploy.
+00:04:37 [W] To deploy Jaeger.
+00:04:38 [W] I'll say that Jaeger itself is not very difficult to operate.
+00:04:42 [W] Your operational complexity is going to come from your back-end the database you choose to put your to put your to put your spans in.
+00:04:50 [W] So Jaeger itself is mainly stateless.
+00:04:53 [W] It has cues that keeps things in memory, but you know, it's easy to operate.
+00:04:57 [W] it's easy to Monitor and to manage it's not very difficult.
+00:05:02 [W] It's kind of the back in that's going to give you trouble.
+00:05:04 [W] Or maybe I'll give you trouble but cause is the source of complexity of operating Jaeger.
+00:05:09 [W] The operator is a cool choice because
+00:05:14 [W] And the operator is a cool choice because it supports some different agent modes, like sidecar injection or as Damon set sitting on your hosts and we'll talk about why you would choose one of the other in a second and then of course Helm Helm is a great option.
+00:05:28 [W] used helmet my previous position quite a bit and home is a great way to deploy applications as well.
+00:05:34 [W] So some of the very first things you're going to be picking when you start building your first production Jaeger cluster is the backend database to use elastic search or Cassandra.
+00:05:46 [W] These are the these are the production supported Jaeger back ends.
+00:05:52 [W] there's others but these are the two that I would recommend elastic search is the recommended Choice by the Jaeger team.
+00:05:58 [W] It has a little bit better flexibility.
+00:06:00 [W] It has a little bit better like search flexibility and capabilities and Cassandra does and the amount of load or kind of besides the cluster will be roughly the same between elastic search and Cassandra.
+00:06:15 [W] Cassandra if is not bad. When fact we use Silla which is kind of a Cassandra alternative at Griffon and it works fine.
+00:06:21 [W] There's like maybe slightly less flexibility and searching but we use it.
+00:06:25 [W] We have no problem. So if you have a ton of operational experience or on Cassandra, and you don't want to kind of take the risk on a building or understanding a new back end then Cassandra is a hundred percent worth a hundred percent good option.
+00:06:37 [W] We use it for fauna, and I'd recommend it if you have just far more experience operating at than elastic search.
+00:06:43 [W] The other option you have to pick is Kafka or not.
+00:06:46 [W] About this like optional Kafka piece you have collector or sorry client agent collector. And then this Kafka in gesture optional part. The Kafka piece is useful in some ways. You kind of have
+00:07:01 [W] Like durable queue for a lot of people. In fact Kafka is very easy to run especially may be compared elastic responder at least for us it is and it provides some more flexibility kind of in your pipeline if you're back in stutters for a little bit
+00:07:16 [W] Cafe very nicely and easily choose these pieces up and then once your back ends back online, it can continue pushing spans in there. There's also some kind of neat Integrations with Kafka of Kafka streaming to do analytics and to do some other do some other kind
+00:07:30 [W] I can data processing on this pants. They come through and also coughing gives you your your org or your group or your team.
+00:07:38 [W] It gives you the flexibility maybe of writing your own kind of like applications that watch the Copic extreme, maybe generate some metrics or you know, provide some kind of information about your infrastructure that is difficult to find otherwise, and if you do make something cool like that
+00:07:53 [W] Please share it.
+00:07:54 [W] Please share with Community Yeager's open source.
+00:07:56 [W] We love contributions and involvement and if you build something very neat.
+00:08:00 [W] We'd love to hear and see it a final Choice here is kind of the positioning of the agent which we've kind of alluded to a few times previously in this discussion the agent the common wisdom here is to put the agent as close as you can to the application,
+00:08:15 [W] So the operator does this kind of nicely for you.
+00:08:17 [W] It'll do this sidecar injection where you have your application and then as a side car you'll be running the agent. So it's sitting there in the exact same network name space and every application is going to have its own agent right side by side.
+00:08:28 [W] Excuse me, and this would be the absolute fastest, you know way to offload spans from your application the kind of game that's being played here is your spam your applications in expanse extremely quickly.
+00:08:39 [W] You're filling up a cue in the client a configurable q in the client.
+00:08:45 [W] There's workers that are draining that Q as fast as possible by sending spans over UDP to the agent.
+00:08:53 [W] So the closer your agent is to your client the fewer drops pans. You're going to get so a sidecar for the most for the most high volume applications aside Korea.
+00:09:04 [W] Is this good as you can get putting your application a single agent as close as possible to your application to get those fans off as quick as possible to do have a few drops pans as possible other popular.
+00:09:14 [W] Our options are to run it as maybe a Daemon set for if you're not in kubernative just on every host and then have all of it in applications on that host speak to your local agent and then a griffon. Oh, we just run the agents as a deployment with a service
+00:09:29 [W] A bit like any normal kubernative application. We do have drops pansa group fauna, and I sometimes wonder if we should move to side car or maybe the statements that approach now we have it yet. And we do have some drops pans and sometimes I think it might
+00:09:44 [W] good choice for us so I will say if you want to run it as a service you want to run this like simple option where you just have a collection of agents that all the different applications in your cluster point at it works, but you're going to have a few more drops fans than normal and then for your
+00:09:59 [W] You know highest volume things use sidecar, maybe some of these other approaches to get your agent.
+00:10:04 [W] Very close.
+00:10:06 [W] Sampling. So sampling is very important choice understanding sampling sampling allows you to only record a certain amount of your total traces into
+00:10:22 [W] Back end most of us cannot afford to sample to record 100% of every request in our infrastructure our back-end. It can kind of quickly get out of control development teams are going to start adding spans.
+00:10:35 [W] Hopefully your volume is going up somebody throws a new service in which is going to add more spans.
+00:10:41 [W] Of course, all these different kind of changes always are growing.
+00:10:46 [W] It's always making your span count grow and you're going to find that it's very difficult to do a hundred percent sampling but at least
+00:10:51 [W] This may be a difficult but costly your back-end Cassandra elastic chips are going to be very large. Once you're hitting hundreds of thousands or you know, a large number of spans four second house is enormous number of spans per second so our options
+00:11:07 [W] For down for down sampling from 100% are like probabilistic or rate limiting.
+00:11:12 [W] Those are common options probabilistic is where you're going to say 10% of every Trace initiated by the service.
+00:11:18 [W] I want to actually save rate limit isn't going to say five requests per second five traces per second and it stated by the service. I want to actually save in my back end and say you're not sampling a hundred percent your sampling this like lower amount and it allows your back in to kind of survive
+00:11:33 [W] The storm of spans that are coming in the next part. I cannot emphasize enough.
+00:11:40 [W] There are these different sampling options like probabilistic and rate limiting which are fun to work with I think for a production instance shared by multiple teams. There is no substitute for remote sampling.
+00:11:53 [W] I'm gonna just tell you to set up remote sampling. I'm remote sampling allows you to centrally control all of the different services and their sampling rates. So yugabyte.
+00:12:02 [W] You as the Jaeger operator sitting here one day and all of a sudden your spans per second go from 50 or from 5000 to 7000 and you don't know why and your back-end struggling and you can't figure out what's going on and you don't have control over these applications that are creating spams
+00:12:17 [W] Sampling gives you that control.
+00:12:19 [W] So it allows you to kind of maintain this document.
+00:12:21 [W] You can kind of see it over here.
+00:12:22 [W] It allows you to maintain this document that says for each service what percentage of span or what percentage of traces do we want to we want to actually save from that service you can even do it per operation.
+00:12:36 [W] So maybe you have like and points that you don't care about you don't ever want to sample those you can set those to 0% and points you want every single trace to be saved for you can set this for a hundred percent. And of course anything in between
+00:12:47 [W] the remote sampling gives you this extreme flexibility of sampling that you're going to need as an operator some development team somewhere is going to start slamming your back end with a ton of traces or a ton of spans or both traces and spans and unless you can control that as
+00:13:02 [W] Operator you just going to get overwhelmed and you're gonna have to go like scramble around talking zebrium in teams. And you kind of at their Mercy remote sampling gives you the control you need absolutely 100% recommend remote sampling monitoring, so
+00:13:18 [W] A monitoring.
+00:13:19 [W] Jaeger is actually pretty straightforward.
+00:13:21 [W] It has really good logging standard out logging like everything else Jason logging if that's your thing.
+00:13:27 [W] It also has Prometheus metrics so or really at the openmetrics format, so there's lots of different applications. Of course Prometheus itself that will scrape those storageos and allow those for query and the metrics are very descriptive.
+00:13:42 [W] They're very easy to read in fact a personal thing. I do when I start any application is I curl the metrics and point. I just
+00:13:47 [W] Start reading it because the metrics endpoint on a well-designed application will give you good information about the internal that application and Jaeger absolutely falls into that category.
+00:13:57 [W] So just reading the metrics is going to tell you a lot about what's going on inside and finally everything is Q. So the client in your application has a cue the agent has a cue The Collector has a queue Kafka is a queue if you run that
+00:14:12 [W] The adjuster is the only piece that doesn't really have a queue and all of these cues can get filled up and start dropping spans.
+00:14:21 [W] And that is the number one question your developers going to come to you with where my spans likewise my Trace broken.
+00:14:28 [W] Where did all my spans go?
+00:14:30 [W] It's going to happen over and over again. So understanding how to diagnose this ingestion pipeline. All of these different cues is critical for like having a healthy Jaeger instance that your developers rely on and Trust to store there.
+00:14:42 [W] Traces and Trust to go find their traces when they need them.
+00:14:44 [W] There's a medium article that I recommend called where did all my spans go and it walks you through every single piece and all the metrics to watch and tells you exactly how to kind of track down where your drop spans are. Also there's a couple of other links there
+00:15:00 [W] The monitoring and troubleshooting links on the docks are also great for figuring this out.
+00:15:04 [W] Finally a couple resource links.
+00:15:08 [W] There's the docks.
+00:15:10 [W] The docks are really well done.
+00:15:11 [W] Please go read those if you're interested in Jaeger, please submit a PR's to improve them if you if you have some problems or if there's something you want to clarify the get er to get her channel is haunted by myself as well as some of the other maintainers and is a great place to get answers
+00:15:27 [W] To getting started questions a great place to just kind of get move past them initial hurdles to understand what's going on or how to how to get your Basics going or also just to chat generally about Jaeger of course, and then the medium yogurt racing Blog has a lot of a lot of
+00:15:41 [W] Articles from all of the maintainers that talks about all kinds of different ways to use Jaeger and new and clever ways to work with it and how to diagnose issues and absolutely a great place to go if you find yourself working with the a gorilla.
+00:15:55 [W] All right.
+00:15:55 [W] Thank you all I hope everyone has a great Coop Khan and I will see you when I see you.
+00:16:00 [W] Hi everyone. Thanks for coming to our Cube convert.
+00:16:04 [W] We'll talk. This is the real kubernative artifacts.
+00:16:08 [W] We have a special Twist on kubernative Project lightning talk.
+00:16:11 [W] Okay, my name is Paris.
+00:16:14 [W] I'm Nikita and we're from the community string comedy.
+00:16:20 [W] So you probably recognize this.
+00:16:22 [W] This is the one of the most famous artifacts in the world.
+00:16:25 [W] This is the Rosetta Stone.
+00:16:26 [W] What did this teach us?
+00:16:29 [W] Well this definitely taught Scholars how to crack Egyptian hieroglyphics, but it also taught us about their community and taught us so many other things about history and when you can be be there yourself, that's
+00:16:44 [W] Exactly what you rely on artifacts?
+00:16:47 [W] So what the people of the future say fifty to a hundred years?
+00:16:53 [W] what would they think about us as a kubernative community if they were to look through some of our artifacts?
+00:17:03 [W] Well, they're definitely gonna think about Yah Mo for sure we have so many thousand llamo files through an across three hundred GitHub repos.
+00:17:13 [W] We also have dr. Files Padma manifests deployment manifest.
+00:17:17 [W] kandra manifest storage like Williams.
+00:17:22 [W] All right.
+00:17:23 [W] All right.
+00:17:24 [W] All right. All right.
+00:17:24 [W] enough for the technical artifacts talking a little bit more about our cultural artifacts.
+00:17:33 [W] Like what makes us us Everyone Knows by now the kubernative logo Story the kubernative name Story the origination story board at Google and Star Trek references for
+00:17:49 [W] Project code names and the whole nine yards.
+00:17:51 [W] That's so real cultural artifact that has history and roots in something and the photo that you're seeing on the screen right now is actually a picture of the contributors Summit patch.
+00:18:04 [W] This actually used to be on the cncf swag store website a long time ago for a thousand dollars some of you may remember that it's no longer on the store because we give these out at special contributor events now so we have thousands of
+00:18:18 [W] Tribute errs all over the world that where this patch as really a representation of them as kubernative contributors.
+00:18:26 [W] That's great.
+00:18:27 [W] So any time you see this patch anywhere in the world, you know that you can give your local contributor a high five.
+00:18:37 [W] Another thing. I totally love about contributor Summits are the T-shirt. So each contributor Summit has its own contributor Summit t-shirt and they look really amazing.
+00:18:50 [W] So dim Hawking loves designing logos and designs for these Josh Berg has also contributed for two designs for Barcelona and the China events. And I really regret not writing the project earlier because
+00:19:05 [W] Just having some of these shirts. I love them so so much same same.
+00:19:13 [W] another thing I love about this community is also that it has a personality and we're not always about code and work all the time and meeting so we have so many hobbies and all of these Hobbies also feed into the stuff that we do in our
+00:19:29 [W] Community and that we do at cute cards.
+00:19:32 [W] So we hang out together a coupon we go on bike rides we could party is we do a lot of amazing interesting games and lots of other things shoutout to say bike sink beard Sig honk
+00:19:47 [W] You can go on and on and on.
+00:19:50 [W] Another thing we love doing it coupon is the chop wood carry water award.
+00:19:54 [W] So there are so many members and the communities Community who do tankless work day in and day out.
+00:19:59 [W] Sometimes they're not even paid by their employers to do it.
+00:20:02 [W] They're working on that on their own time, but they put in effort stay in and day out.
+00:20:07 [W] So we like to reward these members using a chop wood carry water award on the big keynote stage.
+00:20:20 [W] Another way. We also recognize efforts is to the really schwag. So each release team consists of six fifty or more volunteers right now and each release lead like they design their own
+00:20:35 [W] Custom schwag and I personally love Aaron's captor attorneys shirt a lot.
+00:20:41 [W] I know it's one of the many favorites kubernative Community has a kayak and it is Iconic.
+00:20:51 [W] I was not on that release see when I wish I was just so that I have a father that he sure yeah, that's what I eat the same thing. You think about contributor Summit shirts? I think about really shirts. So that's why I'm always trying to join.
+00:21:04 [W] Join the release team at this point.
+00:21:08 [W] Yeah, and we're even doing that in 2020.
+00:21:11 [W] So we're not missing a beat here and keeping in Tradition with how 2020 is going.
+00:21:16 [W] We have an animal crossing to you with positive logo for kubernative with like huge kubernative use out of plastic figures gonna have swag coming and real soon for
+00:21:31 [W] two
+00:21:33 [W] wow, so there is a lot of custom stuff here. Clearly. We've got custom release gear.
+00:21:40 [W] We have got a custom reward and recognition items and there's even more our community.
+00:21:46 [W] really gathers together around creativity and how we can deliver the kubernative name and message on different items.
+00:21:56 [W] So in the past you may have seen the kubernative logo on baby onesies and we give those
+00:22:02 [W] Out to new parents. We even sell those on the on the cncf store this point.
+00:22:07 [W] We also have a massive Sticker Collection just like so many other open source projects do I mean we even have donut artifacts at this point and donut effects though.
+00:22:20 [W] I don't know if they actually can dead at they are technically artifacts at that point because certain my tummy now so don't know like, you know, if they're that real at this point, but we get really creative.
+00:22:32 [W] Of with food, too.
+00:22:34 [W] So that's just not a long-lasting artifact.
+00:22:38 [W] So long-lasting emojis. I don't know about you all but emojis are really one of my favorite things about the kubernative project.
+00:22:49 [W] If I'm even giving a talk on it in the past emojis are just really a part of our life at this point and slack is such a huge huge communication tool for us and its really one of the arteries of the project both for users as well as contributors
+00:23:04 [W] We have hundreds and hundreds some of our folks even try to come up with some of the best emojis and the most custom. Oh jeez, and that's really wonderful. And this is one of them.
+00:23:16 [W] This is one of our favorites Nikita and I picked this one out collectively and in this is one of our favorite emoji artifacts and wouldn't it be funny if people from the future we're like, so wait do they have logos? That's unexpected.
+00:23:31 [W] In their eyes in their in their heart eyes pleasured I promise, you know.
+00:23:41 [W] But these emojis also come with shout outs.
+00:23:44 [W] We have a shout-out Channel and this is awesome.
+00:23:47 [W] Really where a lot of people can find out about us as a community because one of the things we'd like to do is Nikita mentioned before with chop wood carry water is we really like to give people recognition.
+00:24:00 [W] So what's more powerful than recognition powered with Emojis?
+00:24:04 [W] Emojis? I don't know about you, but that really is awesome. And that's my kind of thing.
+00:24:09 [W] But slack isn't necessarily publicly searchable, and yes, we know that.
+00:24:15 [W] So what we've decided to do is make our shoutouts publicly accessible why and how we have a new Twitter account. This Twitter account this year is going to give us a voice for just our contributors so that
+00:24:30 [W] Can really hit some messages home with this large population of people that we have among State growing gigantic user Community.
+00:24:40 [W] This will really allow us to funnel those message those messages and also really bubble up some of our shout outs and the people that we've really care about and want to just tell the world how much they're all how awesome they are and what a great
+00:24:55 [W] That they just did.
+00:24:59 [W] So like poddisruptionbudgets.
+00:25:28 [W] all at kids.gov
+00:25:33 [W] So we've heard a lot about in person artifacts and physical and tangible artifacts, but one of Nikita and eyes most favorite not tangible artifacts and really a cultural artifact.
+00:25:49 [W] Is our value statements these documents live in GitHub.
+00:25:54 [W] there they come in the flavor.
+00:25:56 [W] They also come in the flavor of governance documents.
+00:25:58 [W] All of these things are future artifacts other projects Fork these and rip off them and communities of the future will learn from us through these through these documents and in the values document in particular the one
+00:26:13 [W] That we really wanted to hit home is inclusive as better than xclusive no matter what day it is.
+00:26:19 [W] No matter what time it is no matter what year it is inclusive is always going to be better than xclusive.
+00:26:26 [W] And actually let's end on yeah, hold up.
+00:26:31 [W] We actually have some real let's not end it right there. We have some really quick real project updates.
+00:26:39 [W] So we've had two interesting elections and through past few months.
+00:26:44 [W] So we had a steering committee election. And we also have the code of conduct committee lecture.
+00:26:49 [W] So this want to introduce the new steering committee members Bob killing Jordan Liggett and that one of shrinivas and thank you so so much for Adam and lucky for all your hard work and all the effort that you put into making this project better.
+00:27:03 [W] Thanks y'all leave.
+00:27:07 [W] Hey, we also have new code of conduct memory members joining us.
+00:27:10 [W] So say hello to Celeste Karen and Ferb conch them. Whenever you see them for all of the hard work.
+00:27:17 [W] They're putting in the end the syrians and Catalan trace and Jennifer.
+00:27:21 [W] you so so much for all the effort you put in the past years and shaping going to cut go to funded comedy. It'll work as today.
+00:27:31 [W] Q
+00:27:34 [W] Call us.
+00:27:36 [W] Say that yesterday.
+00:27:38 [W] Yeah and say hi to us for the steering committee Channel and slack and we're friendly and come find us.
+00:27:46 [W] Thank you.
+00:27:47 [W] Hello everybody and welcome to my session on simplifying application deployment at the edge with Harbor.
+00:27:55 [W] My name is Michael Michael and I'm one of the harbor maintainers.
+00:27:59 [W] I'm actually very involved in the cncf community and also maintainer for contour and I'm also one of the chairs in the kubernative community responsible for sick windows and idea right? I am a director of product management at VMware and you can find me under the alias
+00:28:15 [W] M2 on Slack
+00:28:17 [W] So what is Harbor Harbor is a cncf graduated project?
+00:28:21 [W] We graduated this past summer and we're super excited to be part of the cncf highest level of ecosystem set of projects. Our mission is to be the trusted Cloud knative repository for kubernative.
+00:28:35 [W] So we want to be very fast very efficient very secure and the de facto way that you use for storing all of your Cloud native artifacts that you use with kubernetes.
+00:28:47 [W] You can find us on Twitter a project Harbor as well as on our website go Harbor dot IO.
+00:28:54 [W] In a nutshell how about is really an open source registry that secures artifacts with policies role-based Access Control?
+00:29:02 [W] So, you know who accesses what and who is entitled to access what from your artifacts we ensure images are scanned and free from vulnerabilities so you can rest assured that the images and the applications you're putting in production don't have any vulnerabilities
+00:29:18 [W] And we sign images as trusted so you know where these images are coming from.
+00:29:23 [W] With that Harbor delivers compliance performance and interoperability to help you as a user as an Enterprise consistently and securely manage your artifacts.
+00:29:39 [W] Our communities thriving who have over 13,000 GitHub Stars 200 committers 250 contributing companies 3,000 contributors.
+00:29:49 [W] 4,000 Forks. You can see on the right here who have a steady stream of commits to our GitHub repo since 2016.
+00:30:00 [W] So for the past almost five years who have it a steady contribution across the board on Harbor and have 40 maintained.
+00:30:09 [W] Across five components and pretty much every continent imaginable so our communities thriving what a welcoming and open Community if you want to come in and help us achieve and further the vision of Harbor come and join us who have bi-weekly
+00:30:24 [W] Community meetings what active on slack what active on Twitter come and engage with us, we'd love to hear your scenarios and enable your requirements with Harbor kubernative is and
+00:30:39 [W] Been the standard for containerd castration in the data center for quite some time now.
+00:30:45 [W] I don't know seeing tremendous interest from users that want to deploy kubernative clusters are the edge but actually even here in the they want to put kubenetes clusters in cars in airplanes with the proliferation of 5G.
+00:30:59 [W] were hearing about kubernative clusters that want to land at many Edge devices or many thin Edge devices and a lot of the things that we hear from these users is that they want to focus on Simplicity reliability and security so they want to make sure that the one that
+00:31:15 [W] With this clusters of the edge they can manage them from afar.
+00:31:18 [W] We want to make sure that these clusters run autonomously their secure but there are applications are always up and running with your a retail customer and manufacturing plant or even a car.
+00:31:30 [W] But you can't really open it kubernative without the registry. One of the fundamental needs of actually running your cluster is that clustered acquires images that need to be provisioned and available so that you know your Docker or your containerd
+00:31:45 [W] Runtime can actually run the Sim ages.
+00:31:47 [W] So there is a need here for something that a registry.
+00:31:53 [W] Now users are asking for an easy way to describe how to deliver these images were they need to run?
+00:32:01 [W] Translate a little bit differently. These users are asking for the ability to deliver images right next to the computers running their applications.
+00:32:10 [W] We've heard a loud and clear in the harbor community and harbor version 2.1 that ship not too long ago improves image distribution with new features on proxy cash and peer-to-peer support.
+00:32:23 [W] So that's a tremendous tremendous release for us with the proxy capability.
+00:32:30 [W] We extended the concept of a project and I'm going to show that to you in a demo on a little bit weary using some of the same adapters who created for application and now you can proxy artifacts and chronosphere.
+00:32:40 [W] Eat the local cache with Harbor were all these artifacts are considered local. So they're right next to your compute in your Edge devices that you need and the management policies and all the other policies are Harbor has can be applied to your proxy
+00:32:55 [W] The Box includes quarters and scanning and all the rest of the policies are make Harbor the two ladies today.
+00:33:03 [W] The second area that we know rated is around peer-to-peer and we're going to credit with dragonfly and Kraken which are to open source intelligent peer to peer based systems. Essentially.
+00:33:16 [W] They're acting like a Content delivery Network for making sure that they leverage P2 Land files in this case your artifacts were they need to go saving in a lot of ways Enterprise bandwidth because they do that very efficiently you can do
+00:33:31 [W] A lot of policy on top of that like host level speed policies flow control be able to do encryption and all these other things are make sure that when your images are landing on this host whether the edge or in your
+00:33:46 [W] Enter a landing there with maximum efficiency.
+00:33:50 [W] Now Harbor with these capabilities makes it possible for you to distribute your Cloud native artifacts and images call locating them alongside with your applications running on kubernative.
+00:34:03 [W] At the same time we enforce the same Harbor core tenets that you have today, whether you're running at the edge or at the data center ownership and deployment a huge part of what makes Harbor successful multi-tenancy the ability to enforce our
+00:34:18 [W] Horse and project isolation policy are probably see engine is one of the best in the business. We have quotas retention immutability signing policies vulnerability in scanning policies.
+00:34:30 [W] All of that can be applied no matter where you run with Harbor our security and compliance.
+00:34:36 [W] We have identity and access management you have scanning.
+00:34:40 [W] have cve exceptions and the last one extensibility the ability to integrate with the tools services and processes.
+00:34:48 [W] That you have whether you're running at the data center or at the edge, we have webhook integration replication integration of pluggable scanners our rest API robot account CLI Secrets all of those make it possible to extend Harbor.
+00:35:03 [W] And connected to some of the Investments that you made within your data center and for kubernative.
+00:35:11 [W] So let's sit here and do a little bit of a demo.
+00:35:14 [W] We're going to do a little demo to talk about proxy cash and also touch a little bit on PCP here with dragonfly. So I'm going to stop sharing here and going to share my browser.
+00:35:40 [W] What you're seeing here is the harbor installation that on demo Telco Harbor to die or I wanted to show you that the level because that's a free instance of Harbor.
+00:35:51 [W] that's always available. So you can go and try out some of our latest features and this instance is actually running on the latest release of Harbor. So I went ahead and created already an endpoint for the registry connected to dr. Hart and I'm going to show that to you
+00:36:06 [W] Quickly, so the provider here is Docker Hub provided, you know a name for this connectivity and it's an extension is a connection to Docker hub using my own personal account of when I had them verified it so can test the connection to say that it tested successfully
+00:36:21 [W] Click and exit out of here.
+00:36:23 [W] So now with that in mind, I'm going to go ahead and create a new project and I'm going to call my project to be condemned.
+00:36:31 [W] Oh, hopefully nobody else has a name.
+00:36:33 [W] I'm going to mark it as public. So I don't have to deal with using user name and password to connect to this project right now, and I'm going to indicate here.
+00:36:42 [W] This is a new feature that this is a proxy cash and by enabling this as a proxy cash I get to link it to one of the existing connections that I've added.
+00:36:51 [W] It into the registers remember the connections that we have in the registers are being reused also in some of the replication providers that we have because we know how to connect and replicate content in and now pretty much every popular
+00:37:06 [W] Out there and including dr.
+00:37:08 [W] Distributions.
+00:37:09 [W] So in this case, I'm going to connect to Docker Hub.
+00:37:11 [W] I'm going to click ok, so now we've created our project here and it's empty.
+00:37:16 [W] There's there's nothing in it.
+00:37:17 [W] going to go ahead and pull up my
+00:37:28 [W] my my my when they're here and you're going to see that in a second.
+00:37:36 [W] So here's my command window and I'm going to show here that I don't have any Docker images here at all.
+00:37:41 [W] So it's empty.
+00:37:42 [W] So I name my project.
+00:37:47 [W] Cubicle demo, so I'm going to call my doctor.
+00:37:50 [W] Come on now is dr.
+00:37:51 [W] Poole demo dog or a bird a oh, she be condemned.
+00:37:54 [W] Oh Mitch.
+00:37:55 [W] Mike is one of my repositories on Docker Hub.
+00:37:58 [W] And envy go is one of the images I have there. So I'm going to go ahead and pull this and what's going to happen behind the scenes. Here is Harbor is going to be called first going to realize that we don't have this image Harbor will pull it from Docker Hub and one is it replenish the
+00:38:13 [W] Then Harold we have it will have it and provide it to me.
+00:38:16 [W] So if I do Docker images here, I'm going to say that you know, I was able to download this image is about 1 point something megabytes as a fairly small image and have an image ID here and I get some of this info.
+00:38:30 [W] So let's switch back here to Harbor and if I refresh this page, I'm going to see this image in Harbor.
+00:38:37 [W] So there's a cubicle demo Mitch Mike and we go Miss image and it has
+00:38:42 [W] A shot here and I'm going to go ahead and copy the shot just to show you that this is the same shot that we have here for this image. If we were to look at this in doctor ha
+00:38:56 [W] So connecting to the same image in-toto hop and there's the same digest that you see here is a Linux amd64 image and now in Harbor we have that and it's available and it's cached. So next time we request it.
+00:39:11 [W] It will not go and pull it down from Docker Hub.
+00:39:14 [W] It will just do a manifest check make sure that this is the latest image and harbor will keep a local cash for your image. So the more images you bring in the more of them are cached and then you can apply all the different.
+00:39:25 [W] This is of Harbor. You can scan them. You can look at the policy around quota and the ability to apply tag immutability or you can add web control or the configuration with scanning and
+00:39:40 [W] The exceptions all of the capabilities of the project the harbor provides will now be available for you for the use of this proxy cash that you've enabled.
+00:39:49 [W] So now if you are at the edge and you have deployed Harbor at the edge, you can use harbor as a proxy cash to bring all your images in from the public cloud or from whatever that your other Harbor or rather instance of a registry is
+00:40:04 [W] And keep them locally available right next to your kubernative clusters that running your compute.
+00:40:09 [W] So if for any reason your network connection is severed or is unreliable.
+00:40:14 [W] Your images are always available in Harbor to run right next to your computer.
+00:40:19 [W] The next thing I want to show you all here.
+00:40:21 [W] So when I see this environment where I have dragonfly enabled and I already went ahead and create the connection to dragonfly but I'm going to show it to you all. So the provider has dragonfly I could have chosen cracking this wall and it's has a name
+00:40:36 [W] It's API driven and I didn't enable authentication here. But obviously you have enabled either basic or us authentications is up to you depending on how you have it set up and then and test the connection here and
+00:40:51 [W] That dragonfly is enabled and I've been running when I exit out of this and what's going to happen is I could have created a new project here and I'm going to call it P to P demo just to show you really quickly what that looks like and I can come into this project.
+00:41:06 [W] I can't push any number of images that I have liked and the most important part here is a P2P preheat option so I can go into this option now and I can create a policy and what this policy will do
+00:41:21 [W] It would take images from this project are defining Harbor a push those images into the P2P provider dragonfly or Kraken and preheat those images so that were able to
+00:41:37 [W] Whew, you know distribute them based on the P2P policies that you have defined in that tool well as dragonfly or cracking.
+00:41:44 [W] So in this case you get to pick the provider and that's dragonfly when I give it a name when I'm going to call it preheat policy.
+00:41:53 [W] Or P2 P demo for example can add a description and then you get to decide what filters do you want you want to basically pick up every repository out there.
+00:42:03 [W] Do not only pick up the tags that are basically tagged protection.
+00:42:07 [W] Do you want to pick up for example, I'm going to put star star here.
+00:42:12 [W] So we'll pick up all the all the images and then the tag is latest.
+00:42:16 [W] So now we will pick up all repositories with tag latest or you can add one or more tags and
+00:42:23 [W] And then you can Define how do you want that preheat to be triggered you wanted to be my mural as in USA.
+00:42:29 [W] I want you to preheat you need to be scheduled base. So you can give us like a Cron job.
+00:42:34 [W] For example, if you pick customer or hourly or daily, or you can say I want it to be then based and events here is one artifact is push one artifact is labeled or scan you get to see based on some of these actions
+00:42:49 [W] Opening for example a new image is pushed immediately. We get preheated and sent to the feet of the provider.
+00:42:55 [W] So that's it for today.
+00:42:57 [W] Hopefully you enjoyed this short preview on Harbor and how we can enable you to operate at the edge right alongside your kubernative clusters and enable you to meet your application as well as Enterprise needs
+00:43:12 [W] For the edge use cases.
+00:43:14 [W] Thank you so much.
+00:43:17 [W] Hi there.
+00:43:17 [W] Thanks for joining us today.
+00:43:19 [W] This is wish from the tikv community at my infrastructure engineer at King Cab and also called contributor of tacky project.
+00:43:28 [W] I'm very glad to share how we improved tikv observability with my colleague Gentry.
+00:43:35 [W] Recently we added tracing offense to the tikv was very little overhead.
+00:43:40 [W] Let's say only a few nanoseconds per event and we would like to share you about how we did it.
+00:43:46 [W] it. Hopefully this is helpful.
+00:43:51 [W] First let me introduce you to talk a project. We are working with.
+00:43:56 [W] Tikv is a key value database. It is distributed transaction model and open source.
+00:44:01 [W] It has recently became a graduated cncf project.
+00:44:07 [W] So far there are more than a thousand stars and more than 200 contributors in GitHub as a key value database tikv. Our steps key value read and write to requests for
+00:44:22 [W] I do read and write to requests for example get and put sometimes there are jet has a right to request May suddenly takes long time while most others are normal.
+00:44:35 [W] This can be caused by different reasons and we would like to know why now we have logging and Matrix.
+00:44:44 [W] Logging is not very useful. In this case.
+00:44:47 [W] It is usually hard to Lincoln Logs related to a single request together.
+00:44:53 [W] Transfer Matrix. Sometimes it is not useful as well.
+00:44:57 [W] Make sure it's only review aggregated information like average latency and when multiple payloads are mixed together a Json from a single request is hidden.
+00:45:10 [W] So as a result, we want to use Trace to know how to happens.
+00:45:17 [W] Tikv is routing Russ and there are multiple choice in libraries available.
+00:45:22 [W] These libraries are compatible with opentracing or opentelemetry.
+00:45:27 [W] This thing to be nice, but we mediately me some challenges and the most tough one is performance.
+00:45:36 [W] Jenna happens very rarely. For example only once a week. This means we need to trace all requests in order to not miss it. And as a key value database each request takes very short time only a few microseconds.
+00:45:51 [W] Yes, the training facility must be super efficient negligible compared to a few microseconds.
+00:46:00 [W] The Second Challenge is that there are multiple Battery Systems in tikv.
+00:46:05 [W] For example, the assistants receive multiple incoming requests and process until Gaza like in this picture multiple write requests are accumulated and they're a single disk right is performed.
+00:46:20 [W] Some tracing libraries are not designed for this case. We would like to review all details.
+00:46:27 [W] To resolve these issues.
+00:46:29 [W] We had to develop our own training Library. I would like to invite you to share this path with you.
+00:46:37 [W] I am going to introduce our chasing that marine and militaries in English that is very concise and focused on performance is still a
+00:46:52 [W] Need to be stable and production ready.
+00:46:43 [W] We decided develop militaries with the pine cone of high performance.
+00:46:48 [W] Yes, the results of micro check my credential knocks can integration benchmarks.
+00:46:57 [W] On generation and collection of West Bank which point o two microseconds it is c a which is in every was seventeen point five times faster than was tracing and 100 times faster
+00:47:12 [W] You chase 100 Bands by differentiating libraries then recorded the QPS of point every crisis as you can see why I was tracing have already in computers in the trees only dances presents.
+00:47:19 [W] I'm explaining what organizations we've done for such a performance.
+00:47:27 [W] The first key to the performance is to reduce contention attention happens whether share resources except when currently in multiple space or close.
+00:47:40 [W] In most West implementations spends from other postgres are simulate wish to the same span collector, which is globally sure.
+00:47:50 [W] So as ourselves and modified the same resource cause attention.
+00:47:57 [W] They have to pay the overhead of logs or Atomic variables for every spent.
+00:48:06 [W] miniaturize doesn't push when spent each time to the global Speculator instead we collect spends 2 is available, but first first afterwards in Lost very often spends in the sweat local buffer
+00:48:21 [W] Letting through the global collector in patch.
+00:48:19 [W] In this way, the global clatter is assess much less open. The intention is reduced and the performance improved.
+00:48:32 [W] The second key to the performance is to type faster.
+00:48:37 [W] Let's see how this is and looks like for each span the chasing Library records when the span is studied and when Spain is ended.
+00:48:50 [W] So time in performance is important.
+00:48:54 [W] Compensation level waste either use system time to retrieve the time or monotonic time counter by assessing the monotonic clock.
+00:49:05 [W] In our environment is each monotonic clock versus causes 25 nanoseconds latency.
+00:49:15 [W] If we have 10 spins in the key value Gilchrist the total latency.
+00:49:23 [W] Closest by Jason becomes $500 seconds. Remember that tikv. Good question.
+00:49:30 [W] may think about $1,000 seconds two and $3000 circus.
+00:49:35 [W] circus. So this have 16% latency overhead.
+00:49:39 [W] No, Tony Cross is it is vast and resource is 3% latency overhead.
+00:49:35 [W] However is its position is only four microseconds according to our benchmarks, which limits is usage.
+00:49:48 [W] Instead of using this clocks we use the terms then counter, which is turn available in modern.
+00:49:56 [W] Intel and AMD CPUs its value can be accessed via the IDT SCP instruction. The TLC register is very efficient with high precision.
+00:50:11 [W] It's only causes a nano seconds each to assess in our environment.
+00:50:19 [W] However, Jesse is not perfect in some serious TLC is not synchronized in different groups or Hardware single.
+00:50:29 [W] sdlc can be discovered by checking some CPU products.
+00:50:33 [W] Even with this vertex we discovered that Cynthia see maybe no civilized due to an unstable environment or some CPU Force.
+00:50:43 [W] Boom on not reliable it will fall back to youth club monotonic course.
+00:50:42 [W] The final key to the performance is to reduce civilization civilization happens when spectacularity in memory and need to send back to some chasing storage that you go.
+00:50:56 [W] Since there are very frequent key value decreases in the tikv.
+00:51:02 [W] The chasing results reporting is also very difficult.
+00:51:07 [W] civilization may take long time
+00:51:11 [W] to reduce the serialization course in tikv.
+00:51:15 [W] We collect all space related to request the only strategy for them to the chase in storage.
+00:51:24 [W] The selection is based on the request latency only requests take long term will be recorded.
+00:51:33 [W] This is different to the sample collection that we will not miss any jitters.
+00:51:44 [W] To chase bench sisters in the face the boss too much contests related to different which compresses into a single context.
+00:51:53 [W] This Edition is based on the request latency. Only request is that take long term will be recorded.
+00:52:01 [W] This is different to the sample collection that we will not miss any jitters.
+00:52:11 [W] To chase badge sisters Miniatures the post too much cortisol is related to different which compresses into a single context. Then this requires shared the following child
+00:53:01 [W] We are glad to see some related words in the community.
+00:53:06 [W] A subset of change open chasing is implemented for performance.
+00:53:12 [W] Dynatrace supposed to refer to yoga the amazing ago you are greatly is this our verification works?
+00:53:21 [W] Here is a repository link of Miniatures. You can use mini twist in your own projects now.
+00:53:29 [W] Some organization will be contributed to opentelemetry vast.
+00:53:35 [W] We hope one day the official was the current kind of duck organizations.
+00:53:44 [W] Come in tikv, 5.0 real supporter Jason picture provided by the miniatures.
+00:53:51 [W] Hope you enjoyed this talk.
+00:53:52 [W] Welcome to contact us through the following channels.
+00:53:55 [W] Who dear my name is Sakura. So I'm a software engineer Rocky coredns GG and I'm a Manger of several open source projects including containerd e decision will
+00:54:11 [W] And the research opposites of root race consciousness.
+00:54:15 [W] If you have questions, feel free to ask me at The cncf Struck.
+00:54:21 [W] This is pretty recording session so I can answer questions at any time during my talk.
+00:54:29 [W] So why is router is containers?
+00:54:32 [W] Go to his conscience means running run see congenitally canonical Q bread and everything without root privileges.
+00:54:42 [W] This is useful for protecting the host from potential barbarities and misconfigurations.
+00:54:52 [W] There are several techniques that may sound similar, but don't be confused.
+00:54:58 [W] This is not about setting security context short run as user.
+00:55:04 [W] This is not about the Cubans a husband proposal for supporting username spaces.
+00:55:11 [W] Unlike these techniques losers containers means running the whole stack including kubeedge containerd e and run say with absolute. It's not just about running containers as a different user.
+00:55:28 [W] So why do we need Reuters?
+00:55:30 [W] It's because most runtimes change it to HUB serious vulnerabilities.
+00:55:35 [W] Is there a similar techniques that may sound similar but don't be confused.
+00:55:34 [W] This is not about setting security context would run as user.
+00:55:39 [W] This is not about the Cuban State husband proposal for supporting username spaces.
+00:55:47 [W] Unlike these techniques boutrous containerd means running the whole stack including kubeedge containerd e and run say with absolute.
+00:55:56 [W] It's not just about running Consciousness as a different user.
+00:56:04 [W] So why do we need Reuters?
+00:56:05 [W] It's because most runtimes changed her Hub serious about abilities.
+00:56:13 [W] There has been really a band around his or her abilities in the past two years in every component such as runcie containerd e to Cody and kubelet.
+00:56:25 [W] And probably more vulnerabilities to come in the next couple of years.
+00:56:32 [W] Most herbs is vulnerabilities could be mitigated if we had router is continuous.
+00:56:43 [W] And users offer make mess configurations.
+00:56:48 [W] They may try setting up possibility policy kid Clipper or other kinds of admission for the words, but setting each up properly isn't straightforward.
+00:57:01 [W] And some people still exposes the TCP ports of the system components such as keyboards and dragalge to the internet without Mutual TLS Authentication.
+00:57:16 [W] Or even if they could manage to set up till theories, sometimes they make mistakes about the private keys.
+00:57:26 [W] Such as exposing the case as is metadata that is accessible by any container in the cluster.
+00:57:35 [W] Or other kinds of admission for the words, but setting each up properly isn't straightforward.
+00:57:43 [W] And some people still exposes the TCP ports of the system components such as keyboards and judoka G to the internet without Mutual TLS Authentication.
+00:57:58 [W] Or even if they could manage to set up till TLS, sometimes they make mistakes about the probabilities.
+00:58:08 [W] Such as exposing the case as is metadata that is accessible by any container in the cluster.
+00:58:20 [W] So this is continuous is beautiful.
+00:58:23 [W] mitigating the impact of such properties and misconfigurations.
+00:58:30 [W] Even if the host gets compromised the other car won't be able to access other users files want to be able to modify firmware and colonel.
+00:58:42 [W] Also attacker won't be able to do upswing and DNS spoofing.
+00:58:51 [W] But of course, it's not a Panacea.
+00:58:55 [W] It's not too effective against Colonel probabilities DDOS attacks and crypto mining attacks.
+00:59:05 [W] And also there are some caveats about Network performance.
+00:59:11 [W] But we are seeing shoes improvements this year.
+00:59:17 [W] Also, we can't use any face and Brock storageos.
+00:59:21 [W] But this is not too sure to jail where you can use my edges to databases or managed objects managed object is raises.
+00:59:31 [W] Such as Amazon S3.
+00:59:36 [W] Let's take a look at the history of Rogers containers.
+00:59:42 [W] It started about eight years ago.
+00:59:44 [W] Is it before I began to work on rigorous containers?
+00:59:50 [W] Object by XC but wasn't Popular until 2018.
+00:59:56 [W] in the Bronx ours is
+00:59:58 [W] but this is not a huge deal when you get yours Maria to databases or managed objects managed objects raises.
+01:00:07 [W] Such as Amazon S3.
+01:00:12 [W] Let's take a look at the history of Rogers containers.
+01:00:18 [W] It started about eight years ago if it before I began to work on rigorous containers.
+01:00:26 [W] It was asserted object by Alexei but wasn't popular energy 2018 also, do these containers are just time was very different from Modern losers containers,
+01:01:09 [W] So this is containerless at that time was very different from Modern losers containers. Notably setting up networking requires root privileges at that time.
+01:01:25 [W] In 2018, they will click to started to support ruthless containers mostly for building images inside the clearance clusters using continuity technology.
+01:01:38 [W] Delta Chi towards a game changer.
+01:01:41 [W] After booting supported router has more Joker Padma the Clio all these runtimes also began to support uterus merge.
+01:01:52 [W] We also project huge responsibilities.
+01:01:56 [W] But it's still not Upstream date mostly because we didn't have support for cgroup at the time.
+01:02:03 [W] But our work is already unaffected by k3s.
+01:02:08 [W] And in 2019, we gain support for cgroup using SQL project to in systemd.
+01:02:16 [W] Cgroup itself had been there for several years, but it wasn't used for conscious until 2019 because each other rather support for device controllers and freezers.
+01:02:31 [W] Certainly this year.
+01:02:33 [W] This is continuous began to support setting up cgroup or limiting memory resources and were limiting CPU resources.
+01:02:42 [W] with a new kind of creature called seccomp at FD
+01:02:49 [W] Let's take a look into examples of Reuters containers.
+01:02:54 [W] For example darker has been officially supporting uterus model since version 2.0 3.
+01:03:01 [W] It was experience.
+01:03:03 [W] It was experimental in Nike .03, but it's going to re GA in 2014.
+01:03:10 [W] This new version also comes with notable updates for cgroup and diffuse over a affairs.
+01:03:21 [W] Ruthless record company is installed by running a script from HTTP Constructor has get to Tokyo to compress uterus.
+01:03:31 [W] And you can run Docker command with Docker host environment variable like this week's Constructors. Rush transfers users rush. You are these restrictions on
+01:03:45 [W] and if you run PS3 commands, you can see that all processes including conscious energy. And dr. D as well as continuous running without salute.
+01:03:59 [W] You turn it is.
+01:04:01 [W] And you can run Docker command with Docker host environment variable like this week's Constructors. Rush transfers users rush you will disrupt struggle to talk.
+01:04:13 [W] And if you run PS3 commands, you can see that all processes including continuity and Joe Kennedy as well as continuous running without the route.
+01:04:27 [W] So Nicholas is uterine mirantis.
+01:04:29 [W] Usually this is our Q - distribution such Doesn't requires a route.
+01:04:35 [W] Abel suppose master of networking using fraggle and big styra
+01:04:40 [W] He provides a demo of maturity cluster as a Docker compose.
+01:04:44 [W] Circleci.
+01:04:49 [W] For theorem times we support to both Kentucky and acquire and these run times can be mixed up together in a single cluster.
+01:05:01 [W] And you can see that all processes including continuity frogner kubelet running as a non reducer and dsps three screen.
+01:05:14 [W] So Nick says k3s, which is a cncf sometimes project focusing on edge computing.
+01:05:22 [W] K3s also supports reverse mode by incorporating user knative parties ahead of the clearing this up string.
+01:05:34 [W] PS3 is uses constantly as the CRA runtime.
+01:05:42 [W] So next is Billet eat a contrary. Mr. Builder with Ctrl G technology and also adopted by Docker built.
+01:05:52 [W] Executed in similar ways such as as a part of the clergy or other subtle demo or as a tremendous spot here on this job or as a tekton task.
+01:06:09 [W] As a part of the ecology or as a Saturday morning, or as a clear and spot here on this job or as a tekton task.
+01:06:23 [W] To round builder kit inside kubenetes. You don't need to set security context that purpose.
+01:06:31 [W] But you might need to specify security Kentucky's top second profile and up-armored stations to Arrow calling several system calls such as a shear and moment.
+01:06:50 [W] So that's the big is how router is containers work?
+01:06:55 [W] It uses several cotton futures.
+01:06:57 [W] But amongst these features the most important one is username species.
+01:07:06 [W] Username species is a common feature that mlops non reducer to a fake root user with you re zero.
+01:07:16 [W] It's not really a route but enough to run continuous.
+01:07:22 [W] It's also sets up your ideas called subordinate.
+01:07:26 [W] you urges to use multiple you ideas other than 0.
+01:07:34 [W] By using username spaces are using can also create module name spaces.
+01:07:41 [W] Intent to mount Brock services at all.
+01:07:45 [W] But shutting whiskering 4.18 fuse file system such as Hughes over your face can be mounted so you don't need to care about openfaas.
+01:07:59 [W] So next is Network namespaces.
+01:08:02 [W] I usually can also create network name spaces with user emphasis but cannot create projects and it appears for internet connectivity.
+01:08:14 [W] So instead of rotation. It appears we need to use syrup which translates internet packets into solid scores.
+01:08:25 [W] This is true, but we are seeing huge improvements this year. I will talk about this topic creator.
+01:08:35 [W] With regards to cgroup we didn't have support for cgroup Splash around.
+01:08:41 [W] Just because on cgroup a server host be clear set up memory limit CPR image and PID meat, but we can use cgroup version 2.
+01:08:54 [W] Fedora has already switched the default to represent to recently.
+01:09:00 [W] Probably distributions the forest.
+01:09:03 [W] User notification which was merged in color 5.0.
+01:08:59 [W] It's a new way to focus system.
+01:09:01 [W] calls in the user space.
+01:09:04 [W] This is similar to pretorius but it is significantly faster.
+01:09:10 [W] This time we use the for everything saroja. Trilogy is without stretch. It is his responsibility file.
+01:09:20 [W] And Colonel 5.9 are there to support for seccomp ioctl knative activity, which allows injecting file descriptors from host into continuous?
+01:09:35 [W] This time we used the for aiming at things a Serpent's overhead of syrup.
+01:09:43 [W] It's Richard white work.
+01:09:46 [W] Due to this Congress can protect the host from potential vulnerabilities and domestic relations.
+01:09:53 [W] It's already adopted by lots of projects such as Village Joker containerd e prodyna choir and k3s.
+01:10:02 [W] It's also being proposed to the Cuban is Upstream.
+01:10:07 [W] There are some door bucks, but this is the remarks are being significantly improved using seccomp user notification.
+01:10:16 [W] HTTP cross treacherous looters contain 2 RS
+01:10:16 [W] If you have questions, feel free to ask me at cncf circleci.
+01:10:25 [W] So it sort of my talk.
+01:10:27 [W] Thanks.

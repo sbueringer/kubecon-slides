@@ -1,0 +1,257 @@
+﻿Zero Downtime Data Relocation with Vitess: DGMD-3096 - events@cncf.io - Wednesday, August 19, 2020 8:19 AM - 120 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:04:07 [W] Welcome everyone to this breakout session where we will be talking about zero downtime data relocation with bitters.
+00:10:48 [W] My name is deeply Sig ready?
+00:10:52 [W] I'm a software engineer at planetscale and I'm also a maintainer of vitess.
+00:11:04 [W] been working on with us for almost two years now, and I've been a maintainer for over a year.
+00:11:05 [W] And my name is Lisbon Dyke.
+00:11:09 [W] I'm solution architect of planetscale.
+00:11:16 [W] I joined the company about nine months ago. But give you everything there is to know about the testing program at ease.
+00:11:18 [W] I still feel like the movie most of the time my background is mainly in MySQL since I previously worked at a company called proponent for about seven years and it's been really exciting to Branch out into what I consider to Riga logical evolution
+00:11:31 [W] Planetscale I joined the company about nine months ago, but given everything there is to know about the testing program at ease.
+00:11:32 [W] I still feel like the new Beatles to the time my background is mainly in MySQL since I previously worked with a company called percona for about seven years and it's been really exciting to Branch out into what I consider to be a logical evolution
+00:11:33 [W] So just to give you a little bit of background on planetscale R. Co Founders created the tasks at YouTube about 10 years ago.
+00:11:47 [W] And our mission is to make it the most trusted Cloud native relational database period we are headquartered in Mountain View, California, but I am personally based in Portugal and deeply is based in Nevada.
+00:11:57 [W] So
+00:11:59 [W] it's not the first time we talked about data locality, but it does feel as though every time we get to share this topic.
+00:12:09 [W] It becomes more relevant.
+00:12:14 [W] We are recording this just weeks after the European court of justice repute the u.s.
+00:12:18 [W] EU privacy Shield agreement. Particularly Global HR platforms have needed to pick up on this you may have seen a blurb about this awesome through your inbox, but in a nutshell that agreement made it
+00:12:31 [W] Easier for personal data about you citizens to be exported to the United States and it's just the next in a long line of similar rulings that have been changing the legal landscape around personal data more and more countries
+00:12:45 [W] In place that require personally identifiable information about their citizens to be kept within some boundaries.
+00:12:53 [W] And it can feel as though for now.
+00:13:04 [W] These laws are targeted very specific hyper scale data companies and while that's certainly true.
+00:13:06 [W] This is a trend that's not reversing anytime soon.
+00:13:14 [W] So after the rookies of getting our companies in good shape for do PR back in 2018 Business Leaders have been rightfully aiming to get ahead of whatever you are moments are coming and are considering what it's going to
+00:13:23 [W] This latest oars now building new applications with data locality in mind is daunting but it's not impossible implementing its into existing applications that were never architected for that purpose is a whole different
+00:13:39 [W] Whole different level is impossibie, though.
+00:13:48 [W] We want to show you today about the test can help you avoid meeting to pull your re-architect that you already have in place, but it has the tools built in for allowing the transition of your existing data, and yes that it's possible to do so
+00:13:56 [W] downtime for the application itself
+00:13:59 [W] So let's get to the star in the story.
+00:14:09 [W] I will go into some of the basic protest Concepts to build some understanding or I will goes into solving this issue and deep these going to demonstrate to you how to use those elements to achieve our goal.
+00:14:18 [W] So we have a lot going on on this diagram the quickest way to explain what the test is is as a middleware layer between your application and multiple clusters of my SQL servers.
+00:14:31 [W] Do your application on the left of the dotted line? It presents itself as a single giant my SQL database speaks to my SQL protocol you use standard MySQL connectors to communicate with its and it's pretty straightforward.
+00:14:46 [W] Of course internally, there's a lot more people exiting.
+00:14:52 [W] the test is built to accommodate transparent horizontal sharding and there's many components that contribute to that.
+00:14:57 [W] Just in case the concept of horizontal Chardon is not yet a hundred percent clear. The basic principle behind it is that we take the data within a single given table and we spread it across multiple Shard clusters.
+00:15:13 [W] So for example, if you have a table that contains four billion rows we can spread those evenly across for shards containing 1 billion rows each
+00:15:25 [W] And your application the data still looks as though it's coming from one and the same table in this talk.
+00:15:40 [W] We're going to be focusing primarily on what's in the query class, which is represented by the white lines fear outside of that lives PTC TLD in our topology servers close help us manage the infrastructure, but they're kind of less relevant to our talk
+00:15:50 [W] draw some special attention to VT Gates
+00:15:54 [W] by itself VT Cates is your applications entry point to the cluster.
+00:16:02 [W] It's a very light stateless proxy which contains an SQL parser and it keeps itself informed as to the state of the cluster. So it knows exactly how to break down your requests at any given time.
+00:16:16 [W] It's going to transparently select the correct chard for you to select from and it supports in respect to very large variety of natal native SQL terms like joins
+00:16:25 [W] Transactions also got a couple of built-in optimizations like connection pooling to help boost performance.
+00:16:32 [W] Now zooming in on the actual cluster and the shards themselves.
+00:16:44 [W] There's a couple of logical and physical components that help establish them.
+00:16:51 [W] The unified database is represented by VT gate is defined in the tests as a key space.
+00:16:53 [W] The key space is well established the logical layout of our data across one or multiple shards and it's defined by a combination of our normal my SQL schema file as well as something we
+00:17:06 [W] All the histogram which describes the sharding related metadata in Json format.
+00:17:10 [W] Select configurations for any the test specific features.
+00:17:27 [W] We'd like to use on a table by table basis.
+00:17:32 [W] So effectively the V schema is where you build the sharding logic for your application allowing it to remain abstracted from your code now at its most basic definition charting of tables happens by
+00:17:42 [W] Happens by assigning every role a specific key space ID.
+00:17:50 [W] This uses a computer column to so-called Chardon key and it will associate each row to a physical address in a very specific Sharp.
+00:18:00 [W] And that means that each Shard is defined as the owner of a specific range in space IDs the way that's established with The Binding of these Fela and consistently it's enforced by VT great if these going to go into what that looks like,
+00:18:10 [W] Like in the demo sure thing.
+00:18:13 [W] The shards themselves as you've seen from these Graphics are not necessarily made up of the single my SQL instance, either they are effectively minikube stirs of my SQL instances and all of them make use of standard
+00:18:29 [W] Internally to make sure that there's multiple copies of your data present and to allow you to scale reads as needed.
+00:18:45 [W] So zooming in on what makes the my SQL instance of part of the test.
+00:18:50 [W] when looking at a small sidecar process called the test tablet for a v t tablet which acts as an agent of cluster awareness.
+00:18:55 [W] It connects to any existing version of a running my SQL Server that can be any flavor running anywhere.
+00:19:06 [W] We also include Cloud instances to that like RDS or Aura and effectively what it does is it adopts that instance into the greater the test Buster and make sure that it's got a correct copy of the data
+00:19:17 [W] Execute its given role.
+00:19:20 [W] Now somewhere between these two layers for rather kind of transparently woven into the logical concept of the key space and the physical implementation of the detest tablets is what we call a cell.
+00:19:38 [W] And the cell is analogous to what we recognize is failure domains or zones and kubernative.
+00:19:50 [W] They allow us to spread it given key space across multiple geographical locations.
+00:19:56 [W] The actual definition of a cell doesn't need to imply geographical spread and we could Define them as different racks in the same data center, but for the purposes of our demo for opting to let the cells be defined as a
+00:20:05 [W] Boundaries for the data set forth by the data low quality requirements.
+00:20:12 [W] Now to accomplish a truly transparent to your application distribution of data and normal horizontal sharding strategy is not going to suffice strategy that evil spreads
+00:20:29 [W] Charts, we're going to need to build in some additional logic that's specific to the rule sets that we're trying to comply with and we want to keep in mind that this is a moving Target because as we've seen in the past few years those rules
+00:20:45 [W] They change rather quickly. So let's take a closer. Look at a specific part of the V schema that we fall with the next.
+00:20:55 [W] Then next is provide the bridge between the databases column values in a specific charge pspace ID, which is the internal physical address that gets attached to each role. It helps establish the
+00:21:10 [W] A society which is the internal physical address that gets attached to each role. It helps establish the current charts that will you will use of indexes to Define which columns to chard on and specifically which would be established charting
+00:21:16 [W] I'm which columns to chard on and specifically which would be established charting functions to use now just like with normal indexes chart a tables need to have at least a primary the next tile but you can also create
+00:21:26 [W] Alexis now unlike a normal index in MySQL. The next is are not actually start anywhere on disk because they are computed and they use the selected charting function of which there's multiple included by default and vitess.
+00:21:42 [W] As well as the value for the role in the specified charting Paulo.
+00:21:47 [W] To give you a quick idea.
+00:21:57 [W] Here are some of the included charting functions already present within the test and they cover a variety of commonly used faces most often.
+00:22:05 [W] We're going to see that the index defined as a simple hatch for an existing primary heat, but we could use Unicode use md5 when we're using text based columns. But as you can see from the numeric static map charting functions can also
+00:22:14 [W] For an existing primary key for we could use Unicode use md5 when we're using text based columns. But as you can see from the numeric static map charting functions can also take a predefined list external to the
+00:22:17 [W] Find list external to the database as a guide the specific to this demo sharding functions can be built to any specification you need.
+00:22:24 [W] Now with all of those Concepts and ingredients, let's get back to solving the problem with data locality expand. What we need to get started is it clearly defined list of jurisdictions? So let's just a list of the
+00:22:41 [W] for establisher in space
+00:22:44 [W] deepthi is going to show you how to establish a sharding function that allows us to combine with patient-specific rose to the correct charts and should show you how to execute that in place beginning from an existing Uncharted data set.
+00:22:59 [W] In this demo, we have three regions and eight countries and the regions are Americas Europe and Asia and the countries are US Canada, France Germany Etc.
+00:23:16 [W] So we are using region here in the sense of the English word region, not specifically Cloud providers region.
+00:23:24 [W] but what we have done is
+00:23:28 [W] Matt each of these physical regions to cloud provider zones the sharding scheme they will be using for the demo is to use a region.
+00:23:42 [W] Json Windex.
+00:23:45 [W] This is a Windex that is a multi-column index until late last year with us only had a single column indexes, but as as we realize that we should be
+00:23:57 [W] Words data locality requirements. We added a multi-column Windex and what this specific region. Json Windex implementation does is that it Maps an ideal location to go to a tea space ID
+00:24:12 [W] Looks up a byte value for the location using the map and it uses that byte value to as the leading bite of the key space ID. And that's how we achieve the
+00:24:28 [W] There are three with us cells in each of these regions and there is only one key space called met with three shots.
+00:24:40 [W] Each Shard is resident in three different cells.
+00:24:42 [W] This is because on the planetscale production environment, whenever you deploy three instances, they are spread out to three different cells for Disaster Recovery purposes.
+00:24:56 [W] The key space is split into three cakey ranges - 40 corresponds to U s-- and the bike values we are using for us and Canada are 1 & 2 40 to 80 corresponds to Europe and for France and Germany.
+00:25:13 [W] We are using the hex values 40 and 41 which correspond to 64 and 65 80 - is asia-pac and the byte values we are using
+00:25:27 [W] They correspond to 128 129.
+00:25:33 [W] And whatever c0 C1 is for India and Indonesia.
+00:25:38 [W] Now let's get to the demo.
+00:25:41 [W] So here is our demo cluster and in this we have a key space called Maine which we have already deployed and in this key space we have.
+00:25:53 [W] And the bike values we are using for us and Canada are 1 & 2 40 to 80 corresponds to Europe and for France and Germany.
+00:25:59 [W] We are using the hex values 40 and 41 which correspond to 64 and 65.
+00:26:00 [W] 80 - is asia-pac and the byte values we are using.
+00:26:01 [W] They correspond to 128 129.
+00:26:01 [W] And whatever c0 C1 is for India and Indonesia.
+00:26:01 [W] Now let's get to the demo.
+00:26:04 [W] So here is our demo cluster and in this we have a key space called Maine which we have already deployed and in this key space we have.
+00:26:06 [W] Two clusters. We actually have an Uncharted cluster.
+00:26:06 [W] which we are representing with a - to to denote that it covers the whole key space and we have a sharded cluster which has three shots - 40 40 - 80 and 80 -
+00:26:13 [W] We can look at the instances that we have in this cluster and filter them by Shard. So we have three Uncharted instances one in Asia one in Europe one in the US and in each sharp, we have three instances, but they are
+00:26:28 [W] which we are representing with a - to to denote that it covers the whole key space and we have a shot at cluster which has three shots - 40 40 - 80 and 80 - we can look at the instances
+00:26:30 [W] engaging so for - 40 we have us
+00:26:33 [W] 4280 all of the instances are in Europe and 80 - all of the instances are in Asia.
+00:26:44 [W] Now that we have looked at the cluster configuration.
+00:26:49 [W] Let's also take a look at the schema and we schema the schema is very simple.
+00:26:59 [W] We just have one table called customer.
+00:27:02 [W] It has an ID field, which is a unique identifier and a full name and national ID which other personally identifiable information and there's a country field which is our location. So that is the field that we are going to use.
+00:27:14 [W] During very sharding to denote which part of the world the data should flow, too.
+00:27:20 [W] Let's now take a look at the V schema that we have created.
+00:27:34 [W] So this is Richard in so we have created a v schema that says shouting is true.
+00:27:42 [W] And there is one Windex which is of type region Json and we are calling it region B DX and we are going to give it a
+00:27:46 [W] Country to bite map file which contains the Json and this Windex uses one byte to represent the region.
+00:27:56 [W] Let's now take a look at the V schema that we have created.
+00:28:01 [W] So this is a Richard in so we have created a v schema that says shouting is true.
+00:28:02 [W] And there is one Windex which is of type region Json and we are calling it region B DX and we are going to give it.
+00:28:03 [W] Country to bite map file which contains the Json and this Windex uses one byte to represent the region.
+00:28:04 [W] And on our customer table, we create this as a Windex and we will apply this region vdx Windex to the ID and Country columns.
+00:28:11 [W] Now that we've looked at the schema.
+00:28:14 [W] Let's take a look at the data. So we've already pre-populated the database with some data and after we do the riche adding the expect that this data will show up in the new shots.
+00:28:27 [W] The next step is to actually go through the re shouting before we do that.
+00:28:39 [W] I want to I want us to look at the the traffic on these tablets.
+00:28:42 [W] So we have our instances. Let's look at Dash.
+00:28:48 [W] Are Uncharted key space and you can see that there was this spike in QPS that corresponded to when we looked at the data?
+00:29:00 [W] If we look at one of the other shards.
+00:29:04 [W] Then we will see that there is actually no traffic on the child shots.
+00:29:13 [W] They don't have any data yet.
+00:29:16 [W] So now let's run the reshoring command.
+00:29:23 [W] So now let's run the reshoring command.
+00:29:30 [W] What this will do is first it will copy the schema the table definition from the parent chart to the three shots that we are trying to get to and after that it will actually copy all of the
+00:29:41 [W] From the parent chart to the new shots. So if we go back and look at
+00:29:51 [W] one of the tablets - 40 we will see that there was some QPS we replication actually wrote some data into those Stables.
+00:30:02 [W] Okay, now that the real sharding has copied the data over we want to actually verify the data.
+00:30:20 [W] But before we do that, we will switch read so that we can read from the new instances.
+00:30:23 [W] So let's do that.
+00:30:25 [W] So the next command we are going to run is the switch reads command, which will divert all replica traffic to the new shots.
+00:30:38 [W] Once that's complete we can actually now say okay. This is all of our data 14 rows, but now
+00:31:10 [W] Gods but select from a replica.
+00:31:15 [W] And we see that in this shot - 40 there are four only four rows.
+00:31:24 [W] Now, let's try the next shot 40 to 80.
+00:31:28 [W] And this one also has 4 rows and all of this data belongs to Europe.
+00:31:37 [W] The third shot - 80 should have all of the data that belongs to Asia.
+00:31:44 [W] That was the wrong shot specification.
+00:31:50 [W] So we see that the data has all been copied over and we can access this data by routing our query store applica.
+00:32:09 [W] The next step is to switch rights.
+00:32:11 [W] So let's do that.
+00:32:12 [W] Now before we switch rights, let us start a client so that we can see what happens when you try to switch rights from an Uncharted cluster to a shot at one.
+00:32:27 [W] So I'm going to start this client which will just write some rules into the main key space and once that starts.
+00:32:38 [W] We will switch rights.
+00:32:40 [W] And we can access this data by routing our query store replica. The next step is to switch rights.
+00:32:42 [W] So let's do that.
+00:32:43 [W] Now before we switch rights, let us start a client so that we can see what happens when you try to switch rights from an Uncharted cluster to a shot at one.
+00:32:43 [W] So I'm going to start this client which
+00:32:44 [W] We'll just write some rules into the main key space and once that starts we will switch rights.
+00:32:45 [W] So to start with this workflow is going to compute all of the steps it needs to perform and once it knows what it needs to do.
+00:32:58 [W] It'll go ahead and do it.
+00:32:58 [W] Okay, so switched rights, which rights has succeeded.
+00:33:10 [W] I'm going to let this customer I to run for a little longer so that we can show you the data and then stop it.
+00:33:13 [W] Let's go back and look at the errors that we got while switch Rights was happening.
+00:33:23 [W] So we have one two, three, four, five six about eight errors. This client program inserts about one row every half a second. So we have eight errors
+00:33:34 [W] So to start with this workflow is going to compute all of the steps it needs to perform and once it knows what it needs to do.
+00:33:35 [W] It'll go ahead and do it.
+00:33:36 [W] Okay, so switched rights, which rights has succeeded.
+00:33:37 [W] I'm going to let this customer I to run for a little longer so that we can show you the data and then stop it.
+00:33:37 [W] Let's go back and look at the errors that we got while switch Rights was happening.
+00:33:40 [W] So we have one two, three, four, five six about eight errors. This client program inserts about one row every half a second. So we have eight errors so
+00:33:41 [W] During which rights to the cluster were actually being rejected.
+00:33:49 [W] but still we are saying that this is still zero downtime because in a distributed system the application should be able to tolerate transient failure and
+00:33:56 [W] Failure because we got a few errors and then we were able to go ahead and insert a whole bunch of data afterwards and the errors only lasted a few seconds.
+00:34:12 [W] So as long as applications are designed to be tolerant to transient errors, the application downtime will be zero. The users will actually not see any downtime from the application.
+00:34:24 [W] Before we wrap up the demo.
+00:34:27 [W] I do want to show you that all of this data that we inserted actually got into the database.
+00:34:38 [W] So now if we try to select everything from customer, we have a whole bunch more data and we can do what we did earlier again where we select from one shot at
+00:34:47 [W] so let's start with the - potty chard and
+00:34:52 [W] this time let's do account.
+00:34:55 [W] And there are 23 rows.
+00:35:01 [W] Let's look at 40 to 80.
+00:35:06 [W] We have 16 rows and let's look at 80 -
+00:35:14 [W] We have 22 rules.
+00:35:21 [W] Now, let's look at the main key space.
+00:35:25 [W] And that number should add up 23 plus 16 plus 22 is 61.
+00:35:33 [W] So that's all we have for the demo now. Let's go back to the slides.
+00:35:40 [W] Let's recap what we did in this demo.
+00:35:47 [W] We have a database where a geography location corresponds to a data column in the database.
+00:35:55 [W] This allows us to insert data in the correct shot and to select from the table.
+00:36:01 [W] However, you cannot currently use a multi-column Windex to delete data in witters.
+00:36:02 [W] What is needed for that to work is to create a single column index and it's recommended that that should be created on the primary key column.
+00:36:11 [W] And that number should add up 23 plus 16 plus 22 is 61.
+00:36:18 [W] So that's all we have for the demo now. Let's go back to the slides.
+00:36:18 [W] Let's recap what we did in this demo.
+00:36:18 [W] We have a database where a geography location corresponds to a data column in the database.
+00:36:19 [W] This allows us to insert data in the correct shot and to select from the table.
+00:36:21 [W] However, you cannot currently use a multi-column Windex to delete data in witters.
+00:36:21 [W] What is needed for that to work is to create a single column index and it's recommended that that should be created on the primary key column.
+00:36:24 [W] There is a user guide on the vitess website that describes how that can be done.
+00:36:26 [W] The other thing I would like to mention is that storing location as a data column is not the only way to do location-based shouting perhaps there is already a column that includes encoded location information
+00:36:34 [W] The other thing I would like to mention is that storing location as a data column is not the only way to do location-based shouting perhaps there is already a column that includes encoded location information
+00:36:35 [W] If such a thing exists, then you can write a custom Windex that decodes the location information from the data column and achieves the sharding.
+00:36:49 [W] We have a number of talks at the conference.
+00:36:54 [W] There were two yesterday.
+00:36:58 [W] And if you miss them you might want to catch up with the recordings and there are two more talks coming up one is deep dive into vitess and the other one is multi-cloud with a stock and these are happening
+00:37:09 [W] yourself
+00:37:11 [W] That's all we have.
+00:37:15 [W] Thank you very much.
+00:37:16 [W] All right, Bill.
+00:37:27 [W] Hello, everyone.
+00:37:30 [W] Just a correction to the last Slide the Deep dive talk had to be cancel. So the next stock that's coming up is the multi-cloud with a stock that starts in about an hour.
+00:37:41 [W] We did get some questions while the recording was playing. So I'm just going to read out a few of those.
+00:37:49 [W] One question was there is no Global index which will point the request to the exact location Chard is it isn't it?
+00:38:03 [W] If I run a query will it run on each Shard and the result would then be merged?
+00:38:13 [W] this is what the Windex concept avoids you do not scatter all queries to all shards you use the Windex to efficiently direct queries to specific shots one or more of those.
+00:38:18 [W] Looking at some of the other question here, which is called a new one as well.
+00:38:30 [W] so
+00:38:34 [W] How does this compare to energy be cluster?
+00:38:46 [W] And essentially?
+00:38:48 [W] I want to point out. So the tests aims to scale both reads and writes by taking on the logic that is required to allow you to Shard horizontally in
+00:39:01 [W] General with mySQL sharding Solutions of had to be covered inside your own code and vitess actually takes that out and makes that part of it easier to manage. So although it also provides High availability using
+00:39:16 [W] standard MySQL replication and a variety of strategies to allow you to fill over easily primarily use case is for sharding and to help you manage that complexity and
+00:39:31 [W] That's how it's different from, you know, DB cluster specifically.
+00:39:35 [W] We have another question on.
+00:39:40 [W] Load profiles we have several customers with one tiny database space each some sharing a single my SQL be and we would be we would like to be able to have certain customers on more powerful or separate Liam's
+00:39:56 [W] Does help us here with Distributing load?
+00:40:00 [W] Yes, definitely. So when you Shard you can either using one of the built-in wind X's or a custom Windex.
+00:40:09 [W] Store different customers in different shards and all the sharks don't have to run with the same kind of Hardware. The provisioning of Hardware is a separate concern from what witness is doing so
+00:40:24 [W] Padding on the load and the data size. You can provision more Hardware more.
+00:40:32 [W] There's more CPU more RAM for certain shots.
+00:40:40 [W] And you can also if you have Hardware limitations split those shots into smaller ones.
+00:40:42 [W] So all of that is possible.
+00:40:43 [W] I'll also take the kubernative operator question.
+00:40:51 [W] There is an open-source vitess operator already that was created and published by planetscale, but it is fully open source, and it's available to use today.
+00:41:01 [W] There is a tutorial for that on the vitess dot IO website, but I also want to add that the demo that we did today was done on the planetscale database as a service platform. Which runs
+00:41:15 [W] It just kubernative operator on the back end.
+00:41:18 [W] And what we have been able to do in planetscale DB is to use the operator to manage multiple kubernative clusters that are globally distributed.
+00:41:33 [W] I am seeing some questions pertaining to database backends. Particularly one about postgres in one about Microsoft SQL Server.
+00:41:51 [W] So postgres is and husband on our longer-term roadmap for a while. As of right now. The tests is MySQL Centric but postgres is one that we hope to support in the future as of right now Microsoft
+00:42:03 [W] SQL server is not but this is something you know, if we get enough if we get enough requests, it's something we could consider.
+00:42:13 [W] We have about four minutes left in the session.
+00:42:33 [W] We invite you to follow vitess and planetscale on Twitter a Twitter CEO at planetscale data do visit the vitess website with a start I owe the have a slack Channel which is
+00:42:45 [W] Very active and planetscale.com is where you could try out the the sort of cluster that I use today for the demo.
+00:42:56 [W] We will be conducting a zoom call vitess ask me anything at the planetscale booth in about an hour and there will be other witness maintainers there along with me to answer any
+00:43:22 [W] the witness related questions
+00:43:24 [W] right
+00:43:35 [W] if there are no further questions, thank you very much and don't hesitate to come find us at our booth.

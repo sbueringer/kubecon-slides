@@ -1,0 +1,335 @@
+﻿Zero Downtime Deployments: Controlling Application Rollouts and Rollbacks: GJMD-0197 - events@cncf.io - Thursday, August 20, 2020 11:59 AM - 151 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:02 [W] Hi and welcome to zero downtime deployments where we're going to take a look at application rollouts and rollbacks.
+00:05:56 [W] I'm going to be your speaker.
+00:05:58 [W] Hey there, my name is Chris.
+00:06:01 [W] I am a consultant and advisor and sometimes speaker.
+00:06:04 [W] You can see some of my accolades there.
+00:06:06 [W] So without further Ado, let's get started controllers and kubernative our control. Loops that watch the Custer State.
+00:06:12 [W] and if necessary, they're going to
+00:06:15 [W] introduce some sort of change, right? So the control Loop holds desired State.
+00:06:27 [W] It's querying the cluster for actual State and if those things don't match then it takes action.
+00:06:30 [W] So we're going to focus on the deployments in the staple set specifically because they're primarily for long running applications, and we want to look at their behaviors when it comes to Rolling updates.
+00:06:40 [W] So first look at deployment here, it describes the desired state for an application, right? So we're going to take the
+00:06:46 [W] the image that we want to run the affinities and Auntie affinities all those things and put them in the deployment manifest and the deployment isn't alone in making sure that
+00:07:01 [W] The application gets deployed.
+00:07:03 [W] It's actually a wrapper for another controller called a replica set which enforces the replication Factor replication factor is of PODS of course and then within pods are application containers, but what that means is that if
+00:07:17 [W] We create a deployment than in the Cascade.
+00:07:22 [W] We're going to create the replica set the pods and the containers and if we deleted appointment we do that in a Cascade as well the rolling update feature that we get with deployments will change the actual state of
+00:07:36 [W] A cluster to the desired state with zero downtime, right? Nope. No client will be sent into any black hole, right?
+00:07:45 [W] That's the goal here deployments do support a wide array of application types, but really do have a feature set that works best with stateless apps. So potholes names are not really predictable they have
+00:07:59 [W] Passion has that we can't really predict ahead of time.
+00:08:04 [W] So talking to an individual or sending client traffic to an individual pot replica little bit more difficult. If you're going to embed a persistent volume claim within a deployment template for a pod.
+00:08:19 [W] Remember, this is a template right?
+00:08:21 [W] You're going to have many replicas. And so PVC is typically have unique identities.
+00:08:28 [W] I can't parameterize the name of the PVC within the template. So if I have it in read write many mode, then that's great.
+00:08:39 [W] Otherwise, well, that's what the Staples Staples set is for which we'll look at later.
+00:08:44 [W] replica sets are a top-level citizen in the kubernative API, their primary job is really to reconcile desired State versus actual replica.
+00:08:49 [W] Ation Factor, right? So somewhere on the cluster.
+00:08:59 [W] There are a number of PODS actually deployed in the replica set of needs to reconcile that so within the replica set object here. We see two important things desired replicas and then the label query the label query is going to be used to do that
+00:09:07 [W] Conciliation and then when the answer comes back at digit decision has to be made are there seven pods great do nothing.
+00:09:15 [W] Right?
+00:09:16 [W] No action needs to be taken if there are six then you've got to add a new one right similar to keep CTL run dad a new pod. If there are eight then the replicas that's going to kill one.
+00:09:28 [W] And so this guarantees the availability of n number of application replicas across nodes in the cluster and across availability zones and such right they can be
+00:09:39 [W] be used independently of deployments.
+00:09:46 [W] But if you do use them independently, they lose the rolling update feature that we're going to look at.
+00:09:49 [W] However, there are some seedy platforms X Spinnaker which will use replicas that's directly for other patterns, like red black you will see them used in some cases. Now, the relationship between deployments in replica sets is typically
+00:10:01 [W] Too many where we've got a single deployment.
+00:10:04 [W] That's got multiple RSS underneath it.
+00:10:10 [W] This is because an RS is a snapshot of an application version. So when we change the image, what happens is we hash the the new manifest and if the hash doesn't match the old replicas that hash then we create a new one and we roll out a new
+00:10:21 [W] Revision because we have this one to many relationship between the deployment and the replica sets.
+00:10:35 [W] This allows us to roll out with zero down to-- right? So it lets us essentially.
+00:10:37 [W] increment the desired replicas of the new replica set and decrement the desired replicas of the old at the Cadence that we specify it also allows us to have n number of robots because if I want to roll back to an earlier version I can just do that same pattern right and
+00:10:53 [W] I brought back my application. It's also kind of lightweight tracking revisions of an app. So we'll look at the history feature as well.
+00:11:08 [W] So the idea behind rolling updates is we're going to roll out those changes at the control great right new pods are rolled out before old Paws or terminated because we want to
+00:11:15 [W] You have that new replica up before any of the old ones come down.
+00:11:23 [W] Now, the the new pot doesn't go to the exact same node. It is independently scheduled any get scheduled on a know that has available resources based on the resource requests and other factors and the default setting ensures that at least 75% of Bob
+00:11:35 [W] Are available throughout the update, right?
+00:11:38 [W] So we're not going to tear down below 75% availability.
+00:11:43 [W] That's tweakable that we'll look at in a moment in a subsequent slide con. Traffic is then load balance across all available piles as well if you want to see the live in progress.
+00:11:57 [W] Roll out you can like anything else in common is you can watch that for updates.
+00:12:03 [W] So let's get to it.
+00:12:04 [W] So I've got several node cluster here.
+00:12:11 [W] So let's coops ETL get node and see that we've got several workers that we're going to work with.
+00:12:22 [W] So I'm going to I've got a directory here of manifest that I'm going to use just going to cat the deployment one so you can see we've got some
+00:12:30 [W] some settings here that will give us 10 replicas and
+00:12:37 [W] Give us some time in between the deployments for minimum ready seconds.
+00:12:46 [W] And then also the default settings for Max urgent Max unavailable, which we'll talk about going forward.
+00:12:56 [W] They're explicitly set here, but those will be the default interface and we've got a application here that simply outputs.
+00:12:57 [W] It's IP and its host name so that it will show us like which one is being communicated with from a client.
+00:13:08 [W] So we will first set up a watch and so in the interest of time, I'm just going to grab some commands that I've got going.
+00:13:18 [W] So we're going to watch keep CTL get pods and then we're going to use the key value pairs here for the for the deployment.
+00:13:26 [W] Aunt alright, so this is going to tell me no resources fabric is I'm going to play anything yet. But let's go ahead and complete a lap. I that
+00:13:36 [W] And we'll see that we've got 10 pods running. Now. What I want to do is run a client.
+00:13:47 [W] on this other terminal here and so I'm just going to run a client poddisruptionbudgets U7 so that I can run a loop and so my Loop
+00:14:03 [W] Is going to do a double you get against the service and what that means is I also need to create the service.
+00:14:12 [W] So going back over here.
+00:14:14 [W] We're going to expose our deployment.
+00:14:16 [W] And the host info Padma since on 98 98, but we're just going to have the service of some 80 to make it easy.
+00:14:27 [W] So we expose that and now I can run my Loop and will happen is you'll see that it should query and see that we've got the certain RS RS hashtag.
+00:14:38 [W] We've got different endpoint pods that were connecting to write as we see change.
+00:14:43 [W] We're going to see this RS hashicorp.
+00:14:47 [W] Class so we'll let that go and so we've got our watches established.
+00:14:56 [W] So let's introduce a change.
+00:15:03 [W] So here we're going to set a new image that just uses a different tag same.
+00:15:09 [W] So up here hosting for latest.
+00:15:11 [W] We're going to go to the Alpine version and we're going to record that change so we can actually see it. And so let's take a look at the
+00:15:17 [W] behavior that happens out of the box
+00:15:22 [W] So we get a number of new pods that are created immediately and one terminated immediately.
+00:15:34 [W] And so most of our load balancing just right now is still going to the same pods except for there's our first I miss cooking on it, but there's first request to the new set of pots and then obviously we'll see that increase over time.
+00:15:43 [W] And so lots of to change happening in the cluster, right? We've got 25 search 25 percent surge in 25 unavailable.
+00:15:54 [W] So we're going to see a quarter more pods each iteration through and so there's some more terminations cleaning up pods after they've been replaced with new ones
+00:16:07 [W] And so now all of our requests are going to the new set of ponds based on the new hash the 566 ashore here with our client.
+00:16:22 [W] Alright, so now let's look at doing that because let's say, you know, we don't want this version the application something's wrong with that.
+00:16:29 [W] So we're going to do that.
+00:16:36 [W] Now this case we're going to do an undo but also get the status so we can actually see the watch as it happens.
+00:16:37 [W] Right and see how the changes we already have a watch that was below but see what it presents us with in terms of information.
+00:16:47 [W] So it's going to give us and we can see right away that you know, it started with three and then jumped really quickly to 5 and we got a slight pause there and then now we've got
+00:17:03 [W] Tom a few more old replicas pending termination, but pretty much we've got everything that we need rolled out already so fairly quickly because
+00:17:16 [W] Again, the application is lightweight, so it doesn't mean that they need to pull it. Now if we look at the history once this is all the way rolled out right tells us it's rolled out and we can look at the history for our deployment.
+00:17:30 [W] Right. So the first roll out just as essentially none. So sorry the the undo is essentially says None because we didn't really record the do but that's
+00:17:45 [W] I do and then there's our change.
+00:17:52 [W] So we're back to the old application for vision. So if we wanted to interrogate version 3
+00:17:59 [W] we could roll a history and then use revision3.
+00:18:07 [W] So one of the things to note the record is you saw in the command that we used actual record is an annotation for the change cause but in the case of the undo just as know so
+00:18:18 [W] It doesn't mean there's no information available.
+00:18:21 [W] just didn't set annotation by interrogating it.
+00:18:26 [W] We can actually see that the image changed as part of the revision number three, right?
+00:18:33 [W] We did the undo so it's still possible to give the change.
+00:18:38 [W] Cause it just in the change cause table it just says Nam so it does help to do some to use the record flag in many cases.
+00:18:47 [W] Okay, so that's just kind of the default behavior of rolling updates and interacting with them the couple other features that we can leverage when it comes to Rolling updates pausing.
+00:19:02 [W] So we saw that once we introduce the change it then immediately is triggered the rollout, right but deployments roll a trigger connection be positive in any given time. So
+00:19:14 [W] If you do it before any sort of changes introduced, then you can issue several commands to make different changes and it won't trigger anything until you resume it and then all the changes made
+00:19:28 [W] Our to resuming her rolled out also in the middle, you can pause the roll out and do something like confirm settings before the whole thing completes.
+00:19:44 [W] And so then in that case resuming just simply finishes the role of that was stopped in progress.
+00:19:48 [W] Let's take a look at interacting that way.
+00:19:53 [W] So we've got our various watches here.
+00:19:55 [W] We're going to keep the keep those established. But in this case what we're going to do is first,
+00:20:00 [W] We're going to pause.
+00:20:02 [W] So we're going to pause the deployment.
+00:20:05 [W] So that changes that we make are not going to get pulled out.
+00:20:05 [W] All right, so let's introduce the Alpine revision again, right in this case.
+00:20:20 [W] We're again updating the version to Alpine and we're going to see nothing happens right now rollout was triggered my client still hitting the same demo or sorry the same revision.
+00:20:27 [W] Let's introduce a second change.
+00:20:29 [W] So as to show that that's happening.
+00:20:35 [W] So this case we're going to add CPU limit, right?
+00:20:40 [W] So that will let us set resources for that.
+00:20:42 [W] For the container right in this case the container called post info. Let's grow up real quick and make sure that it was called host info.
+00:20:57 [W] Yeah. So the name of the container here is hosting Phil. So this will let us set that.
+00:20:58 [W] Again, nothing rolled out right now. If I introduce the resume, we should see all those changes roll out at once.
+00:21:08 [W] Alright, so we're going to get new containers again in the rollout but not to roll outs, right because we introduced to changes but because the the
+00:21:19 [W] Rollout was paused everything it was introduced before the resume was issued will be rolled out, right? So new and see let's try a new pod.
+00:21:33 [W] I'll do - hell. Yeah, Moe and we should be able to see resources.
+00:21:51 [W] The resources that was not in our original manifest right now one way couple of ways that we can controlling updates is through the max or nginx and available. So we have the default settings.
+00:22:03 [W] Of 25 to 25 percent, but what if we change those things right the max or jizz something that controls the number of pods in addition to the desired number that can be scheduled during the rolling update. This essentially allows us to
+00:22:17 [W] Break up, the iterations into larger waves, right we've seen in previous cases that there are a small number of pots that we can break this up. Hi search percentage over is going to mean more resources right because each application
+00:22:34 [W] Replica is going to need CPU and memory and so you can just need more of those during the rollout Maxon available ensures that a minimum number of pots are always available. Right? It did being that we want to guarantee that that client traffic is delivered through
+00:22:49 [W] Throughout the rolling update this cannot be 0 we have to have some value and if you do set it at a hundred percent that's going to mean downtime. Right?
+00:23:02 [W] So, let's try a couple scenarios using Mac's urgent Maxon available.
+00:23:16 [W] Okay, so maybe a little edit their to expand the terminal little bit so we can actually see a little bit more. So this first time around what we're going to do is patch the macstadium
+00:23:19 [W] Max search what we should expect then is that we have a lot more pods that will get added on the rollout.
+00:23:34 [W] So let's reduce another change that should then see the behavior exhibit. So that's why I expanded the terminal here.
+00:23:39 [W] So wow, we see a lot more pods rollout, right?
+00:23:45 [W] So tons of pots get added immediately to the deployment so that we have a big surge of PODS that can added to our cluster right away.
+00:23:58 [W] Again load balancing across many replicas this case and then we tear down a whole bunch of them because we've got a ton running right so you can tear down really quickly as well.
+00:24:12 [W] Let's do the opposite where we're going to patch again, except this time. We're going to set max on available to 90% to see how that affects again.
+00:24:26 [W] We should expect the opposite where we don't have a lot of surge, but we have a lot of PODS removed again will introduce another change and see what happens there again, hopefully that meets our expectations
+00:24:35 [W] So we've got a lot of containers terminating but then also because need to replace them. We've got a lot of containers that get created right away and so in all the scenarios, we see that our client up in the upper right corner here.
+00:24:50 [W] Is unaware those changes across the board again, because that's the benefit of the zero downtime rolling updates.
+00:25:06 [W] Okay, moving on to staple sets. So staple sets are intended to support stable applications.
+00:25:12 [W] These have some other features regarding stable Network identities.
+00:25:16 [W] So unlike deployment based pods staple sets have unique ordinals so that we can actually communicate with individual members.
+00:25:20 [W] The easier and persistent storage. So there's an embedded PVC template that creates a persistent volume for each pod.
+00:25:33 [W] Now when we do the deletion deleting a stable set will delete the pods but not the PVCs because what we want to do is make sure that it wasn't a mistake, right?
+00:25:42 [W] What if I accidentally deleted my staple set and I'll my PVCs with it.
+00:25:46 [W] Well, usually in the scenario where the persistent volumes are dynamically provisioned the thing that keeps them from being returned to the storage pool.
+00:25:50 [W] Pool is The Binding between the PVC and the PV? So this allows us to make a deliberate decision when we want to delete the PVCs making sure that if we accidentally deleted this table set we don't have any data loss
+00:26:05 [W] The Pod identities are tied to volumes. So failed pods replaced by pods with identical day identical identifiers, which means that existing volumes that were tied to a given Padre Boca easily bind back to
+00:26:21 [W] Ten new pod that represents that same replica of right. So even though it's a it's a new pod that's replace the old one.
+00:26:32 [W] It gets the same storage that the old pot have now the ordinals give us some features ordered or sequential deployments and scaling right so you can see here we start with pot ordinal 0 once it passes its Readiness check, then we can move
+00:26:44 [W] The Pod one once it passes its Readiness check we move on to Part 2 and so on and so forth when we scale out for initial deployments and then we add more replicas. This allows us to have applications that communicate with each other
+00:27:00 [W] As peers right? So what's the point of a Readiness jackets to indicate when the application is ready to receive requests on the network?
+00:27:11 [W] And so we have peer-to-peer communication.
+00:27:16 [W] We don't want to roll out a second replica until the first one is ready to communicate with it so that they can join consensus algorithm to things like that.
+00:27:23 [W] No guarantee during termination though. You can see at the bottom here termination happens all the same time. If you need an order termination the workaround is just a scale to zebrium.
+00:27:30 [W] 0 first and then delete this table set and that will give you again. It will tear down scaling down from the highest ordinal down to zero for Rolling updates pods are deleted and recreated or replaced
+00:27:45 [W] Same node. So unlike deployments where we're deploying applications application replicas to potentially new workers.
+00:27:58 [W] We're going to deploy a new version of the application to the exact same worker this eliminates that need to detach and attach Network volumes from the old no to the to to the new node, right?
+00:28:10 [W] that could be a heavyweight Operation Rolling updates will support the undo feature.
+00:28:16 [W] So all the imperatives we've been using with deployments and the status commands. The history is not super functional, unfortunately and pause and resume is not supported at all.
+00:28:30 [W] So it does have some overlap in terms of features for the imperatives but not everything and occasionally you may run into a scenario where you have to force a rollback.
+00:28:41 [W] So the top section here is again just a repeat of the initial deployment right we go from 0 to 1 to 2 to n
+00:28:45 [W] We update we start at n and work our way down, right?
+00:28:53 [W] So we started the highest ordinal and the ordinal 0 would be the last replica to receive the update.
+00:28:59 [W] So let's look at a scenario first things first.
+00:29:02 [W] You storage class has just to show we got to start classes of got the local storage. And then we've got an NFS client, which is the default storage class.
+00:29:17 [W] We're going to use for the network attached storage scenario. In this case.
+00:29:21 [W] We'll take a look at the stable set. Although it's rather large you'll see that the vol-plane template isn't using a lot of data and it's doesn't have a storage class request. So it's just using the default storage class.
+00:29:31 [W] There's a lot of logic here for starting.
+00:29:34 [W] It up and it being it CD again.
+00:29:38 [W] We want what we want to do is establish a watch.
+00:29:48 [W] So in this case, we're going to again use the label. So in this case the app 8 CD net which is the network attached storage version.
+00:29:51 [W] So again, we're not going to find anything just yet.
+00:29:52 [W] Let's go ahead and apply our staple set.
+00:29:55 [W] And we got our service and our staple set created you can see the rollout right? So initial rollout, we start with replicas 0 and it will go to 1
+00:30:09 [W] And up to 4 now while that's going I'm going to start a client over here again this case we're going to just run a CD of the same version, but just call it c d CTL and that's all we're going to use
+00:30:24 [W] Is the CD cuddle client here to run some things. So I'm going to export the correct version. Once the client gets up and running get that a moment.
+00:30:38 [W] There we go.
+00:30:46 [W] So we're going to export The Entity API version 3 and also export the end points so we know that the end points are zero through 4 and the
+00:30:53 [W] servicemeshcon
+00:31:07 [W] Should give us a member list of 0 through 4 there now.
+00:31:13 [W] I'm going to put a value just to show that we can set and retrieve data and then we'll start a loop.
+00:31:27 [W] So in this loop, we're going to get the value that we sat and then also get the endpoint statuses to see the different versions that have been deployed. So we'll start that Loop.
+00:31:35 [W] And you'll see that the value key and value or there and then you've got the diversion each one.
+00:31:47 [W] So as we do rollout will will get a sense of the versions.
+00:31:50 [W] Let's trigger the first update.
+00:31:55 [W] So in this case, we're going to update it to just a minor revision and watch the rollout status.
+00:31:57 [W] So what we'll see is it's again just like the deployment update in terms of the updates that we're getting from rollout status, but you can see the teardown happens from
+00:32:15 [W] the ordinal for now on two ordinal 3 and we'll go all the way down to 0 now what you'll see over here with the client is that we're going to get some error messages because certain endpoints are not going to give us their status, but what you'll see
+00:32:31 [W] Every single time is that we're still getting the data, right? Because the entity application supports that the various members can still answer the query that we're sending them right?
+00:32:46 [W] We may not be able to query individual members for their status because they're in the middle of being down but the data is always there right and that's the important part and so as you see the clients answering over and over they are
+00:32:58 [W] Giving us the data every single time, right?
+00:33:04 [W] So we'll let that finish.
+00:33:06 [W] I'm going to queue up and undo here just to again see how the undo Compares between the Staples at controller Henley.
+00:33:15 [W] The deployment so give that a moment to finish now.
+00:33:25 [W] We're onto the very last one.
+00:33:26 [W] And it's up and running. So everything has been updated.
+00:33:39 [W] All right, and so the last two members here in the very last Corey from our client didn't answer but now we're on to the fact that they're all answering again.
+00:33:43 [W] And of course the data is still there.
+00:33:50 [W] So let's go back right we something's wrong with this version.
+00:33:51 [W] So let's let's roll it back again.
+00:33:53 [W] So Behavior again is the same where we're tearing down from the highest ordinal bound, which is what we expect.
+00:34:00 [W] Right.
+00:34:03 [W] So in this case, I didn't ask for live update status.
+00:34:07 [W] So let's take a look at the history as this thing rolls out the or reverse the change rather so note that we did
+00:34:19 [W] On the first change I going back up here.
+00:34:23 [W] We did record it.
+00:34:28 [W] But as we said the history is not very workable or not.
+00:34:31 [W] Very valuable the second change. We didn't set a record. We did an undo.
+00:34:35 [W] And started rule things back but still didn't get anything.
+00:34:45 [W] So again if I want to interrogate a particular revision, right?
+00:34:48 [W] I don't get a lot of information here.
+00:34:54 [W] So the role of History not as robust as you would expect that we got from the deployment.
+00:35:03 [W] We can even do partitioned updates because we have
+00:35:06 [W] Organized we can rely on so initial deployment again is 0 to n. What we'll do here is set a partition and see that everything equal to or above that petition number will roll out with the new version.
+00:35:21 [W] - but the old parts will keep the old version now, even if someone comes along and deletes a given part, it will stay the old version even if it is deleted. So let's take a look at that.
+00:35:36 [W] that. But what we're going to do is perform that with local storage volumes and we tell the client running we'll just make some changes to which in points is connecting to and we want to start a new watch with the new app. It's a
+00:35:53 [W] the local key-value pair the only difference between the old old network attached storage version which uses the default storage class and this new one is
+00:36:03 [W] That it has the storage class name here so that we definitely get the local storage class.
+00:36:11 [W] Which we see if I can spell.
+00:36:18 [W] We've got our watch establish go.
+00:36:20 [W] Let's go ahead and deploy our application.
+00:36:28 [W] And so now it's grabbed a local TV.
+00:36:40 [W] So if I do Cube CTL get PB you can see that we've got several being bound overhang. Right? So our level sort of volumes are getting used now again, we're going to export in our client.
+00:36:44 [W] Some in points but different names right STS local and SES local is the service name.
+00:36:52 [W] So export those endpoints and again do a put
+00:37:00 [W] and get the same end points that we did before where the endpoint statuses and the value so we can see that what happens over time.
+00:37:18 [W] So now we want to introduce a change. But before we do that, we want to also introduce a partition number so that we update only some of them so we'll patch the
+00:37:32 [W] Rolling update strategy so that it's partitioned.
+00:37:39 [W] Actually. Let's go with number three.
+00:37:40 [W] Right. That way we get a couple of replicas of the new version.
+00:37:47 [W] Okay, so the staple set is patched. Now. Let's introduce the change again updating the minor version 2.2 4 and witness the behavior that happens here.
+00:38:04 [W] so again, we see that the
+00:38:07 [W] version of replica for changes the version of epsagon replica 3 is going to change.
+00:38:15 [W] And let me stop right? So we're going to see when the members start to report their values over here that the last two are 24 and the other three are 18 now.
+00:38:30 [W] Let's see if we delete a pod so we'll come over here and delete STS local one because we go it's version 18.
+00:38:40 [W] It's going to turn in that pot and it should allow us to create a new one to replace it and once the client catches up and can query all the end points once again.
+00:38:55 [W] We'll see that the version remains 18, right even though it was deleted the version comes back as the old version now, let's say I'm doing some sort of phased rollout and I'm happy with the phased rollout
+00:39:11 [W] Now I can update my partitions to 0 and that will let me roll out the rest of that change. So we see that the version 2
+00:39:25 [W] Updates itself version 1 is or a replica one. I should say is now been updated self and then we'll see go all the way down to zero.
+00:39:40 [W] So we see the entirety of the rolling rolling updates happen, right?
+00:39:46 [W] right? So once we're done with our phased rollout, we everything updates and now everything's up to 3.24.
+00:39:50 [W] Once everything's up and running again. Our client throughout has availability to the data.
+00:39:58 [W] That's what's important. Right?
+00:40:01 [W] We do have some errors communicate with individual members, but once they're back up all up right?
+00:40:11 [W] We're all back to 3 that 2.24 and the data is available. So to sum up we see that kubernative controllers provide features that do give us zero downtime rolling updates and
+00:40:20 [W] There's differ by controller because applications are different whether they're stateless or stateful.
+00:40:34 [W] So hopefully that gives you a sense of how the staple set and deployment controller behave and practice through some of the demos that we did today.
+00:40:41 [W] Just wanted to pop in one more time and say thanks for your time.
+00:40:41 [W] Okay.
+00:41:20 [W] Okay, so we got two audio sources.
+00:41:26 [W] Hopefully one of them works. So we have a couple of questions here that
+00:41:31 [W] that folks asked in in the chat one couple of things were.
+00:41:39 [W] If the slides are available, I'm pointing at my monitor.
+00:41:46 [W] So you guys can see that but I did end up uploading those two sched.
+00:41:53 [W] So you should be able to get those now just refreshed the schedule page.
+00:41:55 [W] I realized that I didn't do that ahead of time. So
+00:41:58 [W] So hopefully that's fixed at this point.
+00:42:03 [W] Okay. So let's see.
+00:42:07 [W] What else do we have?
+00:42:09 [W] So
+00:42:13 [W] Can replicate the data so when we say that the Staples that needs more from the application it what I meant was that we rely more on application
+00:42:54 [W] Right. So if you do something where you're deploying something like Cassandra from
+00:43:01 [W] With a staple set for example, right you're participating the data when you do recoveries, you're going to have to do recoveries for Cassandra.
+00:43:13 [W] Right because those features are being relied upon the Staples that doesn't really help you with things like data replication and making sure that the data is always highly available.
+00:43:31 [W] That's an application feature. Right?
+00:43:38 [W] So that's what I meant by papal sets need more from the application than a the necessarily deployment. So hopefully that kind of answers that question so
+00:43:43 [W] There's some of the things about the audio, so hopefully you folks can hear me.
+00:43:49 [W] Let's see.
+00:43:51 [W] There's another question here.
+00:43:55 [W] That was just from one of the folks during the session that I answer directly but I'll also answer here are their challenges managing database services in the community level.
+00:44:05 [W] Absolutely.
+00:44:10 [W] This is something that's still a challenge.
+00:44:13 [W] I would say with kubernetes staple sets do give you a lot of features for
+00:44:17 [W] deploying staple applications many of those we showed during the session but
+00:44:25 [W] it's still you know, it's not perfect.
+00:44:30 [W] It's not a magic wand like anything else anybody tells you to magic wand is.
+00:44:35 [W] It's not telling the truth, right? So when you use network attached storage things are a little bit easier. If you have no tail your sword example your table set can move and the network that George can chase it to the new bag if you
+00:44:50 [W] If you something like local storage and we didn't really go over failure scenarios in this session because that's that's not what it was about but it's worth noting that you know, if you use local storage that's directly attached to a node and you lose a node a staple
+00:45:05 [W] Great because it's data it needs that data that data is.
+00:45:13 [W] Is on that box, right?
+00:45:18 [W] It's a physically attached drive on that box in that case. Your staple said is kind of stuck, right?
+00:45:24 [W] It can't run. It's going to sit in a pending State and so in that case.
+00:45:29 [W] You have to have enough again.
+00:45:32 [W] This goes back to the other question about needing more from the application.
+00:45:36 [W] When I need to restore.
+00:45:42 [W] That independent podcast start right?
+00:45:49 [W] I need to come up with some sort of backup and restore procedure for the data and start another POD at can pick up where that old pot left off.
+00:45:59 [W] So, yeah, absolutely.
+00:46:02 [W] There are many challenges related to writing database servers. Then with staple sets network attached storage makes it easier but network-attached storage is slower if you need an SLA.
+00:46:13 [W] Where you need to biopsy of a local a test drive you're going to have to come up with scenarios where you have to do backups and cloning and snapshots and such. So those strategies aren't necessarily taking care
+00:46:27 [W] For you by the Staples that controller right?
+00:46:32 [W] It can only do so much.
+00:46:36 [W] So that's it for questions.
+00:46:44 [W] I think that oh here there's another question here about is partition option available for ordinal for deployments. Yeah. It's only for
+00:46:47 [W] people set because the post name of a pod underneath the deployment is the concatenation of the
+00:46:56 [W] deployment name and a - the RS hashicorp
+00:47:07 [W] Deploy in the same way that you would with a staple set and then where do you want to do a partition update?
+00:47:16 [W] Honestly, the best way to do that is to just within kubenetes is to create a second deployment.
+00:47:23 [W] And roll that out to 1/2 or however many.
+00:47:29 [W] Pods you want and that deployment now in that case you're managing to deployment separately. But if you use a common collector for your service.
+00:47:42 [W] The service can then direct traffic to both deployments right both set the pot and now you accomplish the same goal because again, what's the goal here right to distribute client requests across the
+00:47:57 [W] replica, right if you're using a service with deployment controller then
+00:48:03 [W] Using a common selector or common label between Employment Number One in deployment. Number two, you can distribute the traffic amongst those two things achieving the canary and honestly, let's take Spinnaker.
+00:48:19 [W] For example, it's a CD platform. If you're not familiar with it, one of the ways that they accomplish things like Bluegreen deployments or red black as I mentioned in the presentation is to use the selectors on a replica set in simply just switch the track.
+00:48:34 [W] over from books that one to replica set to
+00:48:37 [W] and you've done the switchover from your blue to your green or from your green tier blue, right?
+00:48:48 [W] And so those techniques leveraging label selectors need to be used for the deployment control.
+00:48:52 [W] It doesn't have a partition feature.
+00:48:55 [W] answers that question
+00:48:57 [W] Okay, that's all the questions I have in in the chat right now. So if folks want to continue the discussion offline, I'm happy to do that and the folks have the Linux Foundation
+00:49:13 [W] Cncf have told me that we can use the number two coupon operations Channel or further conversation.
+00:49:21 [W] So I do have a couple questions there.
+00:49:23 [W] I'll go head over that direction and start to answer those questions. Now, let's see. One of those is a general question regarding staple sets.
+00:49:36 [W] Is it a common best practice to use the staple set just for having determined Network host names.
+00:49:40 [W] there another easier solution to that?
+00:49:42 [W] there are ways to
+00:49:47 [W] assign, trying to think of determine Network host names so
+00:49:56 [W] Kubenetes does have features for like assigning hostname and subdomains two pods.
+00:50:10 [W] And those are actually pops back settings.
+00:50:17 [W] But those you know, I don't see often used in practice that much suffering sort of corner use cases.
+00:50:21 [W] for determine Network host names you just a pathetic controller. Absolutely.
+00:50:24 [W] I don't know that there's a based on the question on that. There's easier solution to that but
+00:50:35 [W] But yeah, that's a good question the like I said, the answer is you can give pods individual DNS entries again.
+00:50:47 [W] I don't see that use that often.
+00:50:50 [W] All right, folks.
+00:50:55 [W] Thanks for all the great questions if there any more questions.
+00:50:57 [W] Let me check the check you one more time.
+00:51:02 [W] Yeah, we're all out of questions.
+00:51:05 [W] So thanks again for all your time.
+00:51:06 [W] I appreciate it. Hopefully you guys had a good coupon and
+00:51:10 [W] Thanks again.

@@ -1,0 +1,262 @@
+﻿Mesh in a Mesh: A Model for Stronger Multi-tenancy of Kubernetes Workloads: BEDW-0853 - events@cncf.io - Tuesday, August 18, 2020 8:22 AM - 77 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:01:02 [W] Hello and welcome to our talk.
+00:07:18 [W] My name is Akash and work as an engineering manager at a form networks.
+00:07:24 [W] I look after the platform layer of a product along with me is nitish.
+00:07:26 [W] who's the lead architect and a member of the office of the CTO also at a forum in this talk.
+00:07:33 [W] We will present a model for stronger multi-tenancy of kubernative workloads that has worked. Well for our Telco applications in particular will describe a way of
+00:07:44 [W] Deploying and using servicemeshcon chours to achieve a stronger notion of multi-tenancy before we dive deeper.
+00:07:59 [W] I want to give you some background of what our Tech stack looks like as well as what workloads are.
+00:08:07 [W] So form is a Telco company as of April 2020. We are wholly owned subsidiary of Microsoft and a part of the Z or team in Microsoft.
+00:08:11 [W] To achieve a stronger notion of multi-tenancy before we dive deeper.
+00:08:15 [W] I want to give you some background of what our text at looks like as well as what workloads are.
+00:08:16 [W] So form is a Telco company as of April 2020. We are wholly owned subsidiary of Microsoft and a part of the Z or team in Microsoft.
+00:08:16 [W] This is a stack built largely from cncf projects.
+00:08:17 [W] We use kubernative, of course along with variety of other infrastructure layer projects.
+00:08:22 [W] On top of that. We use various cncf projects again for our metrics framework logging and tracing framework as well as networking database and security needs or workloads on top
+00:08:38 [W] Our what are described as Network functions.
+00:08:44 [W] There's a body called 3gpp, which comes up with specifications for how mobile core software Network should behave like and we build software Solutions which are
+00:08:58 [W] Comes up with specifications for how mobile core software Network should behave like and we build software Solutions which are as per the
+00:09:00 [W] That those specifications now each one of these boxes that you see on top AMF SMF UPF.
+00:09:11 [W] These are composed of between 5 to 15 different microservices and have different roles to play in the Telco Network at a very high level these microservices and
+00:09:21 [W] Jones as a whole help in the call setup routing and accounting process of a everyday consumer 5G phone calls and data calls, right?
+00:09:37 [W] So with that background, let me Dive Right to the heart of the matter namespaces multi-tenancy starts in kubernative with a notion of namespaces,
+00:09:50 [W] you know, if you're looking at running a kubernative cluster, which is shared by multiple teams or by multiple application groups or
+00:10:06 [W] Seasons which are started for multiple customers you would separate them using kubernative namespaces, right?
+00:10:17 [W] What you do there is separate the provide a name space for each of the kubernative objects that you deploy in the cluster, right? These objects could be deployment stifel
+00:10:31 [W] Services horizontal Pato scaling objects and so on.
+00:10:41 [W] It's it's a neat way to separate out logically the boundaries of different parts of your applications, but beyond just predefined your Kube cuddle output.
+00:10:51 [W] Have any other purpose unless you start using for defining some of the namespaced controls that kubernative also offers, right? So we'll go over some of the basic controls which are
+00:11:07 [W] Two offers, right? So we'll go over some of the basic controls which are named spaced in kubernative first.
+00:11:09 [W] So the first control that we have is role-based access control for every name space. You can Define different roles users groups and service accounts through which you can
+00:11:25 [W] Control, which set of users or groups can create delete or watch for different types of kubernative objects.
+00:11:38 [W] Are we Show an example where a user belonging to the green group can only access objects that are created in the green group name space, but not in the orange group name space,
+00:11:51 [W] Similarly for every software or every micro service in some ways every container that runs on kubernative can be attached to service account which are attached to
+00:12:07 [W] Access control as well. So you can in essence control which software or human components can interact with which other software or human components through these role-based Access
+00:12:23 [W] Objects one thing to note here, of course is that these are bad controls are only for kubernative resources, right?
+00:12:38 [W] So, for example, you can't control through these mechanisms the traffic pattern, right? So you can't control which external entities can send traffic to which entity using purely kubernative
+00:12:50 [W] controls
+00:12:53 [W] For that there is a construct called Network policy in kubernative.
+00:13:01 [W] It's defined by base kubernative itself, but implemented via the cni-genie outright. So depending on which cni-genie you route use, for example, Calico or various other cni-genie.
+00:13:15 [W] You can Define different network policies and and restrict which incoming and outgoing well
+00:13:31 [W] And I'll going basis which layer 3 and layer four aspects are are accessible.
+00:13:45 [W] For example, you can specify which ports and protocols and IP addresses are allowed to be accessed on a namespace basis from outside, right?
+00:13:55 [W] So in this example, you can set the policies for namespace one and namespace to separately you can
+00:14:02 [W] Even do things like namespace to containers in the same space to can access objects in namespace one, but not vice versa.
+00:14:17 [W] our layer 3 and layer for constructs which through which you can control the network traffic between name spaces as well as what's coming from outside into the cluster and
+00:14:33 [W] From the cluster outside the cluster, right?
+00:14:40 [W] So this is this provides a fairly strong way of controlling at a very base layer 3 layer 4 mechanisms, right?
+00:14:49 [W] what we found though was that we need more we need some some more constructs on top of the are bad and network policies that we were using already.
+00:15:02 [W] What we found we needed were layer 7 traffic policies pertinent, right?
+00:15:09 [W] We want to Define for example rate limit for the amount of traffic that you want to accept on appurtenant basis, right?
+00:15:22 [W] also want to Define Security on appurtenant basis for incoming traffic for example, things like empty LS that we use which is mandated actually by the standards body for
+00:15:34 [W] Of the network functions in our use case, right?
+00:15:45 [W] So we want to be able to specify which which source of Truth is accepted for each of the tenant, right?
+00:15:52 [W] What it boils down to is different root certificates were needed for different tenants in in the same qualities cluster. We also want to
+00:16:03 [W] Mechanisms to do both jot based authentication as well as what 2.0 based authorization on appurtenant basis as well.
+00:16:15 [W] And lastly we want to do observability and accounting and auditing on appurtenant basis as well.
+00:16:20 [W] We looked at the available solution and found that servicemeshcon.
+00:16:50 [W] This case servicemeshcon vide a lot of tools and features that we could readily make use of it. So as soon as we introduce a servicemeshcon in our cluster.
+00:17:06 [W] Use a servicemeshcon in our cluster we can do policy based on the namespace basis. For example, we can specify which
+00:17:16 [W] Says must have mpls enabled within the namespace and which namespaces do not need to have em TLS for example, right but we found that a common the most common way of deploying servicemeshcon.
+00:17:32 [W] irrespective of which specific servicemeshcon Ploy and there were some common deployment models right parts of those models were that there is a control plane element and that's deployed in its own namespace
+00:17:49 [W] So that in a blue namespace right also the full servicemeshcon all name spaces within the cluster were connected into one single namespace.
+00:18:04 [W] Sorry one single servicemeshcon.
+00:18:19 [W] - which are shared by elements of the multiple name spaces. For example, it's a common deployment model where we have Ingress Gateway running in the servicemeshcon
+00:18:34 [W] Space which adds as the Gateway for incoming traffic for for traffic across different namespaces, right?
+00:18:49 [W] So traffic enters through this single Gateway and gets distributed to microservices that are deployed in multiple other names pieces, right?
+00:19:01 [W] So we found that this typical model.
+00:19:05 [W] all of deployment of the servicemeshcon
+00:19:34 [W] And then scaling of any gateways that were involved. Right? So if the traffic of a certain tenant is increasing rapidly, we didn't want that to affect the traffic or the the distribution of the traffic
+00:19:50 [W] Thirdly, we wanted all the traffic from a given tenant the topology the internal topology of a forgiving tenant to be hidden from even other tenants rights.
+00:20:07 [W] So so even when traffic is crossing tenant boundaries, we didn't want entities in tenant to for example to be aware of how money poured in distances are there.
+00:20:20 [W] In in tenant one's name space, right?
+00:20:27 [W] So that wasn't really there with the standard deployment model.
+00:20:31 [W] Lastly.
+00:20:31 [W] We didn't we still want to share some common control aspects of of the the servicemeshcon.
+00:20:44 [W] We didn't want to create a whole independent servicemeshcon tenant because of the amount of overhead it adds.
+00:20:51 [W] Ads on a per tenant basis, right?
+00:20:56 [W] So we still want to share as much as possible the the control plane aspects of the servicemeshcon have isolation in all these other aspects that we mentioned before.
+00:21:08 [W] So what we came up with was a model which sort of looks like a mess inside a mesh this model consists of Ingress Gateway and egress Gateway deployed.
+00:21:21 [W] Bar namespace or part tenant basis. So you have ingress/egress Gateway along with all sidecar based proxies in the workloads of each tenant here. We show again the green
+00:21:36 [W] the orange workloads
+00:22:07 [W] or if it's traffic leaving the the tenant application and going outside to an external server.
+00:22:20 [W] All the traffic is completely independent pertinent and shares.
+00:22:24 [W] No common elements between tenants in this model in the demo part of the talk will show the use cases how we achieve the points that we mentioned above.
+00:22:37 [W] Specifically how we we can control the policies the traffic policies on the pertinent basis using this machine up mesh way of deploying servicemeshcon.
+00:23:03 [W] The Taste Malhotra, I am a technology architect at a firm networks.
+00:23:15 [W] I focus on cloud native Technologies and their applications to the 5 G domain prior to this. I have worked with Akash and I focused on applying servicemeshcon to our solution.
+00:23:28 [W] Okay. So in the interest of time, let's jump straight into the demo the servicemeshcon turn can apply to
+00:23:37 [W] The servicemeshcon it for our demo we've used a steel.
+00:23:42 [W] So let's begin by installing the sto control plane here.
+00:23:49 [W] You can see that I have disabled the global Ingress Gateway and the egress Gateway in our sto system namespace because we plan to use gateways at our name space boundaries at the tenant boundaries.
+00:24:01 [W] Okay, let's go ahead and kick this off while sto control plane gets in installed canoe show.
+00:24:07 [W] You a quick picture of what application we will be using. So we're going to use the sample app from the St. Repository.
+00:24:17 [W] This is the book Info app and you have a set of microservices a front end product page and you have the review service the details service and the rating service everything come together to provide.
+00:24:30 [W] More information about the book and this is what the front end would look like.
+00:24:41 [W] Okay, so I think our control plane should be up and running next.
+00:24:44 [W] We're going to create our namespaces just to demonstrate the multi-tenancy solution. So it's great tenant one.
+00:24:54 [W] Sorry about that.
+00:24:58 [W] Let's create tenant one and we are going to label our tenant with styra.
+00:25:01 [W] Ew injection equal to enabled and this enables automatic sidecar injection for all the workloads that spin up in this namespace.
+00:25:11 [W] Okay, we have that.
+00:25:14 [W] lets go ahead and
+00:25:15 [W] Deploy your application along with the gateways to this new space.
+00:25:22 [W] So all the relevant resources are being deployed. We can quickly take a look at tenant one and the deployments create so we have our book Info app. We have
+00:25:34 [W] Deployment we have the product page deployment reviews and details product pages what we will try to talk to in addition.
+00:25:49 [W] We also have our both are gateways in this namespace.
+00:25:53 [W] So I think it should be ready by now.
+00:26:01 [W] Okay, we're going to run through the same steps for 10 and 2 and shouldn't take too long.
+00:26:03 [W] Okay.
+00:26:08 [W] Well, this is coming up at also like to note at this point in a real cluster that wants to support multi-tenancy.
+00:26:21 [W] The administrators would set up resource kotas and are back using service accounts for these namespaces.
+00:26:26 [W] So this is this is how it's traditionally done and our car spoke about this and we're going to show what else can we add on top using servicemeshcon?
+00:26:33 [W] Good more secure and improve the multi-tenancy of a cluster.
+00:26:47 [W] Okay, I think by now we should we should have our application up and running.
+00:26:48 [W] Great, so we have everything up and running.
+00:26:53 [W] This is how is traditionally done and Akash spoke about this and we're going to show what else can we add on top using servicemeshcon?
+00:27:05 [W] make it more secure and improve the multi-tenancy of a cluster. Okay, I think by now we should we should have
+00:27:06 [W] our application up and running
+00:27:06 [W] Great, so we have everything up and running.
+00:27:07 [W] I'm going to quickly show you what this looks like in in the graphical dashboard that state provides us called Kali.
+00:27:08 [W] Let's clear fresh this this view.
+00:27:10 [W] So now we can see that we have our gateways diploid.
+00:27:14 [W] We're looking at both the namespaces. So we have our Ingress Kate very Great Skate way and both of the namespaces have
+00:27:20 [W] They're relevant microservices that are now part of the mesh.
+00:27:24 [W] You won't see any graph edges right now because we haven't sent any traffic and related stage in the demo.
+00:27:32 [W] We'll start seeing the edges and the traffic flowing from the Ingress gateway to the application.
+00:27:40 [W] Okay, so let's jump back.
+00:27:43 [W] We have everything ready.
+00:27:50 [W] We are looking at KL e now I'm going to quickly ensure that this sample app comes up.
+00:28:00 [W] I'm using the insecure port and these are Exposed on node Port 3 1080 for tenant 1 and 3 2004 10 and 2.
+00:28:09 [W] So looks like it's reachable. We can do the same thing for three 2080.
+00:28:13 [W] Perfect.
+00:28:17 [W] that went through as well.
+00:28:20 [W] Now, let's jump to postman. And what I'm going to be demonstrating is one of the features that arkasha spoken about and this is the transport authentication using neutral TLS. For those of you who are not familiar with
+00:28:32 [W] Familiar with mutual TLs but understand TLS in addition. So all Mutual TLS does is in addition to the client verifying the service certificate making sure it's signed by a trusted CA the server does
+00:28:45 [W] I certificates so making it a little more secure and this is something that's enabled by default within the servicemeshcon.
+00:28:56 [W] Well as of sto 1.6.
+00:28:57 [W] So so let's let's send a request to our our tenant one at the secure Port again.
+00:29:13 [W] We've set the note board. So 3 1 4 4 3 is the HTTP port for tenant 1 and 3 to 4 4 3 is going to be the HTTP port for or tenant to the way we configure the certificates
+00:29:22 [W] Through some global settings. I have set the certs and keys for both our tenants tenant clients in Bozeman and we have the relevant servicer certificates already uploaded to our
+00:29:38 [W] As gateways in each of the ten and name spaces.
+00:29:46 [W] So let's go ahead and try to reach the product page through Postman.
+00:29:54 [W] I have the header set for 10 and 1 to 10 and 1 dot example.com.
+00:29:56 [W] This is something that will be compared for identification.
+00:29:59 [W] let's go ahead send the request.
+00:30:02 [W] Takes a few seconds and there we go.
+00:30:06 [W] That's the HTML page that we saw earlier.
+00:30:06 [W] Obviously.
+00:30:12 [W] I can't do it over here because I don't have the certificates loaded but this is essentially what it is returning back to us.
+00:30:22 [W] Let's try the same thing with tenant to header set to 10 into example.com, and we're going to send the request.
+00:30:23 [W] All right.
+00:30:29 [W] I just wanted to go back to the certificates and show you that these are two separate certificates.
+00:30:40 [W] We have tenant one using T1 sort of M. And we have 10 into using T to start by Professor dot p.m. And both of them are signed by their own individual keys.
+00:30:43 [W] Okay.
+00:30:49 [W] So so this is how we are accomplishing Mutual TLS. So I want to show this on kiala has well as the traffic flow, so I'm just going to send a couple of requests so that
+00:30:59 [W] Populating its grass.
+00:31:02 [W] Okay.
+00:31:03 [W] I think that should be good.
+00:31:05 [W] Let's go back to chaosmesh.
+00:31:29 [W] Egress Gateway can be used for redirecting traffic out of the namespace in this demo.
+00:31:45 [W] We haven't shown that but it is pretty much symmetrical to how we've set up the investigate the the application pods when trying to read Services outside in namespace are going to redirect all the traffic through the Great Escape
+00:31:53 [W] Redirecting traffic out of the namespace in this demo. We haven't shown that but it is pretty much symmetrical to how we've set up the investigate the the application pods when trying to read Services outside in namespace are going
+00:31:54 [W] This is our namespace external services for that matter. And the last day last case where one is show a failure that that I'm inducing in here is when tenant one tries to
+00:32:10 [W] Our tenant to against his own Ingress Gateway. So what we see here, is that the Ingress Kate returns an error we have we have the English
+00:32:25 [W] The subject alternative names did not contain the request that we made for ten and two. So so this is one component of achieving multi-tenancy using the servicemeshcon turn.
+00:32:41 [W] Like I said, you can use jaw tokens for origin authentication.
+00:32:46 [W] This is something supported by different gateways in stos. The Ingress Gateway. I suppose Ambassador would do the same or any of the other gateways that
+00:32:56 [W] are used with the servicemeshcon of there in addition to both the authentication types. You can also use the or to feature that the gateways provide and sto Ingress Gateway gives you
+00:33:11 [W] Jarred something we kept out of this demo just so that we can finish this in time.
+00:33:21 [W] But but this is this is now an added security level over what we traditionally saw with network policies and our back using service account. So so yeah, there's there's more that can be done.
+00:33:33 [W] Be more features using extensions for these gateways where you can perform more security features and essentially hide your tenant apology.
+00:33:47 [W] All right.
+00:33:47 [W] Thanks guys.
+00:33:49 [W] That's it for me, and hope you guys enjoyed this presentation, and hope you learned something out of it. Thank you.
+00:33:58 [W] Have a good day.
+00:34:00 [W] thanks for listening to the
+00:34:12 [W] talk any questions you can answer.
+00:34:17 [W] To think guard Ricardo asked his about the git repo and I pasted it goes to that in the chat and we can have made it public as well so you can look at it.
+00:34:48 [W] is there a few questions on the
+00:34:56 [W] side
+00:34:59 [W] Yeah.
+00:35:01 [W] So how so what done is asking how do you deal with English Catholic?
+00:35:14 [W] All the Ingress traffic is coming in through our gate phase the deeper tenant gateways or / names face gateways are the ones we expose publicly through the load
+00:35:26 [W] So everything coming in and out is through our gateways and all the services within the namespace are using cluster IP.
+00:35:37 [W] So they do not expose any ports and the gateways themselves. Are they expose a load balancer service, right so they can directly get incoming traffic into the cluster.
+00:35:51 [W] Take the next one.
+00:36:57 [W] Neuron is asking.
+00:36:58 [W] What was the tool you used for looking at this servicemeshcon dings? I I guess that was the key Ally that you showed right message.
+00:36:58 [W] Yeah.
+00:36:59 [W] Okay. Are you done?
+00:36:59 [W] And that's specific to sto.
+00:37:00 [W] There's the other servicemeshcon with their own UI dashboards which are similar and functionality.
+00:37:00 [W] Then there's a question.
+00:37:03 [W] How would you do multi cluster if they see a is in each cluster defer.
+00:37:04 [W] Well, we didn't really show multi cluster. If you mean multi-tenant the this was the whole point that we can have with this architecture
+00:37:04 [W] In this like the the CSR you you program it into the Ingress Gateway and the egress Gateway pertinent and you can have different CS / tenant with this architecture and of course.
+00:37:19 [W] You can do the same thing as well.
+00:37:22 [W] Yeah, like to add in the multi-tenancy case. We do leverage certain Alger and some STS features that on worry provides to program the certificate. So yeah
+00:37:38 [W] Fancy a bundle that and that adjusts so so so yeah, that's that's how you could configure the CS4 multi-tenant spurred per cluster.
+00:37:53 [W] It's going to be it's not in the scope of what we're discussing here. So
+00:37:56 [W] then this question you did not charging you mentioned earlier.
+00:38:06 [W] I think this is referring to the accounting perhaps or auditing.
+00:38:10 [W] So yeah, we didn't cover that servicemeshcon Z offer observability of very detailed set of observability in into the
+00:38:23 [W] To we use Prometheus Matrix that is emanated by the envoy sidecars and / 10 and torpor namespace.
+00:38:38 [W] We get all the observable T. For example, the requests per second and so on and we can do rate-limiting on appurtenant basis for X number of the requests per second.
+00:38:51 [W] And actually we do it even more the annular X.
+00:38:54 [W] Were of requests per second for these URLs and why number of requests per second for these other URLs for tenant.
+00:39:02 [W] I think if there are any special changes made to the control plane.
+00:39:18 [W] No, we we used it use the same control plane that get spun up by is TOC TL.
+00:39:23 [W] There's nothing special that we do.
+00:39:29 [W] They're all the the only kind of custom deployments is how is that we disable the global Ingress and egress Gateway and instead use pertinent English nigra skate fish that we spin up.
+00:39:40 [W] Then there's a question about that.
+00:39:45 [W] Our view that's the whole point that you want to allow the users to edit her determine what kind of setting they want to use for their own interests aggress Gateway. So as you saw in the these deployed
+00:40:09 [W] Guys and egress gateways really become part of the tenants application.
+00:40:16 [W] They are no longer controlled by the servicemeshcon.
+00:40:41 [W] Kinda video settings for it. Right? So you would want them to mess with it if with the and now you are guaranteed that if they change something if they break something that only affects the
+00:40:47 [W] Are tannin see right so for their applications and not other tenants.
+00:40:53 [W] So there's another question from there's a question from Jeffrey around.
+00:41:07 [W] can you explain a bit on how to configure the network policies?
+00:41:09 [W] So yeah.
+00:41:13 [W] I'm so Network policies would be applied on a per diem space bases things to consider.
+00:41:18 [W] You can lock down traffic in and out from the namespace by only exposing or
+00:41:25 [W] For the lack of a better term right listing and blacklisting ports on the Ingress and egress Gateway.
+00:41:40 [W] But what do you have to keep in mind is there's some communication between the elements of the name space with the API so and the control plane and also the observability stack so you would
+00:41:46 [W] plus some of some of those ports but everything else can be locked down which means the the only Port you want to open up our for the gate face themselves and not not for any of the any of
+00:42:01 [W] alignment of positioning within the namespace
+00:42:05 [W] control plane elements, so no, I don't think that's a requirement.
+00:42:21 [W] It's not a standards body doesn't require us to use a servicemeshcon dit to be very useful for implementing 5G control plane elements this them multiple reasons for it
+00:42:32 [W] Mary reason why we use it is for TLS.
+00:42:48 [W] So for for all external traffic, so this is or traffic coming into the 5 G control plane element or traffic leaving of I've even eliminate the standards body do require all
+00:42:51 [W] to be to to go over and TLS and you can use the servicemeshcon TLs features which are fairly widely used and hardened to implement that part of the spec plus the other part is
+00:43:08 [W] Observability you typically want to have very fast time to diagnose and time to mitigate any problems that you see right in a in a five grpc gation. So we we found it very useful for
+00:43:23 [W] For that reason for debug ability of your application if you are using your servicemeshcon, I'd it really helps in that aspect.
+00:43:33 [W] So alexei's asking us how is isolation achieved between 10 cycles? And I think this is this is a really good question as of preparing the demo.
+00:43:50 [W] This did not exist.
+00:44:00 [W] I am not sure about the newer versions of history of but there is there is a discussion around isolation based on based on tagging and
+00:44:06 [W] They're already exists some things where you can make it namespace scope. So the side guy gets get programmed with only the name space namespace and encapsulated services.
+00:44:21 [W] And so that's that's one way of making sure that the side cousin receiving everyone's service Lee Tales, but there needs to be some more work in terms of isolation using tagging as well.
+00:44:33 [W] So that's something that they're discussing in terms of multi control plane. So hopefully that applies over here, too.
+00:44:40 [W] Addendum is a question.
+00:44:45 [W] How are you dealing with latency introduced by sidecar proxy. So that's that's a good question as well.
+00:44:53 [W] Like we we do a very careful job of watching for latency.
+00:45:04 [W] So the measurements that come right out of envoy shows us the median 90 95 and 99 percentile Layton sees on a per pod basis, right so
+00:45:14 [W] In our use case we found the latency is to be fairly minimal. If I remember 95 percentile is around 2 milliseconds.
+00:45:28 [W] So that's in in your application.
+00:45:36 [W] You do have to make that call if that amount of latency is is allowable or not.
+00:45:38 [W] If not, then yes, that's a very valid concern against using the servicemeshcon.
+00:45:43 [W] elf
+00:45:44 [W] Bowden is asking us to follow up question that so he mentions that he claims that we have a single load balancer running on top of Port 443.
+00:46:02 [W] So that's we have a load balancer / namespace.
+00:46:13 [W] It's not it's not one load balance as you would see in the in the traditional deployment model where you have one increased Gateway exposing yugabyte.
+00:46:14 [W] Entire mesh to the global Network. So each one of these gateways in risk it whisper 10 and namespace are going to use their own ports that they want to expose. So load balancer would
+00:46:30 [W] Assign, the assigned the ports to the load balancer service and rocks here to the right Ingress get reports.
+00:46:41 [W] I think of we can continue a conversation on the slack Channel and very interesting questions and we are exploring this path as well and continuing on this journey with more features built in this
+00:47:01 [W] Do so.
+00:47:05 [W] Thanks. Thanks for tuning in.
+00:47:06 [W] Thanks for all the questions.

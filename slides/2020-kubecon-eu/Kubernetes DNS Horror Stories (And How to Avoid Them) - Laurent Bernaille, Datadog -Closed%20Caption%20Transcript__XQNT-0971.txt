@@ -1,0 +1,261 @@
+﻿Kubernetes DNS Horror Stories (And How to Avoid Them): XQNT-0971 - events@cncf.io - Tuesday, August 18, 2020 8:19 AM - 80 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:04:53 [W] Hello everyone, and my name is David and I and I'm very happy to be here today and to visually present this talk about kubernative DMs.
+00:10:56 [W] So quick introduction, if you don't know datadog were assess based monitoring company, and we're not going to talk about the product today.
+00:11:13 [W] We're going to talk about the interest rate for behind the products and especially the the path of these infrastructure that is running in quantities.
+00:11:18 [W] And today we're talking about tens of thousands of hosts and dozens of communities Buster's that can reach up to 4,000 loads and one of the challenges we face is we run on multiple cloud provider which makes things
+00:11:35 [W] We faced many challenges, but when we move to two Cadets and operating our raccoon sisters, and we talked about these families in several conferences in the past.
+00:11:53 [W] However, today we're not going to talk about this. We're going to focus on a subject which is DNS.
+00:11:59 [W] And what would you tell expect when we started working on the code is bad for my datadog where that DNS would end up being one of the most people service we operate and as you can see on this graph which shows number of dinners queries
+00:12:15 [W] Action on each cluster.
+00:12:19 [W] We're currently serving 200,000 genus queries per second, which is which is quite a lot and challenging to do well.
+00:12:24 [W] Here is a quick outline of what we're going to discuss today. First. We're going to discuss about how DNS Works in communities in general then about global challenges people face.
+00:12:40 [W] Usually when they run the nsmcon it is then I'll share some fun stories depending on your definition of fun about DNS and finally I end with what we do now.
+00:12:49 [W] Took generated in communities.
+00:12:54 [W] So here is how it works.
+00:12:59 [W] So when you start a bird the cubed is going to inject the DNS configuration inside the containers and the way that will do that will be this is based on its configuration where you give it the
+00:13:09 [W] Now so get it in kubernative is so here is how it works.
+00:13:11 [W] So when you start a bud the cubed is going to inject the DNS configuration inside the containers and the way that will do that will be this is based on its configuration where you give it the
+00:13:12 [W] To use to to give containers Dennis access and this will translate into a result bol.com file inside containers with a list of search domain which makes discovering services in the cluster and outside easy.
+00:13:25 [W] and of course the name server to use
+00:13:28 [W] when containerd wants to access DNS it's going to send a query to the DNS servers in the cluster and the proxy really use whether it's IP tables on ipps is going to load balance.
+00:13:46 [W] The square is to get asteroids which can either run que quien es or called DNS and these DNS servers are going to do two things.
+00:13:58 [W] The first one is there going to be authoritative for the Clusters or for the crystal domain and also they're going to fall with queries.
+00:14:03 [W] Or to an upstream provider for any domain.
+00:14:05 [W] They don't know.
+00:14:05 [W] So in theory here is how it works.
+00:14:14 [W] So imagine a button and space Matrix requesting the service points.
+00:14:17 [W] that is also running in mid-space metrics. So if you just look at points, your resolver is going to see that points as they than five dots. So it's going to use user first search domain and query for points at
+00:14:29 [W] Kristen local and get an answer back from the gns bud. So simple and efficient, right?
+00:14:38 [W] In theory. Also, if you're a part in the log looks namespaces time accessing service points in another name space Matrix, then of course you just decide the namespace your the service you're looking for is located in in here
+00:14:54 [W] In the metrics.
+00:15:07 [W] So once again, but instead meshmark sighs days and five dots and we're going to try with the first search domain and as you can see it doesn't really make sense because it's going to start with both points that Matrix at blogs which doesn't exist. So the first answer from the
+00:15:11 [W] Whispers points that metrics that blogs which doesn't exist.
+00:15:14 [W] So the first answer from the genetic code is going to be an experiment because it doesn't exist.
+00:15:23 [W] The resolver is going to continue and this time queries for bones that metrics that set is a protocol by using the second search domain and get an answer so less efficient this time because we did two queries, but still it's pretty straightforward.
+00:15:30 [W] Let's talk about challenges now. So you remember what I showed for the series before?
+00:15:41 [W] Let's see what it looks like in practice by capturing traffic from a DNS query.
+00:15:42 [W] So this example is taken from GK instance.
+00:15:50 [W] And in that case, I mean the part of the default any space and I'm looking for WWE could overcome and as you can see here when it seemed to queries were acting who actually think 12 carats.
+00:16:00 [W] the reason for this is well where we have five such domains SQL the questions into inherited from Google and also something that's a bit surprising that that wasn't in my theory examples.
+00:16:13 [W] This is IPv6 queries. So we get twice the number of queries because of addicts.
+00:16:16 [W] This is to several problems.
+00:16:24 [W] The first one is latency, of course because you should or requiring this you're going to make 12 queries, which is going to take longer and also if any of these packets is lost your resolver is going to retry but it's kind of wait for 5 seconds because the default datastax
+00:16:34 [W] Or let's see what it looks like in practice by capturing traffic from a DNS query.
+00:16:35 [W] So this example is taken from GK instance.
+00:16:36 [W] And in that case, I mean the part of the default any space and I'm looking for aww that google.com.
+00:16:37 [W] And as you can see here when it seemed to queries were acting actually think 12 carats.
+00:16:38 [W] And the reason for this is well where we have five such domains three for the questions into inherited from Google and also something that's a bit surprising better. That wasn't in my Serie examples is
+00:16:44 [W] DB 6 queries, so we get twice the number of queries because of economics.
+00:16:52 [W] This is to several problems.
+00:16:53 [W] The first one is latency, of course because you should or requiring this you're going to make 12 queries, which is going to take longer and also if any of these packets is lost your resolver is going to retry but it's kind of wait for 5 seconds because the default datastax
+00:16:55 [W] kinetics
+00:16:56 [W] and finally, of course, I mean we're managing with the nsmcon and we care about heading as you query as you can because it loads it stresses the DSM from
+00:16:57 [W] so let's talk about result as now.
+00:16:57 [W] Why do we get IPv6 queries?
+00:16:59 [W] So the default parsec says it's to query for DNS is get a DDR info and it should do ipv4 and IPv6 by default.
+00:17:09 [W] So the good thing is you're ready for every this takes the band's well the great because you're getting twice a traffic right?
+00:17:16 [W] But there's also the ugly part which is something that most of you may have heard about in the past which it that there's a race condition in that filter.
+00:17:25 [W] Which will trigger packet losses if you do an add for in an IPv6 know very short Stan Stan Stan and this was patched by this issue has been there for quite a while and has been painful for many users because of course if one of the two packets is
+00:17:40 [W] You should do and I did before and then the pt6 know very short Stan Stan Stan and this was patched by this issue has been there for quite a while and has been painful for many users because of course if one of the two packets is lost the resolver
+00:17:43 [W] The resolver is going to wait for 5 seconds before trying.
+00:17:44 [W] Depending on the products you use it's going to be it's going to be an impact at the difference it slightly better with IPS bystander.
+00:17:53 [W] Perfect.
+00:18:09 [W] So we had these very nice idea at the time which is well, let's disable the IPv6, right? So we disable that in SQL the kernel and we just did a very simple solution for people that come and you can see that can be example
+00:18:09 [W] Queries and when they're doing any IPv6, so that's pretty good, right?
+00:18:16 [W] We wanted to celebrate at that time, but look after every interrupted E6 has been disabled on every host.
+00:18:25 [W] We're still getting a lot of at least six queries.
+00:18:28 [W] So whether it be sad, and we were trying trying to understand what was happening.
+00:18:30 [W] So what triggers our GD 6 so as I was saying before according to posix you should be getting ipv4 and IPv6 queries.
+00:18:39 [W] However, the DDT implementation in Linux.
+00:18:43 [W] Is using hints that are notes that it's not supposed to use in the posix in the public sector is doing it because it's helpful and one of the ins used by grpc is AI addr info which is only making
+00:18:58 [W] If it finds an IPv6 address, so well, of course since we disable that insects in the kernel, we should have any IPv6 addresses so is ending at uses in the kernel should just work but as we so it doesn't so that's that's weird.
+00:19:14 [W] So we continued the ink and and thing we found is that well, we're not only running Ubuntu indeed. See we're also running some Alpine containers that are using muzzle isolated provider and well
+00:19:29 [W] These very simple query.
+00:19:39 [W] I knew Brenda base image and another meltdown base image in one case you get IP and the ability for and in the second case you can opt for energy physics.
+00:19:46 [W] And the reason is well mother actually implement the project specification exactly another helpful. Hint that Yugi provides.
+00:19:48 [W] So that explains part of it. However, we don't use Alpine that much so that can explain why it said about traffic is IPv6, right?
+00:19:59 [W] We use gorillas.
+00:20:04 [W] And so at one point we looked at good occasions and to see how they were behaving and if you this very simple resolution come and go. Well, you can see that we're getting identities acquires again and even on Ubuntu so
+00:20:15 [W] Is its risk but not to do that?
+00:20:19 [W] So as you may know go and commence to two ways to do TNS you can have either Navy go or you see girls who so we figured well, let's you see go. So in which case we will Falls go to use
+00:20:35 [W] Information and as you can see here, even when we use see go.
+00:20:42 [W] We're also getting an IPv6 Square things are getting very weird, right?
+00:20:45 [W] so one of the first thing we believed what that of environment variable at the Knick nodes, but if you look at the end at the very small details and these two lines in these two examples, you'll see that
+00:21:02 [W] Environment variable I've been ignored but if you look at the impact is very small details and these two lines and straight samples, you'll see that it's actually difference and that the result was are behaving differently because one is using a
+00:21:06 [W] Grunts and that the result was are behaving differently because one is using a different Source port for the ipv4 and IPv6 squared so it's actually doing something but it's not building as we expect because we'd expect GDC based queries no to do IPv6,
+00:21:17 [W] DDT based queries no to do 86. So we looked into the go our source code and look at what we found.
+00:21:24 [W] we found that when you use see go goes actually specifying hints and the hits it specifies are different from the default till you see once and what is very important here is a TDR conflict,
+00:21:39 [W] Is a different from the default till you see once and what is very important here is a DDR conflict, which will not do idealistic solution.
+00:21:43 [W] It is not 6 address is that in these hands? So it's very sad because in go it means you can't easily remove item six query and the only way I found to do that is actually false go to only query I believe or by choosing TCP
+00:21:56 [W] But mmm so that works that because it would be too simple if we if it would just work.
+00:22:05 [W] It only works when you're using see go.
+00:22:10 [W] It doesn't work with the knative confrontation where you will get those a TV for net lease expires.
+00:22:11 [W] So we tried to read to reduce the number of queries by removing IPv6 queries, and it's something that everybody try to achieve in the community community a crying to reduce the number of queries and medications and let's look at
+00:22:28 [W] ins
+00:22:30 [W] so the first one is recording this plug-in, which is called.
+00:22:35 [W] Oh Tobias with this option called DNS and knows the search domain and it's going to remove the search domain from the query and try and be clever based on everything.
+00:22:47 [W] It knows about the cluster and even route the query Upstream if what you crying for it is not local and as you can see the in in this example, you have a query for google.com that the search domain for the cluster.
+00:23:00 [W] And all the buses answering with a cname saying well, you're actually looking for google.com. And here is the ipv4 and IPv6 addresses.
+00:23:09 [W] So that's very clever, right? Because you're only doing two queries now instead of 10, but sadly it's not magical because to do that and because Jonas autobús limitations needs to know
+00:23:25 [W] It's addresses.
+00:23:26 [W] So that's very clever. Right because you're only doing two queries now instead of 10.
+00:23:26 [W] But sadly, it's not magical because to do that and the coziness and autobús limitations needs to know in which then name State support is just to be able to remove the First full search domain
+00:23:30 [W] Names days apart is just to be able to remove the First full search domain and to do that. It needs to know about all the products in the first order to match the query our IP with namespace and the problem is if you do that, it
+00:23:40 [W] You have the points in the cluster, which is going to consume a lot of memory.
+00:23:49 [W] And as you close to grow the memory requirements for coding is going to grow and it's been a bit painful for us because it's very difficult to know when you need to increase the memory request of your innocence.
+00:23:58 [W] Another option that people are starting to look into seriously and that's available at strimzi.
+00:24:29 [W] So it's very efficient because you're not doing any Unity queries and you remember from before that you deeply queries were triggering this contract issue.
+00:24:43 [W] That wasn't great.
+00:24:46 [W] And also what you can do is you can bypass the dinner service for any non cognitive domain, which means you reduce the load very a lot on your own you get a sandwich which is which is good news.
+00:24:59 [W] Of the of the image so you need to do that and it wasn't as easy as we believe it would be.
+00:25:18 [W] so imagine this issue of state where the container is trying to access a gymnast but and in this example, I'm going to use ipbs because it is what we want and what we know about the most so when the bird is the container is going to make this query is going
+00:25:35 [W] So is that P VP in my example energy vs is going to translate this IP to a pot IP. And of course to make sure that negative following packets are going to use the same connections. It's going to create an IPS contract entry, which I displayed at the bottom there.
+00:25:52 [W] So imagine now that but a is deleted because you're starting a running update for instance or you just reducing the size of your deployments.
+00:26:07 [W] Well any new query is now going to be routed to a new but right? So this is my second example here where the second query is sent to point B, so everything looks good, right?
+00:26:11 [W] However, I'd happens if a new query is using the same Source port.
+00:26:16 [W] Well, what's going to happen is the entry still exists in the 80s contract and so it could be routed to the back in that have been deleted.
+00:26:28 [W] And since the colonel knows that is back in doesn't exist. It's going to drop it.
+00:26:30 [W] Silently and it's not a problem for most applications except when you do a lot of queries which happens sometimes so we work with the cube proxy team to make to make this better. And the first thing we did was set
+00:26:46 [W] The entry still exists in the 80s contract and so it could be routed to the back in that have been deleted. And since the colonel knows that is back in doesn't exist. It's going to drop it.
+00:26:48 [W] Silently and it's not a problem for most applications except when you do a lot of queries, which happens sometimes.
+00:26:49 [W] So we work with the queue proxy team to make to make this better. And the first thing we did was set the system tunable, which is expiring the desk on which will expire hand trees in the contract when a new packet is
+00:26:54 [W] Tunable which is expiring the desk on which will expire hand trees in the contract when a new packet is sent to a back in the days with eat it.
+00:26:56 [W] So what happens from The Courier perspective is you send a query and see if the back end doesn't exist. The contract will be garbage collected which is good and you're going to be notified by getting an icmp error message.
+00:27:12 [W] So it's better because entries are going to be excited much faster. But also you're still getting errors. So not great because under load is configure a lot of errors.
+00:27:22 [W] So when you can also do is reduce the unity timeout for the ipps come Track by default.
+00:27:32 [W] It's set to 5 minutes, which is a very long time and this is you can know computers is in kubeflow starting with your proxy 118 and plus and in our case when I will set it to settle seconds which is which is better because you're an entry is going to expire much faster.
+00:27:46 [W] This means that the likelihood of getting a boat Collision is going to be much lower. So, of course we can get some errors that Carlos.
+00:27:55 [W] And there's also very good news in the way Andrew with another haproxy maintainer.
+00:28:04 [W] Actually the kernel patch to expire entry in the contract when the mechanism T directly to avoid waiting for the next packet and avoid getting an error. So that's very good news.
+00:28:14 [W] news. Thanks, Andrew.
+00:28:15 [W] So I know you came here for all the fun stories and I mean, honestly, it depends on your definition of fun. But now that I can talk about them.
+00:28:28 [W] It's better. So let's talk about them.
+00:28:30 [W] So sometimes well the idea is you should because well your dinners in Praise Him stable.
+00:28:37 [W] And a typical example is called Venus but getting getting killed because they're consuming too much memory.
+00:28:50 [W] And of course, it's the great for applications because well your DNS codes are are getting killed and you can see the pattern on the graph. It's it's kind of where I because things were stable and it's a lonely like when we went a pretty fast.
+00:28:59 [W] The what actually happened here is an API server was restarted and all the coordinates but our to reconnect and add to build a view a full view of the cluster in their clients and to do that.
+00:29:14 [W] Typical example is called Venus but getting getting killed because they're consuming too much memory.
+00:29:18 [W] And of course, it's the great for applications because well your DNS codes are are getting killed and you can see the pattern on the graph. It's it's kind of where I because things were stable and it's literally like when we went a pretty fast,
+00:29:19 [W] the what actually happened here is an API Civil War has resulted in all the coordinates, but at to reconnect and add to build a view a full view of the cluster in their clients and to do that, they had to process all the cards and all the services
+00:29:23 [W] And at startup it turns out to require a lot more memory to do this because you have to process everything in a few seconds.
+00:29:25 [W] And so that was that was that was hard. Sometimes your gymnasium floor is completely stable, but you're using Auto scaling and sometimes you'll see it works too.
+00:29:40 [W] too. Well, so we use proportional descaler to decide on the number of coordinates pots were running. And so we the number of bodies actually proportional to the size of the cluster.
+00:29:53 [W] And so it would completely fine while the question was only growing in size.
+00:30:04 [W] Okay, but at one point well some applications where try we're starting to do with Escape well, and we're also scaling down and so note were disappearing and so-called in the spots where removed and that was new and this triggered an interesting Behavior,
+00:30:13 [W] Well some application started getting did it it is when this was happening and the reason this was happening was because of the for three years each. I was mentioning or application doing a lot of queries.
+00:30:25 [W] So all those killing is great, but sometimes you will get surprises.
+00:30:29 [W] I mean, sometimes you have DNS issues, but honestly, it's not really your fault.
+00:30:36 [W] So this one was very frightening frightening for us, but luckily it only happened in staging.
+00:30:48 [W] So this is when we started to enable or device on the first time and what we did is we moved from the computation on the left to the configuration of the rights the complication on the left as to zones one for which coordinates is authoritative, which
+00:31:00 [W] The second one which is the default.
+00:31:04 [W] So on where your forward enquiries to be cloudbees or Burr and when you enable the best what you do is everything is in the default Zone and your first try the community's own and use other path to do all the magic.
+00:31:18 [W] So this seems like simple and straightforward, right but this completely broke staging cluster and while can you spot what's broken?
+00:31:27 [W] It's it's actually a very small change in the in the before we did the
+00:31:30 [W] Changed we were cashing queries sent to a tree provider and we didn't do it for the communities Zone because of course everything was already memory. So it doesn't even really matter.
+00:31:45 [W] However, when we move to other bus by doing this configuration, we actually removed caching or the abstract cloud provider DNS, which means all the queries who are now sent to the club Jenna's resolver.
+00:31:56 [W] Either and we didn't do it for the kubernative Zone because of course everything was already in memory. So it doesn't even really matter.
+00:31:59 [W] However, when we moved to other pass by doing this configuration, we actually removed caching or the extreme cloud provider DNS, which means all the queries who are now sent to the club generous resolver.
+00:32:00 [W] Well turns out if you're in doing the nsrs probably know that but is actually a strict limit in the number of units queries you can do for any given network interface and the strict limit is
+00:32:12 [W] Race and the strict limit is one thousand packets per second. If you go above these edible lace will just drop the query.
+00:32:20 [W] So of course when reading room kept the cash the number of queries exploded and we hit that issue and applications didn't like it at all.
+00:32:26 [W] Another thing we try to do that sounded like a great idea at the time was well, we had issues with UDP.
+00:32:43 [W] And so we decided to move to TCP. So in this very simple example say well when we do when we send and forward any query else transfer back of a letter, let's use TCP. It's more reliable is going to be better right?
+00:32:49 [W] Well except remember the strict limit of f******. Well, when you do TCB the single query is actually going to use many more packets and so you will trigger
+00:33:01 [W] It was really nice much faster. So really really avoid using TCP when aquarium dubious Resort offers.
+00:33:05 [W] And sometimes I mean, it's really not your fault, right because for the example before it was actually not hopeful that with proper testing and proper configuration. We can work around it. But sometimes well there there really isn't much you can
+00:33:22 [W] So we didn't wear this issue were well in addition. I was seeing resolution errors.
+00:33:32 [W] I was like typical typical problem, right?
+00:33:41 [W] And when we look at this we still that Euros only happening for single zone, which is the default zone. So the Zone sending traffic to the Upstream provider, which was the cloudbees order in that case well, and it turns out when you graph the
+00:33:47 [W] is for the Elgin provider and latency of queries for provider and your group these by Zone you actually see that a single zone was impacted and we have been confirmation by the cloud provider that they had issues in a specific Zone
+00:34:04 [W] India is queries.
+00:34:06 [W] So well, not much we could do in that case.
+00:34:09 [W] And you know, I mean I've been talking about coding is containers and coaching is poets and sometimes well, it's the magic of kubernative right and you tend to forget that actually run a nodes and that is no doubt constraints of the ram.
+00:34:25 [W] So then just in turn were right application searing errors and it took us some time to see that actually what was happening is that we had contract errors in the catalogs.
+00:34:42 [W] And if you look at the graph at the bottom, you can see the number of contract countries has been slow slowly increasing and it's now at a plateau at 130 thousand entries and it's weird because it's very flat right?
+00:34:54 [W] Well, it turned out to proxy by The People's will
+00:34:59 [W] because of contracts have 130,000 entries exactly which is exactly the lady who are getting at and when it goes down is because we fix it by increasing the number of birds in nodes and so connection were distributed much more evenly it was
+00:35:12 [W] better
+00:35:14 [W] If you look at the graph is just as I showed about contract entries, you can see that there's actually two different group of nodes and all these notes were running called Eunice birds.
+00:35:30 [W] So it's kind of weird that these nodes are so different because DNS queries were perfectly load balance across all the codes. And so we would expect to see these be very balanced.
+00:35:38 [W] Well, it turned out the hosts were be difference somewhere running can 4:15 and somewhere when you can't I come oh and there's actually a few Kindle patches in Hive that oh that improve the contract Behavior with UDP
+00:35:52 [W] His choir is actually and what did changes if that country country countries for DNS only get a certain second Studio by default Intel has three minutes which means they expire much faster.
+00:36:08 [W] And so the number of entries in the contract is much lower and if you want details about the patches, I gave the references, I'm fine.
+00:36:14 [W] And what's nice with DNS? Is that sometimes well, it's just plain you playing with it.
+00:36:26 [W] So we did what happened that time is we need to know updates of course canonical Ester and everything was working completely fine except for a single application and this application was pretty bad sir, which is a
+00:36:36 [W] Entity banter wasn't able to connect to Paris. But everything is working perfectly fine. The well while we had to do is catch Regina strategy to try and understand what was happening.
+00:36:49 [W] And here is an extract of the catcher with important likes passing in explaining Underside.
+00:36:57 [W] So a few things I wanted I want you to notice is well, first of all, all the queries are using the same Source Port which is a very different Behavior than the ones we were seeing with GBC or go for instance.
+00:37:08 [W] That's word.
+00:37:12 [W] And also what's even weirder is about on the right hand side where you can see this DNS query nice with random case, that's where I mean. It felt very
+00:37:21 [W] Rising to us and it's actually based on a draft from ietf to increase the NSA currency by encoding additional identity for the query using using Roman case.
+00:37:33 [W] So what I wanted to show here is that well, these DNS resolver is really no one we know about.
+00:37:41 [W] It's very different from all the ones we've been working with and the cognitive and talked about before is this one. So as you can see as resolution happen is well, you're getting stress, which is
+00:37:55 [W] Row which is not error under Fox: and on the fifth column, you can see always 0 and then a 1 and this is the trunk a bit flag and this flag is set when your answer is bigger than the maximum size you allow.
+00:38:10 [W] In that case, the query was giving more than the size of the packet. And of course Cardenas was saying well, it's located and usually rated speed to get the full answer.
+00:38:24 [W] It turned out our piggy bank stirs in this cluster where compiled with a resolver that isn't supporting disappear grade and was just ignoring packets when truncate it was said and not doing anything about it and what so wait it was
+00:38:36 [W] You know that right?
+00:38:38 [W] Well it turned out it was a burgundy division of cardiovascular running where truncate it wasn't set when it should have been so since we're working fine because we had two issues one accordion has one page browser. So we just had to recompile petabyte-scale with another
+00:38:53 [W] Fix the problem.
+00:38:55 [W] And well sometimes you know, it's not Janice well to be honest rally.
+00:39:04 [W] So the reason I'm mentioning this idea because quite often change will come to you because they have dinners issues and most of the time they are right if that it is issue.
+00:39:16 [W] And in that case well, look, we're full of Venus errors so they can to us and say well we have a genetic problem.
+00:39:20 [W] And it turned out everything was fine on the DNS infrastructure, but we looked at the overall deer urine requester and we saw that the number of packets received all the nodes.
+00:39:31 [W] dropped significantly and I mean this is not related to your health, right?
+00:39:35 [W] So we looked at network monitoring and of course, you can't measure UDP packet drops by using that easily.
+00:39:46 [W] However, what you can do is look at the TCP connections on your network. And if you see retransmits means it means that I get are getting lost and in this graph you can see that there are a lot of reasons meetings happening exactly at the time of the error and if you look at
+00:40:00 [W] and when we look at the detail, we said that
+00:40:04 [W] for any of these bar there a set the same is he was involved and so we figured that there was an issue with working in this AZ and it was confirmed by the top of either.
+00:40:19 [W] so it was really the Genesis that time but well this was the first impact and what uses so
+00:40:24 [W] so, let's see what we run now to be safe at the datadog.
+00:40:36 [W] So what we do is we run the local DNS, which I was talking about before and either by PBS for all the cholesterol studio for more recent blisters and we use TCP for any connection
+00:40:46 [W] Because it's a lot better.
+00:40:49 [W] However, we use UDP to connect to the cloud resolver because of the limitation I was mentioning before.
+00:40:54 [W] And if you look at the configuration of the containers themselves, well, it's exactly the same as before except the name seller. We use is the ipg bounds by the local resolver.
+00:41:11 [W] And of course we did something else which is we decrease the time out because the default is 5 Seconds and so we decrease it to one second. So if ever we do the packet being more you're going to get a retrial to one second to the file, which is not great, but better.
+00:41:24 [W] What we also did is we gave applications the options to to use another knative result that counts and obtained using annotation and what happens when is when we see sanitation.
+00:41:38 [W] We have imitating web hook that is going to change the configuration of of your birds.
+00:41:46 [W] And the these alternate configuration is using a single search domain which is as we see the first of the protocol and moving and dates back to Two On Me.
+00:41:52 [W] And this means most queries will get an answer in a single query which is much more efficient. And the only curse is you can't continue. Can't resolve salesman Same namespace by just using its name. You need to also provide
+00:42:08 [W] And it's meshmark patient and wishing that equations being very happy about this design.
+00:42:13 [W] Anywhere, we're almost done in conclusion a few messages.
+00:42:24 [W] I wanted to share with you.
+00:42:31 [W] So one of the things you need to remember is running kubernative means you're going to be running DNS and running in is hard and I'm sure most of you know that a few recommendations try and use never called the Nash and cash as imagine as you can also.
+00:42:39 [W] Test your generation for I do load testing you during your days because it's much better to discover the small issues. I mentioned before during testing that production of course and also understand the Upstream DNS dependent because even if what you do is
+00:42:55 [W] a disease which can also fail calls
+00:42:58 [W] and I think the most important thing I wanted to share is for your applications because well Janice will fare, right?
+00:43:15 [W] I mean even if you do a very good job with DNS and your infra you're going to have issues sometimes and you want your application to read to react as well as possible to see shoes. So try and standardize and if you resolve is only because as you seen is in my examples
+00:43:22 [W] We'll put that about four different resolve errs, and there are a lot more out there.
+00:43:33 [W] It's very difficult to understand their exact behavior and to optimize for all of them. So try to limit the number of resolving use you will have I mean it will make the bag emergency pure.
+00:43:39 [W] also try and try and avoid doing resolution for each incoming requests and reconnecting to back Ends by either using lip collection to your back hands or to asking the next resolution to avoid
+00:43:54 [W] Dennis resolution working great to sell sequence queries
+00:43:59 [W] And finally and I think this is the most important thing is include TNS valid test in your application tests.
+00:44:13 [W] So if you look Alice testing includes NSD cuz you want to see how your application is going to behave when you lose a few packets.
+00:44:14 [W] And we're done.
+00:44:19 [W] Thank you very much.
+00:44:23 [W] I'm going to be around for the next few minutes for questions if you if you have any thank you very much.
+00:44:25 [W] Hello everyone.
+00:44:32 [W] There were many questions.
+00:44:36 [W] So I won't be able to answer all of them. But I'm going to answer a few ones don't hesitate to reach out later either on slack or on Twitter with your questions, and I'm really sorry for the questions.
+00:44:47 [W] I couldn't answer won't be able to answer right now.
+00:44:49 [W] So I had many questions regarding observability for college. Nsmcon working at datadog.
+00:44:56 [W] We use datadog for observability, but coordinates exposes promises metrics a lot of
+00:45:00 [W] There are very interesting and of course you can rely on them to know how our coordinates is behaving.
+00:45:10 [W] You can also look for DNS queries because of course it's interesting to know which parts are making queries and which domain they are acquiring for I would be very careful because if you have any queries logs
+00:45:20 [W] When be able to answer right now, so I had many questions regarding observability for college nsmcon.
+00:45:22 [W] So of course working at datadog, we use datadog for civility, but coordinates exposes promises metrics a lot of them that are very interesting and of course you can rely on them to know how coordinates is behaving.
+00:45:23 [W] You can also look for DNS queries because of course it's interesting to know which parts are making queries and which domain they are querying for.
+00:45:24 [W] I would be very careful because if you have any queries logs will hit your disc very hard.
+00:45:26 [W] So maybe don't lock everything or ideally computer coding is to use a p.m.
+00:45:29 [W] And have a fantastic view of your queries.
+00:45:32 [W] And another question I had was how many coordinates replicas we need to you need to use in the cluster.
+00:45:41 [W] So it's very hard to give you a perfect answer to these questions because it will depend on the size of the poster. And of course on the number of queries, you're going to get on your on your organization from to give you an idea on a
+00:45:54 [W] Another question I had was how many coordinates replicas we need to you need to use in the cluster.
+00:45:56 [W] So it's very hard to give you a perfect answer to these questions because it will depend on the size of the Fester.
+00:45:56 [W] And of course on the number of queries, you're going to get on your on your organism from to give you an idea on a largest blisters. We run about 40 to 50 coordinates pots, and we could we could probably make
+00:46:02 [W] make it work with far less spots.
+00:46:07 [W] However, as you sew with what I meant was mentioning about the contract you will see that issues. If too many if you have too many queries on the same listing the same news, we're at time.

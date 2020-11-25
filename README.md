@@ -5,6 +5,9 @@ Hosted @ https://sbueringer.github.io/kubecon-slides
 This repository contains a utility to download KubeCon slides from sched. Just clone the repository and open it in your favorite IDE. Then adjust the `main` method if necessary and execute the program.
 
 Already downloaded slides can be found here:
+* 2020:
+    * [KubeCon NA 2020](https://github.com/sbueringer/kubecon-slides/tree/master/slides/2020-kubecon-na/README.md)
+    * [KubeCon Europe 2020](https://github.com/sbueringer/kubecon-slides/tree/master/slides/2020-kubecon-eu/README.md)
 * 2019:
     * [KubeCon NA 2019](https://github.com/sbueringer/kubecon-slides/tree/master/slides/2019-kubecon-na/README.md)
     * [KubeCon Europe 2019](https://github.com/sbueringer/kubecon-slides/tree/master/slides/2019-kubecon-eu/README.md)

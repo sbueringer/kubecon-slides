@@ -1,0 +1,262 @@
+﻿Stateless Fluentd with Kafka: RPJF-0504 - events@cncf.io - Thursday, August 20, 2020 7:35 AM - 50 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:04:43 [W] Hello.
+00:09:47 [W] I'm my name is Steve McDonald. I am a site reliability engineer at usability by survey on key as you can see a bit about me here.
+00:09:52 [W] So initially joined usability in March of 2018 doing in order to help set up and migrate to new Cloud native infrastructure and around this not of 2019.
+00:10:05 [W] I took on the login component of that architecture, which is what led to
+00:10:08 [W] the material being discussed here
+00:10:10 [W] So our infrastructure is completely running in easy to we have a wide variety of different instances both Legacy infrastructure and Cloud knative infrastructure.
+00:10:26 [W] And we want to aggregate all of those logs together into the one place. So that's that's the goal that we're working towards here.
+00:10:29 [W] Engineer at usable by surveillance key as you can see a bit about a year. So initially joined usability in March of 2018 in order to help set up and migrate to new Cloud native infrastructure
+00:10:37 [W] Two redundant fluentd the aggregators with the flu and the forwarding protocol being used to forward logs from ec2 instances, and we used fluent bit, which is lightweight to see implementation of the fluentd
+00:10:52 [W] From those instances and then those fluentd aggregators. Would of course do any filtering do any rewriting and end up writing the logs to Cloud watch and elastic search which is so we were using Cloud what for archival and elastic search for easy searching the recent
+00:11:08 [W] Cloud watch and elastic search which is so we were using Cloud what for archival and elastic search for easy searching the recent lungs.
+00:11:11 [W] So that's all fairly standard.
+00:11:11 [W] And it worked well to a point, but we ran into a problem that highlighted out quite a few problems throughout the entire block processing pipeline.
+00:11:23 [W] So what we ran into was the first thing that went wrong was that are elastic search plans to that. We were using turned out to be too small to handle the dogs that we are putting into it.
+00:11:37 [W] So that's a fairly innocuous Miss configuration. It means logs can't be written to elastic search but you would expect that. The problem would remain isolated to writing the logs into elastic search.
+00:11:50 [W] Unfortunately that led us into a cascading failure.
+00:11:52 [W] Where we had a Miss configuration of the fluent the elastic search party in which caused log duplication. So this requires a bit more explanation.
+00:12:06 [W] It is documented in the affluent the elastic search plug-in that in case of a partial failure from the elastic search API, the failed messages will be readmitted into the login Pipeline. And the reason for this is
+00:12:15 [W] No way in the fluent the plug-in API for the plug-in to tell fluent D. Some of these log events work successfully submitted but others white, so what so it just remits them from the beginning of the Bob processing pipeline.
+00:12:30 [W] So that was our bad. We haven't read that bit of the documentation.
+00:12:34 [W] So we haven't configured in that way, but that caused log duplication, which both meant logs were duplicated in Cloud watch, but it also meant that
+00:12:45 [W] it also placed a whole lot more load on the floor the aggregators because the word processing the same messages hundreds and hundreds of times over again eventually to the point that they were unable to accept new logs from the fluentd clients,
+00:13:01 [W] Now problem because those thought those logs start backing up in logged office on the individual instances and if one of those instances dies, we lose any logs that were not except by fluentd D, but that
+00:13:17 [W] Just because we we run into a bug in fluent bit. Where as the log buffer grows. It creates more files to hope the additional logs and fluid bit has a bug where it will hold all of those files
+00:13:33 [W] And when it hits its open file linbit, it just crashes.
+00:13:39 [W] It doesn't gracefully recover from that situation.
+00:13:46 [W] So that means that the logs are not even being collected by fluentd once it's crushed but additionally fluentd it doesn't always recover from that situation at all without manual intervention.
+00:13:54 [W] Suddenly linbit.
+00:13:55 [W] It doesn't always recover from that situation at all without manual intervention than seems to be another bug where if it crashes while the log buffer is in the wrong state. It will spam a whole lot of empty invalid log messages
+00:14:03 [W] spam a whole lot of empty invalid log messages app fluently instead of sending it the the actual log message there in the buffer, which means there's now no way to recover those log messages without diving into the internal fluid bit buffer
+00:14:16 [W] And when you lie recovering that which the easiest thing to do is just consider those logs lost and delete the buffer so that it just picks up new locks.
+00:14:29 [W] So this turned out this one tiny Miss configuration in elastic search turned out to cause problems through the entire pipeline even in Cloud watch where the votes were being duplicated. So
+00:14:38 [W] We learned a few lessons from this about the way we were doing things the initial root cause and which is was an overload of elastic search we can easily fix that.
+00:14:53 [W] So that's just a case of giving elastic search more resources, but we didn't want a problem in one part of the architecture to be able to cause a lot of problems elsewhere.
+00:15:05 [W] Secondly the the Miss configuration of the United States fluentd plugin.
+00:15:08 [W] It is documented Behavior, but it highlights
+00:15:09 [W] That it it's difficult to configure fluently plug-ins for reliability because you can't assume that because this is an output plug-in. It's only going to be able to do the function of outputting locks.
+00:15:24 [W] It has full access to film these internal apis.
+00:15:28 [W] And in this case it was using them to behave sort of like an input plugin by re-emitting those log events, which is an input plugins drop fluent bits crashing highlights that if fluently does have availability problem.
+00:15:39 [W] It is documented Behavior, but it highlights that it it's difficult to configure fluentd plug-ins for reliability because you can't assume that because this is an output plug-in. It's only going to be able to do the function of outputting locks. It has full access
+00:15:48 [W] herbal, it depends on the upshot of all these things the fact that one componentconfig knock-on effects earlier on is we need to decouple those somehow so if it's difficult to configure fluentd for reliability and if
+00:16:02 [W] It's difficult to configure fluent in for liability and if fluent in not being reliable causes problems elsewhere, then we must have something in between we need to have a buffer that doesn't break when fluent egos unavailable.
+00:16:12 [W] So we came up with a new plan.
+00:16:18 [W] First of all, we wrote a new tool.
+00:16:19 [W] Sorry not yet.
+00:16:32 [W] First of all, we decided to use Kafka as a central/logan buffer. So all of whenever any logs went from one system to another they would always go via Kafka. They would never get written directly from one school to another
+00:16:35 [W] If you're not familiar with it is a distributed message broker.
+00:16:45 [W] It's it's used in production by whole lot of companies. It has demonstrated fault tolerance.
+00:16:49 [W] We're also using it in our application. So we have confidence in that there are a couple of added benefits to it as well consumers may be stopped entirely which means that if fluent the brakes entirely for some reason such
+00:17:00 [W] What I just described it doesn't the any load produces don't even see that.
+00:17:12 [W] They just keep writing their logs into comforter. And when the consumer comes back online it can reprocess with missed.
+00:17:18 [W] Another added benefit is that you can process the same logs twice by two different applications, which makes testing new configuration very easy. You don't need to roll out a new configuration and find out if it breaks you can have a testing
+00:17:27 [W] Instead reprocesses the same logs on real data with a new configuration and just see what happens.
+00:17:36 [W] So given all of these advantages.
+00:17:41 [W] It seemed like a good fit for a logging buffer. At least for our use case. We also noticed that we only really need half of what fluentd was doing for us.
+00:17:52 [W] So what fluentd does is it takes logs from a variety of sources puts them into a buffer that it manages internally and then writes those logs out from that.
+00:17:58 [W] Buffered to some destination in our case. It was affluent the instance, but it can also be comforter or whatever else but we don't actually need that first part reading logs from various sources because all of our machines are running systemd and
+00:18:13 [W] Componentconfig Journal D that maintains a unified logging buffer to aggregate all of the logs on a particular host.
+00:18:28 [W] So we already have a login button over there any log exported that just reads that and write it into another buffer is providing duplicate functionality.
+00:18:35 [W] So we only need that second half. We only need something to read from the systemd journal and write those logs into Canada and then has a matter of architectural design. We can say anything that logs must log to the journal.
+00:18:44 [W] Oh and from there, it will be picked up and taken her it needs to go.
+00:18:50 [W] So that's all well and good.
+00:18:54 [W] That's the general design that we're going for what code do we then need to write to to make this design architecture happen?
+00:19:08 [W] So the first thing we developed is a tool called para para, which is just a silly upon so fluently is a Japanese project and para para is Japanese for fluent.
+00:19:11 [W] So it's just reversed we looked
+00:19:15 [W] Into using the existing fluent bit comes with a plug in for this but what that does so it uses a library called Liberty Kafka, which is the same computation of the casket protocol and the
+00:19:28 [W] This is our connection happen.
+00:19:30 [W] So the first thing we developed is a tool called para para, which is just a silly upon so fluently is a Japanese project and para para is Japanese for fluent.
+00:19:30 [W] So it's just reversed.
+00:19:31 [W] We looked into using the existing fluent bit Kata plugin for this but what that does so it uses a library called Liberty Kafka, which is the same communication of the Cascade
+00:19:32 [W] For performance reasons is when you write a message to it.
+00:19:34 [W] It puts it into an in memory buffer.
+00:19:38 [W] And then once it's aggregated some messages, it'll write a batch to cover the fluent bit Kafka output plug-in considers a right successful as soon as Labonte Kafka has it in it in memory buffer.
+00:19:49 [W] So if linbit crashes while there are messages in that buffer you just lose them and we didn't want to we didn't work didn't want that behavior, but also all of the problems that we encountered with fluent bit were
+00:19:59 [W] Related to the way that it does bathroom and we were as we already said we don't need it to do any buffering because we have above so we developed para para, which is a very simple tool. It doesn't support more than one login put it
+00:20:14 [W] Output all it does is read the systemd journal and write everything in it too comfortable with no processing minimal filtering.
+00:20:23 [W] The only thing it does it's filter out its own messages. If you enable debugging to avoid right application and we also use message pack, which is the same serialization format used by fluent.
+00:20:38 [W] He's knative forwarding protocol because what my reasoning was that it would be most likely to give us the best compatibility with Florentine fluently can also read tracing messages from Calcutta.
+00:20:45 [W] We weren't request track and it's the only state the para para itself keeps is the journal cursor, which is just an address within the within the journal the cursor.
+00:20:59 [W] That was the last acknowledged by the Kafka broker so waits for the broker to acknowledge that something has actually been committed to the Catholic cluster before it says, okay.
+00:21:12 [W] I've actually written that so if para para crashes next time it starts up it starts reading from that last successful, right?
+00:21:17 [W] So barring any bugs were guaranteed that no log messages will be lost.
+00:21:21 [W] The other component them is making fluent the work stateless lie and what I mean by that is if we want to use Kafka is the centralized log buffer.
+00:21:38 [W] Knowledge that something has actually been committed to the Kafka cluster before it says okay.
+00:21:46 [W] I've actually written that so if para para crashes next time it starts up it starts reading from that last successful, right? So barring any bugs were guaranteed that no log messages will be lost.
+00:21:47 [W] The other component them is making fluent the work stateless lie and what I mean by that is if we want to use Kafka is the centralized log buffer.
+00:21:50 [W] We want fluent Dean not to keep its own State because it should be using Kafka to visited state.
+00:21:52 [W] This is a bit complicated because fluently has there are buffered and unbuffered output columns for fluentd the and the
+00:21:53 [W] the choice of whether a plug-in supports Buffett around button mode is up to the plug-in over and not the plug-in user if the plug-in office supports both than the plug-in user can choose but most output plugins only choose to support Buffett mode for performance reasons because
+00:22:06 [W] there are buffered and unbuffered output pilings for fluently and the
+00:22:06 [W] the choice of whether a plug-in supports buffer around of mode is up to the plug-in over and not the plug-in user if the plug-in office supports both than the plug-in user can choose but most output plugins only choose to support buffered mode for performance reasons because
+00:22:09 [W] Time you don't want to make one right call for every log message. You want to batch them together?
+00:22:14 [W] That's not a problem when we're using kafka's a log buffer because we can batteries from Kafka but this isn't the way that these plugins were designed to work. So we would have to re-implement every output plug-in fluentd the as a nun buffered up plug in order to do this,
+00:22:30 [W] We didn't want to do that. So we didn't so what we did instead was we
+00:22:36 [W] wrote One plug-in. So there is an existing output plug-in fluently called buffer eyes, which intended to give a buffer to an output plug-in that doesn't support buffering so it basically wraps another plug-in and
+00:22:52 [W] Dogs, we wrote the opposite of that plug-in. So we wrote a plug-in called one buffer eyes.
+00:23:03 [W] And what that does is it it presents itself to fluently as an unbuffered upload plug-in and it presents itself to a wrapped plug-in as the fluent ibuffer API so that that plug-in is
+00:23:12 [W] Having messages written to it from a buffer when in fact, they're coming directly from fluentd input plugin.
+00:23:18 [W] And it also I'm not going to go into too much detail here it performs chunking of each stream so that you can use chunkies in strings in the configuration.
+00:23:35 [W] If you've used fluently you'll know where this is useful. If you haven't it'll take you long to explain but and but this only works well when you can batteries as I said, which is perfect if you're using Kafka because we can easily batteries from Comfort. This wouldn't work. Well with
+00:23:43 [W] I haven't it'll take you long to explain but and but this only works well when you can batteries as I said, which is perfect if you're using Kafka because we can easily batteries from Comfort. This wouldn't work.
+00:23:45 [W] Well with fluent. He's forwarding in would plug in because that just reads however many messages the client centered at the time.
+00:23:51 [W] So if we put that all together what actually happens with influent d is the input plug in the the in keptn plugin will not commit a read together and commit means inform Kafka.
+00:24:06 [W] Yes.
+00:24:09 [W] I've read these messages don't don't send them into me again. The input plug in word actually do that commits in tool the emit core, which is the name of the function in fluentd that sensors and their log event to be processed returns. Successfully
+00:24:22 [W] Bent to be processed returns successfully.
+00:24:22 [W] Normally, this will return when they've been committed to the buffer with influency within the output plug-in, but with the on Buffer areas plug-in, we made sure that it instead returns. Once the logs have been written out successfully to their final destination.
+00:24:37 [W] So we're sure that they're actually on stable storage wherever they're supposed to go before we say to Cafe.
+00:24:42 [W] Yes.
+00:24:43 [W] read these messages.
+00:24:45 [W] We also made sure that if an exception is raised in any of this code, it does get propagated back to the input plug in and the readers not committed.
+00:24:55 [W] So any errors will result in a retry of reprocessing those locks. That means that we have at least once rather than at most once delivery so we can get duplicate logs, but that's better than losing looks at least for our use case.
+00:25:05 [W] So here's a diagram of how it all fits together instead of fluent bit on the ec2 instance.
+00:25:14 [W] We have para para doing nothing but reading from the journal and writing to Kafka.
+00:25:15 [W] The Kafka topic is then an intermediary buffer. We hafta is as I said highly available.
+00:25:25 [W] It can easily survive the loss of a node.
+00:25:29 [W] So para parent should theoretically never have a problem right into that.
+00:25:39 [W] Now that I've said that probably gonna have an outage with it, but you get what I mean, so it doesn't break it fluently goes down as the point fluently reads from
+00:25:43 [W] The topic is then an intermediary buffer. We hafta is as I said highly available.
+00:25:53 [W] It can easily survive the loss of a node.
+00:25:53 [W] So para parent should have theoretically never have a problem right into that.
+00:25:55 [W] Now that I've said that's probably gonna have an outfit with it, but you get what I mean, so it doesn't break it fluently goes down as the point fluently reads from
+00:25:56 [W] That Kafka topic and write it to another task a topic and here's the other thing that we can do with this.
+00:25:58 [W] It's we can we can break up the fluently logic into multiple different fluentd the processes.
+00:26:03 [W] So rather than having one fluently that those filtering and also writes to Cloud watching left it search we have another calf qutopic in between the filtering fluently and the up floaties and they benefit there it is if we have another outage with elastic search the
+00:26:08 [W] So rather than having one fluently that those filtering and also writes to Cloud watching left it search we have another calf qutopic in between the filtering fluently and the output floaties and the benefit.
+00:26:09 [W] There it is.
+00:26:11 [W] If we have another outage with elastic search. The only thing that can affect is that one little fluency on the bottom right of the diagram it that cannot be propagated any further back through the chain because all that fluid is doing is reading from a cadaver topic
+00:26:19 [W] That Kuma T is doing is reading from a cover the topic.
+00:26:22 [W] The filtering plug-in will have no knowledge of this Cloud log messages will not be duplicated in Cloud watch because it doesn't affect the top right fluently and it definitely doesn't cause any problems at all with para para.
+00:26:34 [W] So putting kind of get in between these these sort of rolls makes everything a lot more reliable at least in theory.
+00:26:42 [W] But how does it work in practice? So we found it worked a lot better than the previous approach it actually made things faster overall because without the buffer with influent d we would just processing bachelor's from Catholic as soon as they came in
+00:26:57 [W] In pain point for it is now the way that Ruby cuff good Library works.
+00:27:12 [W] It only sends heartbeat messages to Cuff Co in between processing log patches, which means we can either have nice big log batches and very infrequent heart beats. So it takes a long time to recover from failure or we can have short
+00:27:16 [W] Big Globe patches and very infrequent heart beats. So it takes a long time to recover from failure or we can have short heart beats so that it recovers quickly from failure, but we have to process really tiny batteries of logs and then run into stuff like Cloud watch API
+00:27:24 [W] Process really tiny batches of logs and then run into stuff like kind of watch API limit speakers were processing those dogs too frequently.
+00:27:32 [W] So that's that's a bit annoying that was also difficult to debug because the the sorry the Kafka plugin for fluid d-doesn't log messages from the
+00:27:42 [W] By default.
+00:27:50 [W] So took me to me a while to figure out there actually look message that I was missing that but they eventually got to the bottom of that and also fluent the still use a lot of memory on the order of several gigabytes per fluent the process so we go back to the diagram
+00:27:59 [W] Each of these guarantees is using several gigabytes of memory.
+00:28:06 [W] And of course if you wanted the if you want them to be highly available, then you're running multiple fluentd.
+00:28:12 [W] He's for each of these fluently boxes in this diagram.
+00:28:23 [W] So that's also we can afford it. But it's also not not ideal especially when we're not processing or Bachelors that big we had to make various fixes. So we've submitted a total of nine patches
+00:28:27 [W] Objects in the process of this work, I won't go through all of them, but a couple of the things that we did were we added metrics to the Prometheus plugin for flowdde to report the oldest to newest time keys in the buffer.
+00:28:42 [W] This was before we decided to go with the new approach.
+00:28:46 [W] We wanted more visibility into fluentd is buffering.
+00:28:49 [W] thing that flowmill D lets you do is chunk buffers by time key. So you say basically cut logs up into ten seconds or 30 seconds or 60 second.
+00:28:57 [W] It's and write each one to a separate Chunk in the buffer and I just wanted to have metrics so we could see okay, what's the oldest time key that we haven't yet processed. And also, what's the newest time here? So we know if there's some delay Upstream from tea with Falco
+00:29:12 [W] Better ways of finding these metrics using the metric to look on of the TUF consumer group lab, but those metrics are now on the open source project. So if you're doing things the traditional way with fluently you can make use of that.
+00:29:28 [W] Project. So if you're doing things the traditional way with fluently you can make use of that. We also did some fixes for the way time stamps were handled so we can use calculus timestamps as our canonical source of timekeeping rather than having a separate time
+00:29:37 [W] Timestamps as our canonical source of timekeeping rather than having a separate time stamp within the message even cut already points that and we also implemented correct consumer group rebalance were previously. So the way a consumer group in Telco works is
+00:29:47 [W] if you have a group of consumers that work collaboratively and when a group is formed each group member sends join group message to the Kafka broker, which will wait until it receives.
+00:30:03 [W] Well, it'll wait for a timeout or until it receives join group from all known consumers in the case of containerd group rebalance.
+00:30:13 [W] There was a dog who in Ruby Kafka we're using an old version of the drawing group message that that didn't that the cause the broken not to wait for timeout. So every time a new consumer trying to join it would end up in a consumer group of one and all of the
+00:30:28 [W] Target the group so they were fighting each other of the processing logs and cereal instead of processing them in parallel as the supposed to so we also fix that so we make there are a bunch of improvements there that that other projects can also make use of
+00:30:45 [W] There are a bunch of improvements there that that other projects can also make use of and now there is some bad news.
+00:30:52 [W] So I talked a bit about the fact that the the Ruby Kafka plug-in makes it difficult to balance. Nice big log batches with reasonable value recovery times.
+00:30:58 [W] For that reason after this talk was submitted and it already had a title we decided to drop fluent the reprocessing log messages from Kafka.
+00:31:14 [W] We this approach in general is still possibly useful for anyone else who might want to try a deployment like this with fluently, but it's not all bad because we are still using fluently in one case so
+00:31:22 [W] Even get to para para on our kubernative cluster.
+00:31:28 [W] We're using fluent deed to write the kubernative locks into the journal.
+00:31:35 [W] So that's when I said before we've made an architectural decision that all logs on an old go to the journal and that is our canonical buffer.
+00:31:44 [W] So we use fluently as the way of getting logs into that buffer for the made it this is what the third iteration looks like and this also illustrates a nice property of the design that we went with and which is that components can be replaced
+00:31:50 [W] Just take fluentd out of the slots here in this diagram where was and put in calculus dreams and stuff click connect. We also switch to S 3240 of archival for other reasons, but
+00:32:06 [W] Is we could still use fluentd if we wanted to so we could still use fluently for filtering and use Kafka Connect Four output or we could use we could go the other way and use cover the streams for filtering and useful indeed for output.
+00:32:22 [W] So breaking things up with Kafka buffers in between makes it possible to independently replace each component of the architecture without needing to consider dependencies as long as as long as each component agrees on the
+00:32:35 [W] Recall that gets written to the Kafka topic para para didn't need any modification to deal with the fact that we were placed fluentd with countless dreams. So that's that's the real power of this the solution and we may bring fluently back into it
+00:32:50 [W] To add it back in because we can just slot it in wherever we wanted.
+00:32:56 [W] So the and the future of this we I mentioned some of the open source contributions.
+00:33:03 [W] We've made we are looking at the possibility of open sourcing some of the new software we've written if we find that it's not too specific to our setup.
+00:33:15 [W] Currently. I can't make any promises at all there, but we are looking at the possibility and for updates. You can look at our GitHub hog, all you can feel free to reach out to me personally if you if you want and yeah, so
+00:33:25 [W] And are there any questions?
+00:33:28 [W] Hello, so I'm going to go through these questions in the order that they came in. So the first one which
+00:33:45 [W] should be.
+00:33:48 [W] Appearing now.
+00:33:55 [W] How did you detect influen deeded? The dogs were being sent duplicated?
+00:34:00 [W] We actually detected that in Cloud watch because we were noticing that kind of watch had hundreds and hundreds of the same log over and over again.
+00:34:13 [W] So that was actually tracking down where that came from did involve. Look at the fluentd logs the we in the logs. It was just saying that there were partial failures run to elastic.
+00:34:19 [W] Watch and I actually went and looked at the elastic search plug-in code and eventually found that it was documented in the readme and with missed it, but the initial way we found it was just seeing that they were duplicate called Sinclair watch.
+00:34:34 [W] Miss configuration that caused duplicates within fluently due to partial success requests in the end.
+00:34:49 [W] We handled it by completely changing in changing the architecture as described in the TOC, but the short-term fixes the elastic search plug-in will re-emit those logs with a particular label and you can match on that label
+00:34:58 [W] Short-term fixes the elastic search plug-in will re-emit those logs with a particular label and you can match on that label and just throw them away. If you the short term fix which are just just throw them away so that they stopped being duplicated.
+00:35:06 [W] The short-term fix which rigid just throw them away so that they stopped being duplicated. But ideally you're supposed to handle those remissions properly.
+00:35:11 [W] This one. I'm not entirely sure what it's a difference between fluently flowing but with Kafka integration, I assume that's asking about the difference between the two architectures
+00:35:28 [W] Twins going to float but with Kafka integration.
+00:35:29 [W] I assume that's asking about the difference between the two architectures with the fluent D forwarding protocol fluent bit sends log messages directly to fluently over TCP connection whereas with Kafka
+00:35:38 [W] Well, it's still going over TCP connection. Been Kafka isn't doing anything smart with it.
+00:35:45 [W] So it's much less likely to break.
+00:35:46 [W] Is is there a way to know maybe looking to decode if an output plug-in does or does not support suffering?
+00:35:58 [W] Yes, there is at the very least.
+00:36:00 [W] You can look at the code.
+00:36:02 [W] There are probably other ways.
+00:36:05 [W] But if you look at the code they will there are two methods that can Implement.
+00:36:10 [W] There's one called process and one called right one of those is buffered and one of them is unbuffered and I don't remember which ones which but yes, you can easily see from looking at the code which
+00:36:21 [W] implements
+00:36:22 [W] this next one is a good question.
+00:36:27 [W] How many logs can you ingest and consumed with the solution so far?
+00:36:36 [W] We so far. It's handled all of the log volume that we've thrown at it. So I don't know what the upper limit is, but it's
+00:36:41 [W] Higher than that the most logs that we've had to try to use it. I can get you better numbers. If you want to ask that one again in the slack Channel after the talk.
+00:36:55 [W] Next one.
+00:37:02 [W] why don't we use fluent the memory buffer instead of unbuffered mode? Because we want to make sure that it fluently crashes while something is in its buffer. It gets properly flushed.
+00:37:14 [W] Sorry, it gets it doesn't we don't lose those log messages.
+00:37:25 [W] So what we were doing previously was using disk buffering and we we actually had that on in EBS volume attached to the instance so that if the instance died completely we still
+00:37:30 [W] That EBS volume with the buffer. So we recover those locks with a memory buffer. You don't even have that option if the flow of the process dies while there are logs in the buffer. You've just lost those lost those logs forever.
+00:37:44 [W] So the advantage of using unbuffered mode is that the input plug in the casket input plug in won't acknowledge that it's written.
+00:37:57 [W] Sorry that's read those messages from Kafka until the output plugin has actually written them. So it
+00:38:00 [W] It guarantees that we don't lose loodse. Did we consider Apache Pulsar instead of Kafka know to be perfectly honest.
+00:38:14 [W] I've never heard of Apache Pulsar before but one of the reasons we use Kafka is that we're also using it in our application.
+00:38:19 [W] So it made sense to use technology. We were already familiar with
+00:38:22 [W] Our open source.
+00:38:31 [W] No. No, / not yet.
+00:38:37 [W] I said, I can't make any promises of moment, but it's one of the components that we're looking at the possibility of open sourcing did.
+00:38:45 [W] Did you ever encounter missing logs in journal d?
+00:38:56 [W] I'm not sure what so we Journal D is kind of our canonical.
+00:39:04 [W] That's what we treat as our canonical source of logs to export so that's in a way the definition of a log message existing is going into Journal d.
+00:39:10 [W] I can't say that we've ever been encountered a situation where we've had a we found a log message that we thought should be in journal deep isn't the only thing is if
+00:39:25 [W] Entrance of para para falls behind it can miss log messages if the journal gets rotated, but that's a matter of configuration.
+00:39:38 [W] First of all prepare doesn't tend to fall behind often and second of all you can adjust the the journal rotation if you need to.
+00:39:45 [W] So how many people do we have on this team?
+00:39:53 [W] It's a good question teams been we fought we shoveled a bit in terms of people actually working on this I'd say to people who have worked on it in any significant.
+00:40:04 [W] Cassidy
+00:40:06 [W] Did we evaluate using file be as local Shepherd?
+00:40:18 [W] Notably honest.
+00:40:18 [W] I haven't that's something I haven't heard of either.
+00:40:22 [W] So this next one is an interesting question.
+00:40:33 [W] What were the red flags before deciding to improve the solution during the various iterations?
+00:40:35 [W] That's the kind of a really broad question.
+00:40:44 [W] I would I would say that the most important ones I described during the talk, so.
+00:40:54 [W] clearly the initial problem that led to this restructuring is a problem with the problem that was caused by elastic search having problems and backing up throughout the the stack
+00:41:10 [W] Was issues well kind of red flags.
+00:41:21 [W] None of them by themselves was very serious, but all put together they kind of convinced us that we had to had to change something.
+00:41:22 [W] Next question is we show the case dream.
+00:41:35 [W] Why not use fluent D source and elastic search think connector we could do that and we were doing that. We the reason why we stopped doing that because as I said that there are problems with the Ruby Kafka library that
+00:41:47 [W] The source and elastic search sink connector we could do that and we were doing that. We the reason why we stopped doing that because as I said that there are problems with the Ruby Kafka library that
+00:41:48 [W] That make it difficult to consume batches of messages effectively.
+00:41:54 [W] You can either have really big batches and very infrequent heart beats so that it takes a long time to recover when something goes wrong or really small batches and really short heartbeat. So you kind of quickly if things go wrong, but you end up doing
+00:42:07 [W] Select clutch, which to be honest in the case of elastic search was not that big of an issue was more Cloud watch because of its API limits, but we decided to just go with half the streams for everything.
+00:42:19 [W] So this question is asking did we have a particular config for the topics and Kafka?
+00:42:39 [W] We currently we have 24-hour attention, which is more than enough. We always process those logs in a timely fashion replication factor. I think is three or so, it's fairly standard.
+00:42:48 [W] configuration
+00:42:50 [W] Someone is asking. Can I explain what Scuff the does its work?
+00:43:00 [W] As I said it's a distributed messaging broker. So you it you essentially have one thing that writes messages to it. And another thing that reads messages from it. And the whole point of Kafka is to be very reliable and distributed and fault-tolerant. So there's obviously
+00:43:14 [W] Reading and writing messages.
+00:43:21 [W] The idea is that it should basically never go away because it can survive all kinds of failure modes.
+00:43:23 [W] That's it in a nutshell any more than that.
+00:43:29 [W] I think it's out of school, but there is excellent documentation on the Kafka website if you want to read that.
+00:43:31 [W] Next question is did we think of using Flink over fluently when it comes to stream processing?
+00:43:50 [W] No other I also I haven't heard of Frank to be honest. We did I did look briefly at I'm completely drawing a blank now of the
+00:43:58 [W] There is another tool that I looked at.
+00:44:10 [W] I can't remember the name of but in the end it was fluently seemed to be the thing that had all the plug-in that we wanted for filtering and and so forth.
+00:44:17 [W] And I mean it would have worked.
+00:44:23 [W] Well if it hadn't been for the problems that we had reading messages from Calgary in a reasonable fashion, but in the end of got the next and have this dreams turned out to be I think the best fit
+00:44:35 [W] Using tough go we might as well use the method of Kafka provides for this stuff something. That's all the questions for now, I think well, thanks very much for coming.
+00:44:50 [W] very much for all the questions.
+00:44:51 [W] And yep, please join in this lecture. No that's on your screen now.
+00:44:56 [W] Bye.

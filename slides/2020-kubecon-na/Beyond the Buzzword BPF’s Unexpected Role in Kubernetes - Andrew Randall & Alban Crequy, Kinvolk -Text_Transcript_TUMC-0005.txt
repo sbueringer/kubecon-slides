@@ -1,0 +1,262 @@
+﻿Beyond the Buzzword: BPF’s Unexpected Role in Kubernetes: TUMC-0005 - events@cncf.io - Thursday, November 19, 2020 5:42 PM - 37 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] So welcome everyone to our session on BPF where we hope to go beyond the buzzword and explain how this call the next technology can have a real impact on your daily kubernative experience.
+00:00:14 [W] an open source company based in Berlin
+00:00:17 [W] Thanks.
+00:00:18 [W] Hi. My name is Albuquerque.
+00:00:20 [W] I'm a co-founder and control Gondola director of our Labs team, which is actually very active in various communities and BPF related projects.
+00:00:28 [W] Yeah, and I know it's always a struggle working out who's speaking in a joint talk. So to help you out.
+00:00:34 [W] Just remember that.
+00:00:35 [W] I'm the one with the British accent. That's Andy.
+00:00:38 [W] And I am how about the one with a French accent?
+00:00:40 [W] So first of all hands up those in the audience, if you've heard of BP F 4E B PF and hands up.
+00:00:48 [W] Okay.
+00:00:49 [W] I see a few of you out there for you at the back maybe not so sure. So for those of you who aren't so clear the concept of EPF or extended Berkeley packet filter is pretty simple at a high level.
+00:01:01 [W] First of all, it allows the user to write programs that run in kernel space now.
+00:01:08 [W] Brendan Greg of Netflix put it.
+00:01:11 [W] This is a fundamental change to a 50 year old Colonel model because up till now you've been used to writing programs that run in user space.
+00:01:19 [W] Now, you can actually run them in the context of the colonel. Now, these programs are not completely unrestricted.
+00:01:25 [W] There are certain hook points where they can attach into the kernel and data structures and helper functions that are available to them and lastly they run in a restricted virtual machine.
+00:01:37 [W] to write programs that run in kernel space now as Brendan Greg of Netflix put it this is a fundamental change to a 50 year old Colonel model because up till now you've been used to writing programs that run in user space now you
+00:02:27 [W] In certain strict conditions to ensure that for example, the Cobalt complete and not hanging the kernel in an infinite Loop.
+00:02:35 [W] So why do you care about this because as a as a kubernative application developer, you're probably not going to be writing BPF code, but you are going to be using capabilities that BPF surfaces to you. So the first of those
+00:02:51 [W] potentially some of the fast networking and customizable networking capabilities that you get available with BPF next anyone who writes applications need to debug applications and BPF
+00:03:06 [W] Next anyone who writes applications need to debug applications and BPF provides some pretty cool tools for surfacing things that are going on in the kernel. Let help you debug either feature
+00:03:19 [W] Things that are going on in the kernel that help you debug either feature problems or performance problems and lastly from an operations perspective.
+00:03:30 [W] BPF gives you some capabilities that really help when it comes to monitoring applications and also particularly monitoring them from a security perspective to check that you haven't got a tax in your cluster.
+00:03:43 [W] So these are all pretty good reasons to care about BPF. I think so at this point, I'm going to hand over to able to talk to you a little bit about the history of EPF and how we got to where we are today.
+00:03:59 [W] So it started in 1997 where we had the first version of the EPF. It was used for TCP done so far Network capturing on this one's pretty much it until much later in 2014.
+00:04:15 [W] when we have the new EP F 4X and a DPF, so Alexei server stuff come up comes up with the idea of a universal internal virtual machine where we are kind of different he bof program running together
+00:04:30 [W] If you have applications week later in 2015, we have the eye of iser project established but comes initially from a plum grid technology from Green and then it
+00:04:36 [W] under the Linux Foundation Android up
+00:04:38 [W] a week later in 2016. We have XD P 4X Plus data path. And that's the idea to apply the BPF program very early in the network stack.
+00:04:48 [W] So that white in unique. Ideally we can filter packets on block unwanted traffic speed make it very fast in 2017. We have in the Linux kernel 4.11.
+00:05:03 [W] You data structure like LPM maps that make it possible to filter large amount of Ip or cidr on the network traffic in
+00:05:16 [W] A feature called Socko. Yup. That's a new BPF map that's used for intra first Network to make it very fast by bypassing the network stack that's used in psyllium on issue when we use
+00:05:28 [W] Mesh together with him for example in 2018 Facebook announced the project Catherine.
+00:05:33 [W] That's a BPF load balancer on Facebook. And also the world that they are using that on the networks.
+00:05:42 [W] 2018 we have a new BPF helper function for filtering events by cgroup that's used for containers on for example, I use that in twist loop on Inspector Gadget to figure out which
+00:05:57 [W] spot on which continent
+00:05:59 [W] and lastly my section can allow for that hate sorry 5.8. We have a new kind of EPF ring buffer as a communication mechanism between the VP of programming Channel 2 user space as a
+00:06:14 [W] His mouth much more efficiently Murray waste so I picked a few of those item to show how it's relevant to the vanities for example with a cilium or sto dressing tools on kubernative.
+00:06:25 [W] So let's take these capabilities that above talked about and look at the landscape of tools that are out there that you can use. So the first layer that I want to talk about is the sort of low level tools
+00:06:40 [W] A lot of them have been around for quite a while where you get very low level access to BPF capabilities typically on an individual hosts that are process level something like BPF tool which actually ships with the Linux kernel or the
+00:06:53 [W] Action, which we'll talk about in a minute. If you're coming a PDF from a program perspective and you want to be able to write programs to inject into the kernel. Then there are libraries available that you can
+00:07:03 [W] Shortcut a lot of these capabilities to make it a lot simpler whether you're writing in go or C++ or rust or python.
+00:07:09 [W] There's probably a good library for you out there when you get the next layer up, we start to look at more complete Solutions and less kind of individual apis and libraries and in security and
+00:07:24 [W] Slayer up we start to look at more complete Solutions and less kind of individual apis and libraries and in security and networking space is one of the main areas for the BPF is used psyllium was one of
+00:07:39 [W] The main areas for BPF is used psyllium was one of the first BPF enabled networking Solutions in kubernative. But Calico is added it as well recently.
+00:07:52 [W] Keptn Catrin have all mentioned Falco is used in for security applications from sysdig.
+00:08:00 [W] So a lot of things that you can plug into kubenetes there then the last layer invisibility. This is I think
+00:08:09 [W] Think you know something that anyone in up from an operational perspective should be looking at these tools to say, how can this give me greater insight to what's running in my cluster.
+00:08:18 [W] So things like we've scope or Hubble actually provide the capability to see in real time.
+00:08:26 [W] What what network connectivity is happening how things are connecting in the cluster.
+00:08:32 [W] There's a few other tools as well, which don't fit neatly into any of these categories things like the cloud flare ups.
+00:08:39 [W] exporter project or net cost which actually analyzes your network traffic to give you some idea of what it's going to be costing you to run that in the cloud as an example of one of these tools Hubble Is
+00:08:55 [W] As an example of one of these tools Hubble Is from psyllium folks sits on top of the psyllium cni-genie.
+00:09:24 [W] Our team of Kinfolk work together with weaveworks to author the agent that collects the data using BPF about network connections, you know in this graph here, you can see which pods talking to which poddisruptionbudgets.
+00:09:54 [W] The BPS compiler collection with mentioned a couple of times because it really is the granddaddy of all these BPF tools in the nice thing about BCC is it's very kind of Linux style. So these are command line tools
+00:10:09 [W] arguments that do one thing do one thing well allow you to Snoop and control your system, you know, really quite easy to get up and running and using any of these tools and I recommend you check those out if you haven't already
+00:10:25 [W] His kind of the cousin to BCC maybe less well known and less frequently used because it does have a bit of a learning curve, but it's great for quickly writing custom BPF functions. It's got a lot of flexibility for tracing and debugging your Linux apps.
+00:10:30 [W] As you can see with this, is he on BP have twins. There are a lot of tools really powerful one that come off of the Shelf, but they don't know anything about containerless our communities. So if you own communities on you want to run that on your communities
+00:10:45 [W] pricing and debugging your Linux apps
+00:10:49 [W] As you can see with this, is he on BPF twist.
+00:10:52 [W] There are a lot of tools really powerful one that come off the shelf, but they don't know anything about containerless or communities.
+00:10:59 [W] So if you own communities on you want to run that on your communities cursor, there is no easy way to use them, but I don't if only there was a really easy way that these people Keda running kubernative Custer's could
+00:11:35 [W] The right to use them but I don't if only there was a really easy way that these people could running kubernative clusters could take some of these tools and apply them in kubernative.
+00:11:47 [W] Yes. He funny that's where can folks Inspector Gadget to come in concern.
+00:11:54 [W] so you can take off Inspector Gadget has a Swiss army knife of BPF tools or gadgets for communities. Some of them come directly from BCC with a tiny rubber on top of them.
+00:12:04 [W] To make them kubernative aware and some other are developed my Kinfolk independently outside of ECC.
+00:12:15 [W] So what do we need to make a BPF tool Community said well, we need a few things first the granularity that we care about.
+00:12:23 [W] We don't want to trace other PhD level of process level.
+00:12:26 [W] We don't necessarily want to trace all the processes on the system.
+00:12:32 [W] We only want to dress a process from a specific Parts injury, that's not something so easy to do because vpf programs running in the canal.
+00:12:41 [W] They don't know anything about kubernative sports or kubernative levels, so
+00:12:45 [W] We need to do a bit of work there.
+00:12:48 [W] Another thing we want to do is to aggregate the information but levels so we don't want to see the piece or to select individual process but aggregate using community service on the last thing I
+00:13:04 [W] Teacher like experience.
+00:13:05 [W] So if a person don't need to SSH on a specific node, they should not need to know in advance.
+00:13:10 [W] This is the another where my brother is on is running.
+00:13:13 [W] They should have kept such an experience where there are command line interface directly for that.
+00:13:22 [W] So ideally that's a cute little plug-in which is exactly what we do.
+00:13:28 [W] It looks a bit like that.
+00:13:29 [W] So other bottom left arm on the my laptop, I use a cute little Gadget that's a computer plug in so it executes the procedure Gadget again, and then it only talks through the kubenetes API.
+00:13:42 [W] It doesn't ssh-1 you note if you use kubernative knative Concepts like birds on him on set and so on from there Inspector Gadget deploys both on each note. That's a demand set and each of them will be able to
+00:13:58 [W] Execute the different gadgets and it will execute for example twist Loop those from BCC those will install a BPA program in the canal on the canal will be able to gather information on Sunday back on send it back up to the
+00:14:13 [W] to give CTL Gadget
+00:14:01 [W] So what do we have today as Gadget Inspector Gadget?
+00:14:04 [W] The first one here is capabilities.
+00:14:06 [W] It's a way to get information about capabilities that are exercising your body.
+00:14:12 [W] the use cases. For example, you have about the need some privilege maybe need coming and I mean can see Samia but is quite difficult to know if you are not deep into this level of canonical.
+00:14:31 [W] It is but that's not so great security right instead of just giving what you need.
+00:14:35 [W] This truly is allows you to run the Pod and see what actual Keda BTR exercise but the product and then you can pick that information to write your pain stake on this piece.
+00:14:48 [W] but our Gadgets in Inspector Gadget AA open Snoop exact Snoop buying soup the tells you the tell you when a file is open when a new binary is executed when there is a new TCP Port open by your pants
+00:15:03 [W] In real time. It happened other tools artistic it up on TCP Tracer. So that gives you the network traffic happening inside the body and what is the most voluminous traffic with the participate
+00:15:05 [W] His to see if it was there where you can see when new line for each new TCP connections to see what's happening new pods.
+00:15:02 [W] Profile is a CPU profiler that this one comes directly from BCC has one.
+00:15:07 [W] It's useful to see why something is so sometimes it's not so easy to see which part and which things so one example I had to debug is when there was a community system with way too many are petabyte-scale
+00:15:22 [W] Was on there was a bug in all direction of humanities.
+00:15:23 [W] And then this generate that right Network traffic to be slow.
+00:15:29 [W] But that's was not so easy to debug with this tool we could see what are the network of sorry the kennel stacks on user space stack that are the mostly most often called and then I can see what's happening there.
+00:15:45 [W] Twist Loop is like a little flight flight recorder.
+00:15:50 [W] a record other system called done by all the pods and keep them in a memory in a window fell on just in case something crash. Then the user can ask what happen on see the last few season calls exercised.
+00:16:05 [W] The last one I'll talk about now is Network policy advisor.
+00:16:09 [W] It's the use case is he when you come to develop to implement Security on your quads, but you come to a project without any previous knowledge of that is quite difficult to know what is supposed to talk to which other problems so
+00:16:24 [W] The zettabytes are you can on your product and see what kind of network activity is there and it will automatically create network policies that you can look see if they make sense and if they make sense pick them up, it's a lot faster than creating them from scratch.
+00:16:35 [W] Look see if they make sense. And if they make sense pick them up, it's a lot faster than creating them from scratch when you don't have any general age of the project.
+00:16:35 [W] So let's take a look of a couple of those tool in actions.
+00:16:41 [W] Let's see the first tool. I want to show you today is exact Snoop. So that's a Inspector Gadget tool that allows me to see what kind of program are executed inside and each body.
+00:16:59 [W] Let's see the first one.
+00:17:02 [W] I want to show you today is exact Snoop. So that's a Inspector Gadget tool that allows me to see what kind of program are executed inside and each body.
+00:17:13 [W] So let's get started keeps it here Gadget as to run Inspector Gadget choose the tool exact snow.
+00:17:25 [W] And then I don't want to filter I don't want to get information about all the parts but only a specific one.
+00:17:31 [W] I will select the namespace default on that. We use kubernative level selector to choose only the parts with the level 1 equal cooking.
+00:17:48 [W] So let me run that.
+00:17:49 [W] I have only one node in my plaster on minikube and now I start to record the new program being executed there is nothing to display yet because I don't have any
+00:18:05 [W] unequal cooking
+00:18:09 [W] So let me run that.
+00:18:11 [W] I have only one node in my plaster on minikube and now I start to record the new program being executed in there is nothing to display yet because I don't have any
+00:18:27 [W] So now I will create a new product. So keeps it here run.
+00:18:34 [W] You get some options.
+00:18:39 [W] And I will select the image filter on.
+00:18:45 [W] I'll give it the name of cooking so that it will have the label cooking.
+00:18:50 [W] it will be selected by my Inspector Gadget tool and in there. I will execute a script.
+00:19:00 [W] Transcript with a search and I will use this on T pattern which is to curl shell script on executed for the purpose of this demo.
+00:19:11 [W] So here are curl.
+00:19:14 [W] the transcript
+00:19:21 [W] on this website
+00:19:24 [W] And I pipe the shell script into mush tikv.
+00:19:29 [W] So here I don't know what this script contains. So hopefully Inspector Gadget will tell me what it is doing first. It takes some time to don't know the federal containerd image on when it's ready.
+00:19:45 [W] It should.
+00:19:51 [W] Here it is.
+00:19:53 [W] this website
+00:19:55 [W] and the a pipe no shell script into Russia Italy.
+00:20:00 [W] So here I don't know what this script contains. So hopefully Inspector Gadget will tell me what it is doing first. It takes some time to download the federal containerd image on when it's ready.
+00:20:16 [W] It should.
+00:20:21 [W] Hm.
+00:20:22 [W] Start to see the commands and here I see it were executed and grab got org and qadir help him on the run. So I see it don't know did help him file here
+00:20:50 [W] It's executed and grab cat org and Keda RPM and so on so I see it. No, no did help him file here.
+00:21:00 [W] And then it's inside with a p.m.
+00:21:03 [W] On so on.
+00:21:03 [W] So in this way, I can use Inspector Gadget to select specific product with with labels and then see what he's doing with exact cgroup in this case, but I can
+00:21:18 [W] Select to see what are the new file on being opened by in Snoop to see if it's this analysis report for 80. For example. I cannot I can see that in real time in my
+00:21:33 [W] In my terminal, okay, so hopefully it will be finished soon. And then I will show you the next demo.
+00:21:37 [W] Let me stop that fast.
+00:21:40 [W] Okay, the next demo will be about the network policy advisor first. I will show you that I don't have any pot Awning in the demo him space and then I will deploy something there
+00:21:55 [W] We use the network policy Gadget to record all the network connection that will open and try to generate Network policy from that.
+00:22:05 [W] So let's start with keep CTL Gadget at work policy.
+00:22:14 [W] On the first step is to use this sub-command monitor.
+00:22:18 [W] To record the network traffic and I will only select a list of namespace.
+00:22:24 [W] So in this case only one and I will put the result in this file Network twist not longer.
+00:22:37 [W] Okay. So what it's doing is installing the DPF filter and every time there is a new connection a new network traffic in that namespace.
+00:22:47 [W] It will all work out something in that trial for now.
+00:22:50 [W] There is no traffic because I don't have any pot.
+00:22:52 [W] So let me deploy something.
+00:22:55 [W] So keep CTL apply.
+00:22:59 [W] in this demo namespace and then I will select this cabinet is Manifest file as you can see contain a lot of services on the lot of deployment,
+00:23:15 [W] The truck traffic in that namespace which will record something in that fire for now. There is no traffic because I don't have any pot.
+00:23:17 [W] pot. So let me deploy you something. So keep CTL apply.
+00:23:24 [W] in this demo namespace
+00:23:27 [W] and then I will select this cabinet is Manifest file as you can see contain a lot of services on the lot of deployment, but it doesn't contain any network
+00:24:00 [W] Containerd any network policies of our so all the parts are free to talk to each other.
+00:24:04 [W] The only thing I need to do now is to see what traffic is gathered on what network policy generality.
+00:24:18 [W] Let's see if my product created keeps it'll get Broad.
+00:24:23 [W] - endemic okay most of them already started.
+00:24:36 [W] When I was a difficulty to get started, but that's good enough.
+00:24:41 [W] No, let's see what has been generated.
+00:24:45 [W] I will stop the recording file.
+00:24:48 [W] The coding a jet into this hard and just to show you how it looks like it just P sub J's on that list the different TCP connection that happened there, but you don't need to worry about that.
+00:25:01 [W] You don't need to read that file. Actually, what you can do is to use Inspector Gadget with the network policy.
+00:25:12 [W] Is it?
+00:25:16 [W] With this report that will generate the network policies.
+00:25:20 [W] The different TCP connection that icon there, but you don't need to worry about that.
+00:25:25 [W] You don't need to read that file. Actually, what you can do is to use Inspector Gadget with the network policy change it.
+00:25:41 [W] With this report that will generate the network policies.
+00:25:44 [W] So attack this network Trace file that I just generated and then I will create a network for lessee document.
+00:26:11 [W] Germany
+00:26:13 [W] okay, so now I can look into this network policy amount and that's
+00:26:21 [W] it contains just the list of network policy that has been generated by Inspector Gadget so I can see for example that the
+00:26:30 [W] cat service Isabel to talk to radius on this TCP port on so on so it created a network policies for all the different traffic that has happened on what you can do now is to
+00:26:45 [W] Vince and if it does you can use that as a base to what your network or DC. That's a lot faster than writing them from scratch.
+00:26:55 [W] Thank you.
+00:26:56 [W] So that's it.
+00:26:58 [W] Thanks album.
+00:26:59 [W] That was fantastic to all of you out there in kublr and I hope you got excited by that and inspired to go out and try it on your own clusters. Thanks for coming to our talk today on we look forward to your questions though.
+00:27:30 [W] Hello everybody.
+00:27:32 [W] Hey, hello, everybody.
+00:27:34 [W] Anyway, I held on so we have a few questions there.
+00:27:38 [W] Well, we were going along.
+00:27:39 [W] Thank you so much everyone for the questions.
+00:27:42 [W] So we have one question about call lights Zeke product and I hadn't come across that and if you had album, but yeah, I I looked it up and it looks
+00:27:57 [W] F so I'm going to have to update that landscape chart. And in fact, I think I'll have to publish that and start to keep that a bit more of a living document.
+00:27:59 [W] I think that's something that may be useful for people.
+00:28:07 [W] How long do you want to take the take the next one?
+00:28:13 [W] Yes, okay.
+00:28:15 [W] I'm reading the question are there was Phil sees on how to interpret and access 11 IP packets, for example Escape of quality stuff.
+00:28:24 [W] Yes. There are some documentation.
+00:28:28 [W] One of them is the very good psyllium documentation.
+00:28:31 [W] So if you go on the see your website, there is a documentation which is not only about two young but a lot of BPF information another source is the
+00:28:43 [W] Scandal in the sources. There are some pantheon.tech Tory in the some points / B PF.
+00:28:50 [W] There are a few examples of code, including some that look at SK buff not only did back Kata the bucket but some private Escape of data.
+00:29:03 [W] Yeah, next question about the do the demon set pods need root privileges to run. So I don't you wanna answer that.
+00:29:13 [W] So in the spec you need to give the right capabilities.
+00:29:06 [W] I mean you don't need to do that when you're least don't automatically when you install it it gives capsules that we know although kubectl it is so it's is needs those privileged to be able to run BBF.
+00:29:21 [W] Next question.
+00:29:22 [W] Can I uz B PF + Q CTL Gadget with managed kubernative clusters, like eks and AKs all those Bill using virtual kubelet and I know the answer here is that we can run with
+00:29:37 [W] Can i uz b PF and kublr CTL Gadget with managed kubernative clusters, like eks and AKs all those Bill using virtual kubelet and I know the answer here is that we can run
+00:29:55 [W] no, we've definitely tested with GK and maybe some of the others but virtual kubelet I think is not going to work because the demon set Gadget Padma to be running on the same kernel
+00:30:11 [W] The containers and that can't be guaranteed.
+00:30:14 [W] Is that right? I won't.
+00:30:17 [W] Yes, I think that's correct. I've not tried on your total commitment, but I think that will not clog.
+00:30:25 [W] Okay, grunting next Edition.
+00:30:27 [W] Can he ok go go fight.
+00:30:30 [W] No. No you you I'll read it out.
+00:30:34 [W] out. Okay. It's a good has been manipulated from inside containers would sound maybe someone's thinking that's a bit scary. And if so, would they be isolated across containerd boundaries?
+00:30:49 [W] So not now nominee containerless. Don't run with privilege so they cannot do anything with ppf on. So most often the ppf programs used by Inspector Gadget under the tracing tools there.
+00:31:05 [W] And if so, would they be isolated across containerd boundaries?
+00:31:10 [W] So Nom Nom any content nails done Tony with privilege so they can add to anything with ppf.
+00:31:17 [W] And so most often the ppf programs used by Inspector Gadget don't know that processing tools. There are installed the gonna level so they will Trace everything on the system not
+00:31:43 [W] They are installed the gonna level. So they will Trace everything on the system not specifically one container and after that Inspector Gadget a solubility to filter the events on only look at some specific containerless,
+00:31:59 [W] Yes containerd should not be able to change the twist.
+00:32:02 [W] Yeah, yeah.
+00:32:05 [W] I'll I'll grab the next one.
+00:32:08 [W] So there's a question about iptables. So easy BPF a candidate to replace iptables Padma it work based cni-genie.
+00:32:29 [W] I've been used in Kuma Nettie's that absolutely need Improvement and can be improving PF. So particularly for the routing of services and cute proxy.
+00:32:42 [W] So we see quite a lot of advantages there the I know we've done some benchmarking recently and there really was basically not much difference between the kind of filtering mechanisms
+00:32:57 [W] Absolutely need Improvement and can be improved will be ppf and so particularly for the routing of services and cute proxy.
+00:33:05 [W] So you see quite a lot of advantages there the I know we've done some benchmarking recently and there really was basically not much difference between the kind of filtering mechanisms
+00:33:43 [W] PF and using IP tables that you know having having said that in ppf account provides a consistent, you know modern layer programmable layer for doing all of the packet routing and filtering
+00:33:59 [W] You know long term.
+00:34:01 [W] It's probably a direction that a lot of folks will go in. But right now there's still, you know, a lot of variety of kernels out there and the IP tables and when this came about in performs pretty well,
+00:34:16 [W] Of variety of kernels out there and the IP tables and when this came about in performs pretty well, and it's pretty solid.
+00:34:21 [W] So yeah long term it could be it could be a directional at will be folks going.
+00:34:33 [W] What does keep CTL Gadget offer that psyllium cannot provide do you want George try that out on?
+00:34:43 [W] Sure, I think that's far different domains.
+00:34:47 [W] So you haven't provide networking and tekton Gadget is a twisting tool. So that is not necessarily related to networking at all and can see what files your garden us
+00:35:04 [W] It could be networking as well, but on the dressing so it doesn't provide anything like cni-genie saw anything like that.
+00:35:13 [W] right
+00:35:17 [W] our thingy BPF programs are moved from the kernel as soon as the keep CTL Gadget command execution stops.
+00:35:26 [W] Yes, they should if not, that would be a big butt.
+00:35:31 [W] nominee with our son can allege will be removed automatically.
+00:35:41 [W] There was some old canals that got some works well.
+00:35:47 [W] Prepare for them can be kept but yet they are removed.
+00:35:52 [W] Yeah.
+00:35:55 [W] And then someone's asking if extending the previous question that was the one about court with a cool light was using in pf in Zeke asking whether that it's being used by Rancher and I don't have anything
+00:36:10 [W] Using ppf miss you two are bonding. They support all those kubenetes projects that we talked about.
+00:36:13 [W] I'm sure you can deploy into Rancher, you know, you know if anything's Rancher is using UDP F5.
+00:36:21 [W] Sorry, I don't know.
+00:36:22 [W] I don't think yeah, I think so.
+00:36:25 [W] Any thoughts on new NF tables. Where does ETF fit in?
+00:36:36 [W] I think that's kind of a
+00:36:40 [W] Alternative and it seems that nowadays people are going for a BPF a lot more than if they burn and if you have his so inevitable is for networking, but he BPF are more use cases and just
+00:36:55 [W] Seeing on security.
+00:36:50 [W] So that's not a chronic company's mmm.
+00:37:07 [W] In prevention system.
+00:37:08 [W] I think I cannot dream anymore.
+00:37:10 [W] Okay, so we'll take that offline in this icon select. Ok, so we have to being given the signal we have to wrap up now so we will will be hanging around in the slack Channel.
+00:37:25 [W] Keep Calm operations and will be there for a few minutes. So please do meet us there and thank you very much for attending today.
+00:37:28 [W] Thank you everybody.

@@ -1,0 +1,312 @@
+﻿A Future Journey: How to Migrate 100 Clusters Between Clouds Without Downtime?: SUYV-7191 - events@cncf.io - Friday, November 20, 2020 5:07 PM - 45 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello and welcome to our talk how to migrate 100 clusters between clouds without downtime.
+00:00:07 [W] My name is Manuel choose.
+00:00:10 [W] I'm a systems architect and Tech lead at kubermatic.
+00:00:13 [W] Insulting and we're developing the kubermatic kubernative platform as well as coupon. Our communities management tools with me today is to be a snack had a professional services at kubermatic and he's going to
+00:00:28 [W] About himself.
+00:00:15 [W] Thanks man. Would ya, my name is Tobias.
+00:00:18 [W] I'm already working two and a half years for loot say and mostly responsible for professionals Professional Service where we discovered a way how to migrate clusters.
+00:00:29 [W] So suppose a fancy idea and now we want to present you how far we came to the journey and so heading back to my room.
+00:00:38 [W] All right.
+00:00:39 [W] Thanks.
+00:00:40 [W] right.
+00:00:42 [W] Why would you actually want to migrate clusters between Cloud providers and there are actually a couple of reasons for that on the more business Lee side of things you might have better contract conditions at another cloud provider.
+00:00:57 [W] You would be able to save cost there could be the need to migrate data centers to a different hosting provider or cloud provider from logistic point of view to like a legal
+00:01:10 [W] Hosting provider or cloud provider from logistic point of view to like a legal point of view or you're driven by a multi Cloud strategy and you want to decrease your dependency on one single.
+00:01:18 [W] Driven by a multi Cloud strategy and you want to decrease your dependency on one single existing cloud provider and expand our to other providers.
+00:01:30 [W] There are also some technical reasons for that.
+00:01:32 [W] So again more logistical kind of Reason might be that you have a location migration of a data center or you might want to migrate to another Network segment for separation of concerns or
+00:01:48 [W] Or other reasons you might be adapting improvements in your own private Cloud environments at a new provider that you want to use like new
+00:02:03 [W] Different infrastructure Technologies, you want to use at a new provider or you're bound to some constraints when it comes to data location of certain Services
+00:02:18 [W] Cloud offers services, for example where you run your machine learning and where you have your machine learning data or some GDP our compliance needs that you need to fulfill.
+00:02:26 [W] So what are the main challenging challenges around moving to another cloud provider awareness itself obstructs infrastructure, but it does have several kind of dependencies.
+00:02:35 [W] nonetheless, right?
+00:02:36 [W] So it does consume infrastructure resources.
+00:02:39 [W] For example, the virtual machines where the cluster itself runs on it uses and consumes the network provided right the IP address space routing and firewalling rules are
+00:02:51 [W] of Ingress and egress traffic and also DNS as always and external storage systems.
+00:02:58 [W] Then there are kubernative components that are actually dependent on a certain cloud provider in most of that is the cloud controller manager that contains the node controller for
+00:03:13 [W] Subsequent roller which translates service type load balancer within communities to an actual Cloud load balancer in the cloud providers environment the rough controller, which is responsible for setting up Network rods in the cloud providers Network.
+00:03:27 [W] but there are also things like starch classes that Mac to cloud provider specific storage offerings and sometimes the Oberlin Network you use has some dependency on a cloud provider as well
+00:03:35 [W] Remind ourselves a quick overview of the components of kubernative the central one being the API server, which kind of handles all the changes in state of the cluster itself and
+00:03:49 [W] With the kubelet which runs the actual workload that uses run on top of that cluster and between the API server and the kubelet there has to be two way communication happening and between the
+00:04:02 [W] I mean between the worker nodes as well and that is one main challenges.
+00:04:04 [W] Where were kind of solving today to enable this ways of communication and that directly leads us to our actual dependencies when we migrated
+00:04:19 [W] For us the application workload has the highest priority, but we need to ensure for that to be the case.
+00:04:23 [W] We need to ensure fundamental networking rules that kubernative expect to be in place.
+00:04:28 [W] Those rules are that all containers within a pod can communicate unimpeded lie on layer forms TCP UDP.
+00:04:37 [W] pods can communicate with all other pods within the cluster without netting and all nodes can communicate with all parts and vice versa also,
+00:04:46 [W] Without netting and the final one the IP that the Pod sees itself is the same IP that others see the Pod as and this is really important to keep up so that the actual networking between
+00:05:01 [W] Looks we have to have some external dependencies that need to be reachable right like externally routed I peaceful out load balances and no called services within the cluster and DNS names need to be reachable
+00:05:14 [W] Solvable, right and storage some applications might have to have state that needs to be migrated without data loss.
+00:05:15 [W] So when we look at that now at a level of like scale of hundreds of clusters, maybe we look at large organizations running a whole bunch of classes in different location
+00:05:30 [W] Whole bunch of clusters in different location for different organizational units in different time zones, right? And for those users cluster users.
+00:05:39 [W] The cluster itself is just a service that they consume right and that means that the cluster connection it secret. So the actual interface that the user has to the cluster doesn't is not allowed to change right?
+00:05:53 [W] Otherwise, it would impede the actual service that those users consume.
+00:05:59 [W] So how do we solve for that? The status quo is will have a multi-cloud set up with the kubermatic kubernative platform. Our open source queries management platform and it has a concept of C cluster that holds the containerized
+00:06:14 [W] It crosses the user cluster is being the class kubernative clusters that are managed by K. KP the worker nodes itself our provision via the kubermatic Machine controller, which is a cluster API conform
+00:06:30 [W] That translates machine deployments object into actual machines VMS on cloud providers and we'll use can L as our default overlay networking which is effectively flannel
+00:06:38 [W] working with a Calico Network policy plugin
+00:06:40 [W] and the target is that we migrate the user and C cluster control planes and worker nodes to a different cloud provider will keep all the external clustering points table.
+00:06:50 [W] That means the control plane communities API seven points and the actual application and points being the DNS and Ingress rotting out of scope for now is the storage replication the assumption is that the actual
+00:07:05 [W] Is the storage shelf ocation like at CD which is a feature that we will use to migrate the user cluster control plane.
+00:07:10 [W] So how does it look we have kubermatic insulation that has a seed cluster, which is also just a kubernative cluster running in the Google cloud and it hosts a couple of user clusters and we'll have a look at the vsphere
+00:07:26 [W] So that runs worker nodes on a vsphere cluster and we want to move all of that over to AWS because for whatever reason we want to run on AWS and just some recommended prerequisites
+00:07:36 [W] in production, you'll have to announce a maintenance window and block cluster updates so that those dozen don't interfere with the actual migration process will have to ensure that our backup and recovery procedure for the season
+00:07:48 [W] the application workloads works is tested and proven to be working right well should create a Target clouds cluster as a reference in our case an AWS cluster just so
+00:08:01 [W] Target's clouds cluster as a reference in our case an AWS cluster just so that we can copy and paste some stuff over and we'll have to ensure that we actually control the DNS entries and be able to
+00:08:12 [W] The DNS entries and be able to switch over the nsmcon stew the new Cloud endpoints once we migrated the workload over to the new club provider.
+00:08:22 [W] Yeah, and now we'll look at the actual solution approach and Toby is going to give us a quick demo on how that works.
+00:08:31 [W] Okay them over to me six men will share my screen fully you can see it now.
+00:08:40 [W] And yes, so what is the solution approach?
+00:08:46 [W] So first of all, we want my greater user cluster workers.
+00:08:51 [W] So in this case, we want to migrate it and we want to have a new workers to cut Target out how we
+00:09:01 [W] Can reach that so we using the so-called Machine controller in kubermatic and cuboid and this controller can create workers based on cri-o source code machine deployments.
+00:09:14 [W] So machine deployment is similar like the deployment of pots.
+00:09:18 [W] It's a deployment of machines and if we like change that Machine controller and give them a new specification we can create machines in the new club.
+00:09:29 [W] What is needed to ensure the traffic is reachable.
+00:09:33 [W] Using the so-called Machine controller in kubermatic and cuboid and this controller can create workers based on cri-o source code machine deployments.
+00:09:44 [W] So machine deployment is similar like the deployment of pots.
+00:09:49 [W] It's a deployment of machines and if we like change that Machine controller and give them a new specification we can create machines in the cloud what is needed to ensure the traffic.
+00:10:03 [W] Is reachable. We need to somehow need a way how to communicate between what supports and notes to notes for that.
+00:10:11 [W] We create a VPN overlay by a demon set and Route them traffic of the cni-genie.
+00:10:31 [W] And at least we should ensure to reach ability. That means that we try as long as possible to keep the interest and points table to transfer and then transfer to workloads.
+00:10:51 [W] Okay, how sus sus can look like so we have the C cluster what host in the container is controlled like here we have some controllers and we have the Cuban it is containerized control plane.
+00:11:05 [W] We have their party fault we p n. So this VPN server is used for VPN traffic between success control plane and the workers a traumatic. So that workers can connect with the control plane and your control playing can bake
+00:11:20 [W] Oh plane we have they are pretty Falls.
+00:11:23 [W] We piensa this VPN server is used for VPN traffic between success control plane and the workers a traumatic. So that workers can connect with the control plane and your control plane can bake tunnel the cube
+00:11:38 [W] Always this VPN tunnel.
+00:11:40 [W] Also, we have a machine control of its configured to place on machines on the vsphere cloud and we have between the vsphere workers.
+00:11:49 [W] We have an overlay what's based on kennel and we have a metal AP service what creates then the bound traffic load balancer to commute a dedicated application points
+00:12:04 [W] Great is now to deploy a VPN demon set this VPN demon set ensures that we have a VPN client every worker node.
+00:12:12 [W] This opens in the working out the new interface and we route the traffic from the VPN interface through the VPN.
+00:12:19 [W] It just says our kennel to our dedicated overly.
+00:12:24 [W] So and for that we need to pause cluster because our cluster is controlled by a classic controller. This is Classic Controller would then
+00:12:32 [W] Zile, the machine deployments and the VPN servers.
+00:12:38 [W] So to ensure that this does not happen to be post cluster to make some patches their next step is after we have the credentials for the new Cloud adopted we
+00:12:53 [W] Spec and specific 8 the new AWS Cloud then the Machine controller get updated and we get a new Machine controller instance of it quite now talk to AWS.
+00:12:59 [W] you notes get created and also joins our VPN network and choice. So also the kennel overlay routing the cloud controller now ensures that we also have new AWS LP
+00:13:14 [W] Knative releases LLP is not routed.
+00:13:08 [W] But anyway traffic goes from here to over at a metal IP service to Dedicated workloads.
+00:13:36 [W] At least then clean up the old resources and we removed not needed anymore VPN overlay because to workers can now talk to each other very th interface and that's how we migrated it.
+00:13:51 [W] So to give you a shot inside a short. Look what already is happening.
+00:13:56 [W] We create some demo be aware.
+00:13:59 [W] That's currently this project is like not fully finished.
+00:14:02 [W] So it's more a proof of concept state. So as we see
+00:14:06 [W] Year we have here app or what is our reference actual service and sysdig lot on the cluster.
+00:14:13 [W] Let's take a look in our kubermatic control plane and insist control plane. We have the dedicated clusters here.
+00:14:22 [W] So first we have here so you can migrate cluster what we want to migrate here.
+00:14:29 [W] You have now me crunch to traffic to the new cloth.
+00:14:30 [W] At least then clean up the old resources and we removed not needed anymore VPN overlay because to workers can now talk to each other very easy th interface and that's how we migrated it,
+00:17:52 [W] Machine deployment of two nodes and so-called SEO services nginx and met with ap this metal LP points to the IP address of the vsphere and deploys our actual services.
+00:18:07 [W] So if we go to the vsphere we see here under the cluster ID.
+00:18:13 [W] What is here?
+00:18:17 [W] K p HC you see here?
+00:18:22 [W] Machines running in this one we want now to move through AWS.
+00:18:29 [W] First Step what we already did is that we deployed a VPN.
+00:18:35 [W] So we pitched our VPN server and for that we see that we have a cluster spec and we have so we see here also in our seats are so that everything what you see in kubermatic is also represented as the Clusters
+00:18:51 [W] last name space here this name space we see to control planes and here you see that we have like the VPN server running and we have a pi server and all other components running if
+00:19:06 [W] The cluster so let's take the shortcut.
+00:19:04 [W] Yes.
+00:19:05 [W] I want to go to the Cucumber cluster.
+00:19:07 [W] We see a bunch of containers here.
+00:19:11 [W] And you see here that we have our Echo service. We have our nginx.
+00:19:16 [W] We have our kennel. We have all weepy inclined.
+00:19:20 [W] And let's now we want what we want to migrate.
+00:19:24 [W] So yeah first step is the VPN is already there so we can now deploy our control plane and migrated.
+00:19:33 [W] What is I think the most interesting part of the whole thing so we can then say okay here our update Target clouds group.
+00:19:41 [W] What does it do?
+00:19:42 [W] So we have here?
+00:19:44 [W] Yeah the first we need somehow.
+00:19:50 [W] Trust ID and we need the project idea.
+00:19:55 [W] It's a project ID.
+00:19:57 [W] We find here in our queue Ematic URL here to protect you can copy it and we can hear.
+00:20:08 [W] Place it so what is the first step we create in backup?
+00:20:12 [W] That's the backup of the specification of this cluster.
+00:20:16 [W] So, yeah, I want to create it and as next step, I want to pause the cluster.
+00:20:22 [W] We want to migrate.
+00:20:19 [W] So yeah, first step is the VPN is already there so we can now deploy our control plane and migrated.
+00:20:28 [W] What is I think the most interesting part of the whole thing so we can then say okay here our update Target clouds group.
+00:20:36 [W] What does it do?
+00:20:37 [W] So we have here?
+00:20:39 [W] Yeah the first we need somehow.
+00:20:45 [W] cluster ID and we need the project ID the project ID be find here in our Cube emetic URL here to protect you can copy it and
+00:24:28 [W] It might cloud provider.
+00:24:29 [W] So yes, I want to patch a cloud provider. So I create a new place to the Hammer what we now can take a look on so if we go no to my files I see here that I have here under control plane somehow.
+00:24:44 [W] somehow a new file
+00:24:49 [W] is
+00:24:53 [W] should be here.
+00:24:55 [W] Let's see.
+00:25:03 [W] Okay, here we are. Now. We have one backup cluster llamo and pet Shamu.
+00:25:14 [W] So let's see. What's the difference is?
+00:25:16 [W] So yeah, so currently that's our cluster CRT on the left. We have the backup cluster spec and we have here our API server talking and so on and we have to finalize as what finops our Cloud
+00:25:31 [W] and that's now the important stuff we have here the vsphere configuration what reference a credential and the father and so on and that's something what we now remove as well as
+00:25:46 [W] Be a applies has changed now to our cluster the first step to remove their credentials.
+00:25:45 [W] This is needed.
+00:25:47 [W] So, let's apply that and see what happens.
+00:25:49 [W] So we see now we have configured and now to start reconciling me need to unpause the cluster to the cluster controller can take care about the change and yeah, let's see what now is happening.
+00:26:02 [W] So we have now the cloud spec what get recreated by
+00:26:07 [W] The cloud controller so hopefully everything works well and we see that the cluster get no real good side. Yeah, we see now we getting the new object. We have the three spheres empty.
+00:26:19 [W] Okay.
+00:26:20 [W] this looks good, and we can now watch that hopefully.
+00:26:24 [W] Yeah, we see the API server is reconciling to now empty Club provider.
+00:26:30 [W] Okay, cool the drawers the first step. So now as next step we want to change to the to our AWS.
+00:26:37 [W] So let's go out of this View and let's pause the glass that again like currently depending on the kubermatic controller. We need scissors to step up grades because we are just a cute control client and not operator and and now
+00:26:52 [W] Not provider.
+00:26:52 [W] So what happens now?
+00:26:53 [W] Yes, I want to patch it.
+00:26:56 [W] Yes.
+00:26:57 [W] I'd want a new secret. So there we create a new secret reference for the AWS credentials and then we created a new cluster patch file again.
+00:27:08 [W] So let's also see here what's different now?
+00:27:10 [W] So we see now we have changed basically removed to finalize this because this are not valid anymore. We added annotation.
+00:27:20 [W] I'm here to diplomatic AWS region.
+00:27:25 [W] We patched it allowed spec AWS this the credentials and we have a migration new data center.
+00:27:32 [W] So that's the new migration data center where we want to migrate it after we now make that pause to force the controller try to reconcile swore you AWS should place
+00:27:48 [W] Thing is therefore kubermatic creates now a new Security Group new roles, and that's hopefully what's now happening.
+00:27:41 [W] So, let's see. So let's patch that cluster and
+00:27:49 [W] configured in the app now read on post cluster and see what's happening happening.
+00:27:55 [W] Good, so, okay. So what we see now here we can reconcile you see we get now here also AWS data back from the kubermatic controller and see what we created new security group and
+00:28:10 [W] I'm cool.
+00:28:01 [W] So let's see what happens with my components.
+00:28:04 [W] We now seeing yeah, we have restarting a pi server again.
+00:28:08 [W] It started now with the new club prevent credentials.
+00:28:12 [W] So let's try to find a little bit out.
+00:28:15 [W] What's happening here.
+00:28:16 [W] So we have here deployment. So and let's take a look into it's the wrong side.
+00:28:26 [W] Let's see what we are have placed there.
+00:28:30 [W] So can you get explain deployment?
+00:28:37 [W] For sure need to write Cube conflict and now we should go to the API server of our cluster and see that here. We have specified. Hopefully now the
+00:28:52 [W] name deployment
+00:28:48 [W] for sure.
+00:28:50 [W] I need to write Cube conflict.
+00:28:51 [W] And now we should go to the API server of our cluster and see that here. We have specified. Hopefully now the cloud provider this.
+00:29:16 [W] This here is our new club provide AWS and now let's reconcile and take place. And we also have a new Machine controller that now is able to talk is AWS.
+00:29:30 [W] So what we can now create is the new AWS workers.
+00:29:34 [W] So let's go back into the user cluster.
+00:29:37 [W] yeah here go to skewer migration cluster and first
+00:29:45 [W] Yeah, pause all mushy deployment to be sure so worker machine deployment posts.
+00:30:00 [W] that we don't upgrade this machines and yes pause done and then we can now create our new AWS workers therefore we need first
+00:30:15 [W] Put so here the to specify the cluster idea that is profile the security group that kubermatic had created automatically.
+00:30:25 [W] So here yeah. I want to see the metadata has we have here the cluster idea.
+00:30:33 [W] So let's change that one here. We have the database instance profile.
+00:30:41 [W] What have you created with that one? And we have the AWS Security Group?
+00:30:49 [W] Okay, so let's create that one save it and then running the script deploy.
+00:30:58 [W] So now hopefully fingers crossed regret new AWS workers.
+00:31:04 [W] So yes, I want to create one here. We see that's now rendered in in the machine deployment. We see our security group. We see that we want to have a T3 medium.
+00:31:16 [W] And yeah.
+00:31:19 [W] That in the u.s. Visa best one C. So okay, then let's deploy it.
+00:31:27 [W] So fingers crossed yes as has been graded. So I want to watch The Creation.
+00:31:34 [W] Yes.
+00:31:34 [W] Vision now in AWS.
+00:31:28 [W] So let's see our workload is still running as we see we have here our Target cluster.
+00:31:35 [W] We see also here we have the new bit would Target AWS not true.
+00:31:40 [W] What's now computed? And yeah, let's go to AWS and see what's have been created.
+00:31:47 [W] So here hopefully the AWS console is fast.
+00:31:55 [W] enough we can now go to the
+00:32:00 [W] Ec2 instances and should see that we can have put it now new two instances.
+00:32:10 [W] and
+00:32:13 [W] let's see.
+00:32:20 [W] Yeah, we see here initialising.
+00:32:22 [W] So that's the new two machines what we created if you take a look here.
+00:32:26 [W] We also see the tag.
+00:32:27 [W] That's the cluster for what we have and for that so we have created new machines.
+00:32:34 [W] So let's wait until the point set.
+00:32:37 [W] They are get booted the meantime, we can take a look at the note been sir.
+00:32:42 [W] So, hopefully we also have a load balancer created.
+00:32:46 [W] That's what our AWS cloud.
+00:32:49 [W] AWS takes over and creates also no pants on their side. So let's see that's
+00:32:47 [W] Not the right one.
+00:32:48 [W] That's the right one.
+00:32:50 [W] here. We see all class created but you don't have any instances here because yeah, the instance get no pooted. So let's hopefully let's go back and see how fast they are coming up.
+00:33:05 [W] Okay, we now see that we get a new node.
+00:33:08 [W] That's not ready, but we can already connect to him.
+00:33:11 [W] So let's try to SSH into one either up at AWS note and let's go here for that kind and see what's happening there.
+00:33:24 [W] Yes, I want to connect.
+00:33:28 [W] And yeah, we see here that we have here a flannel route and we will soon have a cube or interface for the VPN server as soon as that started.
+00:33:42 [W] Here we go.
+00:33:42 [W] here we see that interface and we can now try to get the interconnection between one Cloud to another so the I then connect here to turn on premise note on the down and connect.
+00:33:58 [W] To that 112 and test if we are now can top between clouds.
+00:34:05 [W] Here we go.
+00:33:57 [W] Here we see that interface and we can now try to get the interconnection between one Cloud to another so the I then connect here to the on premise note on the down and
+00:34:31 [W] If IP address for the cube interface, what is 10 20 42 and let's try if we can bring it from our AWS node.
+00:34:54 [W] Okay.
+00:34:55 [W] Now we see that we get a connection here from the club note to the on-premise note good cool. So next step. What we now need to do is to migrate our workload.
+00:35:11 [W] Okay, cool. Then let's go back here and
+00:35:22 [W] here as well and try to migrate workloads.
+00:35:28 [W] So we have now switched here to the user cluster to see what's happening and
+00:35:38 [W] see take a look in the Echo server name space.
+00:35:45 [W] Sorry.
+00:35:49 [W] You see now here.
+00:35:50 [W] Okay Tycho service deployed on the migration vsphere note.
+00:35:54 [W] We want to now to roll out the new workload to the nuclear out.
+00:36:00 [W] Add two notes Cordon the notes because that neuvector should not anymore go to this old nodes.
+00:36:12 [W] Good, it's Gordon and we have the knot out to curtain. So that means that the note should be now marked as knots cattle able. Yes, so scheduling disabled perfect so we can now
+00:36:27 [W] Keep control roll out restart feature to now restart our deployment of the SQL server in the namespace. I have a server to trigger like a row in the release of the eco-silver without any change.
+00:36:20 [W] So yeah, let's trigger that one and see what's happening in the down. We see okay that still we have the application up and running and yes, so now we see the container get created in the new Cloud so first success,
+00:36:35 [W] Small now work. We see that now and you could train is running on the new AWS workers and we can now terminate the old one. So that's now going step by step and we have three new vercors.
+00:36:43 [W] You see the service is still reachable and week out get now. Hopefully also if we go to the browser the we can see here detail that we get back
+00:36:49 [W] AWS note to cause so we have the host name.
+00:36:50 [W] It's just the host name.
+00:36:52 [W] We see that the yeah, their workers are running in the new cloud and still reachable through our old and poet cool.
+00:37:03 [W] So that seems to work like now that side The Next Step would be to migrate or other workloads to the new Cloud remove the load balancer in a using the
+00:37:13 [W] the new DNS name so we can quickly try if the nude opens is now listening.
+00:37:20 [W] So yeah, we have here the new instances and maybe the DNS name is already propagated to see if this is working. You can see OK. Let's change that to Newton s name
+00:37:35 [W] No, so DNS is not there.
+00:37:36 [W] So yeah good then finally migrated to the new cloud.
+00:37:44 [W] So, how are the next step looks like so that's how we can Great Migration the worker use the Clusters and to move completely to the nether cloudbees.
+00:37:57 [W] We need now to move a high grade also to see cluster for that how we can achieve that is the same way you re using the same principle.
+00:38:04 [W] So here we have two workers now in the new cloud and now we need to make my great control plane.
+00:38:11 [W] The good thing is on that in any case.
+00:38:13 [W] Workers were workloads is still safe because it's already knew Cloud so we can migrate it.
+00:38:20 [W] Even if we may break it.
+00:38:23 [W] The only thing what would maybe not work is an upgrade of the kubernative, but still the workload is safe.
+00:38:30 [W] So how we migrated to see clusters first, we create new master nodes for Transit Masters. So that means we creating, you know notes putting a new cabinet is API Lopez on it update API endpoints because
+00:38:45 [W] API endpoints are stable in the Cuban this cluster and then we block for sure to see clusters for upgrades so that we don't anything a trigger unexpected to
+00:38:50 [W] During sysdig migration and then yeah me migrating to use a control planes in the same way as migrated to workloads now, it is a clusters. So we moved at cities to the new cloud and using
+00:38:54 [W] Tootie Quorum for data my creation and yeah for sure we should have a backup and recovery for all the components.
+00:39:02 [W] How does this look like?
+00:39:04 [W] For example here we have our seat gain as for own API server. What's project in three Masters there? We have our now or AWS clusters hosted the control plate and we have the workers who hosting security trade rights control
+00:39:19 [W] Right every single Giuseppe then as fast first step, we would again place the VPN that time in the seed cluster connecting every worker nodes and masternodes then create a quorum.
+00:39:34 [W] Verse 5 it's a deal for the master knows that ensures that the new to eight cities get the data replicated from She's peanuts to the AWS nose then as next step if we have achieved that we can remove
+00:39:50 [W] To TCP workers in Seoul have a quorum of 3 so 3 or 5 if enough is enough for the program and we can therefore all the change now. They the DNS name to the nude AWS cloud provider
+00:40:05 [W] No opens up. So they're now we can then remove the Quorum also from 5 to 3, and we have a stable control plane for sure
+00:40:20 [W] Also in this procedure you need then to clean up remove the old.
+00:40:26 [W] She's P note again. Write a new idea by Yes master node, and then we have three exit. He's healthy in the new Cloud migrated in the same way as micro G to use the Clusters workers.
+00:40:40 [W] We now need to migrate the C cluster workers for that. We hear can change the VPN again.
+00:40:49 [W] Then read a new worker nodes and then insist kind also changing here to cloud provider here that it's pointing now to AWS after sisters happened. We can increase here in
+00:41:04 [W] Romantic settings the default value of HT replicas to 5. That means that you kubermatic user cluster controller manager creates two new entities for every use of cluster that's insurers in the same ways as
+00:41:19 [W] You're the top it's migrated also for the for the users custard. So I have now a quorum or five it is running still pointing to the old Gene as but between clouds
+00:41:35 [W] S next step. We now creating a new club balanced load balancer and rename the white car.
+00:41:41 [W] So that's the connection from the UK user class of workers what we already migrated to the new load balancer.
+00:41:50 [W] And yes, then we switch over we adding one new a Tobias node replacing all cheese peanut. So we have then a quorum of 3 HT spur used to cluster on the new Cloud.
+00:42:04 [W] That is the most reasonable Target.
+00:42:06 [W] So now we are safe and we can remove the old missing note worker nodes clean up the old Cloud resources.
+00:42:15 [W] That means we scale down to htu. That is 3 we
+00:42:20 [W] Remove them the repent overlay and we now have the cattle over a what's routing between the workers again between eth0 so then we are
+00:42:35 [W] Cecil we migrated every user cluster in Searcy cluster to the new clown. So that is the approach what we think our is possible to migrate really 100 clusters is our downtime and in a scalable way.
+00:42:50 [W] So for sure we are not right now that we just press the button but that's our future Target.
+00:42:55 [W] So we want to automate also tekton approach procedure and for sure if you want to really make it scalable. We need to write an operator.
+00:43:05 [W] Colonel riveted everything by a yeah hack-a-thon help best script and to not like yeah doing that by hand the health checks.
+00:43:16 [W] We need to have an operator who checked the whole stick to conditions and have also some repair options and retry options, but they're for the Cuban it is reconciling pattern match in the same way as match for our Cloud migration work kubermatic controller
+00:43:31 [W] Rates the new cloud provider and so on we can use the reconciling also for the migration and using okay.
+00:43:39 [W] We have a new Target Cloud operator.
+00:43:42 [W] Take care about that matching the old say to the new state technical.
+00:43:48 [W] We also need to stabilize the VPN connection. So right now we have only one VPN server. That's could be maybe on a bottleneck on bigger clusters. Maybe we should deployed multiple VPN clusters.
+00:44:01 [W] And we have like maybe I have also more soft switch between VPN and host networking overlay with something what we need to explore more and maybe their wire card can be
+00:44:16 [W] The other nativism UPN connection what could help maybe under setup?
+00:44:21 [W] Okay, one more detail accurately.
+00:44:24 [W] We tested it in 1.17 C cluster where the manage Fields features not included.
+00:44:30 [W] Some houses makes a little bit of trouble between okay, you have a like pet by Q control and you have an operator what we could sightings are Fields.
+00:44:40 [W] So that's why early a little bit limited on the 117 seat clusters as to saw the demo to use a cluster can be on 118.
+00:44:50 [W] Cool, then yeah.
+00:44:53 [W] Thanks for your attention.
+00:44:54 [W] We are happy to answer any questions. So feel free to reach out now.
+00:44:59 [W] And yeah, thanks to listening and Manuel few last words from your side.
+00:45:07 [W] Now that was amazing.
+00:45:08 [W] Thank you so much, and we're open to questions now.
+00:45:12 [W] Okay.
+00:45:12 [W] Thanks a lot and looking forward to your questions.

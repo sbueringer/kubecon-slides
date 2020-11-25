@@ -1,0 +1,226 @@
+﻿Autoscaling and Cost Optimization on Kubernetes: From 0 to 100: KXDB-9208 - events@cncf.io - Thursday, August 20, 2020 7:45 AM - 41 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:01 [W] Hello and welcome to Auto scaling and cost optimization on kubernative and from zero to a hundred.
+00:00:10 [W] I'm guy Templeton.
+00:00:13 [W] I'm a senior software engineer at Skyscanner working on schedule and our shared containerd platforms.
+00:00:19 [W] This is Joshi.
+00:00:21 [W] I'm working on AWS eks team and I mainly work focused on the auto scaling project and machine learning areas.
+00:00:28 [W] So you've deployed Kate's you've deployed your clusters into your code or data center of choice, you pack it up. You're either a shiny new apps or old Legacy apps and to Containers deployed them onto your new k8s clusters, and that's when the person
+00:00:48 [W] Hopefully the computer building your organization appears asking you a question awkward questions.
+00:00:56 [W] I thought this Cloud native things was to save us money.
+00:00:57 [W] So why are we spending more than we did previously.
+00:00:59 [W] That's when you realize that one of the key pieces that kubernative enables is the ability to elastic we scale your workloads and your clusters as you need to.
+00:01:09 [W] So is that sin will take you over what we're planning to cover?
+00:01:15 [W] Yeah, I think today session.
+00:01:25 [W] We're what we're planning to cover roughly falls into four different use cases horizontal Part auto scaling vertical part auto-scaling plaster Auto scaling and a few
+00:01:41 [W] Scouting related tips and tricks in each of these areas. I'll take you through the basic concept for us and guy will share more tips on those real-world use cases.
+00:01:53 [W] So let's look at the overview how kubernative is auto scholar interact together.
+00:02:03 [W] Let's look at the left part first the HPA and vpa they both check the metrics to help make decisions with the different part is HP update the pop replicas and vpa update. The results has allocated.
+00:02:16 [W] It to the existing pipe HPA and BPA currently incompatible. And the best practice is to avoid using both together with the same set of the pulse on the right side if there's not enough capacity
+00:02:31 [W] Run policy to see a pick up those Paws and pending state to see a will do some calculation to find the right note groups and desired number of the nose and then request the results and is from cloudbees Riders the Pod can be scheduled later.
+00:02:46 [W] Provisions known as the a can walk with HPA and VP a pretty well.
+00:02:52 [W] last coming to the horizontal part although scouting
+00:02:57 [W] HP eiko's living Kudo cool controller manager, which is the little bit different from C + v p a so they are located in kubernative all those dollar project the HPA automatically scaled the number of the replicas
+00:03:16 [W] requirement based on the target metrics and there's our three different metrics the building Matrix custom metrics and external Patrick's will cover this later each of
+00:03:31 [W] Can be served by one of a number of components.
+00:03:38 [W] However, a single Matrix like the custom metrics cannot currently served by multiple items only one component can register yourself to the API server as serving a given API the in kubernative 118
+00:03:50 [W] So there are more flexibilities to customize HPA a number of settings which were previously cluster white can now between as per HPA basics.
+00:04:03 [W] Guy will talk about the Matrix type spear.
+00:04:08 [W] So the first met with type is resource metrics.
+00:04:16 [W] These are the simplest of three Matrix CPU and memory based Auto scale.
+00:04:21 [W] So this is the sort of traditional auto-scaling you may be used to with your cloud provider of choice scaling and auto scaling group or equivalent based on the CP Target CPU, utilization or memory utilization and it's
+00:04:33 [W] Define a pi metrics on textiles.
+00:04:36 [W] This is the same API path that's providing metrics.
+00:04:40 [W] That's when running cubed and this is sap.
+00:04:44 [W] I was originally served by componentconfig hipster.
+00:04:54 [W] However, this was dedicated in case 111. If you're run it is still running this these days. You really shouldn't be and should be moving on to the more modern ways of solving this.
+00:04:56 [W] Yeah, and it's now usually provided by the metrics. However, the scrapes their resource metrics from people. It's apis.
+00:05:03 [W] Eyes and serve some up via the cube API server by a via an API aggravation.
+00:05:18 [W] One thing to be aware of though is it's currently based on the usage of the entire pod. So this can be an issue. If you're injecting sidecars. For example, you're running in a steel mesh and the pulled you care about scaling on that seven
+00:05:26 [W] Here users is using a high amount of utilization but F5 other politic containers inside the folder using a low enough that can drag their average utilization time. And therefore you may not trigger auto-scaling when you think you should
+00:05:42 [W] The next Metro pipe is custom metrics.
+00:05:49 [W] So this is our blog API custom donation stockade cri-o.
+00:06:09 [W] So by the time this tall guys head that may well have changed and these metrics don't have to correspond to kubernative objects.
+00:06:23 [W] And so you can have two types here Padma metrics things like requests inflate pear pod or object Matrix.
+00:06:28 [W] So these are slightly more complicated than they still describe the kubernative object has been the same names faces odds being skilled.
+00:06:37 [W] So things like requests per Ingress and in the same.
+00:06:39 [W] I'm namespaces the Pod serving those requests.
+00:06:45 [W] And so this is this is useful say where you have a service where you know, for instance, you know, how many requests a given particle serve any one time but the CPU or memory may not be a good indicator of that given that
+00:06:57 [W] It takes an indeterminate amount of CPU power request. So some requests may be extremely low and CPU, but are still blocking an entire request. Therefore you want to actually scale on your number of u.s.
+00:07:12 [W] Key processes that are currently running rather than CPU. So in that case either are scaling on CPU or memory is going to waste your money or result in decreased performance because you put it too low so they better option is to go
+00:07:25 [W] You're known Volta Mac.
+00:07:27 [W] So and finally external Matrix. So this is hard on the sternum a dot matrix dot k cri-o API path again.
+00:07:38 [W] You have components registering to serve this Matrix Path under API aggravation. It's Jackson said this this can only have one component serving this mentions path any one time and there's again a number of
+00:07:52 [W] Citations as your DCP AWS Old Pride ones for that Matrix Systems that you can scale your Kate Services based on metrics from your cloud provider some of the already mentioned custom metrics implementations also are capable of
+00:08:07 [W] I think instana little patience in case I and so it's intended for matrixing entirely external to kubenetes objects.
+00:08:22 [W] So things like Kafka queuing for is Your Service Plus Q length AWS ALB that for Quest so things that are entirely decoupled from your kubernative cluster and and they support to different Target types value and average value average value
+00:08:29 [W] Beige PA takes the value that is being evaluated and divide it by the number of pods in the Target that it is scaling and before comparing it to the Target value value.
+00:08:43 [W] It just Compares directly to the Target without dividing it over the number of pods.
+00:08:46 [W] So let's go into that more detail on each piece algorithm and quarts of Its Behavior.
+00:08:59 [W] So a lot of users might want to scalar multiple metrics.
+00:09:10 [W] And so if you've got something where you can either become CPU saturated or exhaust number of connections, and you may want to set up those multiple metrics will scale and acetates 115 BHP handles as well
+00:09:14 [W] Always make the safest choice.
+00:09:19 [W] So even in the case where one or more of your Matrix is unavailable, it will still if one or more of the metric says that it should scale up. It will take the highest Choice out of all of those metrics and then increase the size conversely if
+00:09:30 [W] Metric, if one more night took these unavailable it would scaled down because obviously can't decide can figure out whether that metric would say that it is safe to skilton and you can also scale down to zero if you really want to
+00:09:45 [W] Find your file saving there's a couple things required for this though.
+00:10:00 [W] You have to enable Alpha feature gate called each phase guilt zero and you also have to set the results Associated HPA up with at least one object or external metric because obviously in the case of PODS metrics, it can't make a reasoning when the
+00:10:04 [W] It's our scale to zero about what the behavior it should use it and if you want to fine-tune the behavior of a given HPA, so if you have certain Services, which are you want to scale up really fast,
+00:10:19 [W] but scaled out slowly and you can now chin that a****** 418 kubernetes 118 onwards with this new part of the horizontal part of the scalar spec for you can see the behavior
+00:10:34 [W] Here so miss case saying at most scale it down by 5% every five minutes and scale it down to minimum zero.
+00:10:43 [W] And however, if that's not my chief stew if you're running kubernative 117 or earlier and all of those flags at that point, we're still cluster wide. So if you had two different apps with to you entirely different skills and behaviors
+00:11:02 [W] You would you would have to make a compromise and across the entire cluster. You can still achieve that same sort of behavior here.
+00:11:11 [W] You can see that we are in Skyscanner.
+00:11:14 [W] We've got this service that's being a deployment is being scaled with a number of different metrics that we've got a jetty you tell threads thread pool and resource that we're podcast metric that we're scaling on.
+00:11:29 [W] We've also got CPU utilization metrics that was going on and finally we've got this object.
+00:11:32 [W] Time scale limit and on the right-hand side. You can see the Prometheus adapter config for what that metric actually maps to and say Prometheus adapter and that basically achieves our for us the ability to
+00:11:47 [W] You will need a scale at most 10% time without needing the kubernative 118 tunable Behavior now Jackson's going
+00:12:02 [W] Takeover they introduce you to the basics of vector called after school.
+00:12:06 [W] Yeah for VP a many of us may have questions when we deploy new applications. Like how many resources they should we give to the deployment initially.
+00:12:25 [W] So most of the time we want to give a higher limit to handle the big load.
+00:12:31 [W] Otherwise, the there's a risk of our applications are not able to serve the big traffic.
+00:12:35 [W] So even if we like to get the highest the naming as we can we need to spend some time on The Benchmark to get those values besides.
+00:12:42 [W] Another challenge is a big occasion is changing over time.
+00:12:45 [W] The odors adding is no longer efficient as the like the daily traffic pattern change or users is growing in central the vertical auto-scaling aims to solve these problems it automatically
+00:12:58 [W] Jasmine CPU and the memory by the relations for your past your help right sighs you love vacations up and down to match the demand and reduce a waste.
+00:13:09 [W] There are three components in VP a recommender, like operator and animation plugin.
+00:13:19 [W] The recommender look at the metrics history om events in the suggest. The feeding values will request and install it in BP object. The updater will decide which path should be restarted based on the
+00:13:36 [W] Recommendations importantly the operator respect the poddisruptionbudgets so you can apply pdbs here to limit the number of concurrent disruptions.
+00:13:51 [W] the mutation omission of a book is used to apply the recommendations on parsec Nations.
+00:13:53 [W] And there's also four kinds of moles that you can use in vpa.
+00:13:59 [W] So the difference is between them is the win. Do you want to adjust the recommended Pablo sauces? If you are not confident enough we suggest you to start from off which only recommend the pot size but doesn't actually change anything the
+00:14:14 [W] Besides recite the pop only when pause operator.
+00:14:25 [W] well the recreated and auto resides and Polished by restarting the existing Ones guy will talk about the vp8 and capes.
+00:14:29 [W] Yeah, so practical part of scaling and is really useful for Singleton's so things like the big Prometheus instance you're using to monitor your cluster and also Services used by internal teams if these aren't
+00:14:48 [W] The script during the global like to have traffic patterns which scale up and down in a predictable way and it's no use giving them people resource usage and burning money during those quiet periods were no limits in the office.
+00:15:03 [W] So in this case, you can see graphed over a week the CPU utilization of a Prometheus instance inside Skyscanner and you can see there's any obvious traffic Peaks when people open engineer's are in the office and then it drops down significantly to
+00:15:17 [W] Roughly a third of the lowest points of its peak usage these sorts of things where their Prime candidates for vertical poddisruptionbudgets can easily achieve huge improvements in your resource usage.
+00:15:32 [W] so there are a few limitations with that's called Auto scaling and
+00:15:37 [W] so as Jackson already mentioned you shouldn't really use it in conjunction with resource-based.
+00:15:51 [W] Hpa's and currently as the to will complete. So obviously the VP a will be trying to change the resource limits or requests at the same time as the HPA is trying to scale on the based on those things.
+00:16:00 [W] You can however use them where your your HPA is set up using customer external Matrix and your vpa is modifying.
+00:16:09 [W] It resource requests and currently modifying the resource to the case requires recreate recreating the entire pod meaning a pod restart. So that will result in the destruction. That's why I say you should make use of PBS as Jason mentioned.
+00:16:22 [W] And there is work on going to try and mitigate this and that at that point the auto mode will become much more useful where it should be able to modify the
+00:16:38 [W] Question limits and so long as the node. It's currently running on house those extra resources. Then the Pod should not require a restart to be modified and and it can also be tricky to be to use with JPM based workloads.
+00:16:53 [W] His height and this is unsurprising, but here we've got a graph of a java-based service inside Skyscanner. And as you can see from the Viewpoint of kubenetes, most of the time these pods are running along and represent memory utilization
+00:17:08 [W] in this case the VP a would likely continue and giving it more giving these pods more and more memory and until we hit the maximum size of the nodes were running on so just something to be aware of Jacksonville may take you through the
+00:17:23 [W] basics of course Trotters killer
+00:17:27 [W] class the autoscaler scale your cluster based on the pending pulse. If you are actually check whether there is a pending pulse and increase the size of the crossword if more resources are needed if knows are underutilized and all
+00:17:46 [W] Also be scheduled even on fewer nodes in the cluster. So plasma autoscaler will try to remove enter utilize node down to the minimum size of the plaster and the guy
+00:18:01 [W] Talk about the utilization graphql.
+00:18:04 [W] Yep, so we have a graph here which shows that so we can see her a bold red line. And the Amber sort of filled in section is the minimum utilization that we
+00:18:22 [W] Of on certain our cluster of 90% And you can see as soon as the bubbler I'd line and set something with it for a while.
+00:18:34 [W] It becomes considered as a candidate for scale down by the cluster autoscaler which point it cordons it drains it and starts node pods, start moving off it so you can see the utilization coming down in steps as these pods are rescheduled on
+00:18:45 [W] Their nodes in the cluster eventually the nodes utilization drop. So low that it's only demon set pods left on it and whatever weight spanning the posture autoscaler terminates the node and we stopped paying for it.
+00:18:59 [W] Here's a detail scale down process each scale of zero, Mark underutilized nose and knative knows as the same time. CA use is kubernative scheduler code to simulate if
+00:19:16 [W] Cause I needed no can be moved to other nodes.
+00:19:27 [W] So after I a well MK knows without the past will be recycled first, in this case, if those under utilized the nose as you and knative after 10 minutes see a weird dream the paws on them and remove
+00:19:35 [W] remove the now
+00:19:37 [W] so let's talk about the expanders in your class pairs.
+00:19:48 [W] You may have multiple nodes groups and Wednesday a try to bring bread more capacity to the classroom.
+00:19:52 [W] You need to decide which node group to scale up to see a prince a concept here called expanders.
+00:20:00 [W] So there are four different vendors here like the random expander priority expander price expander and the list of ways. It's tender. It's very important to
+00:20:11 [W] Understand these is panders to optimize your cost and performance.
+00:20:16 [W] You can choose a white one based on your knees.
+00:20:18 [W] We'll all customize your own expanders.
+00:20:23 [W] So these extenders are very easy to understand from their names.
+00:20:28 [W] We will talk about a few cases using priority extended data. Kairu. Talk about the things to consider in CA
+00:20:35 [W] Ice is the number of things to consider when enabling cluster also scaling and so which of your pots and workloads can tolerate interruptions and whether your pods being scaled down me to do any cleanup.
+00:20:51 [W] So for instance if you have Insight requests, and and if you can't tolerate those requests effectively being canceled father and flight or it's going to cause a degradation to your customers and then you can use containerd lifecycle priests top hooks to basically ensure
+00:21:03 [W] That your containers finish their own flight request, but stop accepting any new request before they're terminated with iPods using disk space that can resume safely whether they should be made stateful sites to speed up
+00:21:18 [W] Start times so that they get their disk usage back and and priorities which pods are most important place.
+00:21:28 [W] You can tolerate not running for periods of time.
+00:21:40 [W] so things that aren't customer impacting you may be okay with not having scheduled at a given time or having lower priority when customer impact in workloads need to scale up.
+00:21:42 [W] So what happens if you have batch jobs or jobs, which you don't need to run immediately. So you can use combine the use of pot pie Ortiz with the CFI Expendable pods priority cut off so that you can use this to avoid the see a
+00:22:01 [W] Yup, and purely for ultra low priority jobs.
+00:22:13 [W] So if you have jobs, which are not important enough that you want to spend money on nodes to scale up the cluster, but just want to been pack around and the rest of the workload from their spare capacity in the cluster.
+00:22:19 [W] This is ideal for that. And and if you're using the priority expander steps I mentioned how do you fall back to On Demand instances for in sport or preemptible instances or your car?
+00:22:33 [W] Cloud providers equivalent of capacity and so you can create on demand note groups with lower expansion priorities and spot instance snowdrops have higher priorities.
+00:22:46 [W] This will cause the cluster autoscaler to preferentially try to scale up the spot for preemptable load groups and then fall back to the on-demand instances if I can get them, so here you can see
+00:22:56 [W] an example of the conflict map showing that so in this case if there's no will first attempt to increase the low cost option, but then if there's no spot instances available within their Max node profession time puts that are tunable flag on
+00:23:11 [W] Strata scale I'd be on L fall back to using the on-demand group and Jackson will may take through some more bits of cost optimization with the CIA.
+00:23:22 [W] So there are some common problems like these like you have multiple spot no groups and some of them are like shut up Cassity to see it will try to wait for the no coming. It takes up to the
+00:23:39 [W] No provision time to move to the next node group if the current notebook is not available.
+00:23:52 [W] However, if your next note will be is does spok group again and is very likely the capacity is limited as well, too.
+00:23:56 [W] There's two things you can do here.
+00:23:59 [W] The first thing is you can't win the max node provision time reduce the time for CA to move to the next node group. So there's there's another tries to use that.
+00:24:09 [W] The mix the instance policy.
+00:24:14 [W] This is the AWS ASD feature and mix them policy allows you to have different spot instance in y as to the good thing is even some of the instances are short of capacity is very likely
+00:24:26 [W] You get other instance types in stackrox when the using instance makes things have obviously has another advantage that you can only have like world to like asg's and help reduce those handled
+00:24:42 [W] Interval Layton sees remember it will be better to use the similar instance with the same amount of memory and CPUs in one makes that influence policy because it helps the am the simulations to
+00:24:57 [W] Like the desired number of the note accurately.
+00:25:01 [W] Next we'll talk about the GPU of My Relations.
+00:25:16 [W] So GP, you know, there is a little bit different from CPU knows because the GPU resources need to be advertised by device plugins, which takes longer time.
+00:25:22 [W] The common problem using GPU node is see bring up the note GPU is not ready.
+00:25:31 [W] Then see a thing called cannot be scheduled on the new coming node since a lack of the GPU resources. So if you apply the label, CA
+00:25:35 [W] Wait for GPU to become ready and these problems can be resolved. So there's no unnecessary scoffs. Another case means skill down is when you apply the label GPU Matrix will be honored in scale down one
+00:25:49 [W] Is if GPU is vendor utilizing even if the CPU and memory utilization is high these notes Q becomes a skilled scale down candidate and a lot of your users May problem scaling up from their room
+00:26:03 [W] Say after it doesn't have any like template in this case.
+00:26:12 [W] It needs to build is template from the cloud provider for simulations.
+00:26:15 [W] However provider has limited information in order for CA to build an accurate template user need to tack the resources in Auto scaling group.
+00:26:26 [W] So the common case is here is custom metrics and count custom metrics and labels for no tufin.
+00:26:33 [W] Entities henceforth all generations.
+00:26:38 [W] So this guarantee CA makes white schedule scheduling decision, even without existing node and guy will continue on the Gauchos. Please see a that
+00:26:47 [W] So there's a few more I got to be aware of with the CIA.
+00:26:58 [W] So how do you protect critical workloads?
+00:27:05 [W] And so if for instance you've got machine learning workloads or something similar where you can't tolerate it being interrupted in the midst of a run without losing all of the work is done up to that point.
+00:27:10 [W] You can apply an annotation safe to that people's false that prevents the see a terminating the node with your critical job, even if the know that utilization is more than that.
+00:27:17 [W] Thresh, and there's a to sort of related problems.
+00:27:30 [W] It can take the see a file to not as podrían right to unscheduled all to the time. It requests the cloud provider scale up as well as time in the cloud provider takes to bring up that new node and potentially over scaling the
+00:27:38 [W] Cluster to avoid that time so you can use the over-provisioning feature. So you put dummy pods with low priority on your cluster to reserve space and then allow the Kate scheduler to remove them to make space for unscheduled or pods with
+00:27:53 [W] I've scaled up.
+00:27:58 [W] That means you don't have to wait for new nodes to be provisioned and you can even use a low priority workloads as already mentioned if you have a suitable work for that rotten dummy pods and slightly wasting money.
+00:28:10 [W] So for all your services start scaling and don't stop scaling though. I'm so resource quotas are invaluable here figure out the maximum resources are given name space you use it people to even with fail over and say it resource coat is to Limitless this prevents a run away scaling
+00:28:25 [W] Control your costs and delighted to have honest conversations with your users about how about for resources?
+00:28:32 [W] They actually need for their workloads.
+00:28:35 [W] And in addition you can set the maximum size.
+00:28:39 [W] We've been all groups and limited skill the cluster on the cluster autoscaler aside to front run away skill in there and and make use of poddisruptionbudgets closer autoscaler respects.
+00:28:50 [W] He's found draining nodes. This is a way to ensure that you don't end up with accidental outages whilst a postural to scalar is draining and nodes.
+00:28:55 [W] And the other thing to be aware of as the cost of the scale doesn't yet for all Cloud providers. All the big ones are covered her over there is work on going to decouple the club for Riders and support our pluggable cloud provider over grpc implementation to make it easier to implement nuance.
+00:29:10 [W] And this is a quick list of the flags that we think are most valuable to look at churning away from potentially way from their default values depending on your workloads within the concert autoscaler.
+00:29:25 [W] So things like scale down the laughter out or scaled. I'm utilization threshold for instance that defaults to 50% Thanks guys going to rerun that 80 or 90% depending on the cluster. So
+00:29:37 [W] The cluster of scale is far more likely to consider. No just candidates for scale day.
+00:29:43 [W] And now Jackson will take you through a few other bits and pieces related to scaling in class and kubernative.
+00:29:52 [W] There are some other community projects and others going like areas like a doll resizer in the class. Very professional autoscaler.
+00:30:11 [W] They both scaled their resources based on the clatter sighs as a cluster skill up and down so you can sink.
+00:30:14 [W] don't resizer a much less sophisticated vpa you use the linear formula to calculate the request limit values of resources based on the processor size. Normally it is used.
+00:30:26 [W] You is Gil meche rights related adults. For example, when your crossbow Pro your probably around a large Matrix, the server cluster propositional autoscaler is normally used for scheduling Diaz replicas as horizontally to
+00:30:40 [W] Short enough balls to meet the DNS priority needs of the posture but nothing prevents you from putting these Q autoscaler on other type of work clothes beside the metrics and the DNS.
+00:30:52 [W] And the kubernative event event driver auto-scaling was released elastic Loop column allows the like the large auto-scaling workloads from a
+00:31:08 [W] Verity of saws, he's like Kafka rabbitmq wear these and some cloud provider carries the a guy will talk the summaries at the end.
+00:31:19 [W] So f*** the cover and as with any tekton cost saving and kubernative is by analyzing the trade-offs. You can make based on your workloads in your environment which pods you can afford to be interrupted.
+00:31:39 [W] How quick where you need services to scale up and down and put scaling Behavior you want in your classroom services.
+00:31:45 [W] Those strategies can vary depending on your clusters environment clay provider the thing that's most likely to yield the best return on investment is your horizontal bol.com line and
+00:31:54 [W] Like your service owners to figure out what are the bottlenecks for them and what Matrix they want to scale on and enabling them to do that. Whether it's through resource metrics through custom metrics or through external debt rose that analysis is likely
+00:32:09 [W] And give you the most Improvement quickest.
+00:32:12 [W] Thank you very much. Any questions?
+00:32:17 [W] Look, yes, so there are a few questions.
+00:32:28 [W] I will I've not got a huge amount of time.
+00:32:35 [W] I'll try and get through as many as wide as you can and Bobby in slack and answering us any I don't get to it afterwards and so there is a question.
+00:32:41 [W] How do you handle auto-scaling during deployment?
+00:32:48 [W] That is a good question in Skyscanner.
+00:32:48 [W] We have our own and blue-green deployment tooling we use.
+00:32:52 [W] Out and we set the minimum to be the current desired cone when we started deployment. So we still love it scale up, but we limit how much it can scale down and during a given deployment.
+00:33:06 [W] And that's largely due to the behavior of our deployment telling so you may want to be back and depending on how you do that.
+00:33:17 [W] For a long time with EPA was not recommended for production workloads.
+00:33:24 [W] It's just written in the official documentation.
+00:33:25 [W] Is it still the case?
+00:33:30 [W] No, so the recommender a few months back when GA if you have any worries about it is that some mentioned would still recommend using an effect for him the off
+00:33:40 [W] Begin with so that you can see what recommendations the BPA would make at any given point in time and use that to build your confidence with it before actually enabling it and modifying pods.
+00:33:55 [W] And do you have any suggestions on how to effectively of skill but I'm not using a cloud provider offered kasturi tsgt that's that will
+00:34:07 [W] Depend a lot on the set of your cluster am sorry for stealing your Guru and asking about if if you want to pick my details in the slack Channel, I can give you a better answer than that, which is the better approach
+00:34:23 [W] Or BPA and it pays the the more mature approach I would say and however, there are situations very as mentioned.
+00:34:36 [W] are situations for the BPA is the better option, especially to the side Singleton's things where you cannot replicate those those pods horizontally so that staple workloads for instance etcetera.
+00:34:46 [W] I think I've got just enough time to answer one more if I use gitops and specify resources. This might like lead to the VP a operator conflict which might result in constant Pottery Styles.
+00:34:58 [W] Am I right?
+00:35:00 [W] I believe that is the case though currently scanning don't use a gitops based workflow. So I'm not actually certain but I believe yes, if it was trying to reconcile the pods running in the cluster with a
+00:35:13 [W] Resources against what you wrote Desiring?
+00:35:22 [W] Yeah, I think your get-ups operator would effectively start fighting with the BPA operator around the pods being created with different resources.
+00:35:29 [W] Thank you very much.
+00:35:30 [W] I think that's me out of time.
+00:35:36 [W] If you have any any of the other questions that wasn't able to answer and I'm happy to answer in the slack channel two - coupon - operations I will
+00:35:44 [W] I'll try and answer all of them and to the best of my ability.
+00:35:47 [W] So thank you very much.

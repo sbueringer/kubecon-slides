@@ -1,0 +1,261 @@
+﻿Designing a gRPC Interface for Kernel Tracing with eBPF: AXOR-8934 - events@cncf.io - Wednesday, August 19, 2020 8:20 AM - 116 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:03:00 [W] Containers track is to look at one of the main interesting part of Falco Falco is a cncf incubated project that aims to provide Cloud native land and security.
+00:09:25 [W] We look at the part of our code that uses grpc as an output interface that exposes the rule alerts match. Thanks to Anna BPF program able to trace all the see schools happening in the colonel.
+00:09:36 [W] Falco was created as an open source project from day one by existing in 2016 to parse leaves in Stevens to match security policies against them at runtime about years later.
+00:09:49 [W] It was donated to the cncf this past January Focus being the first ever and time security project to be promoted to the cncf incubation level.
+00:10:00 [W] Anyways, my name is Leonardo. Righto. I'm an open source software engineer at sysdig where my daily job is to code Falco evaluate and maintain it.
+00:10:07 [W] Medina Falco.
+00:10:10 [W] I also have to Advocate them presented storageos LD artwork we do to continuously improve it. So here I am if there's a photo of me moving.
+00:10:18 [W] It's like a real Italian in San Diego Falco swag to the first one guessing the exact meaning you can usually find me on Twitter GitHub and generally the web West with the nickname loaded.
+00:10:30 [W] Oh, feel free to drop me a line.
+00:10:34 [W] Follow me ask me questions about Falco BPF Colonel, whatever no problem at all. I like to
+00:10:36 [W] socialize
+00:10:37 [W] Eject to be promoted to the cncf incubation level.
+00:10:43 [W] Anyways, my name is Leonardo. Righto.
+00:10:43 [W] I'm an open source software engineer at sysdig where my daily job is to call Falco evaluate and maintain it as a material Falco.
+00:10:44 [W] I also have to Advocate and percentage technology.
+00:10:44 [W] They all the hard work we do to continuously improve it.
+00:10:44 [W] So here I am here. There's a photo of me moving.
+00:10:45 [W] like a real Italian in San Diego Falco swag to the first one guessing the exact meaning you can usually find me.
+00:10:47 [W] On Twitter GitHub and generally the web West with the nickname loaded.
+00:10:48 [W] Oh, feel free to drop me a line.
+00:10:50 [W] Follow me ask me questions about Falco a BPF Colonel, whatever no problem at all. I like to socialize
+00:10:51 [W] The plans for the next 30 minutes are to look at photos of my beautiful Homeland in southern Italy while trying to get the skinny on now Falco solves the runtime security problem, even for cloud native environments based on our beloved kubernative by tracing
+00:10:56 [W] Land in southern Italy while trying to get the skinny on now Falco solves the runtime security problem, even for cloud native environments based on our beloved kubernative by tracing the see schools using a cool kid technology called DB P.
+00:10:57 [W] Co Falco collects these events from the colonel as rules against them and now it eventually of put solids via grpc to make them more usable in a kinetic context since we are going to Deep dive into all
+00:11:13 [W] By the end of this talk you'll have a deep technical knowledge of some very crucial parts of Falco and hopefully you will be also able to start contributing to it.
+00:11:26 [W] What does security mean at least to me?
+00:11:33 [W] I want to control things that can happen and things that cannot since pre-emptive control is not always possible.
+00:11:38 [W] I also want deep visibility into my systems to be able to know as soon as possible what just happened I think of security in terms of to words prevention and detection.
+00:11:44 [W] What these two concepts in common policies but few some kind of policies to describe the allowed or disallowed me before process Dharma system calls their arguments and Austria sources assess. The
+00:11:59 [W] First concept prevention is about enforcement.
+00:12:15 [W] They're not allowed some actions for some person to happen at all because of some policies on the other side. The second angle of Security is to use the policies to monitor the behavior of a process and notify when it steps outside those policies at runtime.
+00:12:18 [W] Some examples of enforcement tools are seccomp II B PFC Linux apartment, even the authorization mechanisms, like kubernative sir back all the policy-based admission plugins feed this category since they will prevent something to happen depending on some policies.
+00:12:36 [W] While tools like audit the and Falco itself belong to the auditing side of the security topic a topic that especially in Cloud native security environments has not been solved yet for Co runs mostly user space and this makes it somewhat a softer
+00:12:51 [W] On the other end.
+00:12:58 [W] This also makes it able to have a much richer set of information powering its policies and augmented kind of policies taking into account things like continue metadata.
+00:13:08 [W] That's very very difficult to implement completely external level. So can Falco solve all our security concerns?
+00:13:14 [W] Honestly, not at all software is made of layers and sorry security.
+00:13:22 [W] This is even more true in Cloud native environments nowadays, as you can see in the scheme, I draw into the slide Falco is here to fit into this picture together with the other tools.
+00:13:34 [W] You have to combine it with other layers in many way using a defense in that strategy.
+00:13:42 [W] The idea is to define a system against any particular topic using several independent methods because you are still not
+00:13:44 [W] Beings that there's no such thing as perfectly safe software.
+00:13:48 [W] And a layered approach is the best possible strategy for software security.
+00:13:56 [W] just allow me to stress some points how to trust cloudbees eiders and their ability to detect malicious of compromise insiders how to prevent an undisclosed vulnerability or at 0 divided by that allows
+00:14:08 [W] Any particular attack using several independent methods because you are still not convinced that there's no such thing as perfectly safe software and a layered approach is the best possible strategy for software security
+00:14:10 [W] Into your system.
+00:14:13 [W] I mean CV still happens linode kubernative name and open source software that does not experience in the city and suffered an explorer.
+00:14:20 [W] I think it's clear. Now that enforcement tools alone are not enough.
+00:14:29 [W] We also need runtime Security Solutions and these two approaches are and must be complementary and not mutually exclusive.
+00:14:36 [W] So what's runtime Security in the context.
+00:14:40 [W] I've just described runtime security softened last line of defense.
+00:14:41 [W] Let's try with a metaphor.
+00:14:44 [W] She scaly. Look how beautiful she was.
+00:14:48 [W] I have locks on my door and also an alarm think of them as compliance rules, but she hollered me when things
+00:14:51 [W] I'm not going right policy violations when little bro is misbehaving think of him like a compromising cider or if there's something suspicious happening outside or nearby anomaly or zero day.
+00:15:06 [W] She detects runtime anomalies in my life at to and she was may she rest in.
+00:15:09 [W] in peace very serious about her job. I mean look at our in the picture. So while prevention is about locking the doors detection is about continuously monitoring the inside the petabyte-scale.
+00:15:21 [W] perimeter
+00:15:23 [W] The f*** you unique way to do.
+00:15:36 [W] the certain rules against events containing the Sea Scrolls plus other contexts in for like arguments kubernative, mayadata containerd mayadata and so on somebody could argue why tracing the Cisco phones well nowadays the production
+00:15:56 [W] With so many paths Services containerless monitoring tools generally software.
+00:16:04 [W] tried to do a nice layered diagram choose light before and what it turns out that complexity is the exact reason we go look under the umm
+00:16:12 [W] In the end whatever program we run it will end up making a lot of Cisco phones this because system calls are the way programs. Ask the colonel where everything happens to perform some task whether the task regards networking iot.
+00:16:43 [W] To go at the lowest possible level and Trace all the footprints and the context in which they happened.
+00:16:56 [W] We need to combine these events with metadata from other layers of Interest like kubernative solid clogs containerd meter deep and so on.
+00:17:00 [W] For example, we need to have the Cisco arguments in a readable way.
+00:17:03 [W] We need to know when events are happening.
+00:17:06 [W] Asynchronously.
+00:17:10 [W] We also need to know if a Cisco switch was originated in a container. What was the idea of the container and from what imaged?
+00:17:14 [W] Dinner was created.
+00:17:18 [W] Combined these events with metadata from other layers of Interest like kubernative solid flux containerd method it is so on.
+00:17:27 [W] For example, we need to have the Cisco arguments in a readable way.
+00:17:27 [W] We need to know when events are happening.
+00:17:27 [W] Asynchronously.
+00:17:28 [W] We also need to know if a Cisco switch was originated in a container.
+00:17:28 [W] What was the idea of the container and from what imaged containerd was created?
+00:17:29 [W] also, we would like to know the cluster nodes where all of this happened how to get Cisco to users.
+00:17:30 [W] Is in use them as one of the inputs for runtime security Focus solves these with three alternative approaches that we can call Falco drivers a kernel module a Petrus base producer.
+00:17:34 [W] We call PD egg, which is slower than other methods and very icky but it's the only possible solution in some environments like managed kubernative clusters Target and places where you cannot install Command Module leader it BPF probes and finally
+00:17:48 [W] Beatrice best producer we call PD egg, which is slower than other methods and very a kid, but it's the only possible solution in some environments like managed kubernative clusters far gate and places where you can uninstall Command Module leader
+00:17:50 [W] Forget the first two drivers and mention it in this talk.
+00:17:56 [W] We are going to focus only on the latter before the while using something.
+00:18:00 [W] It's good practice trying to understand what it is right EVP have is an easy way to program the Linux kernel and like kernel modules EBP of programs are guaranteed to complete without crashing.
+00:18:13 [W] If you ever wrote a colonel model, I know you can feel the greatness of such achievement. So the name of this technology stands for extended Berkeley packet filter. It's the
+00:18:22 [W] Illusion of BPF a technology body 1992 to perform very efficient packet filtering about the unnecessary use of space allocations.
+00:18:28 [W] So if EPF is very flexible and capable of treating and most any aspect of all major Linux subsystem ranging from CPU scheduler memory manager networking system calls and so on with a BPF one can attach custom sandbox
+00:18:44 [W] every function exported via canonical table without the fear of breaking the colonel EPF emphasize the importance of safety when Crossing user space boundaries the in color verify will refuse to load any PR problem if in valid point that references
+00:19:00 [W] Or the maximum stackrox sides limit is reached Lopes are not generally allowed and only a small subset of specific epfl / functions is permitted to be called within generated by the code.
+00:19:16 [W] Only a small subset of specific epfl / functions is permitted to be called within generated by the code.
+00:19:21 [W] Thus a VP of programs are guaranteed to terminate at some point in time and never exhaust system resources furthermore the performance of reading list by BP f is of negligible making it a great fit for monitoring and tracing evilly loaded
+00:19:30 [W] Guaranteed to terminate at some point in time and never exhaust system resources furthermore the performance of reading these by BP f is of negligible making it a great fit for monitoring and tracing evilly loaded systems for all
+00:19:32 [W] For all these reasons it BPF superpowers are perfect for our need to trace all the Cisco phones.
+00:19:41 [W] I know I know we're almost ready to look at our BPF driver implementation.
+00:19:42 [W] No worries.
+00:19:46 [W] Let's first give a glance a towel a BPF architecture Works in general.
+00:19:49 [W] Let's pretend we have any B PF source file ready.
+00:19:53 [W] The first step is to compile it to be P of byte code. Once it is successfully compiled and the object file is generated.
+00:19:59 [W] We are ready to inject it into the kernel attaching it to a given you
+00:20:04 [W] You're making it run on a specific event for this purpose.
+00:20:11 [W] We used BPF system call this seemingly simple Cisco does a lot more apart from loading BPF bytecode it attaches multiple to the event and it also creates a manipulating Colonel Maps. Then the very first article analyzes the program before loading it to ensure that it
+00:20:20 [W] For this purpose we use the BPF system call this seemingly simple Cisco does a lot more apart from loading the ppf bytecode it attaches the bicycle to the event and it also creates and manipulates in Colonel Maps there the verifier statically analyze the program before
+00:20:22 [W] Running system as we briefly explained before and it's important to observe of there are plenty of events to which we can hook up various BPF program types. We have events for monitoring and facing purposes others for security
+00:20:35 [W] All and clear for networking to finally a BPF also provides the ability and process share data structure such as EPF Maps. Well, DBP of maps are likely the most compelling feature of the ppf without
+00:20:51 [W] Without maps and Falco driver will not have been possible at all maps come to the rescue for sharing State between user and kernel space.
+00:21:07 [W] They represent a very efficient in Carmel Keeble use tool for data aggregation and can be assessed a synchronously from user space.
+00:21:12 [W] There are many types of BPF Maps as you can see looking at this light maps that stored data per CPU usual hashmaps arrays maps to store other beeper programs to Telco later.
+00:21:22 [W] The to use a lot in our driver and so on EVP of does not allow you by the salmon to move memory from kernel space to users peace. And for reasons, its purpose to be safe. We'll they've been a completely false.
+00:21:36 [W] hope in that case but likely as say e BP f as Maps
+00:21:40 [W] As you can see in the diagram here, the ppf maps are a vital part of the Falco architecture when using the BPF probe here.
+00:21:54 [W] We have a library called lips cap that loads the elf of the VP of driver into the kernel EBP of virtual machine, which executes it under the hoods lips cap.
+00:22:01 [W] Also sends little BPF programs to be executed at runtime the goal of this little EBP of programs that we call fillers is to augment the trade Cisco also that in an input event we left.
+00:22:13 [W] BPF Maps now lives in Spokane, finally our reach the events flowing in with containerd metadata and all the other fancy Cloud native Things We Said suppose you want to contribute to our a b PF driver now
+00:22:37 [W] You will be to build the existing one from Source, right?
+00:22:42 [W] So create a builder directory go into it configure see make to create make files to compile the ppf probe to as shown in this slide.
+00:22:56 [W] Why is this configuration? Step is done execute make BPF to build it. If everything went well, you will end up having a doctor object file the Falcon BPF probe into the builds lash driver / B PF directory pretty simple as long you are ready
+00:23:05 [W] I loved the leaders for your specific kernel is installed and the bug file system mounted.
+00:23:18 [W] Well, the next natural step is to load the beep are probably just peel and use it as the Falco inputs driver.
+00:23:26 [W] Long story short. You can execute Falco putting before it's binary the Falco BPF probe environment variable.
+00:23:34 [W] can be either empty in which case Falco expects the ppf object file to be into the dot Falco / Falco - BP f 2 Phi into your room directory.
+00:23:40 [W] The or directly pointing to the path where you put the compiled EPF object 5, let's now dive into some details.
+00:23:50 [W] So what does happens when we run Falco with one of the two comments in the previous slide?
+00:23:53 [W] First of all, the provided arguments are passed then Falco instant seeds the seeds class obtaining the Specter, which is what we call live since it passes this inspector instance to the Falco engine. Which in tour
+00:24:06 [W] Also passes the ruleset we started Falco in and to the Falco outputs, which is the piece of Falco responsible for initializing the output method and handled events when they will flow in from this back at this point Falco is
+00:24:21 [W] Rock the inspector to start like capturing Cisco rules their arguments the context within the happen containerd metadata generated what we call impotence it does so by calling the open metered of the scenes class which starts
+00:24:37 [W] Calling this cap open meeting the of the lips cap Library the lips cap main duty in this scenario is to actually load the VP of programming to the colonel and finally start the capture.
+00:24:49 [W] These only slide will need a world tour Keda cated to it. But let me try Briefly summarize it to perform the loading it first tries to locate the ppf object file, depending on the environment variable. We passed the Falco before then it
+00:25:05 [W] To perform the loading it first tries to make a DB P f-- object file depending on the environment variable. We passed the Falco before then it collects some machine info like number of online course enables the ppf just-in-time compilation for better
+00:25:11 [W] enables a DPF just-in-time compilation for better performances and starts passing the health of the Pasadena BPF object file while parsing it leaves cut first checks if the BPF probation as be compiled for the current current release
+00:25:23 [W] EVP of version matches the one that the current file conversion requires then it looks for mlperf map sections into the elf to Define and create them accordingly.
+00:25:39 [W] Dbpedia probably uses various maps to Define and share it setting it state and its Behavior.
+00:25:46 [W] It has a map to represent Cisco control system independent codes.
+00:25:49 [W] for Cisco Telco Dru. Tim Tebow a map to represent whether a specific Cisco should be
+00:25:53 [W] betrayed or ignored look for Cisco table
+00:25:58 [W] Another mop to describe the events in terms of the Cisco.
+00:26:05 [W] They are created from its argument and their tabs look for event info tables a map to link every Siskel to the entry and exit fillers to execute when it occurs Phyllis table.
+00:26:18 [W] It has also maps to store measurements about all processes and trades per CPU lips cap loads all of these from the elf and populates them.
+00:26:29 [W] Then it looks for Elf sections starting with Trace point or row, tracepoint prefix and loads them to to do so. It uses the BPF Siskel using BPF Prague type Trace point or
+00:26:44 [W] And loads them to to do so. It uses the BPF Siskel using BPF prototype Trace point or BPF prototype robot race point.
+00:26:47 [W] Once loaded it attaches them either by opening the trace Point file into the back file system and using ioctl command with perf event is cset BP a flag or by using BPF
+00:27:03 [W] Point open DPF command for Road Race points if they are supported when at respond with a BPF program touch to it fires that program will be run and this is how our BPF driver traces all
+00:27:17 [W] Finally leaves cap looks for Elf section starting with the filling prefix.
+00:27:24 [W] It grabs the corresponding BPF program from the fillers table and set up C to be executed when the related Cisco get raised by populating the corresponding e b PF map of type B PF
+00:27:39 [W] Ray these little a BPF programs are responsible for reading the Cisco arguments at the entry or exit of the corresponding Cisco and make them useful for lip-synchs alongside leaves Gap also
+00:27:55 [W] Assistant using lists and now it is really to scan the proc file system to gather tried IDs read sockets retrieve values are the process information now are all of these events are carried through user space.
+00:28:11 [W] Falco is now ready to go grab them.
+00:28:14 [W] To do so it simply looked through the events by continuously calling next middle of the inspector such meter. Does three main things it gets a pending containerd events. If any it calls the scalp next function
+00:28:30 [W] up and updates the kubernative state by connecting to the kubernative CPI server and the synchronously collecting its metadata and evens reconciling them later with the corresponding event the piece of code
+00:28:46 [W] Grab the Cisco events is again Intel obscure its discovered next method that reads the actual events collected into the ppf maps we mentioned before once this process is completed.
+00:29:01 [W] We do have the input event that the user Space level and we instruct the Falco engine to check it against the currently loaded Falco rule set.
+00:29:15 [W] If a match with the rule is found the event gets immediately passed to the Falco outputs, which will handle
+00:29:18 [W] all it by calling the and all grpc function in this case. This function will shape the information contained in the event to create an output alert and push this final object to a cue from which the actual are piece implementation will pop
+00:29:31 [W] No big into the design of a grpc server and one or more are PC meters to serve those alerts grpc is an arepa see framework originally developed by Google where it was called. Stop be then it was open source
+00:29:47 [W] Cncf umbrella and evolved a lot since then for sure.
+00:29:53 [W] It's one of the more high performance standards based general purpose and feature Rich grpc Frameworks out there.
+00:30:01 [W] It's built on top of HTTP 200, which is a binary protocol that implements the same semantics of HTTP protocol making more efficient use of network resources.
+00:30:09 [W] It also provides some nice capabilities like stream multiplexing within a single connection flow control and either compression usually grpc implementation Newsome generated code obtaining from sterilization formats.
+00:30:25 [W] Find ourselves you want to implement in terms of Arabs equals their type and their messages very often but not always this format is protobuf such generated code hooks into the coredns p is
+00:30:41 [W] Which is the API implementing the main features of the grpc on top of a lower level API like system calls and transport protocols depending on the programming languages.
+00:30:56 [W] We use grpc has like different Stacks since Falco is mainly written in C++.
+00:31:00 [W] We are going to look only at the grpc stack as depicted on the right part of this light at the bottom. We do a TCP as transport going up. We have see HTTP 2, which
+00:31:12 [W] A custom http/2 based on transport implementation that is zero PC data structure, and it's evenly optimized for it.
+00:31:26 [W] But you can also bring your rules such as Chrome at the Chrome networking Library above we have the grpc code where the main functionalities are implemented as said and where a thin Capi is.
+00:31:36 [W] These thin Capi is meant to support rapid languages implementations like the C++ one to go synchronous or to go a synchronous.
+00:31:48 [W] That's the question the grpc programming API comes in both sickness and the synchronous flavors these two closely correlated to the trading modeling play.
+00:32:02 [W] There are secrets model gives the application code for control of the trading model. The singles model can surely end the multiple Rico sysdig.
+00:32:07 [W] He's in parallel, but they are services from as grpc thread pool.
+00:32:22 [W] So in the signals model the implementer only as to care about ending the actual therapy: implementation making it an easy model to work with but if you want finer control over the training aspect of the
+00:32:26 [W] Services from as grpc tried pool. So in the signals model the implementer only as to care about ending the actual therapy: implementation making it an easy model to work with but if you want
+00:32:28 [W] Then the SQL CPI is the better model even to its considerably more difficult to work with honestly in this model.
+00:32:42 [W] The application tells grpc call that it wants to handle an array PC and provide it a tag the tax as a key for the completion of events.
+00:32:51 [W] Then it blocks on a completion queue waiting for a completion key to become available.
+00:32:56 [W] Once the keys available the application code executes the associated directly see
+00:32:57 [W] These model provides the best performances to who is willing to go the extra mile the cost to pay.
+00:33:04 [W] is that such API needs considerably glue code to be written and we will see in a bit and a good amount of patience to deal with implicit behaviors that Doc's do not call out very well honestly, but in the end
+00:33:18 [W] Us to bring our trading model and to overcome scaling limitations since no one knows when some Falco rules violation happens.
+00:33:33 [W] I needed a way to let people starter are a PC and then it just sit there waiting for some violation to a pencil to notify the clients working.
+00:33:38 [W] I want people able to say hey Falco.
+00:33:40 [W] I am interested in violations about this topic and Falco will tell them the violations regarding the topic if any and then if either violations occur,
+00:33:51 [W] It will go ahead immediately send them to the people still watching. This way clients would need to wait and start new era busy Cole's randomly while these mechanisms serves while the just described the use cases. It also reduces
+00:34:03 [W] It reduces the perilous total cost and it gives us some sort of Pop lining of Falco alerts.
+00:34:11 [W] This is what it's usually called long live streaming API Longley are PCR course lasting minutes hours or even days in some cases.
+00:34:23 [W] As you can see in the slide I use this grpc bi-directional API to Define and then implement it anyways, long live. The grpc does not come for free.
+00:34:37 [W] There are a lot of complexity involved both in the implementation of such apis and into their own nature. For example, the grpc flow control may have large buffer retry strategies at the framework level.
+00:34:48 [W] Stop aiming much sense in this case, which means we need to implement our own at the application Level.
+00:34:54 [W] Furthermore.
+00:34:59 [W] We also know that this type of service face when they're rtcp disconnects and don'ts it takes time to detect such Network failures.
+00:35:08 [W] We also know it creates issues with load balancers the alternative is that a Falco client does
+00:35:11 [W] A rapist ecole and asks, if violations are already happened to the Falco grpc server in case they happen the client receives all of them.
+00:35:26 [W] Disabilities connects and also it takes time to detect such Network failures. We also know it creates issues with load balancers the alternative is that a Falco client does
+00:35:35 [W] An arepa SQL and asks, if violations already happened to the Falco grpc server in case they happen the client receives all of them.
+00:35:37 [W] Otherwise, it comes back to sleep and then we'll try again later issuing a newer PC of the same time since having long lead are PC as the only approach will not be sufficient to fit all these cases.
+00:35:39 [W] I handed up providing also this approach by implementing a server streaming grpc the
+00:35:41 [W] As a single request of the summer Falco which can stream back as many alerts he needs to send and then if it does not have any other alerts left to send it completes the are PC.
+00:35:55 [W] It's like emptying a few of Falco alerts at once.
+00:36:03 [W] So just to recap the Falco grpc server implements the bi-directional and the service trimming grpc four outputs this way we can eventually
+00:36:11 [W] start more are PC calls without blocking its current thread honestly, as you can imagine this process was not easy to learn and it's far to be yet completed, but after writing EB P fq nothing can scare us, right?
+00:36:26 [W] After writing ebps code nothing can scare us right improving the performances and the be able Falco grpc server was essential so during the development I needed to use values tool to profile it like G proof and proof.
+00:36:37 [W] To maximize the time spent on Cisco since more siskel's time means better rule application performances.
+00:36:53 [W] You can see a bit of this process in place in Puri cursed 1241. If you are interested in learning more I can say that in general what matters when implementing such grpc apis in C++ is to use the sequencer API
+00:37:02 [W] Model while also reducing the contention using tools like valgrind or mute Risk by making different hypotheses and measuring the outcomes.
+00:37:18 [W] For example, I found that having a number of threads equal to the number of online CPUs works pretty well for Falco.
+00:37:22 [W] You should also tune. The number of completion cues having a completion Cooper tread is known to be the best performance trade-off in common a synchronous use cases. Also, you should try to reduce the
+00:37:33 [W] Options and try to reduce copies anyways as said I consider the current Falco grpc apis fart be definitive for sure.
+00:37:48 [W] There are still a lot of areas where performance is can build but also from an architectural point of view.
+00:37:50 [W] There are still exist Angel questions to be answered. For example, does it make any sense to design the output CPI as a unary code rather than a long live by directions than one?
+00:38:00 [W] These alternative API will return a response containing the current list of Falco rule violations, which is case not really covered up will itself.
+00:38:11 [W] Will it be more efficient for sure, it will be simpler to write and maintain but after the side we need to wake whether the added complexity for streaming long leader PCS provides a large enough benefit or not.
+00:38:25 [W] Any which scenarios sending a message on a stream is indeed faster than a new?
+00:38:31 [W] Movement is fixed and as a higher complexity.
+00:38:39 [W] So this is not a done deal yet as said in the previous Slide, the only real way to find answers is to write code and measure it. So I invite anyone willing to take this task to join our community
+00:38:51 [W] And discuss this with us.
+00:39:00 [W] Let's now jump into some diagrams to describe the current Falco grpc flow in more detail.
+00:39:03 [W] We are at the point that Falco can now read the configuration file and initialize the grpc server by providing it config values like the third paths and the addressed by
+00:39:12 [W] It also automatically guesses the number of online course and uses this number as its trading us value at this point Falco is ready to spawn a new trade responsible for running the entire grpc server.
+00:39:27 [W] Which main operation is to set up its own trading model and said finally the server also ensures to stay awake until it's running or to stop itself.
+00:39:42 [W] Otherwise, when the grpc service sold to start the first thing it does is to register the a synchronous Services automatically generated from the protobuf definitions and get told of the completion cues. Once this is done we can ask the grpc
+00:39:51 [W] It's own trading model as say finally the server also ensures to stay awake until it's running or to stop itself.
+00:39:53 [W] Otherwise when the grpc service sold to start the first thing it does is to register the a synchronous Services automatically generated from the protobuf definitions and get told of the completion cues. Once this is done we can ask the grpc
+00:39:53 [W] And then start the grpc server soon after the Falco grpc serverless pwns one tried dedicated to surveying and processing. The request is for every online CPU and while doing it so it also locates 10 different contexts
+00:40:07 [W] Different types bi-directional streaming and unity for each trait think of them as sessions.
+00:40:19 [W] This context is containerd references to the actual service implementation to cool process Funk and to generate the SQL service method to start serving the session request Punk.
+00:40:29 [W] They have three main functionalities start the session that we do as we allocate them right now process it when linkerd
+00:40:38 [W] courses are coming and eventually complete the associated are PC or keep it going context is also keep track of the state of the RICO see whether it is in the initial state in the writing one are in The Finnish
+00:40:53 [W] When a new grpc even see is available from the completion Q every trade process function running in its trade that said the sides depending on the context State whether to ask it to complete an end.
+00:41:08 [W] Running and it's tried that said the sides depending on the context State whether to ask it to complete an end the are PC or to process the current event.
+00:41:15 [W] We use the address of the context as the tag uniquely identifying the current grpc event available from the completion Q when it's time to process the event the request context dispatch the current concrete implementation of the
+00:41:27 [W] The rest of the context as the tag uniquely identifying the current grpc event available from the completion Q when it's time to process the event the request context dispatch the current concrete implementation of the RPC call using the reference
+00:41:29 [W] In the short case it calls the sub-meter that is responsible to pop the last Falco alert.
+00:41:45 [W] If any from the Falco outputs Q we mentioned before and write it into the response Trim in case there are more Falco colors to pop and to stream it contains to write them into the response
+00:41:52 [W] In case there are more fall colors to pop in to stream. It contains to write them into the response tree these operations generates another grpc venting causes the completion Q2 trigger again and restart the
+00:41:59 [W] See even thing causes the completion Q2 trigger again and restart the word processor in case there are no more Falco others life to send this process notifies the grpc core to be able to read requests again also this
+00:42:09 [W] Bill to read requests again.
+00:42:12 [W] also this operation triggers the completion Q Meghan is MM again. And so this bi-directional streaming API keeps going
+00:42:16 [W] we have an official go client that uses a timeout magnesium for tries to avoid spamming the Falco grpc server at the application Level for sure. There are smarter approaches to implement.
+00:42:29 [W] And this is one of those improvident. Sorry, I was mentioning before we also have an official python client and arrest one for the grpc Falco apis buf need some serious love. So regardless you're interested in contributing
+00:42:45 [W] The C++ Falco grpc server and me toads or to the clients, please.
+00:42:54 [W] Join our community and they'll pass also in case you need direction or support. Feel free to drop me a line over Twitter always glad to help. So thanks everyone for staying here for so long.
+00:43:07 [W] My direct messages are hoping you can find me with loaded on a claim on Twitter or GitHub.
+00:43:13 [W] Feel free to follow me get in touch for even more detail.
+00:43:15 [W] As in case, you don't have had enough.
+00:43:19 [W] how.
+00:43:19 [W] Please children.
+00:43:34 [W] please
+00:44:16 [W] okay to the questions people ask me for why'd you can find these guys on my basically?
+00:44:25 [W] The time of that we provide together with the VP F1 and and together
+00:44:40 [W] About is the power to Command Module functioning as an observer that took him two probes other people it also interacts with the colonel in the right modes of well the
+00:44:45 [W] I mean likely Deegan the users page drivers, but the kennel module that
+00:44:51 [W] so
+00:44:53 [W] - sure there are
+00:44:56 [W] reply to them
+00:45:06 [W] Can you hear me?
+00:45:09 [W] Okay, so I think I applied all the questions.
+00:45:26 [W] Thank you everybody for being so patient to listen to you General technical talk.
+00:45:39 [W] See you tomorrow if you want.
+00:45:42 [W] I will need a talk and you talk about problems integration open source governance model with Pro, which is the same system that kubermatic ceases to manage the unhealthy
+00:45:56 [W] and how the community for the kubernative repositories and GitHub organization by

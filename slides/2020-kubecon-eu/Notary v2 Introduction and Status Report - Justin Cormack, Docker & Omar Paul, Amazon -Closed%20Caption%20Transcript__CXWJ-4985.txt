@@ -1,0 +1,214 @@
+﻿Notary v2 Introduction and Status Report: CXWJ-4985 - events@cncf.io - Tuesday, August 18, 2020 8:24 AM - 74 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:01:15 [W] Hello today. We're covering the notary V2.
+00:01:25 [W] Hello today, we're covering the notary V2 introduction status report. So we've been working on a second version of nature a for a while and
+00:06:28 [W] Today, we're covering the notary V2 introduction of status report. So we've been working on a second version of nature a for a while and there's an advanced talk later on going through some
+00:06:31 [W] Let's talk later on going through is under the detailed work, but this is really introducing where we are. And what's going on.
+00:06:43 [W] This is a joint thing with me and how my ball from Amazon. I'm a notary maintainer of work for Docker.
+00:06:52 [W] I'm on the cncf TOC and I work a lot of time with security and I'm really interested in the whole security space across Cloud native, and I'm out.
+00:06:58 [W] As a product manager at Amazon ECR, so he's very much involved in the registry space one of the the largest registry operators.
+00:07:13 [W] So what is nature if you're not familiar with notary, it's a cncf project.
+00:07:17 [W] It allows you to it provides provenance and supply chain security for container images basically in their sort of simplest sense allows you to sign a container image to say that's I made this.
+00:07:28 [W] The simplest use case is really just signing, you know my container in say when I'm building up my laptop and then making sure that when I pull the same version number from my registry.
+00:07:44 [W] Because the same container back, you know that someone else hasn't some attacker hasn't maliciously Carmen and stuck a different container in there or even what a my coworkers.
+00:07:59 [W] However, you know, if I sign is I want to Note with my container nature is based on the updated firmware quite tough, which is also a cncf project and it uses uses tough as part of the security model for it
+00:08:12 [W] It generally nicely provides kind of Fairly raw tools and it provides the service side piece it's often embedded in more opinionated tooling so Docker content trust was something we built that Docker that may be kind of easy to use workflows for signing
+00:08:28 [W] I was doing something similar with using nature as well.
+00:08:34 [W] there is some is the server implementation and as it's a set of libraries and tools and you can you use directly but ideally it's got a nicer wrapped interface and something else.
+00:08:47 [W] And the Enterprise can say any sighting is really about having easy integration supply chain. We can talk about slow supply chain in a minute validating storing and displaying the images. You want
+00:09:03 [W] is around signatures to make sure that things that are run in production are signed making sure that we have freshness and immutability and so on which I have some of the counties that tough helps give you in as notary about
+00:09:19 [W] Here are actually getting the latest version of an image. And this is part of your governance.
+00:09:28 [W] You've got Central governance and compliance. You've got answer to Auditors about your governance and you've got to manage and audit history of the artifact that went into production and there that they were exactly what you thought they were
+00:09:41 [W] Manage and ordered the history of the artifacts that went into production and know that they were exactly what you thought they were because the last thing we want to do is have things going to production.
+00:09:45 [W] They're not what we thought they were.
+00:09:46 [W] Automated deployments are kind of I mean, obviously there are Foundation of what we do in Cloud native and continuous deployment is one of the key pieces of cloud native of workflows, but they do provide new attack vectors if you
+00:10:02 [W] nation of what we do in Cloud native and continuous deployment is one of the key pieces of cloud native of workflows, but they do provide new attack vectors if you one thing that's attackers have noticed recently as that if you protect your production
+00:10:06 [W] Attackers have noticed recently as that if you protect your production infrastructure, then maybe it becomes easier to attack the deployment infrastructure and there's been a lot of interesting cases, which we'll look at in a second.
+00:10:17 [W] There are so many places you can attack in it in the deployment workflow that can be weak.
+00:10:29 [W] This is a great article from Gartner from 2018.
+00:10:31 [W] Around containerd security and covering threat vectors in an automated deployment process and you can see everywhere.
+00:10:39 [W] There's little red arrows there are places you can attack so everywhere from the developers laptop right at the beginning through to dependencies and deployment systems and Registries and you know,
+00:10:54 [W] everything really
+00:10:58 [W] up to you know up to production.
+00:11:01 [W] some recent examples of supply chain attacks that we've seen there's a there's a kind of high profile ones, but they have and they're definitely becoming more common cases Shadow Hammer update our attack was
+00:11:18 [W] A decade before the script, you know the automated piece of deployment that did the signing so it everything was signed and it was an interesting one because it was only at the hack was only activate on 55 specific
+00:11:34 [W] Jesus didn't notice anything was wrong, but 55 computers in the world were being targeted for being attached which is kind of interesting.
+00:11:49 [W] There's also similar with the mpm event stream of hack and in 2018.
+00:11:56 [W] We're at this is where an attacker healthfully offered to maintain an unmaintained open source projects aimed a nice thing to do and inserted a backdoor targeted specifically at developers of a particular application again, so yugabyte.
+00:12:04 [W] Then most users didn't notice.
+00:12:10 [W] They didn't allow anyone because nothing weird happened, but these are our people being targeted and then not purchaser and 2017 again ship fire and update to a tax Management program that is widely used in much of
+00:12:21 [W] From there. I went and attacked other years is again, the update was signed by an automated process and the bill because the build server was totally compromised damages from that were estimated at 10 billion dollars.
+00:12:37 [W] So there is a very much becoming high profile attacks of interest.
+00:12:49 [W] so, you know, this is where I we need to start thinking about about building these processes into our supply chain, so,
+00:12:53 [W] The notary V2 process started off around you.
+00:12:57 [W] can San Diego Amazon and has your Microsoft and darker measure up and and I did a presentation about the kind of issues.
+00:13:12 [W] We were saying at Duke Garden. We had a kickoff in Seattle back in the days when we could meet people back in December and then we've been working on a are we
+00:13:23 [W] The Cadence everything's in the cncf slack Channel and opentracing a sound recordings are available on YouTube as usual.
+00:13:34 [W] So we've been working on it since then.
+00:13:37 [W] So why do we need a version to the main issue? There's a whole bunch of issues at the most important ones really were making it a registry knative service. So notary V1 is
+00:13:49 [W] Is on the side of your registry basically has its own separate database from the registry.
+00:13:57 [W] So it's there and you know runs in parallel.
+00:14:04 [W] This is an issue for a lot of reasons one of which is that not every registry runs.
+00:14:07 [W] This is not a part of the registry.
+00:14:08 [W] That's knative.
+00:14:10 [W] It was about more of the reasons later.
+00:14:13 [W] usability. We identified a whole bunch of usability issues some of which were due to design and some of the implementation.
+00:14:19 [W] And so there's a lot of things that need to be done there as well as usability and the kind of normal use cases a understandability and debug ability of being able to understand how it works and
+00:14:34 [W] Is when things go wrong, which are all really important things that have proved to be not as easy as we like nature. Eveyone is used but it's fairly Niche.
+00:14:50 [W] We'd like this to be, you know, really widespread.
+00:14:54 [W] We'd like it be able to so that everyone can use it and obviously this is a security product. So we want it to be secure and to have clear understandable security project properties that people
+00:15:06 [W] people really get and there's a whole bunch of things. We'll talk about there.
+00:15:10 [W] It's a registry knative.
+00:15:17 [W] We really want all the data be stored in the registry and not own a separate database.
+00:15:27 [W] This is it's turned out to be really important thing and it's kind of come up a lot because people are using registry is to store more things such as not just container images such as Helm charts and so on and there's an ecosystem around the
+00:15:32 [W] And to have clear understandable security project properties that people really get and there's a whole bunch of things we talked about there.
+00:15:34 [W] So registry knative we really want all the data be stored in the registry not own a separate database.
+00:15:36 [W] This is it's turned out to be really important thing and it's kind of come up a lot because people are using registry is to store more things such as not just container images such as Helm charts and so on and there's an ecosystem around the
+00:15:38 [W] There wasn't so much protect perhaps when notary was new.
+00:15:41 [W] I mean naturally from 2015 when it was really in the early days of containers.
+00:15:48 [W] So then it was kind of easier to have it as a side service but it requires registry operator to install the manage another service which not all of them have so, you know, you can get notary on Duggar Harbor and you can get it
+00:15:56 [W] Has your and harbor supports it but for example Amazon does not at the moment and many other registries down. So you don't know if you're going to be able to use signatures, which is kind of fun helpful if you want to move things around the
+00:16:12 [W] Designed for moving signatures around easily either.
+00:16:30 [W] there's no simple push and pull API. There's you can sign and you can verify but it's much more difficult to actually just move signing data around and because people use a lot more Registries now for different purposes like
+00:16:31 [W] Action and development and things that's become really important.
+00:16:42 [W] So we really wanted to be that you know, when you push and pull images between Registries the signatures come with them as well and we want to validate signatures wherever the contents located there was some issues around notary V1.
+00:16:51 [W] Some assumptions about the registry where the signature was is the same as the registry pull from caused a bunch of issues.
+00:17:00 [W] People also want to use signing not in a registry.
+00:17:12 [W] We've had a lot of use cases being brought up where people want to use containers in offline and disconnected environments.
+00:17:15 [W] This wasn't really much of a use case when we designed notary V1.
+00:17:24 [W] It does have some tooling support that but it's not ideal that's wasn't really a design requirement at the time it cause you can kind of make it work, but you have to know what you're doing.
+00:17:33 [W] If we have a standard mapping between the registry and and faster to mapping say for local use then as man or a cash to offline registry that you can use a whatever there's much easier so
+00:17:49 [W] Test of all those use cases a lot of people say that they are not always connected to the internet at all times.
+00:17:55 [W] Usability is something that we really really need to work on.
+00:18:08 [W] So the raw notary interfaces with the actual kind of Plumbing commands. The nature gives you a not that easy to use after a few kind of years at darker. We decided that
+00:18:18 [W] Suitable for end users and we introduced as a darker trust commands to make it more friendly interface, but although that's a covers only a quite an opinionated workflow on has used.
+00:18:34 [W] Notary doesn't give you all the options that Upstream gives you but it's way easier to use is still there still difficulties, even with that kind of simpler interface, but I think
+00:18:45 [W] Are of what kind of you know, what kind of interfaces are better? But the the other problem was Key Management.
+00:18:54 [W] There's a lot of keys with nature eveyone.
+00:18:58 [W] There's root key for every registry repository. So a normal user might have a lot of different route keys and an organization might have hundreds of thousands even a fruit keys and then there are the other Keys as well.
+00:19:11 [W] There's the riecke's that derive that so you end up with a very large number of keys to manage keys.
+00:19:17 [W] Then expire users not very good at remembering to do things about Keys when they expire we most people I think went for a long-lived keys.
+00:19:30 [W] So the expiry time was you know, its expiry was not something that was people manage very often. So as we learned with TLS the less often you Spire key is the more annoying they are and users are
+00:19:42 [W] Managing that kind of scale of keys and so we hadn't we've had a lot of problems with with their from a usability point of view, you know backups and all those kinds of things so
+00:19:58 [W] To improve the key management side of usability and as well for your fee to understandability and debug ability. I think we is definitely the case that
+00:20:14 [W] People down to understand the security model that tough is using that's partly our fault, but for not explaining it clearly, but it's also it's partly the
+00:20:30 [W] a not that great for actually under seeing and observing what's going on and understanding when in failures happen and this is a sort of is partly a documentation issue and partly observability issue and partly
+00:20:45 [W] Set of is partly a documentation issue and partly at observability issue and partly a design issue and part here and education issue. So there's a lot of work to make sure needs to be done to make sure that
+00:20:56 [W] work to make sure needs to be done to make sure that we have the right exit explanations on hand for their so I think even during this process has been clear that people have very expectation different
+00:21:07 [W] I've signed this image actually means and that's kind of people have an intuition which isn't always what the systems providing and that's really difficult to deal with sometimes because
+00:21:22 [W] Interactions are kind of difficult to change. So we've got a lot of work to do there and and it's, you know, very obvious even in the process that working with people who are familiar with these things that it's not actually
+00:21:38 [W] Hand and it's you know, very obvious even in the process that working with people who are familiar with these things.
+00:21:41 [W] that is not actually it's not actually the easiest thing in terms of usage in adoption and actually be one usage is not that high it's, you know, kind of
+00:21:53 [W] In terms of usage and adoption and actually be one usage is not that high it's you know, kind of when when we were designing the previous
+00:22:00 [W] System that came before nature eveyone every image was signed.
+00:22:11 [W] That wasn't a great so arguably you could say.
+00:22:11 [W] Oh everyone used it.
+00:22:24 [W] It was great. But in practice it had other issues about every image was sign but there was no reasonable way of knowing which Keys you should trust so it didn't the signing didn't really actually matter
+00:22:27 [W] Their usage is just not as high as we would like. It would like everyone to use this rather than it be a niche thing because we want everyone to benefit from scary as you understand the benefits of security and it shouldn't be a burden
+00:22:42 [W] Being natural positive the tooling that we all use with containers things to be signed in jacked and tell you that there's an error as I said earlier that not every registry supported signing before also
+00:22:58 [W] Wanted to be built in so that really you can guarantee you can use it everywhere which would just you know would get rid of some of the barrier for usage, which is just like not not it not being available in your environment.
+00:23:13 [W] Security properties we want said the security property is easy to be understood and understandable and well written well explained but we also I think there's a big feeling that we don't
+00:23:30 [W] Way that people use container images now rather than tell people that they have to use things differently and I was going to security because that way they will probably decide to carry on using things the same way because of familiarity
+00:23:46 [W] We don't want to be sitting there telling people their workflows are wrong.
+00:24:00 [W] Although I mean, there are definitely issues with how the workflows are and the things we should probably do overtime to make them better. But their goal is not prescribed a workflow
+00:24:06 [W] Classic are and other workflows are not secure because then I guess in the way of adoption, but some of the security properties are different.
+00:24:18 [W] So for example, notary V1 unlike TAF is Trust on first used and so trust on first use is the what successfully has been used by SSH or relatively successfully where when you
+00:24:32 [W] First time it says do you want to trust this key?
+00:24:38 [W] you're supposed to check and then in future, you know that the key hasn't been changed.
+00:24:42 [W] So someone hasn't logged into that machine.
+00:24:48 [W] Obviously, if the first time you log into that machine someone has already replaced the key or it's not even the machine you think it is then there's a you've got a problem, but if it happens later than it is actually
+00:24:57 [W] That's kind of useful for that but in the cloud native, well, we have a lot of ephemeral machines. If you ever move ephemeral if you spin up an ephemeral machine and then it tries to check a with to trust him first to use it's always the first use because if your
+00:25:13 [W] Let's Banner it up once runs something and then goes away again there. It doesn't have any history of what you know, what the key is used to be or anything. So try it on first use is fundamentally problematic in a cloud native environment
+00:25:29 [W] Ephemeral machines are really really important that fat milk containers. We everything is ephemeral and in the cloud knative world, so we really can't rely on that kind of mechanism.
+00:25:45 [W] And so that's one of the things in nature eveyone that you know, I think is a is not giving people a security guarantees that they would think they were getting because nature eveyone give you tough but it gives you a version of tough that
+00:25:55 [W] Key management decision and that's problematic.
+00:26:10 [W] Actually notary technically gives you a choice of Key Management, but the implementation that almost everyone uses is the Trust on first use one.
+00:26:15 [W] So, yeah, you can actually Implement different decisions part.
+00:26:24 [W] I'm not aware of very many people. Who do we did some experiments with there's a darker and
+00:26:26 [W] so we did some internal work on that but is not definitely not the normal use case.
+00:26:35 [W] So the plan we've been working on we've been working on reserve requirements and trying to get everything aligned and so we're getting towards
+00:26:53 [W] Not the normal use case.
+00:26:53 [W] So the plan we've been working on we've been working on reserve requirements and trying to get everything aligned and so we're getting towards
+00:26:54 [W] On these things obviously Now Keep Calm we're going through and talking to her and about where we are what we're doing.
+00:27:01 [W] There's more in the in the working session.
+00:27:06 [W] We are working on beginning prototypes as well as your talk about in this session as well.
+00:27:13 [W] We're looking to have rough code by the end of September. So two months really in order to do demos for you've gone North America in the end towards the end.
+00:27:23 [W] November and then GA for next year and Microsoft and Amazon and darker looking to Jay next year and I've and also other people as well, you know, we're working with a big big community
+00:27:38 [W] All the people are running registry is really so we're hoping to have more more than just that.
+00:27:44 [W] So you guys are working session watch the recording of that for more information.
+00:27:55 [W] Some of the discussions are ongoing again something we're talking about in the following session and some of the things we've already had General discussion on one of them has been about adding signatures and
+00:28:09 [W] Say so Registries are content addressable stores and what that means is that everything is defined by the hash of the content you're referring to so the contents of
+00:28:25 [W] Is uniquely and the storage so you can be sure that if you you know, you can ask for exactly this version of Ubuntu because if you know once you know the hash at version of Ubuntu you cannot you always guarantee you'll get the same content
+00:28:41 [W] No, the hashicorp that person over 120 you cannot you always guarantee.
+00:28:42 [W] You'll get the same content hash next time you put a little if you pulled by hash, but that kind of constrains the design of our Registries work and one of the things is that
+00:28:54 [W] Has talked about as a as a requirement was that they wanted to be able to add more signatures to an image after they basically already tagged to are to refer to it by hashtag you want to
+00:29:10 [W] this copy of went to say I want to add a signature saying that it was checked by our compliance department or that I added I want to add the signature saying that I went through
+00:29:26 [W] In program program and it was added to our registry. And so we want to be able to add these signatures without changing the content.
+00:29:42 [W] Whereas if you kind of classic Model with content addressable see was would be that you refer to the content with the signatures and this is kind of the model that Registries expect to work with that you if you want to
+00:29:49 [W] You have to specify as if you want to retrieve the signed up J. You'd have to specify the hashicorp with the signatures.
+00:29:58 [W] And then if you added another signature it would change.
+00:30:04 [W] So there's definitely there's a working group around adding an API to Registries that can give an object retrieve all the signatures attached to it as a separate
+00:30:13 [W] Will still probably be able to I mean you should be able to still refer to the signatures directly. If you want to refer to the signatures tightly, but you would also have an additional registry API for retrieving signatures attached to an object.
+00:30:30 [W] Layer a lot of interest in this for this kind of work flow.
+00:30:45 [W] Another thing that we had talked about in the end the others actually more detail has been more about ephemeral serve as a federal Service. As I said a really important that they do it.
+00:30:51 [W] Serve as a femoral surface, as I said, I really important that they do have security implications and this is something that really hasn't been looked at much before I think but one of the guarantees the TUF gives you is about roll back. So it says
+00:31:01 [W] One of the guarantees the TUF gives you is about roll back. So it says that if you've downloaded or something no one can come along later and say delete all the new versions and then
+00:31:13 [W] no one can come along later and say delete all the new versions and then tell you that the latest version of the package are looking for is the one from two years ago that happened to have a security vulnerability because
+00:31:22 [W] Um because you would detect this had been rolled back because you'd seen versions earlier, but an ephemeral server kind of doesn't have any of that state so it can't see about rollbacks having happened.
+00:31:36 [W] So we're looking at other mechanisms and more about that in the working session.
+00:31:40 [W] Another thing we've talked about a lot is what guarantees users are expecting with signing weather there.
+00:31:45 [W] You know how much how many guarantees do they want?
+00:31:48 [W] What what's the expectation about what signing means and those kinds of issues around you know, which which security properties are you guys saying?
+00:32:01 [W] Is it guaranteeing was it guaranteeing about the software you're downloading and then we have as we have a lot of we have a working group on Key Management. There's obviously discussions around what kind of keys to use like x.509 grpc.
+00:32:14 [W] Jo adhoc signing where the trust is built into the actual signature project goal and the the whole workflow that we designing and so we talk about that more in the other session. So
+00:32:29 [W] K management, there's obviously discussions around what kind of key is to use like x509 gpg ad hoc signing where the trust is built into the actual signature
+00:32:31 [W] So you come and join us at the meetings?
+00:32:37 [W] So thanks very much for coming and happy to answer questions and will be working on this and I hope you look forward to better security
+00:32:48 [W] Better signing coming to a registry for you soon.
+00:32:54 [W] It's lies now.
+00:33:11 [W] Sorry, we got internet issues.
+00:33:12 [W] So I'm on my phone.
+00:33:12 [W] So.
+00:33:15 [W] So so a question from past trauma.
+00:33:22 [W] Two questions right about increasingly pki assistance and Federation use cases.
+00:33:32 [W] So these are really important questions.
+00:33:38 [W] So first of all pki systems, we've got a key management working group which meets on Friday and they're looking into the pki issue and it's a really important issue
+00:33:48 [W] Kind of two sets of users.
+00:33:53 [W] I think there are users who are using pki for signatures at the moment and there's a 5-iron organization has that infrastructure and those think loodse largely people like
+00:34:07 [W] Action is this a lot and other kind of large organization often markup based excited and I said that and so those people have already an exercise or nine
+00:34:23 [W] Silence ads and those people have already an x.509 based user identity and signature scheme, and then there's the rest of the world too.
+00:34:32 [W] And then there's the rest of the world to particularly open source community. So you don't at the moment have any kind of God could be management system.
+00:34:42 [W] There's some use of JeJu but General Hawk has a few communities like Debbie and that use gpg whether the most people have mostly been effective ad hoc
+00:34:54 [W] and so we really want to cover both these cases because the people who have exercised and I want to use it, but the people who don't it's there is no kind of equivalent of
+00:35:10 [W] Um, it's very is no kind of equivalent as the TLs Escape models organized difficult at the moment.
+00:35:20 [W] So the answer about PKS Administration is that is definitely of interest to a community of the users who are using pki fatigue b******, but we don't want it to be the exclusive method because we think there's a lot of people
+00:35:30 [W] It but if you're interested in that, she's come to our Friday working groups on Key Management.
+00:35:41 [W] check the cncf stackrox and luxury to great for the links to that the second one about Federation.
+00:35:48 [W] Yes, the Federation is really important because when registry most for eveyone was created Federation wasn't really an issue because really darker Harbor was the main registry, but now things are take a different and we being able to transfer
+00:35:59 [W] registrations is a very very important use case because a lot of people have workflow but involve moving images from one register to another and said writing and using things production and buildpacks action and
+00:36:14 [W] And so on in different Registries or Federation is really really good qualities case.
+00:36:22 [W] Another question from Carlos.
+00:36:30 [W] what does nature provided in addition to tough or why use nature instead of staff? So nature eveyone is really is a tough implementation for the container use case with some design decisions.
+00:36:42 [W] You can I train instead of stuff. So notary everyone is really is a tough implementation for the container use case with some design decisions around how containerd workflows work.
+00:36:46 [W] Containerd workflows work many of those design decisions are things that we're kind of reconsidering because some of the design we don't like and particular
+00:37:00 [W] Supports trust and first use and that's why Daka comes and tries to users and we don't believe that was a very good design decision. There's not actually a requirement and notary that use that but it's the default option that most
+00:37:16 [W] There's not actually a requirement in nature use that but it's the default option that most people use in this one most of the container or just like the container use cases currently support.
+00:37:24 [W] Try some first use works very well for things like as Ice Age where you regularly from one machine log into the same machine again, and again, and we notified of their signature changes the key changes if a server is really helpful
+00:37:37 [W] also, it doesn't work very well when you have a lot of ephemeral servers and you're a bloke into them once or the same with ephemeral images or you know, someone machines pulling images wherever use of the first use so some of those
+00:37:51 [W] Strange, but fundamentally night really wanted is straightforward tough implementation.
+00:37:59 [W] It's good for a bus guile implementation.
+00:38:11 [W] And so if you want to use to ask nature is an option, it's specialized the container use case, but it could so if you're using it for task for containers nature is a good choice.
+00:38:15 [W] are a few other implementations now nature is kind of, you know, material production hardened.
+00:38:22 [W] procedure for running tough for containerd registries
+00:38:26 [W] I'm sorry, so that's kind of one of y'all was just as if you want to run.
+00:38:33 [W] I mean you can also use it as a reference implementation and but tough repay which is written in Python, which you can use and there's a couple of other and implementations and their how there's a
+00:38:45 [W] Patient I think now which is relatively rare as been around forever. Maybe I'll tell you and I think then there might be a couple of other implementations, but
+00:39:01 [W] I mean I treated the main piece in that itrenew.
+00:39:21 [W] So if you're interested in more do come and join us at the say the cncf slack notary V2 Channel as the center of where everything is to see what our meetings are and so on and we have a session.
+00:39:45 [W] tomorrow
+00:39:53 [W] For the working session, so come on to that man.
+00:40:00 [W] Steve Alaska will be talking about some of the current details and detailed issues that we're dealing with.

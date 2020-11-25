@@ -1,0 +1,214 @@
+﻿The Production Identity Control Plane: Recommended Practices for SPIFFE/SPIRE at Scale: ZJGA-7276 - events@cncf.io - Friday, November 20, 2020 5:07 PM - 33 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] You've gone North America 2020 virtual.
+00:00:03 [W] This is a maintainer track session with you and it has Vega.
+00:00:08 [W] I work at VMware as product line manager for tansu foundation Services.
+00:00:13 [W] Also happen to be a contributor to the spiffe E and Spire projects.
+00:00:17 [W] I worked alongside the maintainers helping out and aspects of project product and program management.
+00:00:24 [W] I'll be talking to you today about term.
+00:00:27 [W] We've recently started referring to is spiffe e and Spire a switch is the production identity control plane and along with that recommended practices for spiffe e and Spire at scale.
+00:00:41 [W] To start out.
+00:00:42 [W] I like to thank the group of people from the community that recently got together. This part of the spiffe inspired books print. These are leading practitioners and subject matter experts that over the course of two weeks
+00:00:58 [W] rode a 200 Page book on
+00:01:01 [W] deploying and operating spiffe e and Spire at scale among the people Emily Fox from six security Evan Gilman from VMware the crew at HP Dan Feldman American Max lambrecht Augustine Martinez Ian Hawke and from
+00:01:16 [W] Flex Fred couch from nsmcon them loan from IBM aligned Esther off from bite dance and Michael wardrobe
+00:01:24 [W] in terms of the agenda we're going to start off with motivation for production identity do a quick recap of fundamentals and concepts of spiffe e and Spire move into The ployment Primitives for spiffe e and Spire at scale once we've gone over that we're going to
+00:01:39 [W] Went to they one aspects of managing registration and identities.
+00:01:45 [W] Managing registration entries and managing identities.
+00:01:49 [W] How do you enable your software applications to be spiffe e ready yet negatively or through a proxy and get into how to actually roll out stage out spiffe e and Spire in your organization throughout
+00:02:04 [W] your organization
+00:02:07 [W] to set the stage the problem that spiffe in Spire solve is that of secure introduction if you look at the landscape of modern applications, these are composed by a larger number of smaller pieces of software managing Secrets its scale requires effective
+00:02:22 [W] Beck's is control implementing that access control requires a strong Bedrock of identity proving identity has required possession of a secret.
+00:02:32 [W] Now, the challenge is protecting one secret requires coming up with some other way to protect that secret which then requires protecting data other secret and so on.
+00:02:43 [W] Ian hakan from Netflix likes to allude to infinite regression as an analogy to the problem.
+00:02:49 [W] We're solving the bottom Turtle if you think of turning on access control to a resource be it a database be at a service that will require a secret such as an API key or password now that API key or password needs to be protected,
+00:03:05 [W] so you can protected with encryption but then you still need to worry about this secret decryption key and how do you secure that you could put that into a Secret store, but then you still need some other form of credential like a password or API
+00:03:20 [W] To access that Secret store ultimately. However, you end up protecting access to that secret results in yet. Another secret sacred stores are great, but they do present a challenge once you have to prove who you are to enter The Secret store and
+00:03:35 [W] Something from there.
+00:03:38 [W] There are a number of other pki and authentication pain points and modern applications.
+00:03:44 [W] You need to ask yourself the question how our certificates and passwords generated and who's responsible for that.
+00:03:51 [W] How are those securely distribute it to the applications that meet them how is access to private keys and passwords restricted.
+00:04:00 [W] How are the secret stores stored so such that they don't leak into backups.
+00:04:06 [W] How are the secrets of stores such that they don't lead and two backups what happens when a certificate expires or a password must be changed.
+00:04:15 [W] is that rotation process disruptive how many of these tasks necessarily involve a human operator today?
+00:04:23 [W] So what spiffe Ian Spire we've proposed with the spiffe E specification a standard set of interfaces by interfaces.
+00:04:34 [W] I mean API and documents for proving validating and obtaining a service or a workloads identity.
+00:04:40 [W] I will be using service and workloads interchangeably. Now Spire is the software implementation of this specification. It's created a tool chain for establishing trust between
+00:04:53 [W] our systems
+00:04:55 [W] there are a number of reasons why you want to use the spiffe in Spire spiffe.
+00:05:00 [W] The basis for a product you're developing and requires transport layer security those transport layer security features and the user management an authentication can be Droppin through spiffe e in one Fell Swoop.
+00:05:12 [W] You can replace the need for managing and issuing API tokens replied for Maxis bringing rotation and for free and eliminating the burden from storing and managing access to those tokens.
+00:05:23 [W] You can deliver mpls across on trusted environments without the need to exchange secrets.
+00:05:30 [W] Security and administrative boundaries can be easily delineated and communication can occur across those boundaries when and where policy allows.
+00:05:39 [W] To reduce the likelihood of a breach through credentialed compromise Spire provides.
+00:05:43 [W] They strongly attest that identity for authentication across the entire infrastructure and spiffe and Spire address security needs by enabling pervasive and TLS to the liver Communications between workloads no matter where they are. They deployed
+00:05:59 [W] Anywhere in a heterogeneous environment.
+00:06:01 [W] So let's take a look closer at the spiffe E spec spiffe E & turtle shell since we're talking Turtles all the way down and reaching through that bottom turtle.
+00:06:12 [W] The spiffe Eid is the representation of a service name.
+00:06:15 [W] That's the identity software is going to be issue that is going to be done through a s fit a spiffe e verifiable identity document that can either calm and the flavor of the Json web token or x.509 certificate.
+00:06:30 [W] Then there's the spiffe E workload API, which is the interface that services will obtain their identities without any prior.
+00:06:39 [W] Secret being required.
+00:06:42 [W] There's no trust bundle, which is a collection of public. He's giving by an issuing authority for a service to cross often ticket to others and then there's the spiffe E Federation which is a simple mechanism by which trust bundles can be shared.
+00:06:59 [W] One additional construct that that will be useful to know when we reason about Spire deployments. Is that of a trust me?
+00:07:06 [W] He trusts domain corresponds to the top level root of trust of a system.
+00:07:10 [W] This can be modeled after a individual developer working on a kubernative namespace carved out for themselves.
+00:07:17 [W] It could be an entire team or larger organization.
+00:07:22 [W] It can be an environment such as deaf stage or prod.
+00:07:26 [W] Our business unit running their own independent infrastructure.
+00:07:29 [W] Now all workloads in the same trust domain will be issued identity documents that can be verified against the route keys of the trust to me the workloads identifiers portion of the ID identifies
+00:07:44 [W] Any particular workload with in a particular? Trust me?
+00:07:49 [W] So that's for spiffe E.
+00:07:51 [W] Let's let's look at some of the Spire components. Once this is actually running. We've got the Spire server and the Spire server is responsible for managing all the identities in the trust domain think of it as a global identity directory.
+00:08:06 [W] the server also happens to be in possession of the asset signing keys and it is considered a critical security component special consideration should be paid when deciding where does the server go the server uses a data store to keep track of its current registration entries as well as the status of
+00:08:21 [W] Spits issue.
+00:08:22 [W] There are a number of backing databases that are supported. You should refer to the official documentation for what those are.
+00:08:30 [W] Now all the Assets in a trust domain are signed by the Spire server, and these are signed by default using a self signed certificate unless there's an upstream certificate Authority that exists and it's been configured through a plug-in interface
+00:08:45 [W] In many cases a self-signed randomly generated key is fine.
+00:08:50 [W] However for larger installations and production environments, it might be desirable to take advantage of pre-existing Cas and the hierarchical nature of x.509 still make multiple Spire servers.
+00:09:03 [W] Then we got the Spire agent. The Spire agent serves a very simple function but a very important one and that is to expose to workloads API to workloads.
+00:09:14 [W] There is no active management required to operationalize agents.
+00:09:19 [W] They require a config file and that config file tells the agent what trust a man it's part of and what workloads can call directly through get identities.
+00:09:33 [W] The entire architecture of the system for both server and agent is based off plugins. There is the author Authority I mentioned there's like no to tester plugins to notary solvers data store plugins key managers whether for disk or in memory
+00:09:48 [W] The agent pass the workload of tester plug-in. So these are perfectly extensible a deep dive on the plugins is outside of the scope of this presentation.
+00:09:59 [W] I do encourage you to check the official documentation on spiffe E dot IO to learn more about those now, no doubt. The station is the process of establishing trust from the server to the machine and agent Vaughn's in a cloud environment it is
+00:10:14 [W] Considered a best practice to verify that note against meta data available from the cloud provider Spire does provide custom note of testers designed specifically for the cloud. You may run on most Cloud providers have an
+00:10:29 [W] That can be used to identify the API collar.
+00:10:33 [W] No, the testers and resolver plugins are available for AWS Asher and Google Cloud the a tester plug in the purpose. It serves is to a test and note before issuing an identity to the Spire agent running on that note once it has
+00:10:48 [W] Verified the integrity and authenticity of the machine.
+00:10:51 [W] The Spire server will have a resolver plug-in installed which allows selectors to be created then match against the note metadata.
+00:10:58 [W] The available metadata is cloud as specific if an environment does not provide a hardware root of trust or ability to attest the node.
+00:11:06 [W] It is possible to bootstrap using a joint.
+00:11:09 [W] Okay, however doing so provides a very limited set of assurances depending on the process through which that be done.
+00:11:17 [W] As a second stage, we have workloads at the station workloads at the station is the process of determining the work that I'd NT that will result in an identity document being issued and delivered that occurs whenever workloads calls and establishes a connection to the spiffe E workload API and from there on it's driven by a
+00:11:32 [W] Other plugins on the Spire agent each a tester plug-in is responsible for introspecting the caller and generating a set of selectors for it.
+00:11:40 [W] This happens at about one plug-in will insert Instant Respect the colonel details and look at information such as user and group that the process is running as well a separate plug-in will communicate with kubernetes and
+00:11:55 [W] Factors such as namespace and service account that the process is running in and the third plug-in May communicate with Docker to get Docker labels Docker image ID and containerd environment variables.
+00:12:06 [W] Now that we've done that recap, let's look at some of the security boundaries of a Spire deployment.
+00:12:14 [W] The first boundary is that of the workloads to the agent.
+00:12:17 [W] The agent does not trust to workloads to give any kind of input the at the station is performed through automatic checks as we covered in the previous slide any selector whose value could be manipulated by the workload as a itself inherently insecure.
+00:12:30 [W] It is expected that a security mechanism Beyond Spire would exist to provide isolation between Linux user permissions and continent every station.
+00:12:42 [W] Then we have the boundary between agent and server and explicit design goal Spire is that Spire Will Survive node compromises Aidan's have the ability to create and manage the identity on the workloads
+00:12:57 [W] behalf, but at the same time limit the power and agent to do so strictly to complete that task and in order to mitigate the impact of an eventual compromise Spire requires knowledge
+00:13:12 [W] Of where a particular workload is authorized to run and note a node cannot just get information for any workloads.
+00:13:19 [W] Less. It's been designated to run there.
+00:13:24 [W] Ages must provide be able to prove ownership of a registration entry before they can obtain an identity to it. And as a result, they cannot get arbitrary identities for something else in the trust domain unless it's supposed to run
+00:13:39 [W] Important to note that communication between the Spire server and the Spire agent can use TLS and mutual TLS at different points in time during the attestation process.
+00:13:48 [W] Once trust has been established TLS takes over and all Communications are secure.
+00:13:55 [W] The last boundary is and environments that have been horizontally scaled and you have more than one server where you have two three four Spire service to manage load Spire servers are trusted
+00:14:10 [W] only two issue as fits within the trust domain daily recommended age when Spire servers to Federate with each other and exchange public key information the keys they receive remains scope to the trust domain they were received from unlike what pki
+00:14:25 [W] Spiffe he does not simply throw all the probabilities in the big next back.
+00:14:28 [W] The result is that if a compromise and a foreign trust domain will not result in the ability to issue s visits and the local trust me.
+00:14:37 [W] It should be noted that Spire servers do not have multi-party protection every Spire server and a trust domain has access to signing keys with which it can issue estimates the security boundaries that exists between servers or limited to servers and different
+00:14:52 [W] The mains and does not apply to service within the same. Trust me.
+00:14:59 [W] Having covered that let's start to look at some of the topologies and building blocks. We can build large-scale deployments eventually. We want to get to something like the picture where we there are objectives for compliance.
+00:15:14 [W] Regulation where you have multiple teams where you have multiple platforms and you have varying requirements.
+00:15:32 [W] So start off with the most basic deployment, which is a single trust me.
+00:15:40 [W] You may want to do this where there's no administrative boundaries where you want to have one large big trust domain and it will reduce the total number of distinct deployments to manage
+00:15:55 [W] On the right hand side. You can take a look at how this would look and kubernative. You can have multiple kubernative clusters all managed by the same Spire server.
+00:16:07 [W] As mentioned previously servers can be horizontally scaled be it for redundancy or for Distributing load all servers in a given trust domain will read and write to the same shared data store.
+00:16:21 [W] now
+00:16:23 [W] as
+00:16:25 [W] deployments grow in size and number of deployment gross and they're multiple administrative boundaries and perhaps multiple Cloud providers environments.
+00:16:35 [W] You want to look at a nested Spire deployment.
+00:16:38 [W] They nested topology allows for communication between the agents and the server to occur within their own data center or their own region and this particular configuration the top-tier Spire servers whole root
+00:16:53 [W] Get some geese and the downstream servers the ones you see for the two regions will request intermediate signing certificates.
+00:17:02 [W] If the top-tier happens to go down intermediate service continued to operate so there's quite a bit of resiliency in here again, does this this is well suited for multi-cloud multi-region deployments.
+00:17:15 [W] We're replicating a data store across regions would be cumbersome due to the ability to mix and match no two testers for different platforms. The downstream server can very well we side and provide identities for workloads that
+00:17:31 [W] Have different selection and identification criteria when it comes to at the station.
+00:17:40 [W] Another primitive is that of federation we talked about Federation to spiffe expect a little bit. But Federation allows you to establish trust between multiple Spire deployments or from Spire to any other spiffe
+00:17:55 [W] Be compatible, CA.
+00:17:59 [W] When deployments have multiple root of trust based off like different companies trying to establish a business relationship and don't want to create a VPN connection from from one to the other.
+00:18:11 [W] You may leverage something like Federation.
+00:18:16 [W] Now there that is one of many cues cases, but again interoperability between a Spire deployment and a servicemeshcon uses spiffe e maybe another motivation to do so.
+00:18:31 [W] Now from putting this into applications, there's two ways to go about it. The first this enabling software natively. It will require making modifications.
+00:18:45 [W] And it can be introduced through a common library or framework used to cross application Services. The knative integration is the best approach for data plane services that are sensitive to latency or services that want to utilize identity
+00:19:00 [W] At an application layer spiffe e thus provide libraries for the goal programming language and the Java programming language to facilitate the development of spiffe e aware or spiffe enabled workloads. You can find the links to the
+00:19:15 [W] protective language libraries here on the slide
+00:19:19 [W] now places where the knative approach may not be feasible be it goes the cost is high or the service is running third party code that cannot be modified a approach there is to front the application with a proxy that supports spiffe
+00:19:35 [W] That could be something like Envoy proxy or that could be a spiffe e helper that will watch the API and reconfigure the workload of certificates change of certainly Envoy through the secret discovery.
+00:19:50 [W] Exchange
+00:19:52 [W] It's a popular approach for.
+00:19:56 [W] adding spiffe e
+00:19:59 [W] for enabling spiffe e to the application without having to make any any code changes to the application also popular when you have polyglot environments.
+00:20:10 [W] Now let's look at managing registration entries. So the Spire serverless ports two different ways to watch registration entries via the command line interface or the registration rate. The I the API allows a demand only axis once we have our deployment in place.
+00:20:25 [W] There are no registrations in there.
+00:20:27 [W] So it bootstrap process is needed that is often done by an operator or a deployment process and practice that doesn't really scale for scale deployments or high-growth deployments. You want to remove
+00:20:44 [W] mental processes from the picture.
+00:20:47 [W] You also want to make sure that if they nameks are dynamically scheduled or elastic. We scaled you can keep up with those changes.
+00:20:57 [W] so you can see here in the picture why an automated process of
+00:21:05 [W] A particular like opaque entries or a particular schema. You came off for modeling of the ovhcloud.
+00:21:27 [W] I like to credit Michael wardrobe for the mental model of reasoning about rolling out of deployment between independent islands and Rich.
+00:21:38 [W] I'll instana.
+00:21:53 [W] the independent Island model allows for individual trust means to operate independently independently of one another this is often the easiest option when you have multiple apps and you have to start by
+00:21:56 [W] What can you target that you can turn spiffe Eon and evolved from there?
+00:22:02 [W] However, these islands may not necessarily have knowledge of each other.
+00:22:07 [W] There may not be any communication in between those another model. That occurs is independent spiffe e deployments get breast by Federation and enabling services from each island to trust each other but there's still no communication between
+00:22:22 [W] spiffe en9 spiffe e Island as this continues to grow like the British Islands model can also use like a gateway to talk from a non spiffe e service to spiffe e service Deep dive on on this subject is outside of the scope of
+00:22:36 [W] Presentation but certainly something to check out and solving bottom Turtle book where we go at length and to how to how to reason about this different models and formulate a strategy around it.
+00:22:53 [W] There are many other considerations for scale certainly haven't covered them all apologies for the typo and on that comma first bullet point in the section.
+00:23:01 [W] There is low testing and capacity planning to be performed. You may want to choose the security over availability trade-off when determining what's going to be the time to live with certificates our are dose if any
+00:23:16 [W] Advocated or renewed.
+00:23:19 [W] it's important to keep in mind that short ttls reduce the time window of a credential being exfiltrated. The utility time someone could use that but do require a quicker response against an outage.
+00:23:35 [W] you may want to reason about
+00:23:38 [W] failure to maintain some blast radius and picking one topology over the other you may want to consider using hsms and looking in it logging and monitoring.
+00:23:52 [W] That said great great place to go for additional information as spiffe e dot iot the docks. If you're ready to get started on the project have any questions are eager to contribute
+00:24:08 [W] You're more than welcome to join the group on slack.
+00:24:12 [W] check out the code on GitHub. It is a very active and Vibrant Community around the project and we're always looking for newcomers and new participation. Also with that said I wrap it up. I think I am
+00:24:27 [W] Right about time few glitches during the presentation, but I think despite my rinky-dinky setup I managed to do.
+00:24:34 [W] All right.
+00:24:36 [W] Hopefully you find the TOC informational and you enjoy the rest of the event.
+00:24:40 [W] See you all in line.
+00:24:41 [W] Thank you.
+00:25:41 [W] Hi, this is Andres here.
+00:25:44 [W] The phone Bridge happy to take any questions or any feedback or discussion like to have around those the session you just saw. I did see the question in the Q&A from Mike question
+00:25:59 [W] So, how about that PLS between kubenetes I service under clients today.
+00:26:05 [W] There's no code in the Ops room Spire repository to make it happen.
+00:26:11 [W] If a Spire certainly a good building block for that.
+00:26:13 [W] It is an area where there's a lot of interest from the kubernative community to expand upon their is the kubernative workloads registrar that was briefly mentioned. It runs the topics kubernative said facilitates identities for workloads.
+00:26:29 [W] Loodse that run in spire and there's the opportunity to use it for Spire to provide the components of under the hood of kubernative use. So if you think of it today Spire is running on top of
+00:26:44 [W] And that he's so be a matter of lipstick that over fire.
+00:26:56 [W] Possibly at the time of bootstrapping a cluster and protecting all the kubernative you say Pi Machinery with TLS.
+00:27:24 [W] Question from Alan fry has the presentation going to be available.
+00:27:27 [W] Yes.
+00:27:29 [W] I do not know the exact time frame or schedule.
+00:27:35 [W] I understand that the cloud native Foundation has pre-loaded all presentations to the YouTube channel.
+00:27:42 [W] They should be going live within the next week is my presumption.
+00:27:57 [W] And so will be the case with the slides not just the recording.
+00:28:11 [W] Write about five more minutes for Q&A.
+00:28:23 [W] Question from Joe Stevens.
+00:28:24 [W] What does a minimalist 50 and Spire rollout look like if I'm starting with Cube nothing else how hard is it to integrate spiffe the identity?
+00:28:36 [W] It is relatively straightforward and super easy.
+00:28:40 [W] I'd like to direct you to the documents and spiffe E dot IO, there's one document in particular called getting started and kubernative the kubernative installer.
+00:28:52 [W] It's the matter of applying the configuration files the aaden run to the demon set then there's the Aidan component you can be up and running within 5 to 10 minutes following the steps.
+00:29:09 [W] And that's that's like the faith vanilla just most minimal setup.
+00:29:18 [W] Any plans to have C sharp clients? Also, do you have a good example how to use Spire to identify a workloads for oauth 2.0 as Mario?
+00:29:27 [W] There is a outdated C library.
+00:29:32 [W] It's something that's been on the team's radar to take back up and polish.
+00:29:40 [W] The proper overhaul make sure it implements the new are API Spire, but good to hear interest around it.
+00:29:53 [W] It's something we will take into the account and try to prioritize if it's something you're looking into.
+00:30:02 [W] Second question is also do have a good example of how to use a Spire could identify a workloads for oauth 2.0 as scenario.
+00:30:10 [W] Just if not, really sure what that as.
+00:30:15 [W] would be perhaps if you can elaborate a little bit in the chat happy to expand on it.
+00:30:41 [W] Well, there's important to note that the distinction between like user identity and machine. I wonder if you have your thinking something along the lines of
+00:30:56 [W] How do you manage?
+00:30:57 [W] a wall credentials or having mpls for like oh with clients?
+00:31:06 [W] There is a recent work. There is far as he I want to say eighty seven. Oh five so often and certificate found access tokens, but we've been tracking the
+00:31:22 [W] That's how to how to incorporate spiffe e into that workflow and half Spire take up over the big management or remove the concern of management of like those oauth
+00:31:36 [W] See if I can paste it inside.
+00:32:23 [W] If the client ID is hijacked and that is an issue.
+00:32:26 [W] That's the Fallout from dress and and you're absolutely correct.
+00:32:31 [W] It's something we started to look at.
+00:32:33 [W] It's not something historically we've paid special consideration or modeled around but it's certainly an active area of exploration as the Theses is would call the virtual city of spire. We can make
+00:32:49 [W] Significant Improvement there. If you like to talk about it more I'd be happy to engage you. Can I believe my emails and as in this lights as well as on the session schedule or you're welcome to join the spiffy slack
+00:33:04 [W] And and happy to chat with you a little bit further around that and connect you with other folks.
+00:33:11 [W] Cool, so love to keep the conversation going. I hope if you're new to Spire.
+00:33:17 [W] This is a spark some interest.
+00:33:18 [W] you're more familiar and experienced with it that it has helped solidify some of the knowledge.
+00:33:26 [W] I I'd like to invite you to this at the slack channel number 2 - puke on - maintainer and the slack workspace up to the session ends and well looking forward to hearing from you. Thank you, very
+00:33:40 [W] Try I hope you enjoy the little that's left of the conference.
+00:33:45 [W] I think it's just the last set of presentations to go over the next hour.
+00:33:51 [W] Thank you very much.

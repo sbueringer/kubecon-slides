@@ -1,0 +1,257 @@
+﻿Enabling Multi-user Machine Learning Workflows for Kubeflow Pipelines: ULND-1515 - events@cncf.io - Tuesday, August 18, 2020 8:19 AM - 79 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:06:13 [W] Hi everyone and welcome today. We will be talking about how we enable multi user workflows for kubeflow Pipelines.
+00:06:20 [W] Let's get started.
+00:11:03 [W] First of all, let us introduce ourselves.
+00:11:10 [W] My name is Janis and I'm a software engineer at erecto working on kubeflow.
+00:11:15 [W] I am presenting together with you and going from Google who works on kubeflow pipelines together.
+00:11:18 [W] We worked on designing and delivering multi-user support for kubeflow Pipelines.
+00:11:21 [W] in this talk, we will explore how multiple users can work together on kubeflow pipelines in a secure isolated manner this completes the kubeflow pipelines experience, which allows you to simplify user onboarding with the kubeflow pipelines intuitive UI X
+00:11:37 [W] Great pipeline development by writing pipelines and Spire from code and collaborate in a secure and isolated manner.
+00:11:45 [W] So let's start at the beginning.
+00:11:49 [W] What is kubeflow kubeflow is a machine learning platform built on top of kubenetes dedicated to making deployments of machine learning workflows simple portable and scalable.
+00:12:00 [W] Now then what's kubeflow pipelines kubeflow pipelines is a Cornerstone of the kubeflow platform.
+00:12:15 [W] It provides a powerful platform to run machine learning pipelines own. It comes with a powerful UI and idiomatic python SDK to Define pipelines as code reads visualisations Linux tracking and more.
+00:12:19 [W] So as we said kubeflow pipelines are a very important component of the kubeflow platform.
+00:12:35 [W] However, when not means try to bring pipelines to their users to quickly stumble upon the problem that kubeflow pipelines has noise relation authentication or authorization all pipelines are running in one namespace once your environment, which
+00:12:42 [W] The insulation is impossible.
+00:12:46 [W] How are we going to isolate authenticate and authorize to the kubeflow pipeline's API kubeflow pipelines is not the communities knative API.
+00:12:58 [W] It is not based on cri-o D's or in aggregating API server instead kubeflow pipelines has its own API server and database MySQL in an object store.
+00:13:05 [W] The initial kubeflow pipelines design.
+00:13:12 [W] There is no mention of isolation of indication or authorization.
+00:13:18 [W] So how can we extend the initial design to enable multiple users to work together in a secure as alleged manner?
+00:13:19 [W] To design how to isolate authenticate and authorize for the kubeflow pipeline CPI. We first turn our attention to the kubenetes API for inspiration for isolation kubernative music namespaces, almost every resource lives in a
+00:13:35 [W] fourth indication the kubernative see Pi server supports multiple methods like authenticating users feel like the see that is open ID connect authenticating machine accounts via service account tokens or getting the user identity
+00:13:52 [W] There's set by a trusted proxy finally for authorization kubernative uses role-based access control over back for served permissions are defined as roles given two subjects variable bindings now, let's see.
+00:14:07 [W] Permissions are defined as roles given two subjects variable bindings now.
+00:14:09 [W] Let's see how we can apply those principles for Designing isolation authentication and authorization for the kubeflow.
+00:14:15 [W] Pipeline's API.
+00:14:16 [W] First of all, let's talk about isolation kubeflow pipelines initial design has no insulation primitive whatsoever or pipeline runs are shared and everyone can access them.
+00:14:30 [W] We introduced the namespace as an insulation primitive same muscular netizen in the kubeflow pipelines data model.
+00:14:38 [W] There are pipeline definitions and pipeline runs which are instantiations of those definitions.
+00:14:42 [W] Oh pipeline runs reside inside of an experiment.
+00:14:46 [W] Now to extend the kubeflow pipelines data model with an isolation primitive.
+00:14:52 [W] We add a namespace attribute to experiments by plane runs for the an experiment by looking up. Five Simple Story pipeline runs find their name Space by looking up their experiment in addition. The experimental API endpoints
+00:15:06 [W] old API calls must now specify namespace CMOS kubernative cpi's
+00:15:14 [W] Then let's talk about authentication as we saw the kubernative see Pi server supports various ways of authentication.
+00:15:28 [W] We want to support that in the pipeline's API server as well.
+00:15:32 [W] We want to be able to authenticate users as well as service accounts.
+00:15:35 [W] So we design the following ways of the negation. First of all a user can authenticate with already see at least a Gateway provided by kubeflow and then authenticate to the pipeline's API server via HTTP headers.
+00:15:47 [W] Tier VIII still Gateway in acts as a trustee of indication proxy for mussina syndication is the empty list is a good solution, but it can easily be used with all kinds of workflows. For example a run to completion workloads
+00:16:02 [W] / kubeflow and then authenticate to the pipeline's API server via HTTP headers here.
+00:16:03 [W] We still Gateway acts as a trustee of indication proxy for my sin of indication is the empty list is a good solution, but it can easily be used with all kinds of workflows. For example a run to completion workloads like Argo workflows and
+00:16:04 [W] Blows and kubenetes jobs.
+00:16:07 [W] Don't fully support running with an easier sidecar for that reason.
+00:16:13 [W] We also design a third way of indication of indication with the service account talking now.
+00:16:14 [W] Be careful.
+00:16:19 [W] We use every second tokens with a custom audience issued by the talking request API. These tokens are only usable at the pipeline's API server and not the kubernative a surveyor and asked to be the will tell you,
+00:16:29 [W] This account talking and Unbound service account talking to anything other than the kubernative CPI server is a very very bad idea.
+00:16:38 [W] Now we saw what we did about isolation authentication. Now, let's talk about authorization authorization is all about answering the question of can user do action on resource in namespace.
+00:16:56 [W] For example, cancellara least codes in namespace kubeflow in the first implementation.
+00:17:05 [W] Kubeflow pipelines are using the kubeflow access management service.
+00:17:07 [W] farm for short to authorize requests case, um is introducing a simple view edit. Admin.
+00:17:11 [W] Just control this abstraction for all actions on top of kubenetes her back as you can see from the permission table below.
+00:17:20 [W] There are only three levels of access available.
+00:17:28 [W] So in admin can specify a more fine-grained policy, like a user can view and create by blender Phoenicians, but not start by playing around this method is deprecated and will be superseded by our buck and subject to review.
+00:17:35 [W] After talking about the current way of doing covariation.
+00:17:41 [W] Let's also see where we want to go.
+00:17:51 [W] The input for authorization is to map every coupla pipeline's API endpoint when Auerbach provision, for example, we get the apis by 1 beta 1 runs ID API call to get runs and so on the
+00:17:56 [W] Missions leaves in kubenetes roles and World bindings just like with knative kubenetes resources.
+00:18:07 [W] Then permissions are checked using a subject access you will you call now be careful and make sure to note that these resources are not scared.
+00:18:17 [W] He's but we can use a subject flux review API to authorize them anyway, so we are essentially using kubernative as an authorization system.
+00:18:21 [W] And authorization database and enable admins to assign fine-grain permissions in the same way. They do for kubernative Native apis with rolls and roll bindings.
+00:18:32 [W] This method of authorization will be implemented by a Richter.
+00:18:38 [W] So we designed authentication authorization and isolation from the kubeflow pipelines service isolation is achieved using namespaces same as kubernative fourth indication.
+00:18:59 [W] We support multiple ways for both human and machine accounts for authorization.
+00:19:05 [W] We want to move to using knative you Burnett has our back for Missions and subject acts review.
+00:19:08 [W] Now, let's see how it all comes together a user logs in advance the Gateway.
+00:19:13 [W] And it's authenticated then the Eastern Gateway will proxy the request with a user identity in HTTP headers.
+00:19:23 [W] Using namespaces same as kubernative fourth indication. We support multiple ways for both human and machine accounts for authorization.
+00:19:28 [W] We want to move to using knative you Burnett has our back for Missions and subject access review.
+00:19:28 [W] Now, let's see how it all comes together a user logs in advance to Gateway.
+00:19:29 [W] And is authenticated then the East your gateway will proxy the request with a user's identity in HTTP headers.
+00:19:30 [W] Winning Side the workload with no human interaction. For example a jupyter notebook.
+00:19:31 [W] We can authenticate into ways. We can authenticate with a service account talking with a custom audience issued with a token request API call after reaching the token.
+00:19:39 [W] we send it via the authorization better header. You need to pee requests to the pipeline's API server.
+00:19:46 [W] Finally, we can authenticate via SQL TLS if that's available per workload.
+00:19:51 [W] Finally the pipeline see Pi server now that it knows who the user is and what the user wants to do.
+00:20:07 [W] We'll ask the simple question of can user do action on the resource in namespace. And this U is subject access review code to authorize the request depending on the answer of the authorization decision
+00:20:16 [W] Texas review code to authorize the request depending on the answer of the authorization decision.
+00:20:17 [W] The pipeline's API server. Will then execute an action on its database.
+00:20:20 [W] So all in all we explore kubernative C design for isolation authentication and authorization and use it as a guide for the kubeflow pipeline's API.
+00:20:36 [W] We oscillate using namespaces authenticate using YDC service account tokens or is tmdls and authorized with kubenetes are back for the next part of the talk.
+00:20:44 [W] talk. I will hand it over to you one who will be talking about isolating visualisations networking implementation considerations and more. So, thanks again.
+00:20:50 [W] Is this is rien at Google Cloud working on kubeflow pipelines again. It's just introduced three ways people may also indicate as for the current phase. We have only designed and implemented using authentication info as
+00:21:05 [W] TCP header now that the KFC API server takes a plain text header for user identity.
+00:21:15 [W] It sounds dangerous, right? So how do we make sure clients cannot pretend to be others by faking a request?
+00:21:22 [W] This is where is to Mutual TLS comes into the play?
+00:21:30 [W] You probably know that so here's a really simplified explanation first.
+00:21:38 [W] We have a client talking to a server through plaintext HTTP after turning our mutual TLS.
+00:21:46 [W] The request is proxy through an issue sidecar in your client poddisruptionbudgets car knows how to secure the connection to the server side car and the server side.
+00:21:52 [W] Card talks to serve a container HTTP again in this way the client container and server containing are still talking in plain text HTTP by the connection between parts are secured and
+00:22:08 [W] Charity is amazing.
+00:22:13 [W] is in that so in addition to that the server side car now knows the identity of clients talking to it.
+00:22:26 [W] Therefore we can configure some authorization rules, like only allow requests from this namespace or like these service accounts.
+00:22:30 [W] So with these serve is to Features we are able to set up a set of security rules to First allow traffic from Institute Gateway to give Pui allow traffic among all KFC components.
+00:22:46 [W] Traffic from captivity to dependence services and the most important one being denying traffic from downtown Kiev resources to create internal components.
+00:23:02 [W] with all of this when kfp API server receives a request we can be sure it's coming from the trustees is to Gateway.
+00:23:12 [W] So it took us a lot of efforts just to securely pass the user identity to our API server.
+00:23:24 [W] That's unfortunately just the beginning of this story The API server also needs to support multi user separation.
+00:23:32 [W] Think about the generic problem of adding user separation to a service. There are typically two options to do this.
+00:23:38 [W] The centralized option is to build a service that take for example here namespace as a primitive concept and enforces authorization rules on it.
+00:23:52 [W] It takes more efforts to implement because we have to do intrusive logic changes throughout the application.
+00:23:57 [W] Basically. We need to add a namespace argument authorization and application logic to every API method and don't forget DB schema migration to
+00:24:06 [W] Way in front of it and we need a controller that also sets up the services in new user name spaces.
+00:24:28 [W] This option is non-intrusive.
+00:24:29 [W] We're just composing existing application instances in a way that they look like a single service with multi-user support.
+00:24:36 [W] So for K FP API server, we decided to build a centralized one that takes namespace as previously described.
+00:24:52 [W] So a single instance means lower operational and the computational cost.
+00:24:58 [W] This is important especially because usually a platform team can handle carefully Systems Operations, like upgrade or backup. So data scientist teams can focus on their own work.
+00:25:07 [W] The other reasons including reserving the possibility of building cross namespace features like sharing and this comes with a cost.
+00:25:21 [W] Bye sir. Cause only for us we did a lot of code changes through our apis made the namespace parameter primitive concept and added authorizations in place.
+00:25:27 [W] Also, remember kfp provides end-to-end reusable machine learning workflow.
+00:25:36 [W] So it looks like this seeing visualization right inside care Pui.
+00:25:41 [W] Our users may decide to store their artifacts in external storage is like Google Cloud Storage.
+00:25:57 [W] So KP UI server needs to fetch these artifacts for them in order to show them on the UI. So, how do we separate KF e UI permissions
+00:26:06 [W] for this case we decided to take the decentralized option here because these artifacts and so bored and visualization Services as they please lightweight clients.
+00:26:19 [W] So there's not much operational cost. Anyway also users are free to configure their own instances with correct permissions in this way additionally one contributor is
+00:26:33 [W] For a data passing at this centralized the fetcher servers can even support mounting persistence volumes because they are also in user name spaces.
+00:26:49 [W] So comparing to kfp a pi server. We took a different approach of for artifacts servers because they have different characteristics and trade-off that in the in both a different options
+00:26:59 [W] different things we are considering
+00:27:02 [W] so it's interesting that we got the experience of building multi-user support with both options for different components in kfp.
+00:27:12 [W] There are still some missing pieces for this design of first, how do we integrate other two types of authentication methods within cluster traffic authorization?
+00:27:26 [W] They can allow other workloads in the cluster to authenticate to KFC Pi server. Second pipeline definitions are still shared that basically means code pipeline code is shared.
+00:27:42 [W] So this is okay for some organizations, but not others. Then me new Object Store and machine learning metadata that DB our dependencies of kfp.
+00:27:55 [W] don't support separation themselves.
+00:27:57 [W] So it's student open question. How can I act you can support separation for them?
+00:28:02 [W] So after discussing all about the design, let me share interesting things. I learned when implementing this feature for some background.
+00:28:16 [W] I was learning a still from the beginning through this.
+00:28:21 [W] So I hope these experiences can help someone who's listening to and disclaimer.
+00:28:26 [W] I was working with st.
+00:28:26 [W] I think it's likely a sound of these happy improved without my notice.
+00:28:35 [W] Okay, so let's start lessons. I learned the hard way.
+00:28:39 [W] Before using any is still features clients and servers need to have is still sidecars injected that became my immediate blocker right away.
+00:28:56 [W] I'll remember kubeflow is a platform of machine learning applications are calm.
+00:29:00 [W] There are a lot of applications other than kubeflow pipelines in the same control plane engine base pipelines was actually the first applications to require is to Security in this namespace.
+00:29:12 [W] So I had to turn that up turn it still sidecar injection home.
+00:29:17 [W] So there are several things that can configure it.
+00:29:24 [W] There's a cluster scoped config map that changes whether pods are injected by default.
+00:29:31 [W] There is also a namespace label that is required before any auto injection can happen in the namespace.
+00:29:38 [W] Of course. There's also a part of level annotation that works for just the pods.
+00:29:43 [W] So in order to turn on is still sidecar injection or what I wanted was that all pods in the shared nameplates should default to not inject while the cave peapods can use potable annotations
+00:29:58 [W] Pipelines was actually the first applications to require is to Security in this namespace.
+00:30:00 [W] So I had to turn that up turn is to sidecar injection home.
+00:30:01 [W] So there are several things that can configure it.
+00:30:01 [W] There's a cluster scoped config map that changes whether pods are injected by default.
+00:30:02 [W] There's also a namespace label that is required before any Auto.
+00:30:04 [W] Action can happen in the namespace.
+00:30:04 [W] Of course. There's also a part of level and a tation that works for just the pods.
+00:30:05 [W] So in order to turn on is still sidecar injection or what I wanted was that all pods in the shared nameplates should default to not inject while the cave peapods can use potable annotations
+00:30:11 [W] injection
+00:30:11 [W] But that's actually not visible because the default policy is a cluster scoped configuration while other names basis in kubeflow have already been depending on that behavior.
+00:30:16 [W] It would be a bigger problem. If I wanted to change the cluster scope to default value. So in the end I had to add the disabled injection annotation to every other pot in the share name space with a
+00:30:28 [W] A really huge pull request and got some really hard time troubleshooting all the priest let me test but it was necessary and it was a great step for the entire kubeflow Community to move towards
+00:30:44 [W] Great step for the entire kubeflow Community to move towards integrating more is to security features.
+00:30:46 [W] So when gradually migrating to is due at first, I was tempted to first set up some authorization rules without turning our mutual TLS because who knows the documentation
+00:31:06 [W] Mutual TRS, and so I thought probably I could skip it, but please be careful.
+00:31:15 [W] that wouldn't work for many authorization rules because I Ruled that refers to email only namespaces requires neutral TLS.
+00:31:26 [W] It still doesn't magically knows the name space of a request.
+00:31:28 [W] When Mutual TLS is on it still sidecars mutually authenticate each other.
+00:31:36 [W] So they know each other's identity.
+00:31:44 [W] For example service account a in namespace be so that's why it's to can also arise requests by name space to put it in another way.
+00:31:51 [W] This is actually a listen calculate. This is actually a life take away.
+00:31:55 [W] So before giving anyone money, don't forget authentication you need to ask them prodyna.
+00:31:59 [W] Who they are first this is as important as authorization.
+00:32:09 [W] So these were just Showcases of the hard problems that took me it's to learner really a few days to figure out troubleshooting.
+00:32:15 [W] So my takeaways are do not skip the basics really understanding is to concept save more time.
+00:32:29 [W] That's the from my experience. Most authorization problems can be solved with just one section in the huge troubleshooting doc.
+00:32:48 [W] That's the ensuring proxies are enforced policies correctly section. It tells you how to enable debugging longing for a sidecar then you can observe what information is still powers from
+00:33:01 [W] and whether it was denied
+00:33:05 [W] So at the end remember that this couldn't happen without these amazing people.
+00:33:17 [W] We all worked on the design together while ning Chen and I at Google Cloud implemented current features.
+00:33:25 [W] Thank you.
+00:33:27 [W] Let's proceed with our demo in this demo.
+00:33:29 [W] We will see two kubeflow users working on the same kubeflow pipelines installation.
+00:33:34 [W] Orpheus and eurydice are two users of kubeflow who are working on the same kubeflow pipelines installation process.
+00:33:44 [W] You will see the resources are isolated.
+00:33:46 [W] Let's see what happens.
+00:33:51 [W] First of all orphans will log into kubeflow.
+00:33:52 [W] When offers logs in he will be greeted by the kubeflow central dashboard where he will navigate to the notebooks page and start a new notebook server.
+00:34:07 [W] Here Orpheus is using the code lab tutorial the Titanic code lab tutorial.
+00:34:15 [W] When's the notebook server is ready or fish will connect to it and open the jupyter. Notebook has prepared beforehand.
+00:34:41 [W] Now in order to convert The jupyter Notebook to a kubeflow pipeline or first we'll be using the cable tool with the kill tool. You can just tag your note Book Sales and
+00:34:57 [W] Fine or fish will be using the cable tool with the kill tool. You can just tag your note Book Sales and with a click of a button he'll will parse your jupyter notebook and convert it into kubeflow pipeline.
+00:35:03 [W] Autumn kill will parse your jupyter notebook and convert it into kubeflow pipeline.
+00:35:04 [W] As we can see here till converts The Notebook submits the pipeline to the pipeline's API server and will finally present or faced with a link so you can track the progress.
+00:35:17 [W] All foods visited visits that link and here he can track the progress of its of his run.
+00:35:30 [W] Let's go to the other user.
+00:35:39 [W] Yuri dies also goes to the kubeflow page and logs in
+00:35:48 [W] After that, you read eyes will list all pipeline runs. And as you can see C cannot see the runs, which are face cards have started. This runs are in namespace kubeflow Orpheus.
+00:36:16 [W] In namespace kubeflow you read eyes.
+00:36:19 [W] When she tries to visit the link for one of our faces runs to gets an error because it's not allowed to do that.
+00:36:27 [W] And when we're going to be experiments page, you can see that c cannot see or faces a Titanic experiment as well to find a to prove that we can least support for the namespace over
+00:36:49 [W] Called kubeflow fails and see that all the Run ports are there while in kubeflow URI dies, no pots exist.
+00:37:00 [W] And this is how we isolate kubeflow pipelines for multiple users.
+00:37:05 [W] Okay.
+00:37:36 [W] Hello everyone.
+00:37:42 [W] Thank you for watching the heart and well from Google Cloud.
+00:37:45 [W] So first of all, let's see this question about when we read all of these features be available.
+00:38:11 [W] cloud
+00:38:20 [W] this one
+00:38:20 [W] So first of all, let's see this question about when we read all of these features be available.
+00:38:22 [W] That's a nice guess that will be available for people to 1.1 indeed for I can answer for me KF that they just in case includes all of these features and some more
+00:38:28 [W] For me k3s, the latest in k3s loodse all of these features and some more and participatory. I let you want to take that.
+00:38:35 [W] There's also another question asking whether this multi-user isolation support Microsoft Azure.
+00:38:50 [W] So the current answer is a juror is not supported at this moment.
+00:38:54 [W] So each application will be responsive responsible for implementing it and test it in its own platform.
+00:39:01 [W] So although the design and implementation are all are all platform-agnostic are right now canonical.
+00:39:06 [W] The only Google Cloud IBM and AWS and also the minikube F have supported these features.
+00:39:18 [W] That's a great dancer, but I think Community will catch up with this cage.
+00:39:19 [W] Inspiration from juban.
+00:39:33 [W] Is there a way to let user ABC surname space and user de another.
+00:39:37 [W] I would say yes. So if I understand correctly you have you want to have three users sharing one namespace and to users sharing another link space.
+00:39:53 [W] This should be entirely possible.
+00:39:55 [W] I see an expression from Juba.
+00:39:59 [W] there a way to let user ABC surname space and user de another?
+00:39:59 [W] I will say yes, so if I understand correctly you have you want to have three users sharing one namespace and to users sharing another link space.
+00:40:01 [W] This should be entirely possibly.
+00:40:01 [W] How do you add to that?
+00:40:06 [W] All you need to do is create one namespace and let the honor add other to users as contributors and then let another lattice user ID quit the second name space and add user fee as
+00:40:14 [W] Add to that all you need to do is create one namespace and let the honor add other to users as contributors and then let another lattice the user D which the second name space and add
+00:40:16 [W] And you will have the setup you want.
+00:40:19 [W] So the next question is if so Selman, ask the question that if he I'm sorry if they already have a kubeflow 1.0 cluster is the only way to get this feature by upgrading to one point one.
+00:40:35 [W] Yes, the answer is yes. So you need to upgrade to one point one and currently there's some friction for the upgrade because we as mentioned in the TOC.
+00:40:51 [W] There's a DB migration needed to preserve all your data in a usable way and we are collecting some feedback and GitHub issue like how you want that implemented and we are still in the feedback phase
+00:41:04 [W] in a usable way and we are collecting some feedback and GitHub issue like how you want that implement it and we are still in the feedback phase if you want to use a feature like without is existing data you
+00:41:08 [W] Use a feature like without its existing data you can install a new cluster is 1.1 right now.
+00:41:12 [W] So there's a another question from okay, please go ahead the Ennis.
+00:41:31 [W] Thanks.
+00:41:35 [W] you and we have some latency indeed. So Mark asks following the multi-user collaborator question.
+00:41:48 [W] Does this mean user in can belong to both user a and user biz namespace?
+00:41:49 [W] I think the answer is yes, and it's how our bugging them spaces work in kubernative is in general.
+00:41:59 [W] In kubernative this and in our back, there isn't a notion of ownership of belonging.
+00:42:10 [W] There are just name spaces which are isolated spaces for that research is living and there are permissions for users in that namespace.
+00:42:21 [W] So a user can have permissions to do things in one in space and they cannot stop their relationship other than space.
+00:42:27 [W] So yes, the answer is yes, I believe.
+00:42:32 [W] She's more. It says only seeing on GitHub the 1.0 release.
+00:42:50 [W] So I think that we didn't we are publishing the dogs in at kubeflow dot org website.
+00:42:57 [W] It's a document documentation website for the entire kubeflow.
+00:43:02 [W] But right now I think we are not painting the released on the on the GitHub repo yet.
+00:43:08 [W] I think I don't know where Maurice that but the thing is that kubeflow is not a mono repo it spread across several Repose and the record that we use for
+00:43:24 [W] yeah, it's
+00:43:24 [W] I think I don't know where Maurice looked at.
+00:43:25 [W] But the thing is that kubeflow is not a mono repo it spread across several repos and the record that we use for deploying is kubeflow manifest.
+00:43:27 [W] Where every month is that is used for kubeflow deployment believes in and inside there. I think you will find the 1.1 release.
+00:43:37 [W] If you could check at kubeflow / manifest.
+00:44:04 [W] You would see the 1.1 release.
+00:44:09 [W] But then we should definitely got wanting to flip it this way. And this was likely an oversight.
+00:44:17 [W] Okay, so we are about time here and thank you for watching our talk.
+00:44:30 [W] We can continue the discussion in the select channel of machine learning is number 2 Cube calm machine learning select channel will have us read their answering the following
+00:44:40 [W] Have them or okay.
+00:44:43 [W] Thank you.
+00:44:44 [W] Thanks a lot.
+00:44:48 [W] Oh, there is a webcast message as well. Perfect.

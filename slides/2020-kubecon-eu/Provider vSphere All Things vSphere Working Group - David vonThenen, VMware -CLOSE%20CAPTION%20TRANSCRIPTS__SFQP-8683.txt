@@ -1,0 +1,213 @@
+﻿Provider vSphere: All Things vSphere Working Group: SFQP-8683 - events@cncf.io - Thursday, August 20, 2020 12:42 PM - 107 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:58 [W] Hello and welcome to Providers vsphere the vsphere working group.
+00:07:45 [W] We're going to talk about everything vsphere related and VMware.
+00:07:49 [W] My name is David Vaughn Tenon.
+00:07:53 [W] I am a cloud knative engineer at VMware. My Twitter and GitHub handle is at Devon pain in my community participation includes kubernative.
+00:08:02 [W] Obviously cloud provider Sig and of course the vsphere working group here.
+00:08:11 [W] My day-to-day activities include recently test infrastructure related things ci/cd pipelines and everything kind of related to the cloud. So that includes as yugabyte.
+00:08:19 [W] AWS and the sorts. So the agenda today. We're going to do cover some brief vsphere working group housekeeping items.
+00:08:30 [W] Then we're going to do a very very quick review of CPI and CSI. We're going to talk about multi-tenancy and resource constraints as it applies to vsphere and the virtual infrastructure and then we're going to do a demo of vsphere role-based access and kubernative
+00:08:41 [W] For this presentation here is like different deployment strategies.
+00:08:50 [W] You might be able to use for large and multi-tenant environments as they relate to these fear users and kubernative clusters.
+00:08:59 [W] So the first thing vsphere working group housekeeping items.
+00:09:05 [W] So where to find us the working group meets every first Wednesday of every month at 9 a.m.
+00:09:05 [W] Pacific the slack link is right there and then we have meeting notes that are obviously publicly available we talked about
+00:09:12 [W] Out everything that's going on with CPI CSI and the meetings obviously open and you're welcome to drop in and post and add your topics for whatever you want to the agenda and
+00:09:27 [W] CPI CSI and the meetings obviously open and you're welcome to drop in and post and add your topics for whatever you want to the agenda and we can discuss that there's also
+00:09:30 [W] There's also a VMware users group meet that meets the first Thursday of every month.
+00:09:35 [W] So the basically the following day at 11 p.m.
+00:09:37 [W] Pacific and then where you also might find some VMware fellow people at in various areas of the kubernative community.
+00:09:49 [W] So we're actively involved in Sig cloud provider Sig storage and Sig cluster lifecycle and I dropped at the community links in the kubernative repo for so you can find the time.
+00:09:58 [W] when they meet
+00:09:59 [W] so next we're going to talk about the CPI and CSI projects CPI is the cloud provider interface formerly known as the CCM or Cloud controller manager cloud provider interface, but it does is it allows you to
+00:10:15 [W] many links in the kubernative repo for so you can find the times when they meet
+00:10:16 [W] so next we're going to talk about the CPI and CSI projects CPI is the cloud provider interface formerly known as the CCM or Cloud controller manager cloud provider interface, but it does is it allows you to
+00:10:17 [W] Kubernative into the underlying infrastructure and kind of make the underlying platform visible to kubernative and it provides various mechanisms to do high availability zones regions load balancers and
+00:10:30 [W] just before this presentation we cut a release of the CPI for vsphere and it's version 1.2 dot 0 and includes nsmcon perk which is currently at an alpha and
+00:10:46 [W] We have yellow base configuration that's now available. So you can express your Cloud config using a camel.
+00:10:57 [W] Also, we still continue to support the Legacy any interface or the any configuration.
+00:11:04 [W] But again, we'll configure to make configurations more can come like complies with and is more in tune to what kubernative offers the GitHub link is there for cloud provider vsphere. You can take a look at all the other bug fixes and other features that were
+00:11:12 [W] Raishin, the yam will configure the rate configurations more can come like complies with and is more in tune to what kubernative offers the GitHub link is there for cloud provider vsphere? You can take a look at all the other bug fixes and other features
+00:11:18 [W] Up, the two big ones that are in CPI.
+00:11:19 [W] So the container storage interface driver for vsphere.
+00:11:26 [W] So the container storage drivers what they do is they provide storage lifecycle management for the underlying infrastructure or cloud provider that they're on and case for vsphere, you know has all sorts of capabilities for like create create
+00:11:35 [W] He's Mountain Mount volumes and for a particular kubernative workloads.
+00:11:46 [W] The latest release at the time of this presentations to dot 0 dot 0, there is a release that scheduled compete maybe a couple months after this this latest 2-0 release includes support for read/write many volumes on di
+00:11:54 [W] And also extend volume capabilities for Block volumes, if you're interested in all the other features that are present in the CSI driver for vsphere. The GitHub link is there you can go ahead and look at the release notes that are available also would encourage you to look at the
+00:12:11 [W] The release notes that are available also would encourage you to look at the user group VMware vsphere User Group session that was happened. Just two days prior to this. I believe was recorded. Its by Steve Wang and
+00:12:20 [W] It's my Steve Wang and Miles gray definitely check that out because they'll cover a lot more various other topics relating to vsphere and VMware.
+00:12:32 [W] So the first topic we're going to talk about is multi-tenancy and resource constraints.
+00:12:35 [W] So just want to do a little quick like level set for like what we're going to cover and not cover in this presentation.
+00:12:41 [W] So we're not going to cover multi-tenancy within a kubernative cluster. Although some of the things that you're going to hear in this presentation can apply to that and so it's
+00:12:49 [W] It kind of gets you thinking about different ways. You can apply or we're going to talk about to doing multi-tenancy doing zones and regions and that kind of thing when it comes to multi-tenancy and kubernative clusters. The recommended thing is to have individual kubernative cluster
+00:13:03 [W] / whatever your smallest organizational unit is and even maybe kubernative clusters per user.
+00:13:15 [W] So like when that user doesn't need his his or her cluster anymore.
+00:13:20 [W] They can go ahead and just reclaim it and or you know, reinstall the new one to get the latest version.
+00:13:26 [W] version. So what this presentation is going to cover is how to efficiently and effectively allocate vsphere compute resources. So the biggest problem when you're dealing with physical infrastructure is that you have constrained resources, you don't
+00:13:34 [W] Have an unlimited amount of hosts out there.
+00:13:40 [W] You don't have an unlimited amount of servers that are out there in your data center.
+00:13:47 [W] So the biggest problem is resource constraints and because you have resource constraints you have to have shared infrastructure.
+00:13:52 [W] So you have vsphere clusters in ESX hosts that need to be shared among many many many many different users organization business units and some organizations might have a lot of infrastructure a lot of ESX hosts a lot of vsphere clusters, you know, the orders of hundreds thousands.
+00:14:02 [W] Did have thousands tens of thousands years ago vsx house and clusters out there.
+00:14:14 [W] The the you still have the problem of if you were to dedicate, you know, take the kubernative recommendation and dedicate like a cluster or a group of ESX host to a given user. If you have hundreds of thousands of users, you know,
+00:14:23 [W] Run out of resource. And so if you can't afford to have dedicated Hardware per-user great, but in all likelihood that's not really going to happen in like in reality.
+00:14:40 [W] You're going to have to share your virtual infrastructure with other users.
+00:14:44 [W] So how do we efficiently and effectively do that in the sphere and share all those resources?
+00:14:51 [W] So the best and easiest way to do that is use vsphere role-based access and apply that to kubernative so vsphere has
+00:14:54 [W] knative built in our back for user access controls the drop the link there for the documentation for vsphere 7.
+00:15:08 [W] So kind of just to give you like a really quick overview like and like logically what happens you have like normally you would have an admin account they access the vcenter server.
+00:15:13 [W] see the data center and in that data center. You have two clusters 8B.
+00:15:15 [W] Now what you can do with our back and having like user accounts like for a given user instead of using the one route admin account.
+00:15:26 [W] What you can do is you can create user accounts per user and then give them each individual access.
+00:15:37 [W] So role-based access based on what their what they have access to so like as in this example here, we have a tenant or user one who accesses vcenter server sees the data center and then sees his or her cluster called cluster a and then you
+00:15:45 [W] Attending user to access the vcenter server.
+00:15:50 [W] Minute ESX hosts finite number of clusters.
+00:15:59 [W] You can't have a user have dedicated ESX host or clusters, you know for that user because you're talking then about a scale problem and you're going to have you know, it's going to be costly and so the best way to do that is to share the share the virtual
+00:16:13 [W] Listen clusters that are in your vcenter amongst many users.
+00:16:19 [W] And so one way you can achieve that is doing are back doing our vac plus resource pools and what a resource pool effectively is is you have a logical grouping of ESX hosts in the form of a
+00:16:33 [W] and within that cluster what you can do is you can carve out individual resource and a and create a logical container or a pool that users can create virtual machines within and so that resource pool
+00:16:49 [W] User to X number of CPU Cycles X number y number of memory and then you can have multiple resource pools contained within a cluster.
+00:17:02 [W] So basically carving out that particular those resources in that cluster to multiple resource pools. And so in the example here the little picture here you have an admin his global view since he has access to everything can see the cluster can see the tenants reached the
+00:17:16 [W] Sources in that cluster to multiple resource pools and so in the example here the little picture here you have an admin his global view since he has access to everything can see the cluster can see the tenants reached. The tenants are used as resource pools.
+00:17:19 [W] You have a tenant or tenant one user one tenant to user to he has they have their own resource pools. They have their virtual machines and they're just kubernative nodes and that's what the admin Seas.
+00:17:33 [W] Now if you have user accounts per user, what you can do is you can
+00:17:34 [W] have those user accounts and apply our back to them and effectively give that user or tenant only access to their resource pool.
+00:17:47 [W] So when they log into V Center, they see the data center and the cluster which is in read-only and then you have readwrite access to tenant ones resource pool and they have their kubernative nodes which are backed by virtual machines.
+00:17:58 [W] my virtual machines and they're able those that user is able to like, you know, add more CPU or memory to a given virtual machine and you know, they're out able to shift around and allocate and create new virtual machines within their resource pool and same with tenants
+00:18:12 [W] as their tenants who are user to has their credentials, they log in the vcenter server and they only see the res the their resource pool, you know, the all the virtual machines assigned to that resource pool and they don't enter mix or commingle and have access
+00:18:27 [W] Each other's slice of the pie in the virtual infrastructure.
+00:18:35 [W] So what that looks like from the vsphere perspective, we've kind of talked about it logically, so we were actually looking at the vsphere UI using vsphere 7 use can see from the admin point of view here. You can see right the virtual Center at the top then you
+00:18:48 [W] DC which is the data center. Then you have the cluster and we have for yes X host there and then we have to Resource pools one called tenant one and one called Ten and two and each tenant has their own kubernative configuration.
+00:19:03 [W] And so when you log in to the vcenter server using their individual the center account and you have our back applied to them, but you do it basically do our back through the vsphere UI and the the vcenter UI and you do
+00:19:16 [W] Figuration there.
+00:19:32 [W] So when you log in on the left-hand side, you have tenant one who logs in can only see the tenant one resource pool and then their virtual machines there which correspond to kubernative nodes and then likewise 10-inch our user to logs in with their creds can only see 10 and twos resource pool
+00:19:33 [W] Machines, so that gives you an effective way of carving out resource.
+00:19:40 [W] So compete resource on a CPU memory it from a given kubevirt set of clusters or a given set of ESX hosts and carving them out to give them out to individual users.
+00:19:53 [W] So now the question then becomes so we have a good means of carving all that stuff out. So what happens when you have a given tenant or a given user where they have a large number of ESX hosts and they need to
+00:20:03 [W] to be able to carve out their own like individual users and carve out their resource pool and dish out x amount of resource to one user or an organ that business unit or an organization and carve out
+00:20:18 [W] For a different user so effectively what I'm saying is is what happens if we have tenant to hear user to they have a they need to have a need for a large amount of kubernative nodes and large amount of virtual machines.
+00:20:34 [W] And so what you can do is have more resource carved out and given to the tenants who's resource pool and they need to carve out and stub further subdivide that resource pool to individual users and business
+00:20:46 [W] So what you can do is you can take that resource pool and effectively have nested resource pools in the center.
+00:20:57 [W] And in this example here is tenant one.
+00:20:58 [W] We're just going to ignore.
+00:20:58 [W] It's just the same configuration that it had before intended to now says, hey, I have two organizations within my within my group and we're just calling ten and two like the engineering organization and they have two groups within that engineering
+00:21:13 [W] within my group and we're just calling ten and two like the engineering organization and they have two groups within that engineering organization ones like the ux team and then ones the backend Services team and so ten and two might decide to create
+00:21:20 [W] This is team.
+00:21:21 [W] And so ten and two might decide to create to Resource pools one resource pool for the backend Services team and then another resource pool for the ux team and you know further subdivide the global the
+00:21:32 [W] You know further subdivide the global the bigger tenants who resource pool into two other resource pools.
+00:21:37 [W] And so what you can do then is you create user accounts for those and apply our back to those individuals sub resource pool. So you create a ux tent or user account.
+00:21:50 [W] That's it can modify and have readwrite access to the ux Services resource pool. And then you create another user on the backend service back-end tenant or back end user.
+00:21:59 [W] Count which has readwrite access to the backend Services resource pool and when you create the are back settings for that particular user you can effectively you have the color coded
+00:22:13 [W] Tenant or back end user account which has readwrite access to the backend Services resource pool. And when you create the are back settings for that particular user you can effectively
+00:22:17 [W] Access to when they have the need to manipulate resources and access to the and to the individual nodes and kubernative.
+00:22:26 [W] So the reason why you do something like this is if you have like one cohesive team, but you have that one is in charge of like ux and we might have another team in charge it back in but those services and individual pods that they Implement our are tied together and you
+00:22:37 [W] Sybil without having to like route them through through servicemeshcon like some other cni-genie ISM and you want them to be able to have access fairly easily to services and
+00:22:53 [W] You have access fairly easily to services and endpoints that are exposed by each POD at each team is creating and this is a like an easy way of like biting off that bullet.
+00:23:02 [W] So here's an example CPI config for tenant to kind of the most important things to highlight here.
+00:23:09 [W] Are you have a Visa under Section and one capability that was added into CP I recently was the ability to specify tenants.
+00:23:18 [W] And you have multiple user accounts within a given vcenter server section here and the section here.
+00:23:29 [W] So and the way you do that is you create a two entries the first entries. We're calling it tenant to engineering ux which would represent is just like a 10-inch I.D.
+00:23:39 [W] And then you have the user account associated with that 10 inch or that user in this case.
+00:23:44 [W] doing engineering ux and then you provide a password same vcenter server. You have a username engineering ux
+00:23:50 [W] Same and then password and then because we're talking about a single vcenter server, you're talking same server IP address and then also the same Data Center and then on the right-hand side you have
+00:24:02 [W] For back-end Services.
+00:24:06 [W] They have their user account engineering be e atmosphere local their password same the same server vcenter server and same Data Center and by having these two tenants defined in the configuration vcenter server is able to use our back.
+00:24:20 [W] And effectively for the CPI interface here.
+00:24:25 [W] It's able to query based and get inventory for each user account.
+00:24:33 [W] apply Discovery through our back but cohesively to the hole for the CPI.
+00:24:40 [W] It's able to manage the entire engineering organization through a single configuration on the CP.
+00:24:45 [W] CP. So that covers the CPI and what that looks like in the CSI configuration because you want to be able to keep the
+00:24:52 [W] the the data and when you're creating a VM decays or you're creating persistent storage for individual pods that are being deployed in your kubernative cluster for the ux team and the backend Services team.
+00:25:06 [W] You might want to do a configuration where you have two different CSI deployments or right one CSI deployment and configuration where you deploy CSI just to the engineering ux team and just using the credentials for that.
+00:25:18 [W] That particular ux engineering ux user account. So here if you look at the vcenter server, you see the user engineering ux vsphere local and then you do the same thing for the back end Services team.
+00:25:36 [W] So you have a second second set of vsphere CSI deployment configuration yam will and then this the configuration looks like this isn't very similar with the exception of that. The user account is different and the reason why you do this
+00:25:49 [W] This might be beneficial is because when you create a VM decays and you do storage or related operations each each all the storage that's related to each account will be tied to that individual account. So
+00:26:05 [W] The you have the less likelihood that you have like PVCs that are called a certain name and have a collision between the engineering ux team in the engineering be team. And so they are able to create their own individual PVCs without
+00:26:21 [W] Then at the same time if there is Collision, you don't have to worry about that particular vmdk that exists on the ux team get mounted and placed over on the engineering be team and it's basically because of these user accounts you're going to have that
+00:26:36 [W] Us so that it's only aware of the vmdk as that are associated with that particular user account.
+00:26:48 [W] So what this looks like in terms of a diagram so that it's just really easy to digest.
+00:26:54 [W] So if you have your vcenter server, you have your cluster you have your tenant one has, you know, it's just the same configuration that we talked about it just kind of just as an example for contrast the cluster to is what we're talking about.
+00:27:01 [W] We have a larger engineering resource pool.
+00:27:06 [W] We want to subdivide it to two teams one ux team won back in team and we
+00:27:12 [W] have to Resource pools for each team.
+00:27:13 [W] They have their own kubernative snowed in the CPI configuration, right? We have both tenant user accounts listed in the CPI configuration so that it can have a holistic view of how it does workloads placement within the kubernative cluster that's
+00:27:24 [W] In team but each tenant has their own CSI driver and it has the benefits like as mentioned before it has the benefits of only providing access and amount capabilities for vmdk as that are associated to that user account. So to that
+00:27:40 [W] User account so that back-end Services tent that user account.
+00:27:47 [W] That's for each individual CSI driver prevents Collision accidentally mounting other VM decays from other users to other pods within their their group.
+00:27:59 [W] I have a demo for you, which actually is going to be the exact configuration that we have here. We have it's going to be a tenant one, which is the very simple same CPI CSI driver for that one individual tenant and then
+00:28:09 [W] The previous picture we're going to have a tendency to which has a to Resource pools for a ux team and a back-end team and we're going to deploy a CPI driver that can manage Engineering Services team and then we have two individual CSI
+00:28:25 [W] Basically create CSI drivers for each individual team to prevent that prevent access to each other's resources for storage.
+00:28:39 [W] So my demo configuration here, I'm logged in the vcenter server under the admin account.
+00:28:43 [W] I have a data center called Kate's data center.
+00:28:48 [W] They vsphere cluster called k8s cluster with for ESX hosts on them and just like in the PowerPoint presentation.
+00:28:53 [W] I in the last configuration.
+00:28:55 [W] I have two tenants the
+00:28:56 [W] lieutenant is has a resource pool called tenant one and it has a kubernative cluster already configured their that resource pool has simply a user account called tenant one that's configured using our back to only see the resources underneath this resource pool
+00:29:11 [W] one so tenant to we said that in the last configuration that we have to imagine that if ten and two was a very large kubernative configuration where it may be required to different business units or two different teams working with each other that we might
+00:29:26 [W] Acquired two different business units or two different teams working with each other that we might have one engineering back-end services and another team engineering ux to be underneath tenant one to subdivide the resources under this tenant
+00:29:36 [W] X2bb underneath tenant one to subdivide the resources under this tenant to Resource pool.
+00:29:39 [W] So tenant to the resource pool here configured using an account called tenant to under our back so that it can see everything underneath ten and two it has to Resource subdivided resource pools one engine back-end Services
+00:29:52 [W] Under our back so that it can see everything underneath ten and two.
+00:29:53 [W] it has to Resource subdivided resource pools one engine back-end Services configured with an account called engineering backup/restore engineering back-end services, so that it can only see through our back and only see these
+00:30:00 [W] All the engineering backup/restore engineering back-end services so that it can only see through our back can only see these two worker nodes and same thing with the engineering you ex can only see these two worker nodes under its resource pool.
+00:30:07 [W] And so we're going to do is we're going to configure the CPI or the cloud provider interface for both of these tenants and we're also going to configure the CSI driver for both of these tenants and the first configuration the first tenant
+00:30:22 [W] It's going to be fairly simple.
+00:30:26 [W] It's going to be simple cscp.
+00:30:28 [W] I driver in CSI driver that gets installed and for tenant to we're going to just like in the last slide. We're going to install a CPI or cloud provider interface for tenant to and that's going to manage the entire kubernative.
+00:30:41 [W] All five nodes so that it can set up zones.
+00:30:52 [W] And then for the CSI driver going to configure and deploy two separate CSI drivers one for each subdivided team. So one for engineering be e is a back-end Services another one for engineering
+00:31:00 [W] Teams the one for engineering be it's a back-end Services another one for engineering you X. So let's go ahead and do that. Now the top window here. I have logging into the kubernative cluster for tenant one.
+00:31:08 [W] And I have a simple script called tenant one dot s h which we can take a look at and it's very simply does exactly what I said.
+00:31:27 [W] just going to go into the CPI folder deploy the CPI for tenant one and deploy the CSI driver for 10 and 1 and let's go ahead and take that off.
+00:31:34 [W] And then if we do a get pods or coetzee keep CTL get pods all namespaces. We can see that we have a CPI
+00:31:56 [W] Our manager deployed for tenant one that's going to correspond and do all the work required to surface everything vsphere up into the kubernative cluster and we have one
+00:32:12 [W] Roller, which does the operations for like create and delete volume and 3cs. I knowed pods which handle all the mount operations for this given cluster for tenant one.
+00:32:28 [W] now for ten and two
+00:32:29 [W] we're going to go ahead and log in to the kubenetes collister that's represented by these five nodes Master one master node, and for worker nodes.
+00:32:44 [W] We're going to execute a script called tenant to you can take a look that really quickly for tenant to because it's a little bit more complex, right?
+00:32:51 [W] We said that we're going to deploy a CPI driver that manages the five nodes the kubernative nodes and the reason why it's important is because that CPI
+00:32:59 [W] It's going to create zones regions and zones so that we can divide the placement for where we want to drop things between either the backend Services resource pool or the engineering ux resource pool back by the
+00:33:14 [W] That are in those resource pools and then like we said for the driver the CSI driver going to deploy two separate CSI drivers one for the backend Services team and then another one for the ux team go ahead and get that script.
+00:33:29 [W] And if we do a cube cuddle get pods all namespaces.
+00:33:51 [W] We can see that we have one Cloud controller manager or CPI gets deployed to manage these for worker nodes and one master node and then sets up the zones for all of those hosts
+00:34:08 [W] And then we have to CSI controllers right one controller for engineering back-end Services One controller for the engineering you X and then we have one two, three, four five nodes for the each corresponding to if you're
+00:34:24 [W] Out operations on the for worker nodes in the master node.
+00:34:31 [W] So there you have it.
+00:34:32 [W] Thank you very much.
+00:34:34 [W] I hope the demo is you found was interesting.
+00:34:38 [W] Like I always try to do I always try to make everything available so that if you want to try this out on your own you're able to do so and you can find all of this on GitHub so you can find it in the link there all the scripts all the ammo and everything.
+00:34:49 [W] Included pictures they are so how you could duplicate the environment and go ahead and you know, try to try this out on your own and thanks a lot.
+00:35:00 [W] I hope you enjoyed the presentation and I guess we're going to be doing QA. Thanks a lot again.
+00:35:06 [W] Alright, so got a first question here.
+00:35:20 [W] So is the default and VC or seven or do I need additional products or is this all coming with CSI and CPI?
+00:35:22 [W] So yeah, this is all all the like the tenancy stuff and is all related to CSI and CPI.
+00:35:36 [W] obviously some deep integration within a sphere to like, you know to make it visible in the UI. So like storage or lated stuff as it like in Fez example for sysdig.
+00:35:40 [W] Sigh but those are all things that you would apply on top of your on top of your kubernative cluster.
+00:35:46 [W] So you'd have like a CSI deployment and a CPI deployment just like the just like in the demo you have scripts for that and and you know you did but you didn't pull it like that way and then what are the requirements to use this? So the same
+00:36:00 [W] Related stuff as it relates as example for CSI, but those are all things that you would apply on top of your on top of your kubernative cluster. So you'd have like a CSI deployment and CPI deployment just like that just like in the demo you have scripts for that and
+00:36:02 [W] The question the minimum requirements is six seven you three, but and that which is fully supported. I the demo was on vsphere 7 definitely newer is better because you'll have all the latest and greatest features.
+00:36:16 [W] So
+00:36:17 [W] and then any other questions here, I know we're kind of running short on time at right after this.
+00:36:34 [W] I'm going to be joining the I just need to conserve bandwidth, but I'm going to be joining the slack channel in kubernative.
+00:36:35 [W] There's a thread already running.
+00:36:40 [W] I'll jump on after that answer any other questions and then if anyone else wants to speak and have extended conversation, we can always do more slack or even the zoom session or what not. You can just reach out to me.
+00:36:49 [W] Any other questions?
+00:36:54 [W] So yeah, I like kind of like the idea that this presentation was to kind of like have more discussion.
+00:37:08 [W] There's like kind of what I was presented with using vsphere users and role-based access.
+00:37:15 [W] You can definitely apply that towards like how you want to set up clusters kubernative clusters and like how you might want to do like tendency within kubernetes through kubernative namespaces.
+00:37:25 [W] So there's definitely can be opportunity to do.
+00:37:28 [W] That would have to be like a pre thought out like Daniel kind of Step but it's entirely possible something like that could be added into like, you know say as an example a script or even into a cluster API, so that would be like a
+00:37:47 [W] Or even into cluster API, so that would be like a nice little like potentially nice integration there as well.
+00:37:52 [W] And no thump.
+00:37:59 [W] Thanks. Someone said thanks for a great talk.
+00:38:02 [W] We have don't have any other questions.
+00:38:04 [W] I think we might just wrap that up.
+00:38:07 [W] Like I said, you can join me in slack afterwards.
+00:38:09 [W] You can always tweet at me and I'm in the kubernative channel also in the VMware slack Channel as well.
+00:38:15 [W] And I guess that'll do. I thanks for hope you enjoyed the presentation.
+00:38:23 [W] So thanks for attending and hope you have a great day or evening.

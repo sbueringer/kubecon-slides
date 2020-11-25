@@ -1,0 +1,867 @@
+﻿Tutorial: Migration 101: From VMs to Kubernetes: WHTG-6388 - events@cncf.io - Tuesday, November 17, 2020 2:57 PM - 85 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] All right, everyone.
+00:00:00 [W] Welcome to the talk.
+00:00:02 [W] So today we're going to talk about migrating VMS to kubenetes.
+00:00:07 [W] name is Luke I so I'm an engineer I hashicorp and I work on console and are kubernative integration.
+00:00:13 [W] Hi everyone.
+00:00:50 [W] All right, everyone.
+00:00:50 [W] Welcome to the talk.
+00:00:52 [W] So today we're going to talk about migrating VMS to kubenetes.
+00:00:57 [W] My name is Luke I so I'm an engineer I hashicorp and I work on Console in our kubernative integration.
+00:01:02 [W] Hi everyone.
+00:01:04 [W] My name is Irina caslava. I also work as an engineered hashicorp working on our Consul kubernative integration.
+00:01:11 [W] Yeah, so let's just share screen here and I'm going to get into the slides that we could get an intro the talk here.
+00:01:19 [W] So going to present here.
+00:01:22 [W] So yeah this talk today is migration 101 from VMS to kubernative.
+00:01:27 [W] So what we're going to do in today's talk is we're going to have our two applications over here.
+00:01:34 [W] We have the web application and the iepi application and they're both going to be running on VMS.
+00:01:39 [W] And then what we're going to do is we're going to deploy the API application onto kubernative. So we're going to go through everything. You need to know about how to get these applications. From what
+00:01:48 [W] It would be like to play on a VM to deploy on to kubenetes.
+00:01:51 [W] And then we're going to do is we're going to deal with the routing so that the web can actually route to API and we're going to swap the routing over in a no downtime migration so that the API service is now running on kubernative.
+00:02:02 [W] So that's like the the overview of the whole talk.
+00:02:05 [W] That's our gold.
+00:02:07 [W] So to get there we're going to start with like an introduction a little bit of at this setup and how we're going to do everything and the interesting thing about our Workshop here is that we're actually gonna be able to run everything on our laptops.
+00:02:19 [W] We have a full set of instructions for folks to either follow along so they can run the commands themselves on their laptops or if you don't have a laptop that you have access to or just have enough like a Ram or something like that. You're having some issues.
+00:02:31 [W] So let's just share screen here and I'm going to get into the slides that we could get an intro the talk here. So Co 2 percent here.
+00:02:41 [W] So yeah this talk today is migration 101 from VMS to kubernative.
+00:02:45 [W] So what we're going to do in today's talk is we're going to have our two applications over here.
+00:02:52 [W] We have the web application and the iepi application and they're both going to be running on VMS. And then what we're going to do is we're going to deploy the API.
+00:03:01 [W] Application onto kubenetes. So we're going to go through everything you need to know about how to get these applications from what it would be like to play on a VM to deploy out to communities.
+00:03:10 [W] And then what we're going to do is we're going to deal with the routing so that the web can actually route to API and we're going to swap the road and over in a no downtime migration so that the API service is now running on kubenetes.
+00:03:21 [W] So that's like the the overview of the whole talk.
+00:03:24 [W] That's our goal. So to get there we're going to start with like an introduction a little bit of this setup and hashicorp.
+00:03:31 [W] We're going to do everything and the interesting thing about our Workshop here is that we're actually gonna be able to run everything on our laptops.
+00:03:37 [W] We have a full set of instructions for folks to either follow along so they can run the commands themselves on the laptops or if you don't have a laptop that you have access to or just have enough like a Ram or something like that. You're having some issues.
+00:03:49 [W] You can just follow along with us because we're going to be running the same steps at the same time.
+00:03:52 [W] So, yeah, so to get to that point where we migrated from vm's over kubernative, what we're going to do is we're going to first build a Docker image.
+00:04:01 [W] So in order to play anything on communities, you need a Docker image, then we're going to actually deploy into kubenetes. So this is going to be talking about like the kubenetes resources the difference between VMS and kubermatic he's and also of course it would be a kubernative talk without ya malaria.
+00:04:16 [W] Talk about what your yeah momisa look like once your app is deployed on the communities.
+00:04:20 [W] Obviously, we now need to route to it.
+00:04:21 [W] So then I may be doing the first part here and they're going to switch over to Irina and she's going to be talking about the next parts.
+00:04:27 [W] And so the first thing she's going to talk about is the routing. So how do we actually route?
+00:04:31 [W] From like on our VMS all the way over into the two communities.
+00:04:35 [W] We're also gonna talk about logging and metrics often.
+00:04:39 [W] You're going to be using your own logging metrics, like whatever assistance you had before you move to kubernative, but we wanted to show you some of the cool Cloud native tooling that is available out there and how to run it and you actually go to run it on your cluster and play around with it yourself once we have all our metrics in place over
+00:04:54 [W] Actually built it run it on your cluster and play around with yourself.
+00:04:56 [W] Once we have all our metrics in place.
+00:04:58 [W] We were able to know whether our app is working as expected.
+00:05:02 [W] We're going to perform no downtime migration.
+00:05:04 [W] And then basically what that means is we're going to have both the app running on PM's and up kubenetes and then we're going to swap over in a safe way.
+00:05:12 [W] It allows us to swap back without missing any traffic and then finally at the end we're going to do a quick demo of Consul servicemeshcon. We don't recommend depending on your use case. It doesn't
+00:05:23 [W] make sense necessarily to go into servicemeshcon.
+00:05:25 [W] One of the things we actually talked about again.
+00:05:27 [W] The talk is about how like you got to keep it simple and don't try to boil the ocean and use all the new cool technology.
+00:05:32 [W] However, there are some like use cases and problems that the sort of matched us solve. And so we're going to give you a quick demo of what that would look like. If you did go down that road. So before we do anything we want you folks to start
+00:05:48 [W] The prerequisites if you haven't already so this URL is going to be available in the chat right now wherever that shot is, so I'm going to switch over and just show you what you need to do to get started and then you can come back to us and we can we can start with the workshop.
+00:06:01 [W] So we're going to go to this URL here.
+00:06:04 [W] And we want to click into the prerequisites here.
+00:06:07 [W] So what you need is you need to talk or desktop?
+00:06:09 [W] So you see here I have dr. Running for you to install kind which is a kubernative and doctor at this can allow us to run kubernative locally and you need to install keep CTL and how so get started downloading those things.
+00:06:22 [W] Maybe want to pause the video until you have them all downloaded.
+00:06:25 [W] Some of them will take a little bit of time to download and also one thing worth noting is that you need to have 4 gigs of memory 60 gigs of RAM and 60p. You are 60 60 gigs a disk and 64 use so when you get Docker running you can
+00:06:37 [W] the preferences here
+00:06:40 [W] and resources and so like a say, they're so four gigs of memory and 60 views so 6 and I have six gigs of memory and then you don't need this much disk, but you do need to say 60 gigs a desk.
+00:06:54 [W] And so that'll make cause we're gonna be running so many things on your laptop here.
+00:06:58 [W] That'll make things a lot easier.
+00:07:00 [W] So get started downloading those things.
+00:07:03 [W] And so I'm going to continue here with a with the talk.
+00:07:08 [W] Instead of migrating an existing application to kubermatic is what we do is we actually we're building a new application and we're going to deploy an inconvenience for the first time.
+00:07:11 [W] So in this exact I'm here. We have our old webinar. I API applications and what we're doing is we have a new application coming the food application and we're going to play that on to kubenetes and one of the benefits of this patterns this pattern is that Foo isn't being called by any production.
+00:07:26 [W] traffic's not being used many users. It's not dependent on it by the web service and so we can deploy to kubernative and if it breaks or this
+00:07:32 [W] Some issues with it.
+00:07:33 [W] It's not a big deal, right?
+00:07:34 [W] There's no downtime when you're talking about what we're doing today, which is when we're moving an existing application is actually getting full traffic over your kubenetes.
+00:07:41 [W] You got to be a little more careful. Once you're deploying this into production, you know, there's actual legit users go with your web and talking to a PI, right?
+00:07:49 [W] And so if this breaks, you know, there's going to be some trouble and so that's why we need to be a little bit careful here. We would be doing it a no downtime migration. We might want to you know, build in some even more complicated things around here around the automatically failing over something breaks.
+00:08:03 [W] So yeah, that's that's what we're gonna cover today. But just note like there's different ways to adopt kubenetes often. Like if you don't have a new application to coming down the pipeline this is going to how this is going to be how you'd uh communities and even if you are adopting it this way eventually you're probably gonna want to move some of these applications over its
+00:08:18 [W] You need to tackle this kind of thing.
+00:08:12 [W] So let's get into the initial setup here.
+00:08:15 [W] So what we want to do is were actually going to employ our services here the web and API on our local machine.
+00:08:22 [W] And what we're going to do is we're going to have the web service is going to be running on localhost Loops Local Host 8080.
+00:08:30 [W] And then our API service is going to be running on localhost 8080 and we're going to be able to access it using this hostname HTTP colon slash slash API and the way we're going to be doing that is Etsy hosts.
+00:08:40 [W] It's so I know what you're thinking.
+00:08:41 [W] You know, this is supposed to be talked about VMS and now you're running everything on on your MacBook. Like what the heck I'm getting out of here.
+00:08:48 [W] Okay.
+00:08:48 [W] Hold on a second.
+00:08:49 [W] So what we're going to learn today a lot of the things we're learning we can teach them in this environment here which allows us to play around a lot easier. We don't have to get you to spin up VMS and spin up a brand-new kubernative cluster and start paying Cloud providers for it.
+00:09:00 [W] And so if we look at what vm's look like you can kind of see that they're actually quite similar to the setup here. And basically we can we can mimic almost everything on our laptops here.
+00:09:10 [W] so if we look at what a normal game setup looks like we're gonna have something like this where we have a set of yams and the web service would be deployed two, maybe three of them and the API service would be deployed to another three of them and then we're gonna have a load balancer somewhere
+00:09:25 [W] It our users coming through and the load balancer is going to request an accommodation going to find have to find a way to split them between like three different web servers sir VMS, right? So maybe you do something you have like a DNS entry and in each VM here has an IP address that gets added to this
+00:09:27 [W] And so you're doing kind of like splitting based on DNS their round.
+00:09:07 [W] Robin DNS and the same thing for like the web service need to talk to its own API service. You might have a DNS entry for like API and then these VMS have their IP address is registered.
+00:09:17 [W] And so you're calling over here like this.
+00:09:19 [W] And so this is very similar to what we've set up over here.
+00:09:23 [W] Where we have our browser coming instead of load balancer and it's coming directly into this web via Local Host 8080. But you know, there's not a big difference there with that and then API we're using a hosting here API, but it's not DNS.
+00:09:37 [W] There's no DNS behind it. But behind the scenes were actually shooting at cos, but that's basically just mimicking DNS and again because we're running on the same laptop.
+00:09:45 [W] We do need to use different ports, but that's not a big difference between these two setups here.
+00:09:49 [W] So take our word for it. We're still going to learn a lot today with the hide it
+00:09:53 [W] VMS and you're gonna be able to do it all locally in your laptop, which I think is really really nice.
+00:09:57 [W] So speaking of on your laptop.
+00:10:00 [W] Like I said, you can do all this on your on your own to or you can follow along with us or kind of do the same thing at the same time.
+00:10:06 [W] As of right now this Workshop only works on Mac, but depending on what we're saying in the chat right right. Now when you're when you're actually watching this chat keep going we may have got it working on Windows to so just check the chat there in and see if it works.
+00:10:19 [W] works. So what we're going to do with here is hopefully you've got all the prerequisites setup.
+00:10:23 [W] Up, and so we're going to go to this first step here. If you if you're coming from the root of the repo just go to click one - setup.
+00:10:28 [W] Going to start the web and API Services running on our laptops. And then we're going to let the web service talk the API service.
+00:10:30 [W] So hopefully you've cloned this Rico here.
+00:10:33 [W] And so I have it over here.
+00:10:37 [W] That's the real there. And so what it says in 1 Terminal start web, so I'm just going to copy this.
+00:10:43 [W] Okay, we see now we have web writing.
+00:10:45 [W] So if you remember our diagram webassembly on localhost 8080 here. So if I go to Haiti will see that we have the web servers running it return to web here.
+00:10:57 [W] But it is Upstream calls its dependencies.
+00:10:59 [W] It's saying like hey, I can't talk to the API service.
+00:11:02 [W] Well, we haven't even started it yet.
+00:11:03 [W] So we kind of expect this not to work.
+00:11:05 [W] like I says that's what you should be getting so they were gonna go over here and we'll start the API service. So I'm gonna open up a new terminal tab here.
+00:11:15 [W] And again start the API service now here I'm using pseudo. That's because API is binding to 48.
+00:11:20 [W] So I'll type my password in there which is a hunter to it. So now this is up and running here.
+00:11:27 [W] here. It's running on a local host 8080. So, let's see if the web service can now talk to its API service.
+00:11:35 [W] So there's still something wrong.
+00:11:36 [W] So the issue here is that this API this host name. It doesn't exist. Right?
+00:11:42 [W] By editing my local Etsy hosts file and create and creating an entry that says hey when you get this API hostname, actually, I want you to write it to Local Host.
+00:11:39 [W] So we have the instructions here like that.
+00:11:42 [W] So me to edit at the hosts.
+00:11:47 [W] So I'm going to open up a whole new set of terminals here and I got to make a little bit bigger for everybody.
+00:11:52 [W] Okay, so and it's a hose again after I pass for a hunter too.
+00:11:58 [W] Oh my gosh poorly. Okay, and at the end here, I'm going to go back into my Doc's here.
+00:12:06 [W] It says add this line to the bottom.
+00:12:08 [W] So let's copy that if you don't add it with a top of the comment. So what this says is when I some of those HTTP API actually wrote them.
+00:12:17 [W] A 127 which is just Local Host. Right?
+00:12:21 [W] So we save that and we go back to our web service. We should now be hitting our API service and I'm going to switch over here. Just click enter a couple times on these logs. So we should see a request coming here.
+00:12:32 [W] Okay, awesome.
+00:12:35 [W] So we saw that the response change here a little bit. So here we can see that it's correctly calling its Upstream which is it's a fantasy and then the name of it is a pi - VM and obviously it is going to change when we do plan to Kate's on to kubenetes.
+00:12:47 [W] But everything's working as we expect here and we go over to our logs.
+00:12:50 [W] We see that you know, that's where I press enter way up here and now we get like getting requests in here.
+00:12:55 [W] So what do we just done when we go back to our diagram here? All we've done is we've got our browser.
+00:13:01 [W] Awesome.
+00:13:02 [W] So we saw that the response change here a little bit.
+00:13:04 [W] So here we can see that it's correctly calling its Upstream which is it's a fantasy and that the name of it is a pi - 4 p.m.
+00:13:10 [W] And obviously it had this is going to change when we do planetscale onto kubenetes when everything's working as we expect here and we go ordering logs.
+00:13:17 [W] We see that you know, that's where I pressed enter way up here and now we get like getting requests in here.
+00:13:22 [W] So what do we just done?
+00:13:24 [W] Well we go back to our diagram here.
+00:13:26 [W] All we've done is we've got our browser. It's Lobos 88 is talking the web service, which is then called.
+00:13:31 [W] Owing the API service, which is exactly what we wanted to do for the stage.
+00:13:37 [W] Okay, so let's go back to our slides here.
+00:13:42 [W] Okay, so we've got everything set up for for our migration here and so now what we want to do is we want to start deploying on to kubernative the before we can deploy the communities we actually build a Docker image
+00:13:55 [W] So this is dr.
+00:13:56 [W] Docker rising and it's not a real word. But as far as like a call it when you try to stick out your app into a Docker image.
+00:14:01 [W] So if we look at what we had with the VMS, like I kind of one of the motivate why doctor right so we look at what we have on the VMS are usually running one app per VM.
+00:14:10 [W] Now when you run a Docker image or Docker container what this allows you to do is actually allows you to run multiple apps in a single VM.
+00:14:18 [W] So I mean, I'm only showing to hear about you can run literally like 30 pots or they're called pause crannies, but you can read like literally 30 containers on a single VM if you have a really big Behavior, but even more than that and so what this allows you to do obviously is have a lot less VMS.
+00:14:31 [W] VMS. And also what it allows you to do is you can treat your VMS. Like there's this cattle versus fats analogy, which I really don't like but basically the idea
+00:14:39 [W] Is if you lose a VM then it's not a special VM.
+00:14:44 [W] It can run anything.
+00:14:44 [W] So all you need to do is bring up another VM of the same type and then can run any Docker containers on it. Right?
+00:14:50 [W] So this is kind of like what kubenetes it does.
+00:14:53 [W] It's a whole it's a whole mechanism of community is this container orchestration, but before we can orchestrate containers, what do we need we can haters.
+00:15:00 [W] You can run literally like 30 pots or they're called pause screen eyes, but you can read like literally 30 containers on a single VM if you have a really big Behavior, but even more than that, and so what this allows you to do obviously is have a lot less VMS.
+00:15:11 [W] And also what it allows you to do is you can treat your VMS like there's this cattle versus that's an analogy which I really don't like but basically the idea is if you lose a VM then it's not a special VM.
+00:15:25 [W] It can run anything. So all you need to do is bring up another VM of the same type and then can run any Docker containers.
+00:15:29 [W] On it, right?
+00:15:30 [W] So this is kind of like what kubenetes it does.
+00:15:33 [W] It's a whole it's a whole mechanism of communities this container orchestration. But before we get Orchestra containers, what do we need?
+00:15:40 [W] We containers.
+00:15:41 [W] So what exactly is a container?
+00:15:43 [W] Well what's compared to a VMS and and and Docker so over here, we have the Ms.
+00:15:48 [W] And then over here. We have Docker so a VM consists of your app. So, you know the binary or its dependencies it's going to have its libraries. So if you're running like node.js you're gonna have like a bunch of look down script files, you know.
+00:16:00 [W] Don't models and then it's operating systems the Boon to our red hat or whatever you're running and that's your VM. And then under the hood is actually sitting on a hypervisor in this eventually.
+00:16:09 [W] There's actually real server the real CPU underneath but this is pretty big right and one of the things with this is that if you want to run a pee on the same VM at that be well what if they're using different versions of node.js for example, then you're going to run into these issues right?
+00:16:24 [W] Because the apps are contained within like the app themselves. They're actually like they have to kind of spread out over the whole VM.
+00:16:30 [W] But we look at a Docker container.
+00:16:32 [W] What we do is we actually contain the app and it's binaries and libraries within a container.
+00:16:38 [W] So it is within its own like namespace.
+00:16:40 [W] He doesn't even know what's going on over here on it a pay. It doesn't know about its files or anything like that doesn't even know about this processes or even its Network.
+00:16:46 [W] And so what this allows us to do is because it's now contained its container, right?
+00:16:50 [W] This allows us to stick a ton of them all on the same be amps. They don't even know about each other until they get see if you throttle because I was using a lot of CPU, but for the most part you don't really notice it
+00:17:00 [W] So that's what we're gonna do is step two here is we're going to package our application in which is currently running our VMware our laptop into a Docker image.
+00:17:07 [W] So I'm over here in Step 2. If you're coming through there, just click on Step 2 - doctor eyes.
+00:17:14 [W] Cbms, they don't even know about each other until they get CPU throttle because I was using a lot of CPU, but for the most part you don't really notice it.
+00:17:22 [W] So that's what we're gonna do is step two here is we're going to package our application in which is currently running RPM on our laptop into a Docker image.
+00:17:30 [W] So I'm over here in step two. If you're coming through there. Just click on Step 2 - doctor eyes.
+00:17:38 [W] Okay. So in this step we're going to build a document for the API service because we're only migrating.
+00:17:43 [W] Let's go back to our premise here.
+00:17:45 [W] We're only migrating API onto kublr going to be webassembly VMS. We only need to build a Docker image for API right now at least.
+00:17:52 [W] So let's do that.
+00:17:52 [W] So in order to build a Docker image, you need to write what's called a Docker file, which is literally just like a build script for your Docker image.
+00:18:02 [W] So the first thing you need to start on is you to think about what's your base for this image?
+00:18:07 [W] So just like in order to run your app, you might be needs to be running on like an operating system like a voodoo or something like that with Docker images.
+00:18:14 [W] You still owe me like a bass now technically you could actually start with nothing so you could just like stick your binary into this.
+00:18:20 [W] Engine all the would be there is your is your binary but say you want to like run a command in your container because remember this is like isolated. So you want to like maybe like LS or look at the files there.
+00:18:31 [W] Well, you don't have LS in your container, right?
+00:18:34 [W] You might not have cd you might want to like curl something but you don't have curl in a container. It's not going to work right? So there are some a lot of benefits from to starting from scratch.
+00:18:43 [W] It's called where you basically you have nothing in the image, but you're a binary but for this example, we're we're kind of messing around with a demo and I think also for when you're first starting out when you actually might want to run
+00:18:51 [W] Inside container I recommend starting out with like a base image with the hassle of like utilities and things in.
+00:18:55 [W] All right this case we're gonna use Alpine.
+00:18:58 [W] And then what we need to do here is I'm going to do is my editor.
+00:19:01 [W] So I'm going to create a new file called Docker file.
+00:19:06 [W] I'm gonna make this a little bigger.
+00:19:08 [W] We're going to copy that first line in there. So let's go back to our instructions here.
+00:19:13 [W] So now you have your base image, you got to think about something specific to your application rate. So a good place to start to know what you do put your Docker image is just look at the startup script before they figure you're actually a Docker Rising.
+00:19:24 [W] So in this case, our startup script here is is started API Darwin and if we look at it, it's like, you know use urban and bath bash. It says these like bash like command so that like the command elected fail so we don't really need that.
+00:19:38 [W] A net exports to environment variables and then it runs our binary which is like the API service.
+00:19:46 [W] So if we first start with these export instructions well in a Docker file, you can basically do the same thing using the MV command.
+00:19:53 [W] So what we're gonna do is we're going to copy these into our dockerfile.
+00:19:58 [W] We're going to change export to ENB.
+00:20:04 [W] Now let's closely. Look at these in this case. We're actually going to change this from VM to case because we're going to be following this Docker image onto kubernative.
+00:20:11 [W] And so we're kind of like we wanted to have a different name so we know we're hitting it in your case.
+00:20:15 [W] You're not going to want to do that.
+00:20:16 [W] Obviously.
+00:20:17 [W] Listening on any intermediate interfaces network interfaces that you could hit from the outside.
+00:20:12 [W] You actually have to be in the container to actually curl it.
+00:20:14 [W] This is because Docker containers have like their own networking. So we actually want this to be 0 and this to be 0 so that we're listening outside of us because we remember we're trying to Route into this container here.
+00:20:28 [W] Most like most most like most of your apps.
+00:20:30 [W] They're going to be listing on all the devices anyways, because like if you're in the running to be I'm gonna need to be listing all the interfaces so you wouldn't really have to make this change. But because we're doing this demo we do.
+00:20:37 [W] Okay the final thing here is this binary here.
+00:20:40 [W] So the first thing we do is we actually need to get this binary into the app.
+00:20:43 [W] You would probably do this in your build script where you actually building these binaries up maybe your have like if it's like a note or if I found something that you're gonna have like little be files.
+00:20:51 [W] So you need copies files from wherever you're building it into the docker image so we can do it like this.
+00:20:58 [W] So this does such being is basically where I'm running my command from so I'm gonna be running it from like the root and you see over here this little small here, but we have been so this is where the a blows so we want to copy the van over and 2/8 app.
+00:21:13 [W] Maybe your have like if it's like a note or python like that, you're going to have like literally files. So you need copies files from wherever you're building it into the docker image so we can do it like this.
+00:21:19 [W] So This does lesbian is basically where I'm running my command from so I'm gonna be running it from like the root and you see over here this little small here, but we have been so this is where the a blows we want to copy the van over 2 / 8 app / API notice
+00:21:53 [W] Not like the Darwin of the windows one.
+00:21:55 [W] That's because we're going to be writing our kubenetes cluster on Linux.
+00:21:58 [W] And so we need like a Linux Docker images.
+00:22:02 [W] But you might notice here like / app that doesn't exist yet.
+00:22:05 [W] Probably that's not really a well-known directory. So what we can do is we can actually run command. So we want to run make your / ah
+00:22:14 [W] That looks good.
+00:22:15 [W] The final thing here is we actually need to execute a command.
+00:22:18 [W] So this is basically kind of like you can take it was like just a single process of rebuilding here.
+00:22:22 [W] So like what does that process actually execute?
+00:22:24 [W] Well, obviously we want to run our app.
+00:22:26 [W] So this is where you set up late entry point here.
+00:22:27 [W] We have / a PPI and hopefully this should all work.
+00:22:31 [W] So let's go back to our instructions.
+00:22:33 [W] This is what your doctor file should look like and all you do is run Docker build and then the current directory, so I'm going to switch over here to this tab here.
+00:22:41 [W] So here we see that we have this Docker file now.
+00:22:44 [W] Especially being on the Run Docker build Dot.
+00:22:48 [W] It's going to send the current context of this directory over to the dr. Damon and then it's going to run a command. So that's really fast.
+00:22:55 [W] So this might take a little longer for you because you might actually be have to be downloading all fine, but you can see here are steps here.
+00:23:01 [W] So we've got the from Alpine them set up an environment variables.
+00:23:04 [W] Everything was good.
+00:23:05 [W] We built this Docker Mission.
+00:23:06 [W] So the very first thing we want to do is we want to run this Docker image before we voted to communities and get all the way down that road.
+00:23:11 [W] We can actually run this to see if it actually works so we can devote docker.
+00:23:17 [W] This image and what we want to do is you guys on a Mac like doctors actually running in a VM.
+00:23:23 [W] Bill Dot
+00:23:26 [W] it's going to send the current context of this directory over to the dr. Damon and then it's going to run Allah commands. So that's really fast.
+00:23:33 [W] So this might take a little longer for you because you might actually be at to be downloading all fine, but you can see here are steps here.
+00:23:39 [W] So we've got the from Alpine and set up an environment variables.
+00:23:42 [W] Everything was good.
+00:23:43 [W] We built this Docker Mission.
+00:23:44 [W] So the very first thing we want to do is want to run this Docker image before we load into communities and get all the way down that road.
+00:23:49 [W] We can actually run this to see if it actually works so we can devote docker.
+00:23:55 [W] This image and what we want to do is you guys on a Mac like doctors actually running in a VM.
+00:24:01 [W] It's like a hypervisor kind of little mini VM.
+00:24:04 [W] I'm not even sure what the technology of using nowadays is we actually publish our report from our Mac over to wherever this containers running whatever magic they have, right? So we're going to use a tea or eight eight and then we're going to publish to a because remember that's where the document is listed.
+00:24:19 [W] Okay, so there's some good news here.
+00:24:21 [W] First of all, we have we can see the log, so that means it's working.
+00:24:28 [W] And we should go get it over here.
+00:24:29 [W] 8888. I believe we can see cool.
+00:24:33 [W] We're hitting our are Docker image and it's a pi - case.
+00:24:36 [W] This actually has like a nice UI to believe.
+00:24:38 [W] not / you.
+00:24:41 [W] So we have our API here as well.
+00:24:43 [W] But the important thing here is our document is working as expected.
+00:24:46 [W] So that's that, dr.
+00:24:49 [W] Build section here. We've done Docker run here.
+00:24:52 [W] All right, so we're really close here.
+00:24:54 [W] We have our Docker image build, but it only exists on our laptops.
+00:24:57 [W] So what we need to do now is in order to run kubenetes their have this running kubernative kubernative ZL to pull this image from somewhere, right?
+00:25:04 [W] So that's where this Docker I the idea of a Docker registry comes in.
+00:25:07 [W] So what we can do is we can tag our image ID would like a proper name.
+00:25:12 [W] And in this case I have I have a Docker Hub registry under El Caso and then I'm gonna be able to push this up here. Now if you don't have a Docker Hub registry, you're actually in luck here.
+00:25:22 [W] Because we're running kind which is like kubenetes in.
+00:25:25 [W] Dr. Richie running that water via on our Mac books right now.
+00:25:27 [W] There's a way to actually load the image directly into kubenetes.
+00:25:31 [W] Our image ID would like a proper name.
+00:25:33 [W] And in this case I have I have a Docker Hub registry under El Caso and then I'm gonna be able to push this up here. Now. If you don't have a Docker Hub registry, you're actually in luck here because we're running kind which is like kubenetes it.
+00:25:46 [W] Dr. Richie running that honor via on our on our Mac books right now.
+00:25:49 [W] There's a way to actually load the image directly into kubenetes.
+00:25:52 [W] I'm so this kind of little cheap here if we don't actually have a Docker Hub account, but for those that do that is definitely a little bit easier to push that image up there. So what I'm going to do first,
+00:26:00 [W] Is I'm going to do this we're going to tag and push into my Docker Hub.
+00:26:04 [W] And then I'm also going to show what you do with kind if you don't have a doctor up so.
+00:26:10 [W] I'm going to Ctrl C here because this with the docker container.
+00:26:13 [W] We were running.
+00:26:13 [W] For this image. I do you need to you need this to go to tag it so doctor tag.
+00:23:02 [W] And then dr.
+00:23:04 [W] Dot IO / L KY so or but this will be whatever you resist and at API and then be zero point 1 point 0 the the 1.0 of the app, so I should be able to take that there and this doesn't push anywhere just exist. Now if I do Docker images
+00:23:21 [W] Okay more lines.
+00:23:23 [W] You can see here.
+00:23:24 [W] We've just had this image.
+00:23:25 [W] So now what I'm going to do, dr.
+00:23:27 [W] push, I'm gonna push this image up here.
+00:23:35 [W] So that's not pushed and if you folks don't have a Docker a Docker Hub account.
+00:23:40 [W] What we can do is we can actually load this directly into kind so kind is our kubernative and dr.
+00:23:46 [W] System.
+00:23:46 [W] So what we want to do is we have a script here that's going to start that up. So just run that.
+00:23:57 [W] So what happened here?
+00:23:59 [W] So we've got this are here in this find it out of solidarity use. So because the way we're doing this migration, we're actually binding to Port 80 with both our kubernative cluster and rvm API.
+00:24:10 [W] So you need to do this kind of funny dance here.
+00:24:12 [W] here. We actually need to stop both our web and API Services control. See those start kind again.
+00:24:19 [W] And this doesn't push anywhere. I just exist now if I do Docker images
+00:24:24 [W] Okay more lines.
+00:24:26 [W] You can see here.
+00:24:27 [W] We've just had this image.
+00:24:28 [W] So now what I do is going to do Docker push and push this image up here.
+00:24:38 [W] All right, so that's now pushed and if you folks don't have a Docker a Docker Hub account.
+00:24:44 [W] What we can do is we can actually load this directly into kind so kind is our kubernative and dr.
+00:24:49 [W] System.
+00:24:49 [W] So what we want to do is we have a script here that's going to start that up. So just run that.
+00:25:00 [W] So what happened here?
+00:25:02 [W] So we've got this are here in this bind IT addresses all together to use. So because of the way we're doing this migration, we're actually binding to Port 80 with both our kubernative cluster and rvm API.
+00:25:13 [W] So you need to do this kind of funny dance here. We actually just stop both our web and API Services control see those start kind again.
+00:25:23 [W] This will work this time and then we're going to go back over and restart those those in those those VM processes.
+00:25:32 [W] So that's I know that's actually right now so I can start our web and start API here again after typing the password.
+00:25:44 [W] Go back over here to kind we see the control Point here is starting and then when this comes up, what we're going to do is we're going to load our daughter Miss directly into kind and you can use any name you want because you're not actually like like you you folks will be able to push to El Caso because that's like my my
+00:28:58 [W] Those are those VM processes.
+00:29:01 [W] So that's I know that's actually right now so I can start our web and start API here again after typing the password.
+00:29:13 [W] Go back over here to kind we see the control Point here is starting and then when this comes up, what we're going to do is we're going to load our daughter Miss directly into kind and you can use any name you want because you're not actually like you you folks will be able to push to El Caso because that's like my my
+00:29:29 [W] It's when you push that the authorization comes in there, but that's okay. You can actually push their but we can do is we can actually use this command call them.
+00:29:37 [W] Hear this kind of load.
+00:29:39 [W] So what we do is we can load our Docker image directly into Connie Kim.
+00:29:43 [W] This is going to bypass a Docker registry.
+00:29:49 [W] All right, so that's been added there now awesome.
+00:29:52 [W] So successfully we built a Docker image.
+00:29:54 [W] We now have a Docker image up in a kubernative.
+00:29:56 [W] Yeah, and now we're ready to kubernative eyes. So let's just quickly jump back into the slides here.
+00:30:03 [W] So what we've done so far as we built this Docker image now, we're ready to play kubernative.
+00:30:09 [W] And just like it was Doc Rising now.
+00:30:11 [W] It's kubernative izing.
+00:30:12 [W] So let's just do a really quick overview of what things are going to look like in a kubernative.
+00:30:18 [W] We don't have a lot of time with us workshops.
+00:30:19 [W] We can't go into like anger thing about kubenetes but kind of the one of the Primitive building blocks of kubernative this idea poddisruptionbudgets collection of containers, so you can actually have multiple Docker containers running in one pot. But for a lot of these cases, especially when you're starting out, you're
+00:30:34 [W] Are running inside that pod and it's going to be your app.
+00:30:37 [W] So that what we just built.
+00:30:38 [W] So for instance, that's what we were running in the pod.
+00:30:41 [W] So these pods can be running on all your notes here and you can be running like multiple pots on multiple notes just like we were talking about before that's kind of the benefits of Docker container train, but you need more than just pause because the problem with pauses if I delete this
+00:30:56 [W] That pods gone forever and kubernative isn't going to automatically restart it.
+00:30:48 [W] So we need a higher level concert construct this going to be something is going to manage like looking like okay, I need three replicas and if one node eyes in my replica, it was on it then I need you to spend up that rope gonna schedule it somewhere else.
+00:31:01 [W] else. So that higher level concept is called a deployment. So in this case, we have two flowmill here and for this it's managing to webparts now if there's no dear dies the crashes the
+00:31:14 [W] that's going to notice that it's running in a loop.
+00:31:16 [W] It says, oh I'm supposed to have to Grapple gun running.
+00:31:18 [W] I only have one.
+00:31:20 [W] I'm going to try to schedule it somewhere else.
+00:31:21 [W] Let's get scheduled over here. So those are the two resources like the core resources were going to Gloria. Look at next is the deployment and applaud.
+00:31:29 [W] So let's look over here to step through here.
+00:31:35 [W] So at the end of this we're going to have API is going to be deployed on kubernative. So we go back way at the end of this we're going to have is going to have a pi running over here in kubenetes. We're also gonna have it running on vs.
+00:31:46 [W] So if you haven't already started kind make sure you do that and make sure you do that little dance with like the porch so that you have everything ready and you can get verify as working by running a few steel get note.
+00:32:01 [W] Okay, cool, so it's up and running as expected
+00:32:03 [W] So let's first start with a pot. I know we're going to get two replicas next but I want to talk a little bit about first. So it's a single replica of the of the application. It has like an API version here that almost every kubernative users can start to the API version and a kind.
+00:32:15 [W] So what kind of resources it?
+00:32:17 [W] Yeah some metadata like a name and then it has a spec and inside the spec. This is gonna be different depending on which resource your your scheduling but everything's going to have this like this first same kind of Park here. So the spectro poddisruptionbudgets
+00:32:32 [W] We talked about this gets really gonna have one.
+00:32:34 [W] We have a name for the container.
+00:32:36 [W] Here's the image.
+00:32:37 [W] So whatever image you had your pushing previously.
+00:32:39 [W] This is what you want to have in here and then we specify the port. So in this case we're going to be using 480 so I create this file here.
+00:32:50 [W] I can then use Cube CTL apply.
+00:32:54 [W] Of this is takes in a yellow file and it's going to apply this to the cluster is going to post it to kubenetes and say hey, this is what I want to exist here.
+00:33:03 [W] He says potty I created so I should be like, oh keep CTL get pods.
+00:33:07 [W] All right.
+00:33:08 [W] We see it's listing here.
+00:33:09 [W] We have a VR, right?
+00:33:10 [W] That's pretty awesome.
+00:33:13 [W] We can get his log by running a few detailed logs API.
+00:33:17 [W] You see it's running as expected.
+00:33:18 [W] That's pretty great. And we can also port forward to it.
+00:33:23 [W] We're gonna do that in a bit.
+00:33:24 [W] We get to the deployment. But remember how is saying like think it's pause. It's not enough.
+00:33:27 [W] So what happens if I do qtl delete podcast?
+00:33:35 [W] I go get pause again.
+00:33:36 [W] It's gone.
+00:33:37 [W] Nothing like managing it.
+00:33:38 [W] There's nothing to be starting.
+00:33:39 [W] It's just literally gone. If I were to delete that kind note. It would never come back up.
+00:33:44 [W] So we need more than PODS of what we need.
+00:33:45 [W] Is that deployment? Right?
+00:33:47 [W] So if we look at a deployment file is kind of the same thing, right?
+00:33:50 [W] We have our API version and our kind we got our metadata now, we're adding some labels with little bit different and we have our spec and then you know, then the deployment second of the specifics is a is that's what comes next.
+00:34:01 [W] So here we're going to have one replica. Obviously you want to set this to more in your production clusters. But in this case, we're running
+00:34:07 [W] Mowgli squealing want to have one.
+00:34:08 [W] This is a bunch of metadata and it inside here you'll notice that this section here looks pretty familiar. We look that we had over here and
+00:34:19 [W] So all this is is like saying, okay.
+00:34:21 [W] Well, what do my pods look like?
+00:34:23 [W] They're being managed under this deployment so you can you can see how these concepts are being mapped here.
+00:34:27 [W] is the exact same thing as I have for my pod. So let's create this deployment digamma file.
+00:34:36 [W] Is that in there?
+00:34:38 [W] And I'm going to refute a low poly - yep deployment boom.
+00:34:44 [W] Our deployment is created.
+00:34:44 [W] So I should be able to go qu C TL get and then the get command at this the third argument here is going to be at the research type. So whatever resource type you've learned about you can use it do that type it in here.
+00:34:54 [W] So in this case, we're going to do get deployment.
+00:34:57 [W] You see we have our API deployment in a scout one pot of ailable.
+00:35:00 [W] It says so I should go to go get pods or poddisruptionbudgets.
+00:35:04 [W] Here we say we have already a cloud running but it's got this kind of crazy prefix or suffix here.
+00:35:09 [W] This is because the deployments actually managing that and it's given it like a random ID here so we should be able to keep still logs and get the logs there.
+00:35:20 [W] That looks good.
+00:35:21 [W] And then think we're talking about before what if what if this gets deleted so if you delete poddisruptionbudgets
+00:35:31 [W] Should be deleted here.
+00:35:35 [W] But when we do I'm going to Ctrl C guys it's hanging but it's actually deleting in the back end. If we do get pots here. You see like what how about was deleted. Well, if you look at the ID we deleted this TC zettaset and for this is a new pot this pot up 12 seconds ago.
+00:35:49 [W] So the deployments not watching that it's like, oh that pot deleted.
+00:35:52 [W] I gotta have another replica it brings it back up.
+00:35:54 [W] Okay, so we're running kubenetes.
+00:35:56 [W] This is awesome.
+00:35:57 [W] awesome. The final thing we want to check is like can we curl this app? Right? So we haven't set up the routing that's what I mean is going to do with us next but there's one way to kind of direct.
+00:36:04 [W] About directly to a pod and not without having like all the routing work on the outside and that's called port for so we can do qtl port forward.
+00:36:12 [W] The potty and then just like we're doing with dr. Ra publishing ports over we're going to publish our 8888 over up into that pot 80.
+00:36:23 [W] All right says this it's forwarding over there.
+00:36:25 [W] Let's see.
+00:36:29 [W] Awesome, so it's working as expected.
+00:36:31 [W] We're talking to a pi - Kate's here.
+00:36:33 [W] Remember that's the docker image.
+00:36:36 [W] We just built and it's got like the body hello world everything. So everything's working just as expected.
+00:36:41 [W] So go back into our slides here.
+00:36:44 [W] This is what we got. So far we have web running is talking to a peon rvm MacBook. And now we have a pi deployed over its kubenetes.
+00:36:53 [W] We've put into a Docker image.
+00:36:54 [W] We've covered it sized it we have our Gamble and everything.
+00:36:56 [W] And so if we look at like what it would look like if you're doing this in VMS, you would have kind of your old your setup here.
+00:37:03 [W] Nothing's changed. Right, but now you have a pi to Voyager kubenetes cluster.
+00:37:07 [W] So obviously you're thinking like, okay great.
+00:37:08 [W] Now what how do I actually wrote requests over to that?
+00:37:12 [W] And so that's what we're gonna talk about next and I'm going to swap over to Irina who's going to take it from here.
+00:37:20 [W] All right. Hey everyone.
+00:37:22 [W] So yeah, I'm taking over from Luke.
+00:37:24 [W] Let me go ahead and share my screen.
+00:37:25 [W] Thank you, though.
+00:37:28 [W] Thank you. Look for writing us through this all these steps.
+00:37:32 [W] We're gonna start with routing and just as a reminder as Luke has mentioned you still should have all your VM quote unquote BM Services running on your laptop and this point in time and
+00:37:48 [W] You should have your kubernative deployment running.
+00:37:50 [W] So I'm just going to make sure just for my own sake that I do have all of that and I'm in the same state as all of you. All right, so let's let's talk about routing.
+00:38:07 [W] And really when we're talking about exposing your service externally in VMS.
+00:38:12 [W] What I imagine is having a load balancer and just as we've shown before you look went over this like you can have your web VMS may be in some sort of Auto scaling group as you wouldn't eat it eight events, and it's all funded by a load balancer and
+00:38:27 [W] You can have the same thing with API and so for example, if your web service needs to reach your API service, they'll like typically do it through a load balancer.
+00:38:36 [W] Now let's talk about how would you expose a service externally in kubernative and communities really has this concept of a service. There's three types of services. The first one is a cluster AP and
+00:38:51 [W] Mr. IP service is meant to be used only for things that need to talk to each other within the same cluster.
+00:38:57 [W] Each service gets assigned an IP. But that IP is kind of a virtual IP doesn't work outside the cluster only kubernative knows about that IP. It's not resolvable in any way then there is a note for service and that would work great if
+00:39:12 [W] Example you have your notes that you can reach externally the one limitation with that is that there's a specific Port range, which doesn't really work for our case because we have a service that runs on Port 80 and our web
+00:39:27 [W] Cole's the API service on Port 80 and if we want to do with a zero downtime aggression without restarting our web service the note Ford service really will now work for us because we don't want to change anything.
+00:39:36 [W] We just want the web to automatically switch to the new API service.
+00:39:40 [W] And the last thing the third type of service is the load balancer service that one really depends on your cloud provider.
+00:39:47 [W] Most Cloud providers have load balancer service. It would definitely work for our use case. However unkind load balancer service is not supported.
+00:39:56 [W] And for that reason we're not we're going to use something different called an Ingress. And so an Ingress is another abstraction and kubernative and is really building on top of the service abstraction.
+00:40:06 [W] And what it allows you to do is you can it's mainly for HTTP Services. You can expose your HTTP routes externally outside the cluster the one benefit to Ingress over a little bouncer service is that you can have
+00:40:22 [W] Your Ingress have only basically you can have only a single load balancer fronting only the Ingress controller instead of having a load balancer per service and that is really great. Because if you're trying to save on like say infrastructure cost per load balancer
+00:40:36 [W] Using an Ingress could really be a better option there.
+00:40:38 [W] So we're going to show you how to use Ingress for two reasons is that it may be beneficial for you in the future.
+00:40:44 [W] But also our infrastructure doesn't happen to support load balancers.
+00:40:48 [W] A service an inch and an nginx Ingress that we will be able to reach local week.
+00:37:05 [W] All right, and with that, let's dive in into Workshop step 4.
+00:37:10 [W] So right now you're probably on step 3.
+00:37:13 [W] I'm going to go ahead and click next to the step 4.
+00:37:18 [W] So the first thing we're going to do as I said Ingress built on top of kubernative service. So we need to create a service first and since we don't need any other kind of special kind of service, we're just going to use the cluster IP, which is the default
+00:37:33 [W] Ingress built on top of kubernative service, so we need to create a service first.
+00:37:38 [W] And since I we don't need any other kind of special kind of service, we're just going to use the cluster IP, which is the default type of service and as you can see the weight structure is you have a selector which in our case is just
+00:37:53 [W] Service and as you can see the weight structure is you have a selector which in our case is just using labels.
+00:38:00 [W] That is how our API deployment is labeled.
+00:38:04 [W] That is how kubernative will pick pots for for the service to front and then we're going to choose our ports. The first Port is our kind of like a quote unquote front-end Port. This is our service port and then the Target Port
+00:38:19 [W] This is the port that the container is listening on so let's go ahead and grab that and create our service diamo file.
+00:38:31 [W] In our workshop and let's go ahead and apply that.
+00:38:38 [W] All right. So our service is created now, let's make sure that we can actually talk to our API through that service. So first a couple of basic checks, let's go ahead and check that. We do have that service in fact there and let's also check that we have and points.
+00:38:54 [W] For that service and really endpoints will show us that there is a pod that it was able to select with that selector that we specified for the service.
+00:39:05 [W] Another last step since we've created a class for AP service.
+00:39:08 [W] We want to make sure that we can actually talk to that service from within the cluster and for that we're going to create a pod running inside the cluster that will just curl our service at API for it 90 90 and remember that our front-end
+00:39:24 [W] Community service is 90 90 not 80 and the DNS that were using in this case is just the cube tienes que bien as by default will result to that IP that will work from within the cluster.
+00:39:34 [W] let's just go ahead and run that.
+00:39:41 [W] So this will take a few seconds to for the Pod to be creative.
+00:39:46 [W] But once it's there, hopefully we can actually reach our service and talk to doctor service.
+00:39:55 [W] All right.
+00:39:56 [W] So this is our response. We have an API case. This is our Kate's deployment within kubernative the API deployment within kubernative. And so it works great now we're in a good shape to add an
+00:40:11 [W] And so it works great now we're in a good shape to add an Ingress on top of that. Let's go ahead and delete that test pot. We just created called test API. We will not need any more.
+00:40:16 [W] All right, and for Ingress we're going to be using an nginx Ingress controller where we have provided the file for you to install all the nginx CR DS a custom resource definitions as well as the
+00:40:32 [W] So just go ahead and CD into that folder and run a keeps UCL apply that nginx egress that llamo.
+00:40:43 [W] With with hopefully the correct command.
+00:40:47 [W] All right.
+00:40:48 [W] we want to make sure that we have everything running. So since there is a controller the in nginx control that's running.
+00:40:58 [W] So let's go ahead and check that.
+00:41:00 [W] all the pods there.
+00:41:06 [W] And once that Ingress controller is running we should be able to create an Ingress object.
+00:41:12 [W] So let's take a look at what it's going to look like.
+00:41:15 [W] So here again, we're just going to say kind Ingress and in the spec where like I said, this is really used mostly for exposing HTTP where else in our case. We only have kind of like one main route, which is just the
+00:41:30 [W] And for the back and we're going to specify our service that we have just created and tested and then our service ports, which is like the front end port for the service now turns into the backend port for the Ingress.
+00:41:40 [W] So let's go ahead and grab that.
+00:41:43 [W] Check that are Ingress is now running.
+00:41:46 [W] And let's create our Ingress object here.
+00:41:50 [W] We let me see the out of this because we already have an Ingress object here, but I'm just going to do it in the main one.
+00:41:58 [W] Here we go.
+00:41:59 [W] Let's apply that.
+00:42:06 [W] All right.
+00:42:07 [W] So now we should be good to go.
+00:42:09 [W] We can oops we can double check that. We do have an Ingress controller there we can we now should be able to just curl a local host and
+00:42:24 [W] Reach it from our local machine.
+00:42:21 [W] So at this point we are ready from the writing perspective to Route.
+00:42:28 [W] Make sure our web service can talk to our API service on kids.
+00:42:31 [W] So that is all good. But
+00:42:36 [W] as our next step we want to make sure that our migration will actually go smoothly and for that we are going to add logging and routing.
+00:42:46 [W] So I'm going to switch over to configuring logging in voting and really we want to do that so that you know, like kubernative already has logs like Luke has shown but those logs are going to be gone as soon as you restart those instances.
+00:43:00 [W] So you really not like accumulating Mark. So you want to kind of set up your platform so that you're in a good place and you have your equipped with all the knowledge that you could possibly have so that your migration goes smoothly.
+00:43:17 [W] All right.
+00:43:18 [W] so for our next step.
+00:43:23 [W] Let's go ahead and dive in a write-in actually and continue working on our liking.
+00:43:33 [W] I'm going to go ahead and hit next here.
+00:43:35 [W] Actually, what each of them does because some of them take a bit of time to install and I'm going to use that time to talk a little bit more about each of those tools.
+00:43:40 [W] To get started.
+00:43:41 [W] Let's first create our separate name space because we want to have or all of our logging infrastructure be running separately from our applications.
+00:43:50 [W] So let's create our logging namespace.
+00:43:53 [W] Our next step is to create a kubernative operator for elastic.
+00:43:58 [W] This is something that elastic provides basically just allows you to have special custom resources for deploying and managing elastic and canonical stirs. So let's go
+00:44:10 [W] And do that install the operator.
+00:44:16 [W] Cool, and now we're ready to create our elastic cluster.
+00:44:21 [W] So this will be an elastic server running running in case for this we have modified this slightly here from the example that they have in their dogs because we're running on kind and we don't have
+00:44:40 [W] Cool, and now we're ready to create our elastic cluster.
+00:44:44 [W] So this will be an elastic server running running in case for this we have modified this slightly here from the example that they have in their dogs because we're running on kind and we don't have
+00:45:15 [W] So we were addressing resources to only run with one gigabyte.
+00:45:19 [W] Let's go ahead and copy this and create our elastic that llamo here.
+00:45:31 [W] And let's go ahead and appoint that.
+00:45:37 [W] All right.
+00:45:41 [W] You can you can actually pretty nicely check the health of the elastic search coaster again. This is because of the how elastic is managing their custom resource definitions, but we can just watch that and wait for the
+00:45:56 [W] I slit check the health of the elastic search cluster again.
+00:45:59 [W] This is because of the how elastic is managing their custom resource definitions, but we can just watch that and wait for the change has to be applied. In the meantime.
+00:46:12 [W] just going to go over and talk about some of the logging infrastructure and how that works in case so when you're thinking about logging one second.
+00:46:26 [W] Oh, I'll just talk like this.
+00:46:29 [W] We were you when you're thinking about logging is EMS and logging in kubernative is really not that much different in VMS. You probably have some agents running together with your application and they're forwarding your logging directly to some sort of blogging
+00:46:45 [W] Brady's is really not that much different in the yams and you probably have some agents running together with your application and they're forwarding your logging directly to some sort of blogging platform. In this case.
+00:46:58 [W] It's really not that different except that everything is running in kubernative spots.
+00:47:02 [W] So here you have your three communities hosts and you have some pods running on there when you add is a lock forwarder to each host and that block forwarder will look at all the pods.
+00:47:14 [W] On that particular host and you can configure that to to forward logs to your specified Lock storage. And then that log storage in our case actually also is running on kubernative, but it doesn't have to be it could be external you could be running in the cluster really doesn't matter.
+00:47:30 [W] In our case actually also is running on kubernative, but it doesn't have to be could be external you could be running in the cluster really doesn't matter.
+00:47:37 [W] All right. So that's kind of the basics is very similar to VMS and I'm going to explain a little bit more about like what each piece does as we're continuing to install our logging stuff.
+00:47:52 [W] All right. So it looks like our elastic server has come up and it's green.
+00:47:57 [W] The next thing we're going to do is deployed qabbani and combini' is really just the UI.
+00:48:04 [W] that's kind of fronting the elastic cluster. So let's go ahead and create Cabana die camel.
+00:48:13 [W] and then apply that
+00:48:18 [W] we can check the health of the combiner instance in the very similar way.
+00:48:25 [W] We can watch that and these are probably I want to say the most memory intensive things were installing because all of them are like packaging a lot of things and their images could be quite large.
+00:48:37 [W] So watch out for that Docker memory that you've allocated and just if you're running into any issues or pending containers or Docker image pool errors, just make sure that you have that enough memory
+00:48:52 [W] Chris is here that look has covered in in the beginning and just make sure you have enough memory.
+00:49:01 [W] So yeah, so the what we have so far is the elastic costume, which is our block storage right here.
+00:49:08 [W] Additionally.
+00:49:10 [W] We're installing a UI in front of it because really elastic server isn't great for visualizing and searching logs just on its own.
+00:49:17 [W] So Cabana will help us with that.
+00:49:22 [W] Let's all right.
+00:49:25 [W] Looks like we have our Cabana running we can double-check the house.
+00:49:31 [W] It's all green and so good so our next step we're going to login into a cabana instance and just make sure that we can access things that were allowed to access so far.
+00:49:43 [W] Let's grab our password first.
+00:49:45 [W] I'm going to copy that.
+00:49:48 [W] And let's port forward the Bona service.
+00:49:55 [W] This will be running on Port 5601.
+00:49:58 [W] I'm gonna
+00:50:01 [W] go ahead and start that you have to say I accept the risk because we're using your custom see a so we really know what we're doing here.
+00:50:10 [W] once the UI looks just use the elastic username and then the password that we've copied.
+00:50:19 [W] And really when we go to the combiners Discover thing like we should be able to before we can start using component. We have to create an index so it can index the data that's stored in elastic search
+00:50:31 [W] When we try to create an index we're seeing that there is no data yet and this is something that we would expect because we haven't configured that Ford in part so far.
+00:50:32 [W] We just have the storage and UI.
+00:50:34 [W] So let's go ahead and do that for the forwarder.
+00:50:39 [W] We're going to use this tool called fluent D.
+00:50:41 [W] this tool is really kind of standard in the for kubernative and in general the cloud native space because it allows you to like first of all parsec and
+00:50:53 [W] Forward logs of any kind of format and then on the back end when it forwards logs to some system. It really is possible in many ways as well where you can configure it to to send logs to any common log
+00:51:08 [W] And in our case, we're using elastic and it supports that as well.
+00:51:10 [W] So let's let's kind of take a look at this fluent D Damon set.
+00:51:18 [W] and really this Damon said it's just
+00:51:23 [W] Something that is a standard you can look at you can go to fluently docks and take a look at that. But I just wanted to show you all these environment variables that we're setting here.
+00:51:33 [W] And those are really the only things you have to modify to provide your elastic host password potentially like various SSL configuration.
+00:51:42 [W] And and that's pretty much it and also have to note that this is a Daemon set and the demon said in kubernetes is something that
+00:51:52 [W] It's on every host and as I mentioned before this is the architecture that we're looking at for, you know, we're looking for something that can run on every host and then look at the locks.
+00:52:03 [W] So let's go ahead and apply that.
+00:52:07 [W] Damon said I'm going to keep qabbani running.
+00:52:11 [W] I won't interrupt that. I'm just going to go to another terminal window and go to
+00:52:17 [W] I need to go into logging.
+00:52:19 [W] and then
+00:52:21 [W] runt keeps ETL apply
+00:52:24 [W] for ED
+00:52:30 [W] what supplied we want to make sure that it's all good and running.
+00:52:35 [W] It's not available yet, but we can check the pods.
+00:52:42 [W] So that should be pretty fast.
+00:52:44 [W] All right, it's already running.
+00:52:45 [W] So we're good to go.
+00:52:46 [W] Now. That's new and he's running. It should as soon as it starts running. You should start forwarding logs immediately.
+00:52:53 [W] So here we can just go to our component you are and check for new data and we can see that it now detects that we have some data.
+00:53:01 [W] So we're going to Define our index called log stash - this is just the default name.
+00:53:06 [W] You can change that if you wish but in our case, that's what we're using go to next step.
+00:53:12 [W] For the time field, we're just going to use the defaults and then create our index pattern.
+00:53:20 [W] Next if you go to kind of demeaning why we're seeing all the logs are coming in from all kinds of various kubernative system components, but we want to make sure that we're seeing our logs. So let's go
+00:53:35 [W] And create our index pattern.
+00:53:32 [W] Next if we go to kind of demeaning why we're seeing all the logs are coming in from all kinds of various kubernative system components, but we want to make sure that we're seeing our logs.
+00:53:46 [W] So let's go ahead and check for logs that have our API labels.
+00:53:56 [W] All right.
+00:53:58 [W] Let's run our query and great.
+00:54:00 [W] So we're seeing are a plugs and combiner.
+00:54:02 [W] We're good to go.
+00:54:07 [W] Let's move over to the next step where we're going to configure metrics with the metrics.
+00:54:13 [W] We kind of have a similar sentiment where we have we want to make sure everything is running and everything is working while we're trying to migrate our service to kubernative.
+00:54:24 [W] Especially that we want to make sure it's your downtime.
+00:54:26 [W] So that's why we need to instrument the metrics and in kubernative.
+00:54:33 [W] So without further Ado, I'm also going to Dive Right In and then I'm going to cover some of the metric infrastructure in a little bit afterwards.
+00:54:41 [W] Let's create our metrics namespace first.
+00:54:45 [W] You'll be very similar to how we did a logging.
+00:54:50 [W] I'm going to interrupt Mike bhana UI we don't need that for now.
+00:54:57 [W] And for metrics we're going to be using Prometheus and Griffon.
+00:55:02 [W] A' Prometheus is a metric server and anger. Fauna is the UI similarly have elastic server is a server and then qabbani is the UI and to install these things.
+00:55:14 [W] So let's go ahead and copy these lines to install the previous help chart.
+00:55:19 [W] We're not changing anything there. We're just using all the default configuration.
+00:55:27 [W] All right, so that should have kicked off the install.
+00:55:33 [W] Let's go ahead and do grow fonder right away as well.
+00:55:37 [W] We refine our this we need to depend on Prometheus so it can be running kind of in parallel even if Prometheus is in ready.
+00:55:43 [W] So let's go ahead and do that.
+00:55:50 [W] And let's make sure that things are running.
+00:55:57 [W] All right, while these things are creating and getting ready.
+00:56:01 [W] I'm going to switch over to our slides and talk a little bit about the metrics infrastructure here.
+00:56:06 [W] So first of all in the model that Prometheus is using four metrics.
+00:56:14 [W] This is called the pull model where the server is pulling the app for the metrics data every zone so seconds for that the application itself needs to expose / metrics and point and then the Prometheus
+00:56:27 [W] Well queering that and point every X seconds, which is a configurable amount in our case.
+00:56:35 [W] We have a graph on it instance, which is fronting the Prometheus server.
+00:56:35 [W] Dr. Van Der instance will help us display the logs and graph things in the beautiful way hopefully. All right. So let's check and things are running looks like all the things are ready
+00:56:51 [W] Next up we are going to note that in the output of your Helm install for good fun. I'm just going to scroll back a little bit.
+00:56:57 [W] It tells you kind of how to login. So we're just going to follow this first step where we will grab the user password.
+00:57:11 [W] and copy that
+00:57:14 [W] and then the next in the next step. We'll just port forward the Griffon and UI so we can access that locally.
+00:57:24 [W] We will go to Local Host Port 3000.
+00:57:32 [W] The username is admin and the password is the same that would copy.
+00:57:38 [W] So this is our graph on you why but it doesn't know about Prometheus yet.
+00:57:41 [W] So our next step is to configure that Prometheus data source, let's go to configuration and add data source for me. Keyes is the first suggestion conveniently and really the only thing we need here is the HTTP URL which is by default.
+00:57:57 [W] HTTP colon slash slash Prometheus server
+00:58:00 [W] You're using the helm tried. I really want change for you as well.
+00:58:05 [W] Cool, so it's not working. We should see just kind of the default kubernative metrics and I'm just going to show you something just to make sure that it's working.
+00:58:18 [W] For example, we can look at response times of kubernative rest client just to get a sense looks like it works and the response times are looking great as well.
+00:58:33 [W] So our next step step for metrics.
+00:58:33 [W] is to change our application so we can our applications going to start to send metrics right now application isn't configured to expose that Matrix and point that I've talked about and we need to make a few changes to it to allow that
+00:58:48 [W] so
+00:58:51 [W] I'm going to go to our
+00:58:56 [W] Apologies, so I'm going to open our deployment diamo.
+00:59:05 [W] Okay, one second. We're
+00:59:10 [W] there we go.
+00:59:11 [W] So in our deployment that me llamo we have to do a few things.
+00:59:15 [W] First of all, we have to enable our application to expose the metrics and point and in our case.
+00:59:23 [W] All it's doing is its is just taken an environment variable.
+00:59:29 [W] So we have to add it under the containers stanza here.
+00:59:38 [W] Okay.
+00:59:39 [W] there we go.
+00:59:40 [W] Hopefully this will work and then next we will need to add annotations to our pod.
+00:59:48 [W] And as Luke was talking about how deployment and poddisruptionbudgets.
+01:00:07 [W] This is our Padma data.
+01:00:11 [W] So
+01:00:14 [W] Okay, so that should enable the Prometheus server to look for this apps metrics and point and scrape them. So let's go ahead and apply that.
+01:00:28 [W] I had a feeling this will happen if this is happening to you as well.
+01:00:32 [W] You can just grab this radio deployment that llamo.
+01:00:42 [W] And use that instead.
+01:00:48 [W] All right.
+01:00:54 [W] And that is all because Yama was hard.
+01:00:59 [W] So as you can see, we have our old poddisruptionbudgets and the new pot starting up with this new configuration.
+01:01:05 [W] We should also go to our app and just kind of try to generate some metrics by just going to localhost.
+01:01:21 [W] Maybe not this localhost.
+01:01:27 [W] But the one that's running in case I'll just kind of do that a few times.
+01:01:31 [W] So we generate some new metrics.
+01:01:33 [W] And now when we go to Griffon, oh, we should be able to see our app specific metrics.
+01:01:40 [W] Refresh that page and one of the metrics that we have is how many times has the server service started?
+01:01:48 [W] So let's take a look at that.
+01:01:51 [W] Then we have the metrics that metric has come in.
+01:01:54 [W] It's called a service service started total.
+01:01:56 [W] We should see that it has started a total of 1 x which is true.
+01:02:02 [W] And the last thing which I'm not quite sure that this will work quite yet, but we can look at the response times. Then this app will have currently has.
+01:02:16 [W] Doesn't look like we have that quite yet.
+01:02:19 [W] Let me try another query.
+01:02:24 [W] It's possible that we'll just need to generate a little bit more.
+01:02:30 [W] Metrics, but that's okay because we know that the metrics are coming in because we've seen that other counter that has started.
+01:02:38 [W] All right. So at this point you have the logs and you have the metrics configure and we're ready to migrate.
+01:02:49 [W] All right. So remember how Luke has mentioned that we're just going to switch our DNS right now just to recap we still have our
+01:03:03 [W] web running and we still have our
+01:03:08 [W] API running locally, so if I go to localhost
+01:03:16 [W] port 8080
+01:03:19 [W] I feel like we should see that we're still pointing at the amps.
+01:03:29 [W] And if I go to the UI part, you can see that it's still running in GM's.
+01:03:39 [W] So now to migrate we want to make sure that basically we just want to point that DNS at the new IP and in our case we're using this IPv6 because
+01:03:54 [W] Any IP that is not a one 27001 will default to that basically the one that's listening on all interfaces because remember we have one that's listening on
+01:04:09 [W] I T1 27001 and then we have another one which is the kind Ingress that's running on all interfaces.
+01:04:15 [W] So basically, we just want to choose an IP that are machine understands, but the one that is not going to route to this VM one.
+01:04:25 [W] This is not really of course something you're going to do in real vm's but this is these are the constraints that we're operating. So let's go ahead and
+01:04:35 [W] change our Etsy hose
+01:04:45 [W] So you should have this line that's pointing at epi.
+01:04:52 [W] I'm going to change that to use the IPv6 localhost and save that.
+01:05:02 [W] And now if I go to my web I'm seeing that it's now pointing at API Kate's, which is great.
+01:05:12 [W] Awesome. We've switched over who are now we haven't restarted our web at all.
+01:05:17 [W] It's just pointing to our new kubernative service, which is great. And the last part is let's just double check that. Our metrics are coming in for from webassembly.
+01:05:31 [W] Going to API.
+01:05:33 [W] So again here I'm going to kind of refresh this a few times because to mimic kind of a real back-end service that is probably calling the API continuously.
+01:05:47 [W] and
+01:05:50 [W] As the last step.
+01:05:51 [W] I'm going to check that. These metrics are in Griffon.
+01:05:55 [W] I do not know if they will appear.
+01:05:56 [W] Hopefully they will.
+01:06:01 [W] Cool. So what this is doing is checking the request the rate at which the requests are coming in in the last five minutes and we can see that all of a sudden this has picked up
+01:06:17 [W] To a new value of 0.06.
+01:06:19 [W] So yeah, this is how we know that it's running.
+01:06:22 [W] Our metrics are showing up great. We're all healthy and we have migrated to Gates.
+01:06:33 [W] So at this point I
+01:06:36 [W] let's just kind of go over what we have just accomplished.
+01:06:39 [W] We had our API and on webinar Epi pointing to this one 27001 port and then we switched it over to the one that's pointing to nginx.
+01:06:53 [W] And in the vmworld you would do something similar where you'll take your DNS entry for API that company.com and you will switch it over to let's say your nginx load balancer.
+01:07:07 [W] As as shown here.
+01:07:13 [W] And I think we've already covered step 7.
+01:07:18 [W] So where we are right now and what we did let's recap that we have built a Docker image. We deployed that to kubernative using a kubernative deployment.
+01:07:30 [W] We've added a community service and a kubernative Ingress so that we can reach it locally.
+01:07:34 [W] We've added logging and metrics to our app and then finally perform that 0 null.
+01:07:41 [W] Zero downtime migration where we switched over our one of our services and pointed it at the one running in queue. And as our last step, we're going to cover the console servicemeshcon.
+01:08:03 [W] Let's do that.
+01:08:04 [W] Here's a couple things to think about here.
+01:08:07 [W] I know this was kind of like a constraint example, and so let's kind of talk about like at a higher level kind of general of lessons and things about adopting kubernative is and that might be useful to do folks to the to the ecosystem.
+01:08:19 [W] So I've personally done like a kubernative migration into different companies and I think as want to like give some advice to folks who are doing it for the first time.
+01:08:29 [W] So keep it simple.
+01:08:32 [W] That the second you start using new tooling you get really excited and you want to use all the new tools that exist in that ecosystem.
+01:08:39 [W] So like the stuff we just showed you like, you know, your elastic search in your fluid D.
+01:08:43 [W] You always Prometheus in Griffon.
+01:08:44 [W] You want to use a servicemeshcon use all these new things, right?
+01:08:47 [W] And so what I what I want to caution folks is keep it simple.
+01:08:52 [W] simple. Don't try to set up this brand new beautiful platform in the sky focus on what you really want to do, which is get your app onto career days.
+01:09:01 [W] And I would encourage you to use the existing to look so if you already have something using four metrics don't switch to a new mattress provider use use whatever it took to lady doesn't kubenetes to get your metrics into your existing metrics provider.
+01:09:15 [W] If you already have an existing logging system use fluidy, but then get it into your existing logging system don't switch to a new logging system. And the reason I recommend that is because you really want to be focused on like what provides the most value to organization and that's going to be having your app running in communities once
+01:09:30 [W] That process smooth and oiled out your buildpacks lunch and everything set up.
+01:09:34 [W] You can deploy where they're you know, your migration is good because you're looking at metrics and everything.
+01:09:37 [W] It's a lot easier to start moving things over and and kind of picking that up and eventually you can switch to that that new tool that you really wanted to use.
+01:09:45 [W] But if you start jumping on trying all these using these things at once when something goes wrong, it's going to be like there's about a hundred things that could have gone wrong.
+01:09:51 [W] You're not hundred percent sir, like what part of it went wrong. And so I think like I really want to caution folks like keep it simple to start kind of focus on providing value getting your app.
+01:10:00 [W] And to communities getting that first migration piece done that in and of itself is going to be a ton of work.
+01:10:04 [W] Don't don't don't don't get me wrong because like if you're moving from BMC kubernative, so this is a whole new set up things get to deal with especially around build and security and access we did make it look pretty easy here.
+01:10:16 [W] there's a lot of things that we didn't kind of show you what you need to figure out. So keep it simple. Don't try to use all the new shiny new tools unless it actually makes sense for you use case. I really do want to cover the next year. Yeah and definitely want to plus 1
+01:10:30 [W] Things that you've just said like the tooling that we've shown is not necessary is just showing an example definitely keep your existing tools. One thing I wanted to highlight is just the kubernative ecosystem is a really rich
+01:10:45 [W] Ecosystem that has a lot of tools and if you're using something out that it was different from what we've shown like the likelihood is that that tool or an integration with that tool already exists in the ecosystem. So I would definitely encourage you to look and find things
+01:11:00 [W] That are already implemented and then the last few years that I wanted to highlight is security and we kind of alluded to that where we have our last step where we're talking about a servicemeshcon.
+01:11:30 [W] Security especially the security and then they're working within the cluster. Then I would highly encourage you to look into something like a servicemeshcon cuz you can add like this kind of mutual TLS encryption by default and
+01:11:45 [W] this is you know, like definitely don't do it as the first step but as the next step in your migration, you might want to consider, you know, thinking about things like security and zero trust networking to just kind of increase and harder in your cluster and the
+01:12:00 [W] That are running in that cluster.
+01:12:02 [W] Yeah, absolutely.
+01:12:05 [W] Okay, and that's that's great segue.
+01:12:06 [W] I'm going to talk about that quickly.
+01:12:09 [W] Just going to go through the console servicemeshcon next.
+01:12:11 [W] I'm actually going to pause here so I can get caught up with all the work a green has done and then when I resumed recording, I'll be all caught up and we can just try out consul servicemeshcon.
+01:12:34 [W] So I gotta catch up with here.
+01:12:37 [W] Okay. So what we have is we have our browser talking to web is talking over to nginx, and it's Takin Over the API.
+01:12:43 [W] So like I said, there isn't a right now like it's all done in plain text.
+01:12:48 [W] So websocket nginx over plain text and nginx.
+01:12:50 [W] talk to you cover plate X and so one of the benefits of a servicemeshcon
+01:13:04 [W] In the front of everything and so these proxies are now programmable you can you can change the request to to do whatever you want them.
+01:13:12 [W] And so what I want to do is a really quick demo here. We're going to swap out nginx for console in Cresco, Iowa.
+01:13:19 [W] We're going to put a proxy in front of the API service here.
+01:13:23 [W] The mesh and then we're going to show you some of the cool like routing it capabilities we have when this API service is now part of the mesh. What we're gonna do is we're going to have a pi like be really buggy service have lots of Errors. Then we're going to use our routing rules to say, okay.
+01:13:36 [W] Well if there's an error this retry it so this might be something useful in your migration. If you were finding like obviously you should look into why there's always lots of errors. But in this case, you might be something useful to like kind of a stopgap measure and we have all this documented here and workshop
+01:13:51 [W] Shop step 8. So let's go over here into step eight here.
+01:13:56 [W] So in this section we're going to do is we're going to stall console on a kubernative cluster and then we're going to configure it.
+01:14:01 [W] So the first thing we need to do is actually need to uninstall nginx.
+01:14:04 [W] That's because nginx is kind of listing in place there on Port 80 we could do this.
+01:14:09 [W] we could have our you guys skate wheel is on a different port but then our nice routing where the web surf the web service doesn't know it always talking 488 that wouldn't work. So in this case, we're just going to take the quick Road here is delete nginx here.
+01:14:21 [W] So that's fun install nginx here and now like we can't refer you to stall console.
+01:14:25 [W] So the first thing we want to do is we need to add our Helm Rico so console is installed by a Helm and then we're going to create a values that llamo file for our installation.
+01:14:37 [W] So this is what you use to configure your helmets Collision, so
+01:14:42 [W] A couple things to note here one. We're using one replica for the console servers now.
+01:14:48 [W] I'm usually you want to use three but you want them spread across three different nodes.
+01:14:52 [W] So if Node 1 node goes down. The other two are up. They still have coredns. Everything works fine in kind.
+01:14:56 [W] There's only one note.
+01:14:57 [W] So we're going to set this to 1 for this example here. This is a connecting check what this does is it says I want you to inject a sidecar.
+01:15:06 [W] So a sidecar is just another container remember how a way back when we talk about how pots and have multiple containers. This is where this is really useful.
+01:15:12 [W] So we can actually inject a proxy as a sidecar container. So it's just a container that runs in the pot and what this is doing is it's going to automatically eject this you want to like set it up in your deployment diamo, but it's going to when it when it sees that thought come is actually going to automatically eject proxy into
+01:15:28 [W] This controller here is allowing us to use our custom resource definitions, which is newly out in the beta the console beta and then here we're setting up for Ingress gateways.
+01:15:36 [W] So this is going to replace our nginx English controller.
+01:15:39 [W] So we're setting up our Gateway here and it can be running on Port 80.
+01:15:43 [W] So let's say that file and then we're gonna run a Helm install and don't try to keep CTL apply that that's not going to work.
+01:15:49 [W] So we're gonna help us all here and we're gonna point to that.
+01:15:53 [W] So I'm going to open up another tab over here and just so we can just watch that.
+01:15:57 [W] So watch keep CTL.
+01:16:02 [W] it's a bit ugly as all make a little smaller, but
+01:16:06 [W] Basically, we have our console Services coming up here.
+01:16:11 [W] So this is going to take about two to three minutes. What is happening? It's a little bit some has a bit slow because we're going on kind but we're getting if we look at the components here is open this up a little wider.
+01:16:21 [W] Okay this again we go. So let's look at the components we get so here's API.
+01:16:25 [W] It's running it's you know doing its thing.
+01:16:27 [W] We haven't made any changes to it.
+01:16:29 [W] Then we have our console server.
+01:16:32 [W] So this is the where all our data is stored in. This is what we said.
+01:16:35 [W] We only want one replica of then we have our ringers Gateway.
+01:16:39 [W] This is a currently in an error State because the rest of the cluster is kind of up and coming so you can see here like this console here. This is a what's called a causal agent and in Risk a Trader relies on that causal agent. So this needs to be running for the
+01:16:51 [W] Gateway to actually work you can see here. Now that the consul agent is ready that the singer Stinger skating is coming up. So this is what were actually going to be is actually going to be listening on Port 80.
+01:17:00 [W] This is what we're going to hit to get it all working.
+01:17:02 [W] So I'm going to make this smaller here this student me markets office ready, but I'm immediately going to make some changes to it.
+01:17:09 [W] So well, we don't really have some for right now for listening on a host port for the Ingress Gateway because it's made more for like running a cloud. So we're just going to do a little bit of a cube CTL patch here to actually pass that appointment. So it listens on the graphql.
+01:17:20 [W] right port
+01:17:22 [W] So I'm going to run this command here qtl patch and it's going to pass that deployment.
+01:17:29 [W] So it's running on the expected portworx is 480.
+01:17:33 [W] So then it's going to be bound to the same port as nginx and so actually be able to come through.
+01:17:39 [W] And so we can run this rollout status command and we can watch to make sure that that rule out is actually completely but what I'm going to do is kind of fast forward here, so I don't want to take too long hair.
+01:17:51 [W] So while that's all coming up we can actually look at the content UI so we're going to a port forward here and it's going to pour for a local skate E500.
+01:17:59 [W] So if we go over here to localhost 8500, /ui, we should be able to see our console you why so this is a list of all the services that are in our servicemeshcon now, there isn't any
+01:18:10 [W] We can see our consulate instance is running as we expected and then our English Gateway here is starting to come up that we have like one instance coming up and then there was that that new one coming out from 480 that were kind of waiting for to be running.
+01:18:24 [W] Yeah, so it should come up soon and then we'll be good to go.
+01:18:28 [W] So now we look over here.
+01:18:31 [W] We see that you know, we have our list of services but there is no API running. So we go back to our notes Here. What we want is we want API to be part of the servicemeshcon.
+01:18:40 [W] It's not going to get automatically injected with outside car.
+01:18:43 [W] We wouldn't want cost servicemeshcon injecting everything really nearly.
+01:18:46 [W] So you actually have to annotate that Services.
+01:18:48 [W] Hey, please and please inject me with us I car so to do that. What we're gonna do is we're gonna use that patch command again, and we're going to add an annotation that says hey inject me with a sidecar.
+01:18:59 [W] So let's run that past Grant here and we can see here that API is now starting to come up and you can see here has his gyro free.
+01:19:07 [W] So this is actually the number containers. So previously we had one now we have three.
+01:19:11 [W] So what's going on there?
+01:19:12 [W] So this is the injection, right? So we're getting our side car which is running our proxy and we're also going to another side car.
+01:19:17 [W] that's like a helper container it helps with dealing with the life cycle of these cogs. So if we go back now over to our console you why we should see API
+01:19:27 [W] And here we do we see if API in this connected with proxy. So it's all up and running as we expect is now part of the servicemeshcon.
+01:19:51 [W] It's got his proxy running next to it, but we're not done yet.
+01:19:37 [W] You need to just like we had to configure nginx to route to service by the Ingress object.
+01:19:42 [W] We need to configure our Ingress gave me a Consul to wrote to the API service.
+01:19:46 [W] We don't want to just expose any service. You know, we have to actually explicitly say that we wanted.
+01:19:51 [W] So the first thing we're going to do is we're going to set the protocol for our API service to http then this is so we know protocol and it's using and we can actually provide better metrics that way because we know that it's
+01:20:03 [W] TCP are not yet TCP.
+01:20:05 [W] yet TCP. So we're going to apply that.
+01:20:09 [W] Okay, and if we do keep the tail?
+01:20:13 [W] service defaults
+01:20:15 [W] make sure that's working in pregnant and it says it's sync true. So that means that work.
+01:20:19 [W] Then we're going to configure an Ingress Gateway.
+01:20:21 [W] I'm going to I can show you what this Json is the second.
+01:20:25 [W] So let's just see this.
+01:20:27 [W] Yes.
+01:20:33 [W] wrap it
+01:20:36 [W] So here we're saying. Hey this Gateway listen on port 8080 and you're using HTTP protocol and we say, okay, we want you to grow to API when you get a request in for API, make sure you're out to Avi.
+01:20:49 [W] So this is going to configure diggers gateway to rent or API service this ring.
+01:20:53 [W] So if you look over here, you can see a nice Gateway here.
+01:20:56 [W] here. We should see that it's configured throughout the API.
+01:20:59 [W] So that's all that's needed.
+01:21:01 [W] So we've set this all up here.
+01:21:02 [W] We have our Ingress Gateway routing to API with this proxy. So we should be able to go to this here actually see that working.
+01:21:13 [W] We do we see now that we're reading through the inner scale. We've placed the nginx fingers Gateway. Okay, so you're thinking like hey well, so what what's the point of replacing here into English Gateway, you know that was already working for me and I'll just show here. We're getting our web service and you can see here that we're actually getting this
+01:21:28 [W] You had her out of here.
+01:21:30 [W] So this is actually the proxy that's adding these header. So you can see this actually going fully through. So one big benefit we have already is that we now have TLS going in between the Ingress Gateway and our application here and the certificate for this is totally provision like by console. So you want to deal with like producing certificates
+01:21:45 [W] Like that, it's all happens automatically if anyone is listening in your cluster to traffic and now it's encrypted so they can actually likes to keep that traffic.
+01:21:52 [W] But I also want to do a really quick demo of kind of the power that you have now.
+01:21:56 [W] you have these proxies in front of everything.
+01:21:59 [W] So what we're going to do is were actually going to cause our service to have failures. So luckily the service has support something where you can actually said an error rate and this is our API service I'm talking about and you know, what it'll do is accept as your about 550 percent request the service are just going to fail they're gonna fail out,
+01:22:15 [W] So let's do that.
+01:22:18 [W] So we should see you guys start to come up here with the new excuse me, so we can roll out.
+01:22:28 [W] We have the new one coming up here.
+01:22:29 [W] And now we make requests to it.
+01:22:31 [W] We're actually going to see half of them fail.
+01:22:32 [W] So this is probably not ideal. Right? So if we do this curl again,
+01:22:38 [W] you see it's not healthy if we look over here.
+01:22:47 [W] Okay, I think yeah, I think I know what's happening.
+01:22:53 [W] So week earlier cases.
+01:22:56 [W] This is what I want to show you.
+01:22:57 [W] So if we curl here we can see that this this request succeeded with do hundred but in this request fail with 500 to curl again, you can see here again is getting 200 girl again.
+01:23:07 [W] He's failing of the 500.
+01:23:09 [W] So this is really not that ideal, right?
+01:23:11 [W] this is where it kind of we have the power of the servicemeshcon. Why don't we just tell the proxy that's running over here?
+01:23:19 [W] This is the Ingress Gateway is also a proxy right let's just tell it to retry request to have a 500. I mean, it's a bit of a Band-Aid fix. You should probably looking to wire services to 500 but this could be really something that's valuable for a short-term fix or something like that.
+01:23:32 [W] It's all we need to do is create a new C Rd called a service router and we look into its back here.
+01:23:39 [W] I want you to retry up to three times whenever you see a 500.
+01:23:42 [W] So let's apply that.
+01:23:49 [W] And we'll do keep CTL get service router make sure that fly properly so it's a succinct true. So now let's go back to this curl.
+01:24:02 [W] We're not seeing any ears.
+01:24:03 [W] So this is pretty cool.
+01:24:06 [W] You can see that the duration is actually changing.
+01:24:08 [W] That's because like so that one, you know that one took awhile, that's partly because I want to be tried three times. All right, so that's just a really really quick demo of kind of the power of the servicemeshcon.
+01:24:31 [W] The organization that Elder all of us have to be mpls then the servicemeshcon actually it's complex to add it but then it's actually solving you saving you from a lot of complexity.
+01:24:40 [W] So depending on the trade-offs are it might make a lot of sense for your organization cool.
+01:24:44 [W] So that's the end of it there.
+01:24:47 [W] there. You can find us on Twitter at that's just Ava and at elq. I so did you have any final words Irina?
+01:24:55 [W] Yeah, thank you so much.
+01:24:56 [W] That was awesome.
+01:24:58 [W] And thank you all for coming to this Workshop.
+01:25:00 [W] Yeah, feel free to talk to us on Twitter if you want afterwards and we'll probably be in the chat right now talking to you.
+01:25:07 [W] Yeah, absolutely.
+01:25:08 [W] Alright. Alright everyone. Thanks for listening and good luck with your kubernative.

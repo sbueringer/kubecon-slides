@@ -1,0 +1,268 @@
+﻿Nondestructive Forensics: Debugging K8s Services Without Disturbing State: UVMO-9893 - events@cncf.io - Thursday, August 20, 2020 12:04 PM - 146 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:01:00 [W] Hi, this is non-destructive forensics debugging kubernative services without disturbing state.
+00:01:10 [W] If you have any questions throughout this presentation, go ahead and type them in the box below and we'll do a Q&A at the end.
+00:01:12 [W] So I want to start with this kind of ubiquitous tweet, which says we replaced our monolith with microservices so that every outage could be more like a murder mystery.
+00:01:27 [W] It's from honest update.
+00:01:31 [W] I really like this quote. I think it is very apt because when you're debugging outages, you know, you have to do a lot of the same things as in a murder mystery, you have to collect Clues and evidence.
+00:01:42 [W] We have to consider the suspects and yugabyte.
+00:01:43 [W] Have to kind of mentally reconstruct the series of events that you think happened.
+00:01:48 [W] So, my name is Alex.
+00:01:55 [W] I work at a company called buoyant and I am a maintainer of the linkerd E project.
+00:02:01 [W] I also really like board games and I really like debugging microservices murder mysteries.
+00:02:06 [W] You think happened?
+00:02:24 [W] So, my name is Alex.
+00:02:25 [W] I work at a company called buoyant and I am a maintainer of the linkerd E project.
+00:02:25 [W] I also really like board games and I really like debugging microservices murder mysteries.
+00:02:26 [W] So to give you a little bit of context on to talk about what linkerd e is so linkerd e is an open-source servicemeshcon of the cncf as an incubating project.
+00:02:28 [W] It's got open governance, of course because it's part of cncf and it's ultra light security first written go and rest and if you're not familiar with what a servicemeshcon
+00:02:38 [W] It's a sidecar proxy is responsible for intercepting all traffic that goes in or out of the Pod and proxying it along and then also doing some kind of interesting stuff with it.
+00:02:52 [W] So that includes recording metrics about that traffic doing intelligent load balancing and so on and so forth adding security M TL S automatically and what's kind of cool about this is that it's totally
+00:03:05 [W] Mpls automatically and what's kind of cool about this is that it's totally transparent the application.
+00:03:08 [W] The application doesn't know that this is happening.
+00:03:09 [W] It's all kind of layered on.
+00:03:10 [W] But the thing is that since these proxies are handling all the traffic going through the network. It's really really important that they don't have any bugs or at least that they don't have any bugs that's going to interfere in any way with the traffic there proxying.
+00:03:26 [W] So one of the most interesting things that that I get to do is I get to investigate bug reports and this is kind of fun because it means I get to do these kind of Investigations and and and do this kind of murder mystery thing and trying to figure out
+00:03:44 [W] that wrong
+00:03:46 [W] so I want to start just by talking about what what is this detective work?
+00:03:55 [W] And what does it entail and why is it difficult and then go through some of the tools that I use to to do these investigations. So I want to talk about a feature linkerd which lets us tap into lat.
+00:04:10 [W] The into a node in your cluster to get an even better.
+00:04:26 [W] look at what's going on. And in order to talk about that would kind of have to talk about what what is a pod anyway and what happens when you kind of peel back the layers of abstraction look at what's really going on and then finally I want to talk about a feature that's coming
+00:04:41 [W] As an alpha right now called me ephemeral containers.
+00:04:44 [W] So when you get a bug report, probably the first thing you're going to want to do is you're going to want to reproduce it. If you can reproduce that bug it's going to be much easier to solve than if you can't.
+00:04:59 [W] But sometimes this is really difficult.
+00:05:06 [W] Some bugs are very very difficult to reproduce because they may only happen in certain environments.
+00:05:18 [W] They might only happen at certain scales or inserting load levels or after a certain amount of time has elapsed or when some other you know set of conditions has been met and you don't necessarily know what those conditions are.
+00:05:24 [W] So this can be very frustrating especially when you get a bug report says, you know this thing happens, but I can't tell you when or I can't tell you why and you have to
+00:05:34 [W] Figure it out on your own.
+00:05:36 [W] So sometimes the best you can do really is to replicate the you know, what's in the bug report as closely as you can replicate that environment to the best of your ability and then just let it run and
+00:05:47 [W] I Can't Tell You Why and you have to kind of figure it out on your own so sometimes the best you can do really is to replicate the you know, what's in the bug report as closely as you can replicate that environment to the
+00:05:48 [W] On it and hope that you trigger the bug and if you're lucky then eventually the bug will happen.
+00:05:54 [W] And so when when this happens and you have triggered this bug that you've been trying so hard to reproduce you want to gather absolutely as much data as you possibly can and you don't want to kind of squander that state that you've gotten yourself into so you want
+00:06:11 [W] Logs you want to collect metrics you want to collect, you know, everything you possibly can about that about that state you're in you want to look at the network State the state of the sockets you want to do a traffic capture. If you can get a traffic after you want to get kind of as much data as as
+00:06:28 [W] You want to avoid disturbing that state because then you're going to basically have to start over if you end up restarting the process or restarting the Pod or interrupting any of those connections, you make kind of lose that that state you're in and you have to start over and reproduce the bug
+00:06:43 [W] Esther these bugs are very difficult to reproduce. If you don't have a reliable way of doing that that can be very very painful and time-consuming.
+00:06:52 [W] So in other words you want to collect data without disturbing the scene of the crime.
+00:06:56 [W] And so I call this non-destructive forensics.
+00:06:59 [W] and for this talk, I want to really focus on bugs that have to do with service to service communication and the primary reason for this is because this is where I have the most experience, you know, I work on linkerd E linkerd E proxies network traffic so
+00:07:21 [W] All of the bugs that I investigate have to do with communication between services and some at some level but I think it's more than that. I think communication between Services is really what is essential to microservices, you know if you don't have
+00:07:36 [W] Inger if there's nothing going wrong with that communication then it's really kind of no more interesting than single services are more monoliths.
+00:07:52 [W] So I think looking at service to service communication really captures something that's essential about microservices.
+00:07:57 [W] Another reason is I think these are just really hard to debug.
+00:07:57 [W] don't necessarily have a lot of tools or at least we're not necessarily used to using the tools for debugging service to service communication and you know, it's just
+00:08:10 [W] Just more complex. You have many different moving pieces that are all running concurrently.
+00:08:13 [W] So you have a high degree of parallelism.
+00:08:20 [W] There's a lot of opportunity for race conditions network connections are not totally reliable.
+00:08:21 [W] So there's failures they can happen not only within the services but also between them so there's just a lot going on in a lot that can go wrong.
+00:08:31 [W] And so debugging these types of problems can be really difficult.
+00:08:32 [W] And finally the other reason why I think it's really interesting to look at Services service communication is that it kind of allows us to treat each Service as a black box.
+00:08:44 [W] Just looking at its communication.
+00:08:46 [W] We kind of see both its inputs and outputs and and that lets us help or that helps us narrow down our list of suspects and kind of figure out which service is behaving in which is not without needing to look inside it
+00:08:59 [W] Allows us to treat each Service as a black box.
+00:09:01 [W] Just looking at its communication.
+00:09:01 [W] We kind of see both its inputs and outputs and and that lets us help or that helps us narrow down our list of suspects and kind of figure out which service is behaving in which is not without needing to look inside it
+00:09:03 [W] Whole technique for for kind of narrowing down the scope of our investigation.
+00:09:04 [W] So I think about every Service as having a contract in other words a set of behaviors that it needs to that it needs to do or a set of rules that it needs to obey and sometimes this is explicit. You might have some
+00:09:26 [W] API specification that exactly spells out what your service is supposed to do but more commonly, I think it's kind of implicit as someone who has designed to the system.
+00:09:38 [W] You just have it in your mind.
+00:09:39 [W] what the correct behavior for each service is and how they're supposed to coordinate and work together and get along and as one of the words, you know, what constitutes correct Behavior?
+00:09:51 [W] and the idea behind microservices is that you have all of these Services each with their own individual contracts and if they're all doing the right thing then the service the service architecture as a whole does the right thing and if that means that if the
+00:10:06 [W] All is not working.
+00:10:12 [W] That means some individual or at least one individual service is not satisfying its contract.
+00:10:15 [W] It's doing something wrong.
+00:10:15 [W] And like I alluded to earlier we can look at the communication between services in order to kind of identify which service is not fulfilling their contract, you know treating them as a black box which is not doing the right thing.
+00:10:30 [W] And it's also worth noting that these contracts exist at multiple levels.
+00:10:42 [W] So you may have application-level contracts which say things like if my service gets a request for a certain type of records and it's going to return it or if I get a new user creation request
+00:10:51 [W] Rho into the users data base, but there's also Network level contracts which say things like if I get a TCP packet, I need to acknowledge it and so in order for your service to behave correctly, it has to obey its
+00:11:07 [W] every level
+00:11:09 [W] so the first feature I want to talk about are the First Tool in your tool kit right in my tool kit is called linkerd E Tap.
+00:11:22 [W] And this is a feature of linkerd e that lets you tap into HTTP streams. So remember I was describing linkerd e earlier and I said that it runs a sidecar proxy inside every one of your pods that intercepts all of the ingoing and outgoing traffic
+00:11:39 [W] Our full thing you get from this is that you can now kind of connect to any proxy and say hey tell me about the traffic that that's flowing through you, you know, describe it to me.
+00:11:53 [W] Let me tap into it as if I was like doing a wiretap and this is really powerful because you know, it lets us see this data in transit. It also see it in real time as it's moving and so we can look at requests and responses
+00:12:05 [W] Low through the system in real time.
+00:12:09 [W] And authorization for this is controlled with our back.
+00:12:13 [W] I think that's really important. That means that you can set up our back rules that specify which users are which accounts are allowed to tap into which resources you don't have just, you know carp purplish access.
+00:12:24 [W] So here's what that kind of looks like using the linkerd ecl. I you can say something like linkerd eat app. You can give it a name space in a resource and it will just spit out a stream of events that describe the requests and responses that that proxy is seeing.
+00:12:42 [W] So in this case, I'm just showing three events that that showed up right away.
+00:12:49 [W] We've got a request a response and an end.
+00:12:53 [W] So the end means that the response has has finished has completed and you can see that there's just a ton of really cool metadata in here.
+00:13:01 [W] So for example, we can see the source of that request. We can know the IP and Port that it came from and also the destination where it's going to
+00:13:05 [W] We can see other HTTP metadata like the path here.
+00:13:12 [W] So in this case this request looks based on past like it's a grpc request.
+00:13:14 [W] We can see stuff in the response.
+00:13:19 [W] There's the status code and the latency and then we can see trailers in when response has completed.
+00:13:26 [W] So this was a grpc status.
+00:13:28 [W] we can know the IP and Port that it came from and also the destination where it's going to
+00:13:36 [W] we can see other HTTP metadata like the path here.
+00:13:36 [W] So in this case, this request looks based on past like it's a grpc request. We can see stuff in the response.
+00:13:37 [W] There's the status code and the latency and then we can see trailers in when response has completed.
+00:13:38 [W] So this was a grpc status.
+00:13:38 [W] Okay trailer we can see how long it was streaming for and how many bytes were in the response. So the tons of really really cool.
+00:13:40 [W] of metadata
+00:13:41 [W] Oh, and the other thing that I wanted to say about this is that you can of course. This is maybe a little difficult for humans to consume. But you can also type this into other text processing tools to make it to kind of filter down to what you want to see so you can type this into
+00:13:55 [W] knative
+00:13:55 [W] Oh, and the other thing that I wanted to say about this is that you can of course. This is maybe a little difficult for humans to consume. But you can also type this into other text processing tools to make it to kind of filter down to what you want to see so you can type this
+00:13:58 [W] On format if you wanted to treat this a little more programmatically.
+00:14:03 [W] But since it's a little difficult for humans just to eyeball and to see what their own eyeballs.
+00:14:14 [W] This is also available in the linkerd E dashboard.
+00:14:25 [W] So here's kind of aesthetic same data, but but in the the web dashboard and you can see here, we've rolled things up by their path. So everything all those requests that have the same path get rolled up together until we can get a count of how many requests there were.
+00:14:29 [W] All those requests that have the same path get rolled up together until we can get a count of how many requests there were and we can also calculate success rate based on the HTTP response status code.
+00:14:38 [W] So that's a really cool way of getting a view of that data at a glance and this is really powerful for for seeing which requests are happening between what our services and how long are they taking in? Are they successful and are they or
+00:14:49 [W] You just get a lot of high-level data about that communication very very quickly and very very easily.
+00:14:57 [W] so, like I said, this is like super super convenient, you know, it was one CLI command and you just get all this data basically for free and it's very rich in the amount of metadata you get and it has this very nice property that
+00:15:15 [W] That is non-destructive.
+00:15:19 [W] I didn't have to restart anything.
+00:15:23 [W] I didn't have to you know, add log lines to any program and recompile them. I was just able to directly tap into that existing HTTP stream.
+00:15:27 [W] Now the downside here is that of course this requires that you already have linkerd e running.
+00:15:38 [W] So if you don't already have linkerd e installed in your cluster and in your paws, then it's not non-destructive anymore.
+00:15:44 [W] You would have to restart those pods to add the proxy. So it's kind of only non-destructive if you already have it there.
+00:15:48 [W] The other thing is that we were only able to see metadata we weren't able to see what was actually in those request or response bodies that's coming in a future release of linkerd e it's on the road map.
+00:16:04 [W] It's something that I'm very very excited about because being able to see exactly what was in those messages in those requests and responses.
+00:16:14 [W] I think would just take this to the next level you'd be able to do a lot more debugging if you are able to see exactly what are the contents of
+00:16:18 [W] These are requests and responses and are they correct?
+00:16:23 [W] So that's something I'm really really excited about and the other big big drawback here is that this is HTTP only grpc is is a also HTTP and that kind of means
+00:16:36 [W] Well, it means that if you have traffic that is some other protocol like MySQL or redness or something else.
+00:16:44 [W] This isn't going to work. You're not going to be able to use this tool.
+00:16:47 [W] But I think the other thing that this means is that even if your traffic is HTTP, you're only getting HTTP level data about it, you know in those events, you're not seeing anything about individual frames.
+00:17:03 [W] You're not seeing anything about individual connections or individual packets.
+00:17:06 [W] It's all at the HTTP layer.
+00:17:10 [W] So if your problem that you're debugging goes below there and is more complicated and you need to dig a Little Deeper that's kind of where tap stops and you can't get anything lower.
+00:17:17 [W] out of it
+00:17:19 [W] so tap is always kind of my first line of defense is always the first tool I turn to because it's just so convenient and gives you so much data so quickly, but often I find I need to dig a little deeper and kind of drill down to the next
+00:17:36 [W] And so that brings us to debug sidecars.
+00:17:42 [W] So it turns out there are already exists. A lot of really really powerful tools for Doing Network debugging some of my favorites. I've listed here netstat and ss4 looking at the state of sockets on a system tcpdump Wireshark
+00:17:58 [W] Wireshark and T shark for grabbing live captures of traffic dig for doing DNS queries and then curl and ngh tp4 doing HDPE queries.
+00:18:11 [W] And these are super super powerful tools.
+00:18:16 [W] But they might not exist in the container that you're debugging. So ideally what you would want to do is you would want to use exact to shell into a running container and use these tools to see what's going on.
+00:18:32 [W] But those tools might not exist in the container. In fact, your container might not even have a shell.
+00:18:36 [W] So this is where you can use what's called a debug sidecar and a debug sidecar is just another container that has all of these tools that you would want.
+00:18:49 [W] It's got a shallow. It's got all these powerful networking tools installed into it and you run that debug container inside the Pod the same pod as the container you want to debug and because they're both running in the same pot.
+00:19:01 [W] They are going to share a network namespace and what that means is that you know, they'll both share an IP address. They'll be able to
+00:19:08 [W] Talk to each other on localhost and critically they'll be able to see each other's Network traffic as if they were on the same host.
+00:19:14 [W] On the same, you know Network.
+00:19:17 [W] So this is a diagram of kind of what that looks like.
+00:19:24 [W] So here we have one pod.
+00:19:26 [W] Bug and then we have the debug container to separate container running in the same pod and that debug containers got all of the fancy Network Tools that we want and we can use cout control exact to run a shell inside that
+00:19:44 [W] on and we can use cout control exact to run a shell inside that debug container and then use all those tools to to see what's going on in the application container
+00:19:53 [W] And so linkerd e has a command that makes this really easy we can do linkerd e inject and we can use the enable debug sidecar flag.
+00:20:08 [W] And what that will do is it will just add a sidecar container to to whatever workloads you specify that has all of these, you know debugging tools and then it's just a matter of exacting tears Coop control
+00:20:16 [W] Sidecar container to to whatever workloads you specify that has all of these, you know debugging tools and then it's just a matter of exacting tears Coop control exact into that debug container.
+00:20:21 [W] Debug container which gets you a shell into that container and then you can run tcpdump or netstat or whatever tools and kind of debug away.
+00:20:27 [W] So this is really great. I use this a lot because you get basically any low level Network debugging tool you could possibly want, you know, anything you can put in a debug container. You can get the other
+00:20:47 [W] Basically any low level Network debugging tool you could possibly want, you know anything you can put in a debug container. You can get the other nice thing about this is it doesn't require linkerd E.
+00:20:51 [W] I just showed you a command a linkerd e command that lets you be very easily add a device icon container, but this is not necessary. You could just add that sidecar container to the Manifest manually, you could even roll your own debug sidecar container that has you know, whatever tools
+00:21:06 [W] If you want, so that's totally up to you.
+00:21:09 [W] The big downside here is that its destructive. You can't add a container to a running pot. You have to restart the pot in order to add a new container to it.
+00:21:26 [W] And so this violates kind of our big thing that we wanted. We can't we can't we have to disturb the crime scene in order to have this debug side. So this is kind of not going to necessarily work for us.
+00:21:35 [W] So this brings us to direct node access.
+00:21:46 [W] So if we want to use all of these powerful debugging tools, but we don't want to restart the Pod.
+00:21:49 [W] Well, what if we just SSH directly onto the node in kubernative such as running the pod.
+00:21:52 [W] So here's a diagram I had before we've got the application container and the debug container running inside the Pod, but we know pods don't exist in a vacuum.
+00:22:02 [W] They are run on nodes.
+00:22:06 [W] So here we have a node with three pods on it.
+00:22:12 [W] Direct node access.
+00:22:18 [W] So if we want to use all of these powerful debugging tools, but we don't want to restart the Pod.
+00:22:18 [W] Well, what if we just SSH directly onto the node in kubernative such as running the Pod.
+00:22:19 [W] So here's a diagram I had before we've got the application container and the debug containerd running inside the Pod, but we know pods don't exist in a vacuum.
+00:22:20 [W] They are run on nodes.
+00:22:20 [W] So here we have a node with three pods on it, but this diagram isn't totally
+00:22:21 [W] Accurate either because pods don't actually exist.
+00:22:24 [W] Here's what it might kind of more realistically look like you've got the node and then you've got the container runtime on that note and it's running a bunch of containers.
+00:22:26 [W] You see there's no reference to pods anywhere here in this picture and that's because a pod basically is just a network name space at least for our purposes.
+00:22:34 [W] So you'll see that some of the containers are different colors.
+00:22:36 [W] That means that they're running in different network name spaces. They correspond to their pods.
+00:22:38 [W] And you know, like I said earlier a network name space basically just means that all of those containers share an IP address they can talk to each other on localhost and they can kind of see each other's traffic as if that was one network entity. And so if we just
+00:22:53 [W] Now space basically just means that all of those containers share an IP address they can talk to each other on localhost and they can kind of see each other's traffic as if that was one network entity. And so if we just SSH on to the node, we're not going
+00:22:55 [W] network name space to debug one of these containers were just going to be kind of at the node level and what we really want is some way to enter into the network news base of the Pod that we care about in order to debug it and
+00:23:11 [W] Does exactly that it's called nsmcon and it lets us execute commands in a given Network namespace.
+00:23:23 [W] So all you have to do is give it a process ID of process that you want to debug and then it lets you execute a command in the network name space up that process.
+00:23:28 [W] So here's how I would typically use that this is me after SSH into a gke node in my cheek luster.
+00:23:42 [W] I start broke running Docker PS, which lists all the containers they're running on that node.
+00:23:45 [W] I look for the one that I want. And I know it's container ID.
+00:23:51 [W] Then I can use a command called Docker inspect to get the process ID of that container and then I can use nsmcon to run whatever command I want in the network name space of that container. So in this case I run tcpdump and
+00:23:59 [W] Get you know attract traffic dump of what's going on there.
+00:24:03 [W] So this is really really cool.
+00:24:12 [W] We get all of our low level tools we can use TCP dump or nested or whatever we want.
+00:24:13 [W] It's totally non destructive.
+00:24:17 [W] I didn't have to restart anything or interrupt anything to do it, but it did require SSH and directly onto the note.
+00:24:27 [W] And so this is something you may or may not have access to depending on how your kubernative clusters administered and it'll is a little bit, you know complex. I had to SSH on to the node. I had to get a pit I had to
+00:24:34 [W] You know figure out the network name space and kind of jump through these hoops in order to do it.
+00:24:39 [W] So the last technique I want to talk about is ephemeral containers and this is a new feature.
+00:24:51 [W] It was introducing Alpha and kubernative is 1/16 and this is basically all all we ever wanted this lets us run add a container to a running pot without restarting it this is kind of what we've been hoping for all along.
+00:25:02 [W] This is the best of all worlds.
+00:25:05 [W] We get all of those powerful low level tools.
+00:25:06 [W] easy to use is non-destructive. All we have to do is take that debug sidecar and just add it.
+00:25:12 [W] It to whatever container we want without restarting it.
+00:25:16 [W] that's fantastic.
+00:25:21 [W] So I haven't really had a lot of chance to play with this yet.
+00:25:21 [W] It's currently in Alpha.
+00:25:23 [W] I'm really looking forward to its stabilizing so I can use it more because you know, it's just good to be so so great to be able to add these containers so easily and without disturbing the crime scene and you can see
+00:25:37 [W] You might use it.
+00:25:44 [W] Basically you just give it a pod in a container image and it'll add that containerd image to that pods.
+00:25:44 [W] It's really that simple.
+00:25:45 [W] So in summary network devaluing is is hard but a lot of good tools exist. If you if you know about them linkerd E. Tap is always kind of my first line of defense just because any time I'm using linkerd e it's just very available and it's
+00:26:04 [W] Union and gives you a lot of data very quickly about what's going on at a high level. So for digging deeper I use debug sidecars and these are really good. If you're you are planning ahead. If you know in advance that you're going to need them you can add them when you create the
+00:26:20 [W] and then as they're collecting data the whole time or is there available for you to use you don't need to restart it when when you trigger the bug but if you don't plan ahead and you don't know you need an advance, it won't be there or if you're kind of debugging something that happens in the wild
+00:26:36 [W] Or if you're kind of debugging something that happens in the wild, you won't necessarily have that debug sidecar.
+00:26:42 [W] And so you have to fall back to doing something like SSH and directly into the node and using nsmcon to to look inside the network name space of the Pod and and see what's going on.
+00:26:53 [W] But hopefully in the future as ephemeral containerd stabilized will be able to use that instead and that will be a lot easier and we won't have to worry about planning ahead as much and we'll just always have that available. So that's
+00:27:01 [W] something something to look forward to
+00:27:04 [W] So that's all I had to talk about today.
+00:27:14 [W] I hope that you learn some new techniques that might help you in your own debugging or at the very least. Maybe you learn something about the way that pods and network name spaces work when you're going to peel back the the illusion. So thank you for
+00:27:25 [W] Listening.
+00:27:29 [W] Like I said, I work on linkerd E.
+00:27:30 [W] We're a growing project.
+00:27:32 [W] We love contributions from the community and people getting involved in joining us.
+00:27:40 [W] So please find us on slack or GitHub and and come participate to really awesome project.
+00:27:45 [W] Thanks, and that concludes my presentation.
+00:27:47 [W] All right.
+00:27:59 [W] Thanks for watching everyone.
+00:28:01 [W] I think it's time for some Q&A.
+00:28:03 [W] So it's already some great questions in here.
+00:28:05 [W] So I'll go ahead and get started.
+00:28:12 [W] So there's one question here from Deepak, which says how do you avoid not disturbing environment in production where you must restore the environment while you can continue the Deep dive into postmortem?
+00:28:21 [W] Yeah, that's a really tricky question.
+00:28:22 [W] And I think that depends a lot on kind of the specifics of the
+00:28:25 [W] How critical is it that you get back up and running, you know quickly and so I think all I can really say is that you want to just gather as much data as you can, you know, wow while the system is in that state so that you have
+00:28:40 [W] Kind of available to you when you go to reproduce this in like a staging environment or a test environment.
+00:28:56 [W] So the more information you can gather, you know from, you know these tools if you have them available like TCP dump or or you know, picking up the logs and the metrics that's going to help you more accurately reproduce that scenario in a
+00:29:02 [W] Guy asks, how can you correlate messages using tap?
+00:29:13 [W] So that's a great question.
+00:29:20 [W] So when we were looking at that linkerd e Taps dream, we were just seeing the communication kind of between two services and so often, you know, that doesn't exist in a vacuum, you know, one request will trigger a service to send it to another service which will
+00:29:28 [W] A service and so on and that's where a tool like distributed tracing is really helpful because you can kind of follow request as it travels through the system and see all the things that the branch off of it and everything that it triggers.
+00:29:44 [W] So distribute racing really is the right tool for that job tap itself doesn't really have a way to let you correlate these requests, but I usually don't use it in that way.
+00:29:56 [W] usually look at you know a single specific service look at its inputs and look at this outputs using tap and try.
+00:30:02 [W] To figure it out, you know, whether the requests and responses that it's ending our correct rather than trying to like Trace through the whole system because I'm usually trying to narrow down investigation at that point.
+00:30:12 [W] Camilo asks together with the message bodies.
+00:30:23 [W] Are you planning features related to use it to replay flows to run simulations to reproduce bugs?
+00:30:25 [W] Yeah.
+00:30:26 [W] This is this is great.
+00:30:27 [W] This is really cool.
+00:30:36 [W] So the idea here is that you know, once linkerd E Tap is able to emit not just metadata, but full request and response bodies.
+00:30:41 [W] Theoretically we could record those bodies and then replay them. So in order like basically do like a recording of some traffic and then replay it
+00:30:45 [W] Later time to reproduce a bug or to you know, use it as part of some kind of integration test suite and yeah, that's definitely been something that's on my mind.
+00:30:57 [W] But once once bodies are supported. Yeah, so for sure.
+00:31:03 [W] Let's see.
+00:31:12 [W] Jan asks, how much history is being kept.
+00:31:18 [W] So with linkerd E Tap, there's no history being kept all kind of just live data and it just screamed out to either to the web dashboard or to the CLI.
+00:31:28 [W] And so at that point it's up to you whether you just kind of want to you know, consume it live or whether you want to you know, pipe it off into some kind of storage and and you know store it somewhere to review it later.
+00:31:34 [W] It's kind of up to you as the consumer of that data.
+00:31:37 [W] It's not, you know, automatically stored anywhere. It's just totally
+00:31:37 [W] live data
+00:31:39 [W] Let's see.
+00:31:53 [W] There's a question here from Armand who asks, how does the debug sidecar work with non-privileged pods or containers me answer is that it? Doesn't you definitely do need elevated privileges privileges to run these kind of network debugging tools
+00:32:02 [W] I guess another downside that I didn't really talk about other restrictions that you do need kind of elevated access to run these Network level tools.
+00:32:13 [W] Let's see Mama asks, if it's possible to get a copy of the slides. I think a slides are linked in shed in sched Chad's.
+00:32:40 [W] So if you go to the the page for this talk you should be able to download the slides there.
+00:32:41 [W] There's a question here from Blasio's asks, whether ephemeral containers resolve the requirement. And yes, they do that's kind of the great thing about ephemeral containers is that they resolve the requirement of needing to restart the pot. So that's kind of
+00:33:04 [W] After this whole time and so I'm really excited to play some more with a femoral containers as they stabilized.
+00:33:16 [W] They'll just make using debug sidecar so much easier because you don't need to kind of plan in advance.
+00:33:17 [W] You don't need to have the foresight that you need to, you know, add this container before before the problem comes up.
+00:33:24 [W] All right, I think that's I think that's most of the questions.
+00:33:37 [W] I'm going to be on in the slack.
+00:33:43 [W] So if you have more questions that I didn't answer here or if you think of something or if you just want to come say hi.
+00:33:46 [W] I'll be hanging out in the slack for for a little while. So please come by say hello, and I'm happy to chat more about non forensics are non-destructive forensics.

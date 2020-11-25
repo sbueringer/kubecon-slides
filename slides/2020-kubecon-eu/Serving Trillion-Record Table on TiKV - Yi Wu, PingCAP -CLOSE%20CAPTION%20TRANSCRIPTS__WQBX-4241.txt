@@ -1,0 +1,170 @@
+﻿Serving Trillion-Record Table on TiKV: WQBX-4241 - events@cncf.io - Thursday, August 20, 2020 12:05 PM - 144 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:01 [W] Well, hi everyone.
+00:00:06 [W] My name is Yi.
+00:00:08 [W] I'm an engineer from tank cap today. I'm going to give the presentation serving cheating record table on tikv.
+00:00:16 [W] So in this presentation, I will talk about what activity is and shows the overview of the architecture of tikv and I out then show the introduce the tables use case, which
+00:00:29 [W] is the largest tikv cluster that we are aware of we'll talk about typical use case for storing the reading history data in tikv and also their next generation for the city infrastructure for the same use case,
+00:00:44 [W] Which is the data table stop and after that I'll talk about two features that are that have been useful for example use case, which is the chance action and follow every and that's it.
+00:00:59 [W] So first what is tikv tikv is distributed transaction model key value database that was originally created a pen cap as the underlying storage layer,
+00:01:11 [W] and although usually use together with Heidi be tikv can be used as a standalone key value database and the design of tikv is inspired by Google spanner and hbase, but it is simpler to manage
+00:01:26 [W] And it does not depend on the any distributed file system.
+00:01:33 [W] The project is Right Out cncf CF incubating project and we are trying to move this tikv to graduation stage this year.
+00:01:43 [W] How can we have over 7,000 GitHub stars of and is right now have around 250 contributors. So it actually provides a simple key value of epi.
+00:01:56 [W] EI but is also able to provide a horizontal scalability, which means that whenever you want to scale up the tikv cluster you can simply add machines to the cluster and the cluster will Auto scale up without
+00:02:11 [W] You're worried about doing a resorting to your data and also attacking we offer the high availability.
+00:02:20 [W] Thanks to the underlying Rock replication and also tikv relatively supposed transaction.
+00:02:30 [W] This is a picture showing the overall architecture of tikv in the front end tikv provides simple chances transactional KV API.
+00:02:39 [W] It also exposed kubectl API, which handles
+00:02:41 [W] Push down a quick application requests from Tiger Beat It has a transaction layer which handles distributed transaction and multiversion concurrency control.
+00:02:56 [W] It used Roth to replicate data and it used rocks db2 as the underlying storage engine and we are also working on making the storage engine flexible.
+00:03:07 [W] So in the future, we may be able to use other types of storage engines.
+00:03:09 [W] And this picture shows how data is organized inside tikv cluster?
+00:03:18 [W] The full kill range is split into small areas.
+00:03:24 [W] And each of this area is we call it a region?
+00:03:29 [W] And the region is the you need for a rough replication in tikv and by default. Each region will have three replicas and those replicas will be scattered around in different tikv notes.
+00:03:37 [W] And when the swallowed changes some of the Region's can get more traffic than the other region and in some regions can grow oversized and tikv rely on another component to do low balance, which is the
+00:03:53 [W] Up placement driver or PD the PD cluster will basically stores the metadata for the reach all the regions and it also monitors the workloads and the data size of each tablet region and if needed it
+00:04:07 [W] Struck tikv knows to move the regions around both that leaders of the regions around and also a split or merge some of the regions.
+00:04:18 [W] This is a rough timeline for tikv development.
+00:04:30 [W] It was first created on 2015 as storage later for Taibbi and one year later.
+00:04:31 [W] We open source it on 2018 Tai Chi with Android cncf as a Sandbox project and then become an integrated project and this year. We released the first major release of Tai Chi now,
+00:04:45 [W] Look take a look at so goes your case, which is the currently the largest tikv deployment bit north.
+00:04:59 [W] So just who is the Chinese question and I so website you can think of it as Cora and if the website is really popular in China and just who is using a tikv to stall the reading history of the users on the website.
+00:05:06 [W] And this is the dashboard as snapshot of the dashboard of the tikv cluster in this use case, as you can see the data size is really huge is currently having a 500 take my data and the
+00:05:22 [W] It's still growing and the cluster has over 200 tikv knows about the use case the reading history of the users is used to filter the recommendations. So a user won't see an article that he
+00:05:36 [W] Already we have created here in the recommendation list. And also the data is used to chain models to personalize the recommendation to the users. The data set is currently having or 2.5 trillion record
+00:05:51 [W] And but they decided still growing due to the fast growing user base of civil and growing user activities while having a large data set. The cluster also needs to handle a large volume of read and write operations.
+00:06:06 [W] and I'm during peak time the classic at the cluster can have all around two hundred thousand records per second rice and the cluster also normally have 150 thousand queries per second for Reese
+00:06:22 [W] And under this reaction right pressure.
+00:06:29 [W] The cluster is able to achieve a P90 9.9 latency of around 100 milliseconds.
+00:06:32 [W] This is a overall architecture for the use case at the very front end which is who has a proxy layer and then there is a rapid sketch layer that handles large volume of reach effect.
+00:06:49 [W] The cash is a write through cache. The rice will hit the underlying database which is tidy be and tidy be used tikv as the underlying storage layer and the cash layer also subscribe to tidy be changes.
+00:07:01 [W] We are to be tidy bin law to achieve.
+00:07:03 [W] eventual consistency
+00:07:06 [W] before using Title VII and Title VII to who used to use my SQL and to stall the reading history data and as the data grows larger and larger State needs to restore the data from time to time, which is
+00:07:21 [W] Heavy operations for them and after they switch to use Keda T and tikv when the data grows what they do is simply add more hose to the pastor and the classic can automatically scale up.
+00:07:36 [W] up and so the so so it's easier for them to handle the increasing role and the bigger size. And also when a tikv server is done, they see immediate no impact to the overall healthiness.
+00:07:51 [W] Is of the use case due to the high availability provided by tikv, and also as the data size clothes just will also move to use the
+00:08:06 [W] AWS cloud provider deployment and during this transition tikv is being very stable for them.
+00:08:16 [W] So they are kind of very happy with tikv in the reading history use case as they add more space to their system. They want to expand the feature set.
+00:08:28 [W] So they are building Next Generation infrastructure for the same use case.
+00:08:39 [W] This this new infrastructure is called a data table saw this data table saw is still based on tikv and from the tikv dashboard of this cluster and you can see the data size is right now at around
+00:08:49 [W] Stampy petabyte-scale salt around 110 KV nose and the data side. The data table saw is right now basically following the same set of data as the reading history cluster, but the data
+00:09:04 [W] Is several times smaller due to some due to the some clever optimization on the application side to reduce the Redundant data.
+00:09:15 [W] Data tables all provide features a no SQL API and it provides a transaction and secondary index support. It provides a negative y column data model and the data in really Tempe can have similar or be Sigma 3.
+00:09:31 [W] And most importantly decorative all sorts all is still based on iCarly.
+00:09:41 [W] So to who can still enjoy the availability and scalability provided by tikv, and also they make use of some of the technical features for example, the transaction and secondary index support are all based on tikv transactions.
+00:09:51 [W] This is a little architecture of the data table saw we won't go into detail here. But as you can see takemiya is still being used as a storage layer and most of the other nodes are stateless.
+00:10:05 [W] And Chris is a demonstration of the y-column model provided by tekton table saw and as 2/4 which the chocolate from the existing reading District luster to
+00:10:20 [W] Milk newer table saw they also plan to add more features to the system including multiple protocols called optional relaxed consistency level and also they plan to build big data connector and food has such capacity.
+00:10:35 [W] And for the last what items they they plan to have those systems integrate with the target tikv cluster on the Rock replication level and we'll talk about that in a bit.
+00:10:51 [W] So let's talk about transaction in a tikv, which are transaction is proved to be very useful for the for the circles. Use case is simplify the application logic.
+00:11:03 [W] They don't need to re-implement transaction in there.
+00:11:05 [W] Application layer, so to have chance action because of data in tikv are split into small regions and those rough leader for each of the regions can be on different
+00:11:20 [W] So I will run the transaction we need to do distributed transaction over multiple rough groups.
+00:11:32 [W] And this is done in Title VII using the percolator model.
+00:11:36 [W] The population model is described in the Google percolator paper and we use it to support both automatically automatic transaction and pursue music transaction.
+00:11:44 [W] This is an example of the percolator model which is basically a two phase commit protocol and in this model all the data are split into three columns the data column the last column and the right column and
+00:12:00 [W] Type Alias we use locks TVs color family to implement those columns.
+00:12:04 [W] And in this example, we have a transaction writing to two keys A and B and for each transaction, we need to choose a primary key.
+00:12:16 [W] So here we choose key a as the primary key and during the pre-trial phase.
+00:12:28 [W] We will write a new data to the data column with a timestamp and also will place a log to each other key in this transaction and the blocks will have a pointer pointing to the primary key.
+00:12:34 [W] And in the commitment for this only the key a which is the primary key will be updated.
+00:12:49 [W] So the right column of ta will be updated to denote that the transaction has been committed and also the locks on key a is deleted.
+00:12:51 [W] Since only the primary key is being updated in the committee phrase. It can be done in an automated way to a single rock group and the logs and the right columns for the other keys will get updated as we resolve the logs
+00:13:06 [W] Subsequent really and a background of Jesus rap while we resolve a lot. We will yield make use of the Ponder to the primary key to confirm that it's chance action is committed.
+00:13:20 [W] So this is how we initially Implement automatic transaction in tikv.
+00:13:28 [W] And in the latest version.
+00:13:29 [W] We also want to implement a person music transaction. And how do we do that?
+00:13:34 [W] It turned out it turns out that only required require a very simple change.
+00:13:43 [W] So four person basic transaction and we have that actual locking phrase and during the login phrase will place the log to all the keys in this transaction and the law.
+00:13:50 [W] we'll have a special flag which you know them which signify that this law is a person is o'clock and in the provide phrase the person is o'clock is turned into an automatic law the
+00:14:05 [W] the law format it's the same as being optimistic transaction so that and the rest the flow for 4 for 3, right and commit praise others are the same
+00:14:20 [W] Ask up automatic translation in this way of Pacific transaction and ultimately ultimately transaction in tikv are compatible with each other so you can have two clients connected to the same
+00:14:35 [W] How do we cluster and one client doing a significant transaction and one client doing automatic transaction and it's perfectly perfectly fine.
+00:14:44 [W] For persimmon is transaction.
+00:14:49 [W] We also Implement a deadlock detection.
+00:15:02 [W] So for that law protection, we will hang tight a we cluster. We will have one type of a note to play the role of the develop a packer and to simplify the invitation with simple we use a region once
+00:15:04 [W] as the Delta packer
+00:15:06 [W] and also on each of the tikv knows there is a weight a manager and a transaction want to lock the key.
+00:15:21 [W] If a transaction wants to log in and then find the key has been locked by another transaction. It has to wait at the way to manager.
+00:15:24 [W] and the way the manager will use the information to update the dependency graph on the delicate external and if that law is detected the Dell of detector will notify the operator manager to about one
+00:15:39 [W] Transactions so the older design is very simple and there is one tricky case.
+00:15:54 [W] So when there is a leader transport happen and and the region was little transfer to a new tikv know this new development hacker will lose all the previous information on the dependency graph.
+00:16:01 [W] And what we do to resolve this issue is very simple.
+00:16:08 [W] We are not trying to keep the dependency graph up to date.
+00:16:13 [W] in this case. We simply rely on the HSN timeout to retry themselves.
+00:16:17 [W] So that's it for transaction.
+00:16:24 [W] And another thing I want to talk about is all agree that we recently had to tikv follow every is an optimization in the Rock protocol to reduce a real latency and to understand what it is.
+00:16:35 [W] We need some basic background knowledge for the rock bottom.
+00:16:39 [W] Laughs is a consensus algorithm and consensus algorithm basically have two goals.
+00:16:53 [W] The first one is to ensure an agreement on just stay among all the nodes in a cluster in for tight. A readership. Say is the state of the data solving another goal of consensus
+00:17:02 [W] Our son is to recover the cluster from Silver phaleas be autonomous in so rough the not algorithm achieved is to goes by doing a lot replication and I'm going to use tikv as an example.
+00:17:17 [W] Go to explain how long replication works.
+00:17:23 [W] So when the client want to write this as Theta we will send a request to the corresponding rap group leader.
+00:17:30 [W] The leader will change just lay the request into a lot and she and I started block replication.
+00:17:36 [W] The the lot replication consists of two steps. The first step is the common law in this step. The leader will append the log entry to is local law and at the same time it will broadcast a message to replicate
+00:17:51 [W] law actually to all his followers and once it make sure that the lot nginx has been replicated to a majority of the replicas it proceed to The Next Step which is apply law the
+00:18:06 [W] Content of the lock and she will be applied to the local state machine on the leader for tikv.
+00:18:19 [W] The state machine is just the underlying case all or Rock City. And after that the leader will return to the client and all the followers want to receive the love energy.
+00:18:28 [W] will apply the law to their local state machine asynchronously.
+00:18:32 [W] So this is how a write-in tekton weaveworks and how that really works.
+00:18:43 [W] So for re it is usually done in the form of a reading Dex.
+00:18:52 [W] So when a client wants to read a piece of data is says a request to one of the nose in in the rough group and in case it gives a follower in the
+00:18:59 [W] All of our will need to send a real industry request to the leader. The leader will Daniel cat is committed in committed index which is the latest which is the index of the latest
+00:19:14 [W] That has to be that that has been committed then it will broadcast a message to confirm the lightness of this committee index and then after that it will read the data at the committee
+00:19:29 [W] That is all on its own State machine and then return the data to the follow follow and as you can see here, the reading bags hats Dojo back and so the set
+00:19:44 [W] Second Step can be optimized out by using an optimization called least three but still another job at is that re-indexing H2 in reinvest the data
+00:19:59 [W] Always read from the state machine on the leader and which incur more iot on the leader and also if incurred Network latency between the leader and follower and and never latency will be more noticeable.
+00:20:13 [W] when the follower and the leader on different data centers
+00:20:18 [W] So there is a flurry to to solve the problem in a follower read when the follower receive the request. It will send a modified version of reading that to the leader and the leader still
+00:20:34 [W] To confirm the lightness of the committed index but this time instead of reading data from its local state machine.
+00:20:45 [W] It returned the committed in the X Direction and The follower will use the committee index to read from is a local state machine together data and return to the client so
+00:20:57 [W] Follow really is generally useful in case the follower and the leader is on different Data Center and also is more useful when the data being really is a larger size in the
+00:21:13 [W] Let's use case a bit make use of follow every to he'll reduce latency and also they plan to use for Laurie in a more creative way.
+00:21:28 [W] So this is a demonstration of their plan use case.
+00:21:31 [W] plan to add a data warehouse in the system, but this data warehouse is in a different Data Center and what they plan to do instead of building a ETL pipeline to stream the data from
+00:21:43 [W] tikv cluster to to the data warehouse.
+00:21:54 [W] What I plan to do is to have the data warehouse participate in the replication of the tikv cluster.
+00:21:59 [W] And then for Reese on the data warehouse, they will use follow read There are some benefits or for this setup.
+00:22:09 [W] One of them is of course the olap workloads will now keep the data warehouse where the query can be better handled and also,
+00:22:12 [W] By using follow read across States and traffic can be reduced and also since the data warehouse participate in the Rock replication.
+00:22:27 [W] You can play the role of one replica in the system.
+00:22:36 [W] And so the so for just who they can reduce one replica in the tikv cluster in the mayadata center to reduce cost and this usage is very creative and we are not involved to see how it goes in
+00:22:42 [W] In the future development and that's it.
+00:22:47 [W] That's it for my presentation.
+00:22:57 [W] And if you want to know more about tikv, here are a few more links, and we will always be available on tikv selectional for any questions.
+00:22:58 [W] Thank you.
+00:22:58 [W] Hi.
+00:23:28 [W] Isaiah thanks everyone for joining any question.
+00:23:50 [W] So we call a question.
+00:25:17 [W] What are the three characteristics and how many real operations are possible and how to optimize for that? Actually today. I have some Watson who's the LIE of
+00:25:29 [W] Was infrastructure creating with me over the Internet, so I'll look under him.
+00:25:37 [W] for the answer
+00:25:40 [W] I saw Bhai.
+00:25:51 [W] I don't think they can hear you, but I can I can relay your question.
+00:25:52 [W] so
+00:26:04 [W] So the so a pic and restart.
+00:26:13 [W] 61 160 million million requests per second
+00:26:28 [W] Yeah, that's the number of Records per second.
+00:26:40 [W] I think for the for the heights of all for the for the resizing they are they have pain get mostly or are they do yeah, they're Point get mostly so so we are not using high-tech classroom optimize them.
+00:26:57 [W] The next question is when running in multiple data centers how transactions Dell with so right now. So I think this question is mostly for type type
+00:27:14 [W] Be as so um, I think so right now we don't have special handling for for valid data in multiple data centers or we still use the say polka later model for for running the transaction.
+00:27:31 [W] so, yeah, so so so they still need to go go over the
+00:27:36 [W] Data centers we still incur across data then send the traffic for transaction.
+00:27:44 [W] All it is you are if this question is referring to the last the use case described at the end of the video.
+00:28:10 [W] So so the the the Quorum so we'll reach inside the main data center. So
+00:28:14 [W] So so so in that case we can keep the latency low.
+00:28:20 [W] Also the next question on how did you get into building databases these complicated?
+00:28:30 [W] It looks awesome, but way over my head so I am yeah that there is a lot of interesting story about about about how helping get bills this.
+00:28:43 [W] so, but but I think
+00:28:49 [W] So so basically they so so the founder of pink have wants to 1 what wants to build something that that's open source, and and that kind of that kind that can make people
+00:29:09 [W] Okay use it. So yeah, I'm not sure about how to answer this question.
+00:29:18 [W] Yeah, I think I think all the questions are answered.
+00:30:54 [W] Beautiful fall for any questions you can if you have any further questions, you can go to the tech channel for question.
+00:31:44 [W] Thank thank you all for joining.

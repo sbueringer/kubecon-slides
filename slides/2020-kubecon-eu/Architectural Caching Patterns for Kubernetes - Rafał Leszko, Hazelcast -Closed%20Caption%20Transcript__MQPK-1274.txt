@@ -1,0 +1,296 @@
+﻿Architectural Caching Patterns for Kubernetes: MQPK-1274 - events@cncf.io - Tuesday, August 18, 2020 8:28 AM - 69 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:02:03 [W] Hello everyone.
+00:02:09 [W] I'm Raphael and I speaking to you from Poland from Krakow and I will tell you about caching and especially about cashing in the context of microservices deployed on kubernative.
+00:02:18 [W] but first a few words about myself
+00:02:21 [W] I'm A Cloud software engineer at Hazel cast before I worked at Google and CERN.
+00:02:32 [W] I'm also an author of the book continuous delivery with Docker and Jenkins from time to time.
+00:02:38 [W] I do training and speaking but my main job is I'm a software engineer.
+00:02:41 [W] And as I said, I live in Krakow in Poland.
+00:02:42 [W] Also a few words about hazel cast.
+00:02:50 [W] So Hazel cast is a distributed company. We Produce open source software and we have three products.
+00:02:57 [W] First one is the most known Hazel cast in-memory data grid. This is what people usually use for caching.
+00:03:01 [W] Our second product is Hazel cut jet which is a library for stream processing. And the last product is quite new is Hazel cast put into the as a service in the cloud our agenda for today is
+00:03:16 [W] Straightforward so there will be a very short introduction about caching and the microservices and then we will walk through all possible caching patterns than you can that you can use in your microservices
+00:03:32 [W] Possible caching patterns that you can that you can use in your microservices deployed on kubernative.
+00:03:35 [W] When what I'll be talking I would like you to think about two things first thing is in your software.
+00:03:48 [W] Which of this pattern do you use because this list is complete.
+00:04:00 [W] So you must use one of these pattern and the second thing I would like you to think about is what are the make sense to change to any other pattern would it make sense for my system for my architecture?
+00:04:05 [W] Okay. Let's start.
+00:04:06 [W] This is a short introduction.
+00:04:09 [W] So in general, that's how that's a diagram for microservices worked.
+00:04:14 [W] So in general.
+00:04:22 [W] They have different versions. They can be written in a different programming languages and they used each other
+00:04:25 [W] the main question when it comes to caching is
+00:04:30 [W] where where is the right place to put your caching layer?
+00:04:35 [W] Is it inside of it micro service or maybe as a separate unit in an hour separate deployment or maybe we can put cash in front of the microservices and that's what this talk
+00:04:51 [W] Out so strike starting from the first caching pattern is the simplest thing you can imagine.
+00:05:00 [W] It's embedded cash.
+00:05:01 [W] So embedded cash is when you put your cash as a library inside your application.
+00:05:10 [W] So the flow is as follows request goes to our kubernative service which forwards the request one of the kubernative sport and application receives the request then the application check checks in the cache, which is embedded
+00:05:27 [W] Which forward the request to one of the kubernative sport and application receives the request then the application check checks in the cache, which is embedded have I already executed several requests if yes returned from cash.
+00:05:31 [W] Executed several requests if yes returned from cash if if now do some business logic put it into cash and return the response.
+00:05:39 [W] So the idea is very simple it the cash goes together. The application is that simple then we could think even about implementing this on our own if use Java that that is probably how
+00:05:52 [W] So create a concurrent hash map then we process the request check if the request is in the cache. If you just get the value from the cache if know do some processing put into cache and return the response.
+00:06:07 [W] So you can implement it yourself.
+00:06:14 [W] yourself. However, please don't please don't do it.
+00:06:15 [W] Don't do it because a simple collection Java or any programming language is not a cash is not a cash because it has no eviction policy.
+00:06:26 [W] No Max size limit no statistic.
+00:06:28 [W] No billion cash loaders. No expiration time. No notification mechanism. So it's lacks a lot of features that you will need later.
+00:06:35 [W] So we are better way better off by using some caching Library.
+00:06:43 [W] So what is a good caching library for Java a very simple if you just need anything as a library is like guava cash is a very very very good caching solution where you can Define all these parameters.
+00:06:55 [W] Up front in the in the while building the cash.
+00:06:59 [W] Another the solution is th cash.
+00:07:03 [W] We can even take this idea of caching one layer hire and put the cash into application layer.
+00:07:19 [W] by ISBN with the first check in a books cash if there is such value if he has returned it from the cache only if there is no cash value, we will execute the method find book and slow Source, but be careful because spring
+00:07:38 [W] Uses concurrent hash not by default. So we are better off first thing you do in a spring application change your cache manager for example to guava or any other caching Library.
+00:07:51 [W] So this is our diagram for embedded cash.
+00:07:58 [W] So this is pretty simple. But there's one that is one big problem about this crushing.
+00:08:10 [W] Imagine that the we first request goes to kubernative service and it's forwarded to the pot on the top.
+00:08:12 [W] We do some we do some business logic. We put value into the cache and so on now.
+00:08:20 [W] There is a second request which is the same it goes to kubernative service.
+00:08:28 [W] But this time it's forwarded to the application at the bottom.
+00:08:31 [W] So application needs to do this business logic once again, because this caches are completely separate.
+00:08:40 [W] They don't know about each other.
+00:08:44 [W] That is why one of the Improvement to the embedded cash is embedded distributed cache.
+00:08:48 [W] So it's still the same idea if you think about the past.
+00:08:50 [W] It's still the same pattern.
+00:08:56 [W] However this time we will use a different caching Library.
+00:08:58 [W] So this time we will use for caching.
+00:09:02 [W] Exactly the same but all caches all embedded Cashes in on applications.
+00:09:15 [W] They form one consistent hashing cluster.
+00:09:19 [W] This is how how it would look like in your spring application. If we stick to the spring example, if you would like to use for oil cacheable would like to use Hazel cast as a cache. All you need to change is to add Hazel cast the cache manager.
+00:09:36 [W] Example if you would like to use for oil cacheable would like to use Hazel cast as a cache. All you need to change is to add Hazel cast at the cache manager and then as act for the caching layer Hazard cost is used.
+00:09:42 [W] Now if I think like okay, I start my applications like my iced I start to instances on my applications.
+00:09:56 [W] They both have like hash and now how do they form the cluster how the hell do I configure this?
+00:10:02 [W] Because you see on this on this slide.
+00:10:03 [W] There is no configuration, but they will still from the cluster refer how to make it very convenient to users and we came up with the idea of the discovery.
+00:10:14 [W] likings
+00:10:15 [W] so now for every like deployment environment we have Discovery plug-in, which uses
+00:10:22 [W] API of the given environment to discover other members and to form a cluster.
+00:10:33 [W] It's not only to discover members is also to provide like high availability to distribute across distributed the partitions across the zones and so on.
+00:10:41 [W] So you can choose for the from the plugins there is like now very trending like kubernative plugin, which is the most relevant to this presentation.
+00:10:56 [W] Are two modes you can use one is the plug-in uses kubernative API and queries the kubernative mastered for to detect other members and the second mode is to use DNS resolution.
+00:11:16 [W] So we read records from the DNS to also to find other members and it's all done.
+00:11:22 [W] Dynamically automatically. So that is the good the good part.
+00:11:26 [W] So that is our diagram for embedded distributed cache. It works really good.
+00:11:35 [W] Actually the kubernative is like very good for that.
+00:11:36 [W] So short pros and cons of embedded cash.
+00:11:42 [W] So from the good sides configuration is very simple because the cash goes together with application so you don't really need to do anything.
+00:11:50 [W] Latency of the data is is very low because it cash goes together with our application again, and there is no Ops Team or Ops effort needed because it goes together River application.
+00:12:06 [W] However from the downsides the cash management is not flexible.
+00:12:17 [W] If you would like to scale up your cash. I would like to now not to have two nodes, but I would like to have five nodes of cash. You can do it only to get a river application because it's embedded.
+00:12:19 [W] It's also limited to the your language of choice.
+00:12:29 [W] If you if you write in Java, then it will be limited to the jvm based Solutions.
+00:12:36 [W] A bit maybe a bad thing or not such a big deal that would depend on your probably your Enterprise from our experience like big Enterprises.
+00:12:52 [W] They don't want to have their data together the application even if it does a cash. No, they just want it separate.
+00:12:57 [W] Okay, we covered embedded cash. Now. The next one is client-server topology.
+00:13:13 [W] So client server is a little bit like a database so we set up.
+00:13:15 [W] Caching server and application connects to the caching server.
+00:13:21 [W] flow is
+00:13:23 [W] like this request go to kubernative Services goes to the kubernative spot to the application and then application uses cash client to connect to the cache server, which is deployed completely separate completely separate from the application.
+00:13:39 [W] And if you think for a moment, like what is the difference between this diagram and this diagram like from embedded cash.
+00:13:51 [W] There are two main differences.
+00:13:52 [W] First one is obvious. We have this guy on this guy on the on the diagram.
+00:13:58 [W] Uses cash client to connect to the cache server, which is deployed completely separate completely separate from the application.
+00:14:07 [W] And if you think for a moment, like what is the difference between this diagram and this diagram like from embedded cash.
+00:14:08 [W] There are two main differences.
+00:14:09 [W] First one is obvious. We have this guy on this guy on the on the diagram and this guy is this guy needs separate like management.
+00:14:10 [W] But it also gives us flexibility we can scale it up down as we want we can do whatever we want with the car server.
+00:14:16 [W] That would also mean you will usually need some Ops Team to manage this or just support as part of the developers time. Like it can be a devops team.
+00:14:27 [W] team. It can be like a that doesn't necessarily need to be a separate team, but definitely some time to manage this to maintain This Server.
+00:14:34 [W] Now there is second thing on this diagram that is very different from the embedded cash. And this is this part.
+00:14:40 [W] So now we use now we use cash client to connect to care server.
+00:14:48 [W] And the thing is that cash client can be written in totally different language than car server because there is a well defined protocol and you can use use it complete like in a different different language and that there is a
+00:15:04 [W] Totally different language than car server because there is a well defined protocol and you can use use it comply can add different different language and that there is a very common strategy that you set up the cash cluster or a lot of cash
+00:15:08 [W] Then there are a lot of applications written in different programming languages and they use this cash.
+00:15:15 [W] That is a very common approach and a microservices word. It's so common that
+00:15:22 [W] Most caching Solutions like the most popular readies or a little old-school busted propeller memcache they are they're designed to work from from client server mode and then it's actually the only way they can work like
+00:15:39 [W] Guess written in C so you can kind of really embed it in a in a natural way into your application.
+00:15:47 [W] Now how to deploy like cache server and cache client if we stick to the Hazel cast example, and we would like to deploy on kubernative.
+00:16:02 [W] So obviously for kubernative we provide a hand chart or an operator where you can just start the cache server and scale It Up Down upgrade whatever you want.
+00:16:09 [W] now for the client part
+00:16:12 [W] If we stick to the Java example and spring Boot and spray spraying that this is will this is how it would look like the cache manager.
+00:16:25 [W] So we defined like client conflict and then we say use this kubernative plugin.
+00:16:27 [W] This is what I described before to discover the cache server. So it's dynamically discover discovered and like you don't you see there is no static configuration here.
+00:16:40 [W] So that is the whole Beauty it will the client will use the discovery strategy to find the circleci.
+00:16:42 [W] server
+00:16:43 [W] now
+00:16:47 [W] All good, like we have server and as a separate separate thing on our diagram you can do can manage this.
+00:16:58 [W] It's it's all good.
+00:17:05 [W] Now if you think about it, like usually in a big Enterprise.
+00:17:05 [W] And if it's already managed by a separate team, we can move one level one step further and put this part into the cloud.
+00:17:23 [W] So cloud is still like a client server, but it's very specific.
+00:17:33 [W] It's so specific that it can be considered as a separate caching pattern and it's specific because the crowd part is outside of our organization.
+00:17:40 [W] So we have this Cloud think which we which we asked some service provider like in case of Hazel cast has ovhcloud create a casting plaster for us and give us the way to connect into
+00:17:56 [W] But it's so all these parts we mentioned before like management.
+00:18:10 [W] You don't you don't need it because you just pay cloud provider to provide you a cash provided cash for you.
+00:18:13 [W] now the thing is like, you know like
+00:18:18 [W] We are in the in the caching domain is like it's very strict in terms of latency.
+00:18:29 [W] It's even more strict than a databases.
+00:18:33 [W] So so we know like when someone creates a caching cluster for you, you must be sure that the latency is low and now how we do it like
+00:18:46 [W] So the first thing we don't own the infrastructure we our heads up as cloud is based on based on AWS gcp and Azure you can choose now the thing is you should choose the same cloud provider on which your kubernative
+00:19:02 [W] It's run so that they are you know, they use the same cloud provider.
+00:19:12 [W] So then you should select the same region. So they are in the same region and the same cloud provider and then we even go one step one step further and provide you a way to do a VPC peering.
+00:19:23 [W] They are really in the same future of network.
+00:19:30 [W] Your Burnett is cluster and you're you're caching cluster and then there is no even one router.
+00:19:36 [W] Hope between your application and caching pastor and that is very important.
+00:19:46 [W] No matter if you set up your car server or use the Cloud solution, you must think about latency because here latency is what matters.
+00:19:52 [W] For Heiser cast Cloud if we stick to this if we stick to this example of spring.
+00:20:00 [W] That that is the configuration would you which you gonna use so you click for to play the create a cluster and we provide you the discovery Toc and cluster name and password you put it into your configuration. And that's it.
+00:20:15 [W] Static IP configuration and that way with Discovery tokens.
+00:20:24 [W] That is more like most Cloud solution works right now.
+00:20:32 [W] I think mongodb or anything like that that does the way like for for Discovery you get Discovery token, and that that's all pros and cons of client server and cash and Cloud cash
+00:20:40 [W] it's o
+00:20:40 [W] pros and cons of client server and cash and Cloud cash from the good sides.
+00:20:41 [W] Data is separate from the applications. It's usually a mask for big Enterprises from from my experience.
+00:20:49 [W] We have separate management.
+00:20:52 [W] So we scale up back up.
+00:20:57 [W] It's all separate from your application is programming language agnostic because we use client cache client cracker server with well defined protocol from the downsides.
+00:21:06 [W] We need some hops effort needed or pay for the Cloud solution latency can be higher.
+00:21:13 [W] I mean, you should Community you must think more about it that that that's the thing.
+00:21:16 [W] And yeah, if you if you set up your clients are client your but by yourself think about region on the PC and so on.
+00:21:26 [W] Okay, we we covered like them the more classic like approaches to the caching.
+00:21:41 [W] So now something a little a little more modern which fits very well into kubernative word. So cash as a sidecar.
+00:21:45 [W] This is the diagram for caches are dark side. / so the flows look as follows request goes to kubernative service. It goes to the kubernative spot. It goes to the application. But now the cash is not a separate thing on this
+00:22:01 [W] Also not embedded into application but it's in the same pod is a cache server run in the same pot AS application container.
+00:22:12 [W] That's it.
+00:22:18 [W] So the application can access the cache always on the Local Host because it's the same pot. But technically it uses cash client to connect to the cache server.
+00:22:24 [W] So it's kind of a mixture between embedded mode and client-server mode. It's a mixture because like it's similar to embed it because we it's around the same physical machine because the same kubernative spot.
+00:22:39 [W] It's considered the same resourceful scale up and down together.
+00:22:46 [W] And there's no Discovery needed because we use localhost, but it's also similar to client server because after all we use cash client to connect to the cache server, so it can be any programming language
+00:22:58 [W] There is some kind of isolation between application and the cache which may be good enough or maybe not good enough.
+00:23:06 [W] It's on the container level.
+00:23:07 [W] How it looks like in the the code.
+00:23:13 [W] So again sticking to the spring example cache manager, we specified the static configuration for localhost. But you know, it's not static after all because we know that the whole system is dynamic.
+00:23:28 [W] We just know that the cache server is run on the hookah hose in the same kubernative spot.
+00:23:31 [W] Counter kubernative configuration looks like it. We just run two containers in the same and the same pot.
+00:23:45 [W] So we specify deployment we specify the bottom plate and to two separate containers.
+00:23:48 [W] The first one is our business logic.
+00:23:50 [W] So this is your application.
+00:23:52 [W] There will be this will differ from use K to use case and the second one Hazel cast. It's always the same as the cache server.
+00:23:57 [W] Pros and cons of using sidecar cache configuration is again very simple because you you you've seen that was all the configuration had to do its programming language agnostic latency is low.
+00:24:13 [W] There is some isolation of data and applications from the downside again. The management is not super flexible because scaling up down it goes together with your application.
+00:24:26 [W] And after all the data is collocated in the same application pot
+00:24:27 [W] And the second one Hazel cast it's always the same as the cache server.
+00:24:28 [W] Pros and cons of using sidecar cache configuration is again very simple because you you you've seen that was all the configuration had to do its programming language agnostic latency is low.
+00:24:30 [W] There is some isolation of data and applications from the downside again. The management is not super flexible because scaling up down it goes together with your application.
+00:24:33 [W] And after all the data is collocated in the same application pot
+00:24:33 [W] Which again may be big think may not be a big thing dependent you skate on your use case.
+00:24:35 [W] It may be a big deal for you or not.
+00:24:38 [W] The last caching pattern for today is reverse proxy caching.
+00:24:46 [W] And this will be something totally different because all these patterns so far in every pattern application was aware of the cash.
+00:25:02 [W] So it knew that such thing as a cache exists this time will be different.
+00:25:08 [W] We'll put cash in front of the application.
+00:25:10 [W] So this is our diagram.
+00:25:15 [W] So request before going to the kubernative service, it goes to the cache.
+00:25:16 [W] And if this request is found in the cache, we don't even you don't even go to the kubernative service or to the application.
+00:25:26 [W] Just returning very from the cash only if the value of the request is not found in the cache.
+00:25:31 [W] We go to the kubernative service to the application and do some business logic.
+00:25:38 [W] As of now if you would like to reduce reverse proxy caching nginx will be your way to go.
+00:25:46 [W] The different will put cash in front of the application.
+00:25:59 [W] So this is our diagram.
+00:25:59 [W] So request before going to the kubernative service, it goes to the cache.
+00:26:00 [W] And if this request is found in the cache, we don't even you don't even go to the kubernative service or to the application.
+00:26:00 [W] returning vary from the cash only if the value of the request is not found in the cache.
+00:26:01 [W] We go to the kubernative service to the application and do some business logic.
+00:26:02 [W] As of now if you would like to reduce reverse proxy caching nginx will be your way to go.
+00:26:04 [W] Anyway nginx is used everywhere like in kubernative. So you can you can tweak it with caching like like this simple configuration will add HTTP caching to your nginx.
+00:26:06 [W] And nginx is good, you know because like the thing about nginx is very mature solution. So you can trust trust it, you know, you can implement it right now into your production system and you're safe however nginx
+00:26:17 [W] nginx
+00:26:17 [W] and nginx is good, you know because like the thing about nginx is very Metro solution. So you can trust trust it, you know, you can implement it right now into your production system and you are safe however nginx
+00:26:18 [W] Like it's only for HTTP, but that's probably fine, but it's not distributed as it's not heavy and highly available that is that is a problem data stored on the disk. It's
+00:26:34 [W] That is that is a problem data stored through this kits. It's like actually stored in memory, but it can be offloaded to read this.
+00:26:40 [W] it's a little different like with hazel cast you were sure that your data is in memory. So it's access to fast in case of nginx. It can be offloaded to be disk. So you have to be careful.
+00:26:50 [W] but it's nginx is a very good tool so you can you can start using this, but we can even go one step further and
+00:27:02 [W] Connect this idea combine this idea of reverse proxy caching with a sidecar and create reverse proxy sidecar cash.
+00:27:15 [W] And this will be the last variant for for this talk.
+00:27:16 [W] So reverse proxy sidecar cashing this works like on this diagram so request goes to kubernative service, then it goes to the this Ferrari to the kubernative spot.
+00:27:32 [W] But this time it's not the application container that receives the request but it's um, I called reverse proxy cache container, which is an Interceptor for further requests.
+00:27:44 [W] So we inject a sidecar which is Interceptor of our of all our calls.
+00:27:46 [W] And only if it does not find cash value, then it forwards the request to the application container and needless to say they should form one.
+00:27:59 [W] cash distributed
+00:28:07 [W] and
+00:28:10 [W] this like
+00:28:13 [W] this whole idea like that like we put cash in front of the application and not like the this whole idea that application is not aware of caching.
+00:28:28 [W] It has some good sides and bad sides and we need to mention both.
+00:28:32 [W] Starting from the good side. So the good side is that
+00:28:38 [W] Remember this diagram from from from the beginning of the presentation.
+00:28:49 [W] So we have a lot of microservices they use each other. They have versions. They are different in progress different.
+00:28:51 [W] They are written in different programming languages.
+00:28:53 [W] And this is small diagram.
+00:28:57 [W] This is generally a mess quickly your system becomes a mess.
+00:28:59 [W] Have you can look at this depth such a diagram in your system?
+00:29:03 [W] measure this
+00:29:05 [W] and you can look at this and say I would I think I need to introduce caching for service to version 1 and service one.
+00:29:14 [W] And you can do it in a declarative manner. You don't even touch the code of the service.
+00:29:20 [W] All you change the configuration of your system and say I would like to inject caching here and there and that's it.
+00:29:28 [W] That is the whole beauty of the reverse proxy caching.
+00:29:32 [W] like kubernative configuration, so
+00:29:39 [W] This time like this could be a this is actually this is actually a configuration of what we did. We did a reverse proxy sidecar prototype with hazel cost and that is the kubernative but is a prototype it's not something you can use on the production right now,
+00:29:55 [W] This this was our configuration.
+00:30:05 [W] So at the bottom we have the our application that's clear. Then we have this caching Interceptor the caching proxy.
+00:30:06 [W] This is the whole thing.
+00:30:08 [W] It does it intercepted network. If there is a cash value return the cash value if no forward into the to the application.
+00:30:16 [W] But we also needed like in each container and is not intent continued networking container like this container with the did it change the IP tables so that the any request from outside would go to the caching proxy
+00:30:32 [W] From inside would go to the application container because otherwise it would be application that would receive all the requests.
+00:30:41 [W] Now if you think about this diagram it if I say, okay, I already seen I've already seen some where there are. No direct diagram like this and you could be right.
+00:31:00 [W] It's very similar to the idea of East you so the whole idea is of Easter is like yeah, we have an some some Network Interceptor cider container and it does some additional logic
+00:31:13 [W] And actually that's it. Like as of now, there is no matter solution for reverse proxy sidecar caching.
+00:31:22 [W] I did this was the issue like opened in re and Android proxy.
+00:31:31 [W] And very recently this year. This issue was actually closed. So the caching
+00:31:41 [W] It was implemented in east Europe and I think like when it when you finally it gets major a little more major is still is used everywhere.
+00:31:57 [W] So it's getting more and more popular.
+00:32:04 [W] So I really believe that this with the with the adoption of East your and this feature implemented reverse proxy sites are cashing. This will be the way to go.
+00:32:11 [W] This will be the way how you do cashing in
+00:32:12 [W] out of use cases
+00:32:13 [W] so as of now reverse proxy sidecar caching is is
+00:32:22 [W] is at the face of not major thing, but I think it will become very popular.
+00:32:32 [W] And I think like when it when you finally it gets major a little more major is to is used everywhere.
+00:32:44 [W] So it's getting more and more popular.
+00:32:45 [W] So I really believe that this with the with the adoption of East your and this feature implemented reverse proxy sites are cashing. This will be the way to go.
+00:32:46 [W] This will be the way how you do caching in a lot of use cases.
+00:32:47 [W] So as of now reverse proxy sidecar caching is is
+00:32:48 [W] Is at the face of not major thing, but I think it will become very popular.
+00:32:52 [W] But I also mentioned like before that this idea of putting cash in front of our applications also has some bad sides.
+00:32:53 [W] So if the application is not aware of the caching there is one thing that becomes way more difficult and if you look on the internet anywhere on the internet, what is the biggest problem?
+00:32:55 [W] Oblong with cashing in general everyone will tell you the same that is the cache invalidation meaning when to decide that my cash is stale that I should update my cash.
+00:33:06 [W] And when we are applications aware of the caching you can use some application business logic to say, okay, I would like to invalidate this part of cash.
+00:33:20 [W] However, when your passions in front of our application, then you are limited to this standard HTTP things like time out attacks basically time out to Fort Granville invalidate the cash and this may be good enough or not good enough
+00:33:29 [W] way more difficult
+00:33:29 [W] and if you look on the internet anywhere on the internet, what is the biggest problem with cashing in general?
+00:33:30 [W] Everyone will tell you the same that is the cache invalidation meaning when to decide that my cash is stale that I should update my cash.
+00:33:31 [W] And when you are applications aware of the caching, you can use some application business logic to say, okay, I would like to invalidate this part of cash.
+00:33:34 [W] However, when your caches in front of our application, then you are limited to the standard HTTP things like time out attacks basically time out to Fourth 200 invalidate the cash and this may be the good enough or not good enough
+00:33:37 [W] Pros and cons of reverse proxy and reverse proxy sidecar caching.
+00:33:44 [W] So the biggest prawns is and the reason why you will use it as its configuration based.
+00:33:49 [W] So, you know, there is no need to change applications to introduce it.
+00:33:52 [W] It's also programming language agnostic is everything agnostic application does not even know about it and it's very consistent with the microservices word.
+00:34:04 [W] kubernetes East your that's that's where the world is going that that's why I really trust in this in this thing.
+00:34:07 [W] From the downsides we mentioned in validation. There is no Matrix solution yet, and it's protocol-based which may be a problem for you.
+00:34:14 [W] So if this last pattern we were almost done with the presentation. So as a short summary, I don't want to repeat anything I said before before because it would be boring
+00:34:30 [W] And yet and it's protocol-based, which may be a problem for you.
+00:34:31 [W] So if this last pattern we we are almost done with the presentation.
+00:34:32 [W] So as a short summary, I don't want to repeat anything I said before with because it would be boring for you. So as a summary or a proposes a summary is a very
+00:34:36 [W] Summary or a proposes a summary is a very short over simplified decision tree which will which can help you decide which caching solution is for me.
+00:34:47 [W] First thing you can ask is.
+00:34:50 [W] Does my application need to be aware of caching?
+00:34:54 [W] If no am I an early adopter? If no use reverse proxy with nginx. If yes use reverse proxy sidecar with this is to implementation or use a prototype for hazel cast if you are brave enough.
+00:35:10 [W] Now if your application needs to be aware of the caching then do I have a lot of data or some security restrictions?
+00:35:21 [W] If no, do I need to be language agnostic if no use embedded and by the distributed cache if yes use sidecar now, we will have a lot of data security restrictions.
+00:35:32 [W] then the last question for you is is my deployment already in the cloud.
+00:35:35 [W] Do I run on AWS and kubernative on AWS or?
+00:35:42 [W] Or do I deploy kubernative on my own servers?
+00:35:50 [W] If you don't run in the cloud use client server, if you run in the cloud use cash as a service now, this diagram is obviously a little over simplified but it gives you at least idea
+00:36:00 [W] Kubernative on my own servers. If you don't run in the cloud use client server, if you run in the cloud use cash as a service now, this diagram is obviously a little oversimplified, but
+00:36:02 [W] Look for for the write caching solution.
+00:36:04 [W] And as the last last slide, I would like to recommend some resources.
+00:36:15 [W] So the first one is blog post on how to configure Heiser cast as a sidecar second one. Is this prototype imesh mentioned?
+00:36:20 [W] We did for hazel cast a reverse proxy sidecar caching.
+00:36:29 [W] The third one is not related to this dog, but it's very good blog post about cashing in general.
+00:36:35 [W] And the last link is a very good video top from nginx on reverse proxy sidecar Keda River started cashing from nginx.
+00:36:41 [W] And with this light I would like to thank you a lot for listening. It was a pleasure to stick here.

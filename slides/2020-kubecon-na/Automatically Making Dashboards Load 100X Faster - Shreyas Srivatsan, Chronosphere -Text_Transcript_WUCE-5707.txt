@@ -1,0 +1,200 @@
+﻿Automatically Making Dashboards Load 100X Faster: WUCE-5707 - events@cncf.io - Friday, November 20, 2020 5:07 PM - 31 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi, good morning.
+00:00:01 [W] Good afternoon.
+00:00:01 [W] Good evening, depending on where you are. Today. We're going to talk about making dashboards, like automatically faster using some tools.
+00:00:13 [W] My name is Chris.
+00:00:15 [W] I'm a software engineer at chronosphere.
+00:00:17 [W] We're working on building a hosted metrics and monitoring platform targeting large scale High throughput use cases.
+00:00:25 [W] I'm interested in all things observability primarily kind of focusing on making use of metrics and traces to solve like interesting problems prior to this.
+00:00:38 [W] I was on the observability macgruber working on like building out and
+00:00:42 [W] killing the alerting platform there.
+00:00:45 [W] The agenda for today is kind of setting up the problem looking at kind of like Ty cardinality metrics and why they're a challenge then we're going to talk about kind of aggregating metrics using recording rules and them
+00:01:00 [W] I'm kind of like called that is how we can kind of make dashboards faster using that then we kind of talked about how we make things easy to use and finally we kind of round out with the demo and kind of Q&A
+00:01:01 [W] A problem for most of this talk we're going to take see advisor as an example which provides essentially resource usage and performance metrics of running containers.
+00:01:04 [W] This dashboard taken is kind of see advisor dashboard from Agra fauna, as you can see, it has some amount of aggregated information and some amount of like individual kind of like partly real information.
+00:01:20 [W] It has like it's tracking five thousand containers. You have some accurate shots and keep usage Network traffic Etc.
+00:01:25 [W] You also have like per card stats like CPU usage in memory usage which are useful.
+00:01:32 [W] So aggregate stats kind of give you an idea that something is wrong and then the more like per pod stats kind of hook your group cause better so this has like tons of Dimensions because
+00:01:47 [W] Kind of slicing those metrics in different forms.
+00:01:47 [W] So what are these Dimensions actually do if you consider a simple metric kind of CPU usage you end up having like 16,000 series and it takes 20 seconds to actually carry this information like which is really slow.
+00:02:02 [W] You end up having like 16,000 series and it takes 20 seconds to actually carry this information like which is really slow.
+00:02:03 [W] This is because like you can see the so many different tags on it. Like there's a part ID. There's an instance there's the image and so on so forth.
+00:02:20 [W] If you only consider the two labels that are interesting and we actually aggregate this using a recording rule.
+00:02:26 [W] Then this query becomes way more manageable like 230 series and just takes like half a second to actually get back information and in most cases this is actually all the information you want now
+00:02:41 [W] Now the reason for getting so many series here is like even though it's kind of like containing its kind of Something's tracking one instance as things get restarted like as a pot gets restarted reschedule like
+00:02:56 [W] So they're more things actually getting stored in the time series data base, which don't have data currently, but we actually like way for like 30 minutes or like a few hours of data you end up putting time series, which do not exist.
+00:03:08 [W] So it basically results in like sewing dashboards and dashboards which kind of like constantly decreasing like di cadore time as mentioned.
+00:03:21 [W] This is because the cardinality of Dimensions keep increasing as you add new instances rule out.
+00:03:26 [W] Images like things basically we keep adding dimensions and things keeps going up.
+00:03:35 [W] So this basically results are have slower dashboards.
+00:03:38 [W] So our dashboards is unsung browser locking up and a bad user experience.
+00:03:43 [W] So when a ninja notices this the dashboard needs to be optimized like how we actually kind of go up go about doing this.
+00:03:54 [W] The first step is kind of figuring out which queries are the culprit you inspector requests. You could inspect the request from a dashboard to look for.
+00:04:02 [W] still queries you could do this in kind of chronosphere être could use the Prometheus query log to do this and kind of associate back and yeah and try to associate back to the dashboard, but this is difficult
+00:04:17 [W] This query log has all the craze running in the system and the dashboard itself.
+00:04:21 [W] Like you may have many many dashboards, but given that we figure out kind of which are the culprit you probably want to do some point of preoccupation of these metrics to make these queries faster and over the next
+00:04:36 [W] about a few of these like three advocation might prove few ways you can actually create a great things the first thing I'll talk about is recording rules this is something Prometheus Provide support for and kind of their like widely used for
+00:04:37 [W] The basically allow pre-computing queries and storing back aggregate time series to the case TB.
+00:04:43 [W] Once you do that you're essentially instead of making a query which guy looks at all the series The Dashboard is just making a query which is like picking back one Series, so it's like super fast and
+00:04:58 [W] Caveat is that now the dashboard now has to go and we need to point it back to the pre-computer time. So you see need to coredns like change the dashboard to actually access the individual time series recording rule looks like something like the below you have a record, which is basically the
+00:05:12 [W] Storing stuff in and then the expression which is like whatever prompt you and expression you want to get executed so you can put anything as complicated as you want here and as mentioned the record is
+00:05:23 [W] Anything as complicated as you want here and as mentioned the record is essentially a new time series.
+00:05:31 [W] So to basically create recording loodse need to know what to pre-compute so we figure out the back row mad craze by doing some form of analysis on the dashboard.
+00:05:39 [W] Then you basically go configure these recording rules and you can go and change the dashboard to the kind of query the recording rule metrics.
+00:05:51 [W] Instead of underlying Matrix. So it's a real long manual process say you've actually done this what happens when one of these metrics seems is like them query
+00:06:06 [W] It's our a new panel becomes slow basically have to repeat this process all over again and kind of do the same manual processing again. And again, the second thing is recording rules are very expensive
+00:06:21 [W] Execute and pre-compute thus create a regular intervals.
+00:06:22 [W] So a curry accessing many times your he's can get expensive very quickly, especially when father dimensionality of the underlying metrics.
+00:06:33 [W] keep increasing and the given that these kind of run alongside other queries in the system, like dashboards and alerts.
+00:06:43 [W] They have the potential to kind of work around the query engine. So those are kind of
+00:06:50 [W] Couple of like really bad aspects of kind of using recording rules and which we need to kind of be careful about but as mentioned before sometimes for underlying metrics, we don't actually need all these Dimensions.
+00:07:04 [W] So be nice if we can actually get rid of these completely and not store them what care about is just the Aggregate and we don't need to really care about kind of the underlying metrics themselves. So would be great if we can do that and that's kind of where the empty
+00:07:19 [W] Here comes easy. So every three is a remote storage for Prometheus and them to aggregation here allows us to kind of move the expensive recording group competition to streaming aggregation.
+00:07:32 [W] So when Prometheus remote Right comes into M3, it sees that some metrics mean aggregation kind of it forwards it to them through hybridization here then to activation here basically knows
+00:07:47 [W] Was to apply on what metrics it applies those aggregations and then sends it back to the coordinator to actually like persisted into long-term storage m 3 DB so that negator basically allows down sampling.
+00:08:00 [W] Car aggregating metrics prior to persisting them to the time series data base.
+00:08:06 [W] The a greater supports kind of two different types of rules.
+00:08:09 [W] One of them is called Rule of tools, which allow aggregating these metrics then second is mapping rules, which basically are of energy dropping random Matrix.
+00:08:21 [W] Well first we're going to talk about both of these but first we're going to dive into roll up rules rule up rules are way to aggregate metrics. So the basic have a series of transforms which are applied in
+00:08:37 [W] To kind of change and generate a new metric and the metrics can have applied to depend on kind of what filter actually matches it also has something called a storage policy which basically determines like
+00:08:52 [W] like where to store that generated time series in m3d be talking about kind of one by one the first step is kind of what we call like a transform an increase or Delta transform the underlying
+00:09:01 [W] Transform an increase or Delta transform underlying metrics, which come from Prometheus are kind of monotonically increasing like counters seats.
+00:09:11 [W] We can't really aggregate them as is we need to apply the equivalent of kind of the Prometheus rate function first. So that's exactly what increase transform is essentially applies. The Prometheus rate function gets
+00:09:26 [W] data point and kind of generates a new time series for views by the next level of the transform the next level or transform is called the roll-up essentially sums the Deltas by the unique Dimensions specified in the group
+00:09:40 [W] This case running Christian container name and namespace.
+00:09:43 [W] So it does a some by containerd containerd namespace in like Tom ql language and it stores the generated thing as a different metric name. Now. The metric name is interesting.
+00:09:58 [W] If you're actually using a mapping rule to drop the original Matrix, then we can basically store the rolled-up metric as with the same metric name as like as the original metric.
+00:10:10 [W] if you're not planning to kind of drop dangling Matrix, then this metric knative is to be different just like it's in in the recording Lucas, but the advantage of actually dropping the metrics installing the metrics using the same name
+00:10:23 [W] Dashboards alerts are anything which is actually creating these metrics now, I'll just create aggregate rather than the high dimensional metric.
+00:10:30 [W] So that's something to keep in mind.
+00:10:32 [W] Now finally like after we've gone things up and we kind of reduce the dimensionality.
+00:10:38 [W] We want to store this back to the Tas to be so we need to go back from dealing with Delta's to actual kind of the cumulatively like increasing like monotonically increasing tank series.
+00:10:51 [W] So we apply kind of a cumulative add operation for each of the metrics to kind of get aggregated like monotonically increasing time series.
+00:11:04 [W] This is basically sent to mtdb namespaces identified kind of by the stores policies and things get stored there now as mentioned before like if you actually want to go and store the metric kind of with the same
+00:11:19 [W] For each of the metrics to kind of get aggregated like monotonically increasing time series.
+00:11:25 [W] This is basically sent to mtdb namespaces identified kind of by the stores policies and things get stored there now as mentioned before like if you actually want to go and store the metric kind of with the
+00:11:57 [W] Like original metric then we need a way to kind of drop the like the raw like item and snow metrics.
+00:12:07 [W] This is where kind of mapping rules come into play.
+00:12:10 [W] It's mapping rules also have a filter which basically says, oh, these are the metrics that actually interested in match these metrics and just drop them do not store them.
+00:12:23 [W] So the roll-up would rules would still apply but they won't actually get Stuart to the TOC be
+00:12:27 [W] So the combination of roll up rules and mapping rules we can get like aggregation like really easily like at ingestion time.
+00:12:36 [W] So to summarize kind of that creation here basically allows for kind of ingesting time streaming aggregation.
+00:12:45 [W] The metrics can be aggregated ruled up based on like whatever rules you provide different functions are possible and I think the key thing really is that
+00:12:57 [W] it's a way to kind of like drop the wrong metrics based on these matching filters, which gives us the like the great characteristic that dashboards and alert and different queries could automatically sped up
+00:13:14 [W] I have like two ways of doing things.
+00:13:15 [W] You just want to quickly let go over pros and cons of recording rules and roll up ruse to recording rules are generally like they are general purpose and they support full product label.
+00:13:26 [W] So if you have this like super complicated like expensive query which we want to speed up and coding rules are probably the way to go the caveat is that they're expensive because they run against
+00:13:41 [W] And it also kind of affect other queries. So you're actually creating like if you have a recording rule going and aggregating across twenty thousand times series recording rule every minute or every interval
+00:13:47 [W] A thousand times series and guys Aggregates and stores them back.
+00:13:48 [W] And Third Kind of yeah, I guess bigger point is that all the data needs to be stored?
+00:13:54 [W] So there's a very high storage cost. You cannot like with recording Google you will store the load em instana team information and high dimension and aggregate information at the same like high dimensionality information aggregate information at the
+00:14:09 [W] Which also means that kind of your dashboards of queries and alerts need to Mark be modified to actually like hit hit the aggregated metric instead of the version of metrics
+00:14:20 [W] Because of the way they had been at ingestion time or much more efficient to run.
+00:14:21 [W] We have the option of from destroying the Aggregates. We need and dropping other series and if we go the route of only strong Aggregates, then you kind of get automatic query speed up
+00:14:36 [W] It ends up having the same metric name as the result metrics the biggest kind of caveat with Hula Pools is they don't support full prompt kubeflow, but rather like specific Aggregates.
+00:14:46 [W] We are we have been kind of adding more and more of these aggregate aggregate functions or time but it's unlikely that recording like grow up rules would support everything that recording would support
+00:15:01 [W] So now that we have these like two things to two ways of kind of aggregating things.
+00:15:06 [W] Like how do we kind of make it easy to do these aggregations?
+00:15:12 [W] So we're going to talk about kind of to we're going to talk about kind of a couple of different things around like we're going to talk about this tool which we call the high cardinality
+00:15:28 [W] Which makes it easy?
+00:15:25 [W] Yeah, which basically makes it easy to go and like do this.
+00:15:35 [W] Which basically makes it easy to kind of go and do this analysis and kind of like create these recording rules and roll up loodse going to share my screen again here.
+00:15:47 [W] So this is actually available as a tool on GitHub the link to this is posted sometime like in the later part of the yeah in the latter part of the talk, so we have
+00:16:03 [W] To make use of the Prometheus like query logs and we're going to analyze them and we're going to do like some operations to actually go and like speed things up.
+00:16:12 [W] So for purposes of this example, I am it had some metrics locally just to kind of get some basic information for the purpose of this demo.
+00:16:22 [W] It's not really high cardinality information with too many series.
+00:16:26 [W] It's just a handful of queries. So what does it do?
+00:16:31 [W] Coral are actually have it has some Curry information here of what the exact query was when it started then different stats like how long it took to evaluate how long it took the sword like that query preparation time,
+00:16:46 [W] Elevation and so on. So kind of just to run this we have type this High current IR laser.
+00:16:53 [W] We pointed to a sample query log.
+00:16:55 [W] We give it some targets am only interested in queries which have kind of a minimum query time of like .01 seconds because it's a smaller example and then we have kind of oh, I want to only
+00:17:10 [W] Easy to happen at least two times.
+00:17:04 [W] So this actually shows you some like some options here. Then the query log like that analyzer has this way of like 200m recording rules for these queries that we identified and
+00:17:20 [W] Rules here and has another mode where you kind of can generate roll up rules and generate mapping rules.
+00:17:22 [W] So what exactly is this like analyzer doing? So let's jump back to the slides and kind of talk about that.
+00:17:31 [W] analyzer like primarily kind of uses the Prometheus query Logs with logs all of these queries kind of like run by the engine and the query log.
+00:17:44 [W] It has information about where time was spent in the query.
+00:17:49 [W] So analyzer is kind of an offline process that Standalone tool to generate recording and roll up rules as mentioned. It uses the per meter squared log to find good candidates for aggregation and it provides some
+00:18:04 [W] Was our kind of M3 aggregative roll-up mapping rules to create then speed up expensive queries.
+00:18:09 [W] So it just provides recommendations and then users kind of have the option of kicking these recommendations and going and creating the actual rules themselves and kind of speeding up their dashboards. So few steps like
+00:18:24 [W] Would do is you basically have like days worth of Prometheus query logs.
+00:18:22 [W] So we have enough information to know like which are the repeated queries which repeated expensive queries which are being run out of the system.
+00:18:30 [W] So we want to kind of find these most commonly hit expensive queries.
+00:18:37 [W] Once we kind of get information about that.
+00:18:39 [W] We want to kind of check the cost of these queries are due to number of series.
+00:18:43 [W] It's the cost of a query could be due to multiple different reasons.
+00:18:46 [W] It could just be because it's very encouraging like large chunks of data large chunks of like a few series essentially were like a huge like sequence of time or it could be like creating many many series of data
+00:19:02 [W] Many series of data and the cost like even when it's quite as many series of did I that's actually they're turning all the data then you can't reduce speed things up.
+00:19:08 [W] But if it's actually a crane many underlying series from the psdb and then it's kind of aggregating them together into like a fewer set of series like those are kind of the
+00:19:23 [W] TST be and then it's kind of aggregating them together into like a fewer set of series.
+00:19:22 [W] Like those are kind of the candidates like kind of queries are actually looking for so we want to basically look at kind of like the cardinality of the quarries which are actually being done and kind of used that
+00:19:38 [W] And only optimize those queries.
+00:19:39 [W] So once it kind of identifies these these queries, which actually need to be need to be need to be sped up.
+00:19:51 [W] We provide proposals for kind of recording and roll up rules to create then users are kind of like free to go in like configure these rules as necessary if the user kind of
+00:20:06 [W] rules then dashboard and other places where these Rouge are being applied need to be changed if we're talking about kind of look rules and and the user is already gone and like
+00:20:21 [W] Are being applied need to be changed if we're talking about kind of look rules and and the user is already gone and like these are also said that they want to kind of dropped underlying Matrix. Then the queries will kind of
+00:20:50 [W] Said that they want to kind of drop the underlying Matrix.
+00:20:52 [W] Then the queries will kind of get sped up automatically as the query actually captures the aggregated metric in case the rule approval is not dropping the underlying series then like then you'd like
+00:21:07 [W] Like then you'd like recording you will have to go and kind of like change change dashboards on their places where things are going.
+00:21:16 [W] So we built this tool. It's available open source the link to this is in the next like in like the last glass slide say we encourage you to go and like try this out
+00:21:31 [W] Snow kind of how this works out for you.
+00:21:35 [W] So thank you so much.
+00:21:38 [W] We're open to questions. Now. If you want to kind of know more about kind of the M3 aggregation here like which are due to reach out to us on them three slack Channel and there's a link to kind of the high priority analyzer available here.
+00:21:54 [W] Like on analyzer ago for your for you to kind of try out. Thank you again.
+00:22:52 [W] I have to ask.
+00:22:53 [W] thanks if anyone has any questions, yeah, please yeah, put them in through kind of speaker Q&A or if you have kind of any comments about tool itself
+00:23:10 [W] Then yet, please visit my visit the high quality analyzer link and you can like put questions there, too. I'm going to drop the link into the Q&A to so that way people can access this year.
+00:23:28 [W] So we have a question from Rudy.
+00:23:31 [W] What's the advantage of M3 over other TST bees for Prometheus long-term storage.
+00:23:37 [W] I don't want to do a complete comparison here. But M3 their few different things were kind of in three works really. Well M3 is kind of like highly like horizontally scalable
+00:23:52 [W] Shouldn't hear kind of allows you to kind of like do kind of these roll up rules. And also with the use of mapping rules allows you to store data kind of like different resolutions and retentions.
+00:23:57 [W] So the same metric can go into like different resolution and detentions into kind of different namespaces with name 3D be cluster allowing you to store kind of metrics which your dashboards need and like 4M long term
+00:24:12 [W] X and yeah
+00:24:12 [W] someone else asking here will the presentation be available later?
+00:24:15 [W] Yes, I think yeah all all the presentations are available and will be posted in a few days cncf.
+00:24:28 [W] From zle if I use a rollup rule to replace an original query will it have conflict if the query time interval include metrics before roll up and after roll up?
+00:24:37 [W] Yes, the roll-up rules the way kind of M3 does streaming aggregation it basically the moment you kind of like start the roll-up rule. It starts aggregating them and stores them
+00:24:52 [W] Like into into a particular name space in the time series data base.
+00:24:53 [W] So if the same kind of metric name is present before and kind of accesses different tags.
+00:24:59 [W] We had like has many more tags and you have fewer tags later. Then a query kind of across this time range is going to he's going to like pull like all that information out.
+00:25:10 [W] Yeah, so yes, that is right.
+00:25:15 [W] Do you always recommend aggregating rolling up metrics?
+00:25:18 [W] If so why I know like we don't always recommend aggregating rolling up metrics.
+00:25:25 [W] There are like many use cases where you actually want to see kind of underlying metrics to understand kind of what's what's going wrong in a system aggregation particularly is like really useful to kind of like speeding up
+00:25:40 [W] dashboards, so or kind of you alert on aggregate metrics are you like speed up dashboards and aggregated metrics and they kind of tell you that something is wrong, but for many a times for kind of root cause purposes you need kind
+00:25:49 [W] is wrong, but for many a times for kind of root cause purposes you need kind of the like underlying like high cardinality information that said there are some cases where
+00:25:57 [W] Hi cardinality information that said there are some cases where like when you actually script the metrics in the Prometheus case you end up with like a number of different like tags.
+00:26:12 [W] Medias case you end up with like a number of different like tags, which you don't necessarily want to persist even like save your storage costs.
+00:26:23 [W] So in those cases like you may want to kind of aggregate your metrics and that's where kind of the empty aggregation Theory allows you to aggregate the metrics and kind of drop the underlying metrics.
+00:26:42 [W] We have one more question.
+00:26:43 [W] How would I store spans traces events and logs using m 3 so a to this?
+00:26:54 [W] to this question, you can't really say you can probably make M3 Workforce pants dresses but like
+00:27:09 [W] Essentially like a purpose-built Time series storage, so it's not the best.
+00:27:14 [W] It's not the ideal storage just for like spans and traces and that's it. M3 kind of has support to store data like alongside time series.
+00:27:27 [W] So if you have like a small amount of information you kind of want to annotate and like add additional information along with certain data points in three allows you to store that
+00:27:40 [W] Events, depending on kind of what type of events were talking about events. Could ya events could be stored in M3.
+00:27:50 [W] But primarily in three employees primarily use case is being a TS T be which kind of support site Prometheus remote, right and allows you to scale your kind of like time series storage
+00:28:05 [W] Shin is like how does it handle metric resets and what they went three is restarted.
+00:28:02 [W] What will be the impact metric resets our kind of handled this same way kind of the rate function handles it so the way kind of the
+00:28:18 [W] X is it kind of maintains running kind of aggregation corresponding to kind of each rule and like as kind of metrics come in it goes into kind of this processor.
+00:28:26 [W] which is which kind of does this like aggregation as the metrics come in if like like one of the server restarts and there's kind of a reset of a particular metric then you kind of like
+00:28:40 [W] You can same we kind of the red function will kind of miss that Delta and we'll just take the next Delta and add it up. The impact of M3 being restarted aggregated normally kind of runs in pairs.
+00:28:53 [W] There one is kind of a there's one active aggregator and there's a passive aggregator and kind of both of them are receiving the data.
+00:29:00 [W] So we kind of we so when you're kind of doing upgrades to the aggregator kind of
+00:29:08 [W] it to kind of just like bring one of them down because it's kind of the underlying metrics data is going to kind of both these instances.
+00:29:19 [W] So after the one like one of the has been upgraded and comes back up the other one kind of takes over when this one goes down and continue doing that aggregation and like that's how you kind of do the yeah.
+00:29:33 [W] That's how you kind of do upgrades if kind of both of these aggregation tears kind of get restarted.
+00:29:39 [W] And yes, you're in trouble M3 itself kind of m 3 DB runs like with kind of three replicas.
+00:29:50 [W] So again you while you're kind of rolling out changes to m 3 DB or kind of expected to kind of roll them one replica by one if you end up ruling multiple replicas M3 has a mode where like you can just make
+00:30:05 [W] Application say that it right is a success but like kind of any stand like distributed like database you kind of need to keep in mind the replicas while doing restarts.
+00:30:21 [W] Yep, I think those are the questions I had.
+00:30:28 [W] I've got so if anyone else has any other questions, please let me know. Otherwise, we're probably
+00:30:40 [W] yeah we're probably done
+00:30:48 [W] thank you everyone and yeah if you have any other questions I'll be on the cube con like observability slack and otherwise yeah to reach out to reach out to us kind of
+00:31:04 [W] How to learn more about M3 M3 aggregator and kind of other interesting things are working on.
+00:30:58 [W] Thank you.

@@ -1,0 +1,195 @@
+﻿Elastic Scheduling with TiKV: WUET-9679 - events@cncf.io - Wednesday, November 18, 2020 5:47 PM - 32 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi, everyone.
+00:00:02 [W] Hi.
+00:00:02 [W] thank you all for being here.
+00:00:06 [W] We are glad to have this opportunity to share our experience on elastic scattering with tikv during the next 30 minutes.
+00:00:18 [W] First of all, let us introduce ourselves.
+00:00:21 [W] I'm you'd home and infrastructure engineer at can cap.
+00:00:26 [W] Also, I'm the type of leader of the scheduling special interest group of tikv single infrastructure engineer at Pin cap and the maintainer of chaosmesh and the
+00:00:42 [W] Every single infrastructure engineer at Pin cap.
+00:00:30 [W] I'm the maintainer of chaosmesh and the commuter of tikv Si G scheduling.
+00:00:39 [W] Yes, we are working on the scheduling system for tracking week.
+00:00:46 [W] Okay, let us take a look at it.
+00:00:51 [W] the gender of this talk
+00:00:54 [W] there are five parts Corridor for this topic.
+00:00:59 [W] an introduction to tikv the elastic scattering background
+00:01:04 [W] The implementation tikv be on kubenetes some future work.
+00:01:10 [W] We are working on an Ideal will be time for questions at the end of the presentation.
+00:01:18 [W] I would talk about part 1 and part 2 and a single will work you through the Polish three and a platform.
+00:01:32 [W] Before what we dug deep into the details about her elastic scattering.
+00:01:38 [W] you might need some background information about the Khaki V. So what's a tikv?
+00:01:46 [W] Tikv is a key value database and it is open source distributed and support transactions.
+00:01:56 [W] Takeaway is a same self graduated project currently.
+00:02:01 [W] And the users taking me now has more than 8,000 GitHub stars and the more than 200 contributors.
+00:02:14 [W] Now we are going to take a look at the tikv architecture.
+00:02:20 [W] Each tikv known store different data chart name the regions which are divided by winch.
+00:02:29 [W] For a single region, it has multiple replicas we call rock group.
+00:02:37 [W] It is used to guarantee High availability through the router algorithm and each group has its own wrapped leader and other followers tikv client use grpc
+00:02:52 [W] You can twist each Tycoon denote as well as placement driver the cluster manager of tikv.
+00:02:55 [W] And tikv will send it a heartbeat pure radically to the policeman driver which is short for PD to update the information about itself.
+00:03:08 [W] PDP erratically chatter replication constrained to balance load and the data automatically across node and regions.
+00:03:19 [W] And how does PD balance load in the data?
+00:03:24 [W] PD will classic style kubeedge that his tick contending take give you a heartbeat to help make us scheduling the addition before we come to the next part.
+00:03:35 [W] It is better to know how Tai Chi we migrated a region through the rather algorithm.
+00:03:45 [W] Let's take a look at an example.
+00:03:47 [W] We have three nodes in the region here.
+00:03:52 [W] Each region has three Piers which are located on nobody a b and c.
+00:04:00 [W] We use the Potter and to Mark the leader.
+00:04:06 [W] Consider that we add a new node to the cluster.
+00:04:09 [W] balance load candidate
+00:03:58 [W] PD will classic style kubeedge that his tick contending type kiwi heartbeat to help make us scheduling the Edition.
+00:04:07 [W] Before we come to the next part. It is better to know how Tai Chi we migrated a region through the rather algorithm.
+00:04:19 [W] Let's take a look at an example.
+00:04:21 [W] We have three nodes in the region here.
+00:04:26 [W] Each region has three Piers which are located on Note a b and c.
+00:04:34 [W] We use the Potter to Mark the leader.
+00:04:40 [W] Consider that we add a new node to the cluster.
+00:04:45 [W] PD has a scheduling decision which are going to migrate up here from the high load node a to the newly added a note D.
+00:04:57 [W] What will show you the detailed process in the next few slides?
+00:05:06 [W] Assume it's lacked region, 1 as a source region, and I know the tea has targeted node PD will first gather the whole scheduling steps and combining them into a command.
+00:05:22 [W] And essentially too tightly with the first step of this command is to add a new rally car in no dirty.
+00:05:37 [W] Since region one is a leader.
+00:05:40 [W] We need to transfer the leader before going on.
+00:05:44 [W] So the next step is to transform the Region's leader.
+00:05:52 [W] after the leader in transferred PD will execute the next step to left iqb remove the radical unknown a
+00:06:03 [W] when the above stories that are down
+00:06:06 [W] Now the region has three racket cup which are located on know the b c and d.
+00:06:13 [W] We have shown with a detailed process in the next few slides.
+00:06:22 [W] Assume it select region 1 as a source region and the nobody has targeted note.
+00:06:30 [W] PD will first gather the whole scheduling steps and combining them into a command.
+00:06:38 [W] And essentially too tightly with the first step of this command is to add a new replica in no dirty.
+00:06:53 [W] Since region one is a leader.
+00:06:56 [W] We need to transfer the leader before going on.
+00:07:00 [W] So the next step is to transform Region's leader.
+00:07:09 [W] after the leader in transferred PD will execute the next step to left iqb remove the radical unknown a
+00:07:19 [W] when the above stories that are down
+00:07:22 [W] Now the region has a three racket cup which are located on know the b c and d.
+00:07:31 [W] That's how PD migrate region.
+00:07:39 [W] Now, let's move on to the elastic scattering in tikv. Another question.
+00:07:48 [W] What is elastic scheduling?
+00:07:53 [W] Briefly speaking elastic scheduling is auto-scaling depending on the workloads within the tikv cluster is deployed.
+00:08:02 [W] Not only the scale skating of tikv cluster is able to handle the average load, but sometimes the workloads will become larger which requires operator to
+00:08:18 [W] Time's the workloads will become larger which requires operator to manually scale out of the type of exhauster to handle the workloads.
+00:08:28 [W] when the heavy workouts gather lower
+00:08:31 [W] the operator also need to manually skewing the calculation cluster to save the results in cost.
+00:08:40 [W] The elastic scattering makes the whole process automatic.
+00:08:48 [W] So why do we need or choose the elastic scattering here are several reasons?
+00:08:57 [W] First elastic scattering could handle the unexpected of traffic automatically.
+00:09:04 [W] Now, okay. We're leaving a word with huge amount of information and the breaking news always appear with no projection.
+00:09:15 [W] Here in the statistic about the storage of QPS but operator about its business as you can see most of the time the QPS for the storage and a year stays low.
+00:09:30 [W] And then suddenly become larger at some point.
+00:09:35 [W] After a short period of time the QP a****** back to low-level again.
+00:09:42 [W] The changing career shows that it is difficult for the operator to manually manage the storage in the year because of traffic is unexpected.
+00:09:56 [W] Second elastic scattering could help us do the results when we don't need it.
+00:10:04 [W] How's the traffic is unexpected? And it operator need to needed the ability to handle the heavy workload.
+00:10:12 [W] They have to pay the cost for actual resource for the most of time. This resources are wasted.
+00:10:21 [W] If the story has a bility of elastic scattering the results could be released with the workload come load.
+00:10:33 [W] Finally, the cloud infrastructure has already become virtual reality.
+00:10:40 [W] You're asked to calculate can benefit from it.
+00:10:43 [W] And then release the resource and is on Pace.
+00:10:41 [W] Moreover as a scoop as a kubernative help has provided a powerful API to manage a container and resources on cluster.
+00:10:52 [W] It is more convenient to manage the staple staple of applique Mission like distributed database.
+00:11:03 [W] For now, we have introduced in the background of tikv and elastic scattering.
+00:11:08 [W] We also discussed why we need or choose the elastic scattering for the storage layer. Now, we will have a single introduced the implementation in Thai Cuisine.
+00:11:26 [W] Okay sang-soo tongue.
+00:11:28 [W] I'd like to move on to the introduction of how tikv scheduling builds as the last its elastic scheduling management mechanism based on these Solutions first
+00:11:44 [W] They asked scheduling architecture on tikv.
+00:11:51 [W] The architecture is composed of four components first tikv cluster is closed.
+00:11:58 [W] It's metrics of its status according to the workloads second the monetary system that promises were collects these metrics the scheduling system, which is called PD
+00:12:13 [W] Well, that's the Magics from the monitor system and the calculate the Autos game plan, which is exposed by the API. Finally the operator system take the auto scaling plan.
+00:12:17 [W] It by the PV and the scale that tikv cluster.
+00:12:16 [W] Now we are expanding how this architecture works by two parts the operator side and the scheduling side.
+00:12:31 [W] We use operator pattern of famous method of packaging deploying and managing the kubernative supplication.
+00:12:40 [W] It is basically composed of two components the controller and custom resource definition, which is also called ci/cd.
+00:12:51 [W] We use ci/cd here as the elastic scheduling configuration for users after the configuration file.
+00:13:00 [W] Is deployed into the cluster?
+00:13:04 [W] the schedule the controller will start to check the configuration fire periodically and courage the auto scaling plant from the PD as the operator manage the tikv
+00:13:19 [W] After the configuration file is deployed into the cluster.
+00:13:22 [W] the schedule the controller will start to check the configuration fire periodically and courage the auto scaling plant from the PD as the operator manage the tikv
+00:13:49 [W] And that is after the operator get the skating plan from the PD. The printer will start to scale in the tikv cluster according to the plan.
+00:14:03 [W] On the scheduling side the PD meaning do two things first such The Matrix from promises as tikv has exposed many matches in lots of dimensions.
+00:14:19 [W] Could they use this information and calculate the proper auto-scaling plan for the operator?
+00:14:28 [W] The second thing for scheduling is to design the scheduling strategy in this elastic scheduling situation before we introduce this specific strategy for this situation.
+00:14:43 [W] Heads, what if the PD take the newly created elastic tikv as a normal note like normally skating out as PD would balance that data distribution between each tikv.
+00:14:54 [W] We're transferring a lot of regions to the newly created tikv as the data transferring need called system resources and also could cause Latin see that devote balances scheduling
+00:15:06 [W] Don't work very well for the scheduling's elastic scattering to solve this problem a PD would only transfer the regions which is under High free content visiting or updating and they are located
+00:15:17 [W] Should be under high load we call these regions as hot regions.
+00:15:21 [W] So how do PD only migrate that hot regions to the elastic scattering tikv node?
+00:15:33 [W] Before we answer this question.
+00:15:35 [W] We need to know how we recognize the hot region PD will record the read and the write flow of each region and stores each store will maintain a top and cash to save the most
+00:15:50 [W] In this store if region is beyond.
+00:15:52 [W] A predefined threshold and continuously heats the cash.
+00:15:57 [W] We think this is a how do we G with this information the hot reading scheduler in PD will decide if migrating the region can make this tikv more balanced.
+00:16:17 [W] Since we have known about how PD recognize the hard way region, once the hot region is selected. The resting is to find a way to only migrate it to the new Lake scanning mode.
+00:16:32 [W] Tikv supports using some predefined the label to manage the data placement so we can utilize this mechanism actually PD has many kinds of schedulers.
+00:16:41 [W] McCann is MM actually PD has many kinds of schedule has walking at the same time besides the whole training schedule.
+00:16:45 [W] When this schedulers start to schedule we usually use some filters to filter the store which don't want it to be a source or Target according to each schedulers.
+00:16:59 [W] rule and thus we can create a new label for newly skating nodes the label consists of key value pairs.
+00:17:08 [W] The key of the label is specials and the value is hot region.
+00:17:17 [W] When the note is scared out the label will be added by the operator automatically PD where get this information once the new links getting node sends its heartbeat for
+00:17:32 [W] Label is special use and value is how to region.
+00:17:39 [W] When the node is scared out the label will be added by the operator automatically PD will get this information.
+00:17:49 [W] Once the new links getting node sends its heartbeat for other schedules such as balance regions before we created them.
+00:17:59 [W] We add a label future which use is you label to it?
+00:18:05 [W] This future where prevent the start being selected as targets. For example, we only allow the hot willing scheduler to select the store one as the target the rust scheduler cannot
+00:18:21 [W] And the stock being selected as targets. For example, we only allow the hot reading scheduler to select the store one as the target the rust scheduler cannot
+00:18:39 [W] Here is an example of how elastic scheduling configuration looks like as you can see here the configuration point out the necessary factor and the parents the pde idiot during the calculation
+00:18:54 [W] Releasing the auto scaling plan. We can also Define some concentrates here in order to limit the total count of scaling tikv notes as the configuration is managed by custom
+00:19:09 [W] But notice after the consecration is deployed the elastic scheduling will start working.
+00:19:15 [W] Now we are should experimental result about the elastic scheduling tikv in this experiment.
+00:19:25 [W] We will use tidy be and open source distributed database which used tikv and storage layer and the run the suspension of famous meshmark tool to show you how elastic scheduling
+00:19:40 [W] the heavy workloads
+00:19:41 [W] this graph shows the relationship between the regions and the tikv the column indicates the status for the dedicate tikv, and the roles shows that the region and the
+00:19:56 [W] Each tikv the blue rectangle represents represents a follower appeared for the region and the directed graph rectangle represents the leader for this region.
+00:20:07 [W] As the tikv Caster is consuming lots of CPU resources during Benchmark the elastic scheduling star to deploy to new technology automatically add the beginning of the
+00:20:23 [W] Is created there are no regions being scheduled.
+00:20:27 [W] To the elastic scheduling tikv, so we can see the suspension result didn't change yet.
+00:20:40 [W] after the PD transferring some hot regions to elastic tikv notes as you can see, there are already exists some red rectangles under the elastic tikv s column now
+00:20:55 [W] Transferring some hot regions to elastic tikv notes as you can see they already exist some red rectangles under the elastic tikv s call, you know, we can find
+00:21:12 [W] And that both the TPS and the QBs.
+00:21:16 [W] Of the Spanish have increased the whole process.
+00:21:21 [W] should that the elastic scheduling automatically detect the workloads and the skating across them to improve the performance.
+00:21:35 [W] In addition, we are going to support more features with the elastic scheduling in the future here are some ideas.
+00:21:47 [W] The first is to dynamically increase the read-only replicas according to workloads as we know tikv only can read the data from the Region's leader in
+00:22:03 [W] You but now we support follower read and disasters we can read data from followers also.
+00:22:12 [W] when the re pressure's high, it will increase the read-only replicas automatically which can greatly help us reduce the refresher when the rig pressure becomes low, it will switch back
+00:22:27 [W] no state
+00:22:24 [W] The second is in some seniors.
+00:22:26 [W] There is some data which is barely accessed.
+00:22:32 [W] It's better to move this kind of data to the cheaper storage. In order to save the cost combined with the elastic scheduling. We can make the custom recognize his kind of data automatically
+00:22:47 [W] Side to scale out a cheaper storage and skill you the highly-paid storage.
+00:22:53 [W] This is basically everything we want to cover in this talk.
+00:22:58 [W] Thank you very much for attending if you are interested in what we are doing you are welcome to join us. If you have any questions regarding what we have talked, please ask.
+00:23:13 [W] Thank you very much.
+00:24:13 [W] Find a mentor my face.
+00:24:17 [W] Hi.
+00:24:27 [W] Is there someone have constant questions?
+00:25:08 [W] Yeah, here is a question. And how long does adding a new node take does it complete in time to address High load?
+00:25:22 [W] You ready?
+00:25:23 [W] The new note is added in around.
+00:25:38 [W] Yeah, here is a question. And how long does adding a new node take does it complete in time to address High load?
+00:25:52 [W] Purity the new node is added in around.
+00:26:01 [W] 15 cents 50 cents per second and that we need to balance the data into the new node.
+00:26:12 [W] So we are we also we also has has a something to do now to predict the the load and
+00:26:31 [W] 52nd and we need to balance the data into the new node.
+00:26:40 [W] So we are we also we also has has a something to do now to predict the the load and
+00:26:56 [W] Head to the new Note new node before the high load high-low to come.
+00:27:09 [W] Do I saw your questions?
+00:27:34 [W] Okay.
+00:27:48 [W] Any other questions?
+00:28:45 [W] Oh another question does the rebalancing data consume more resource like CPU or network and a cause performance issue?
+00:28:57 [W] of course the ribbon snyk, I will call Will consume more resource, but we need to do these things before the high load come so this
+00:29:12 [W] This this is a resource called consider consumed nation is not cannot be avoided.
+00:29:33 [W] but after the contest after the height of the big become low again, we can just we can just outline the new new node
+00:29:48 [W] but after the contest after the height of the big become low again, we can just we can just outline the new node
+00:30:12 [W] reduce this resource
+00:32:13 [W] Okay soon.
+00:32:15 [W] There's no more pressure in this.
+00:32:17 [W] Thank you for your listening.
+00:32:21 [W] and
+00:32:25 [W] goodbye.

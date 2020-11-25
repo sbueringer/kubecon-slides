@@ -1,0 +1,335 @@
+﻿Seccomp Security Profiles and You: A Practical Guide: PDBA-7583 - events@cncf.io - Wednesday, August 19, 2020 10:42 AM - 1194 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:06:04 [W] Hi everybody and welcome to keep con 2020.
+00:12:12 [W] My name is Duffy Cooley, and I'm here to talk about seccomp security profiles.
+00:12:14 [W] So I am a staff Cloud native architect at VMware and I've been working with kubernative since about 2016.
+00:12:25 [W] I've worked at a few companies that are really interested in the space. Obviously kouros Hefty.
+00:12:28 [W] Oh, and I'm now at VMware every week.
+00:12:33 [W] I work on a couple of different things to kind of get the word out about the cognitive stuff in general.
+00:12:40 [W] One of them is TGI Kata IO, you can go there Fridays at one o'clock and kind of interact with us live and help us explore all kinds of cool stuff.
+00:12:46 [W] Of happening in the ecosystem today and in the parlance is a audio podcast with a bunch of really amazing co-hosts.
+00:12:59 [W] Definitely check it out. If you're interested in understanding more about what's happening in the cloud native ecosystem or just you know, staying up to date you can find me anywhere at Maui lion. So keep slack Twitter or whatever if
+00:13:07 [W] What you and welcome to keep con 2020. My name is Duffy Cooley, and I'm here to talk about seccomp security profiles.
+00:13:08 [W] So I am a staff Cloud native architect at VMware and I've been working with kubernative since about 2016.
+00:13:10 [W] I've worked at a few companies that are really interested in the space. Obviously kouros Hefty.
+00:13:10 [W] Oh, and I'm now at VMware every week.
+00:13:11 [W] I work on a couple of different things to kind of get the word out about the cognitive stuff in general.
+00:13:14 [W] One of them is TGI Kata IO, you can go there Fridays at one o'clock and kind of interact with us live and help us explore all kinds of cool.
+00:13:17 [W] Of happening in the ecosystem today and then the part of this is our audio podcast with a bunch of really amazing co-hosts.
+00:13:31 [W] Definitely check it out. If you're interested in understanding more about what's happening in the cloud native ecosystem or just you know, staying up to date you can find me anywhere at Maui lion. So keep slack Twitter or whatever if
+00:13:32 [W] This content you can find them at TGI Kata IO / Cube Khan - seccomp.
+00:13:33 [W] I'm going to provide some legit references later, but that's where you can find the content.
+00:13:34 [W] All right, let's keep going.
+00:13:34 [W] First I'm going to start with what is a container. So a container is an interesting construct because it is effectively a process and when we containerize a process that create a container so in the Linux kernel
+00:13:37 [W] Is effect has effectively makes the use of these same Primitives and if we just look through them real quick, they'll start to make sense to us, right?
+00:13:52 [W] So we have a cgroup cgroup is actually used to ensure that a given process is constrained to a specific set of memory or CPU utilization or iot sort of thing and then down in the other
+00:13:59 [W] Are other things that we can use for abstraction for isolating a process?
+00:14:06 [W] Let's take the net the net namespace here.
+00:14:08 [W] for example, so this is a network name space that is associated with this given process most of the time it's going to be sharing the same network name space as the node itself.
+00:14:23 [W] But if we containerize a process like if you do Docker run and you look at the new Docker executive that container you're going to see it's a TCP IP stack associate with a container. It's different than the one with the
+00:14:32 [W] node
+00:14:32 [W] And this is important because contextually as we go through this process and add permissions to a given process leveraging capabilities are seccomp profiles.
+00:14:46 [W] It's important to understand that the permissions that we Grant are scoped to only those namespaces that the process can see right and so for this given process if I were
+00:14:56 [W] Admin, which is the ability to manipulate network devices and change routing tables and all kinds of stuff like that.
+00:15:08 [W] I'm actually only giving the that access when I grant that capability.
+00:15:16 [W] I'm only giving that access to the to the network name space that the process is associated with or set a different way the network name space that the container is running in.
+00:15:20 [W] I hope that's clear.
+00:15:22 [W] Now I was talking about net admin.
+00:15:28 [W] Let's talk a little bit about what these things are.
+00:15:29 [W] Right so back. I look back for for a very long time. When we considered the permissions model of most Unix systems. There was kind of it was like it was all or nothing right?
+00:15:43 [W] It was either that you were route or you were not route and you'll see there's lots of vestiges of this still around.
+00:15:50 [W] This is still pretty this is still pretty normal for the implementation of users with analytic system. And so when you SSH into a Linux system
+00:15:56 [W] as a regular user you might see that you are you're not route and that we're able to secure like the devices that the the node has access to or able to hear things behind it permission set and if you wanted to say
+00:16:08 [W] Directory outside of your home directory you need to escalate your user ID to needed escalate your privileged by suing to root or doing something like that.
+00:16:23 [W] that. Well, we have since Colonel to dot to we have a bunch of other things that we can do. Right specifically we're going to dig into capabilities and seccomp here.
+00:16:28 [W] So capabilities are a way of granting like kind of a chunk of access to a process and we're going to talk about them a little bit more in here and and they're granted on a per thread basis.
+00:16:44 [W] So just like I said containers are basically process isolation.
+00:16:48 [W] You can associate with a process any of these capabilities and these capabilities represent kind of a chunk of access. So let's take a couple of these and just kind of compare them like we said before the cap meshmark
+00:16:59 [W] Admin one, right that gives us the ability to manipulate network interfaces and routing tables and dump IP tables and do kind of stuff and do all that all that kind of stuff.
+00:17:11 [W] So anything with the word admin has quite a lot of privilege but in a container context usually it's just the network name space that the container sees now if you had hostnet turned on that would be the end you granted net admin
+00:17:23 [W] And we're going to talk about them a little bit more here and they're granted on a per thread basis.
+00:17:25 [W] So just like I said containers are basically process isolation.
+00:17:25 [W] You can associate with a process any of these capabilities and these capabilities represent kind of a chunk of access.
+00:17:26 [W] So let's take a couple of these and just kind of compare them. Like we said before the cap Ned admin one, right that gives us the ability to manipulate network interfaces and routing tables and dumb pipe.
+00:17:27 [W] A few tables and do kind of stuff and do all the all that kind of stuff.
+00:17:29 [W] So anything with the word admin has quite a lot of privilege but in a container context usually it's just a network name space that the container sees now if you had hostnet turned on that would be the end you granted net.
+00:17:32 [W] That you could really manipulate the network interfaces of the underlying node interesting stuff. Another one that's really important is a cap system boot gives you the ability to reboot the node and cap sysadmin is
+00:17:39 [W] Most scary of all of these capabilities because cap sysadmin is like all the things right cap sysadmin is effectively route. So when you grant cap sysadmin to a container, which you should probably never do you're giving that containerless
+00:17:55 [W] Any of the namespaces that it has access to so there's I've been in some pretty interesting exploit to exploits associated with caps assignment. So if you're interested in that kind of stuff definitely check that out.
+00:18:07 [W] So we've introduced capabilities and we talked a little bit about what they are.
+00:18:15 [W] There are way of like granting like a chunk of permission to a given process.
+00:18:22 [W] And so here we have a pod of on spec. We're going to create like the node.
+00:18:23 [W] Hello container.
+00:18:30 [W] I run it as a pod and inside of the security context, which is part of the pot API.
+00:18:31 [W] We're going to Grant capabilities. We're going to Grant net admin and system time.
+00:18:35 [W] And that means that when this container starts up its going to have its own network namespace, which is the default within kubernative and with net admin it'll be able to manipulate the interfaces in there. It'll be able to manipulate the route table will be able to manipulate iptables all that good stuff.
+00:18:51 [W] By default that admin is not granted to a pod. But when we add capabilities we can add that capability in we can also drop capabilities, right we could do kind of a drop all capabilities and then just add specific ones that we know the
+00:19:06 [W] But these are really kind of broad sweeps of permissions, right the big chunky stuff that were granting access to so gret so capability of Grant access to stuff but it's like big stuff like cap sysadmin or cap net
+00:19:22 [W] Seccomp is an interesting one and it's and it's a little more granular than what capabilities Grant right. So capabilities Grant you like a permission or access to kind of a big chunk of permission seccomp can work at a different way seccomp can be used.
+00:19:40 [W] In allow list or deny list option or both at the same time and the in the both models.
+00:19:50 [W] Actually, I think probably the most interesting one of the bunch.
+00:19:55 [W] So with a seccomp profile you can actually have a default action that denies any system calls from the process to the colonel and then Define a list of system calls that you will allow and
+00:20:06 [W] that denies any system calls from the process to the colonel and then Define a list of system calls that you will allow and this is great because it means that you can be very very granular about exactly
+00:20:11 [W] because it means that you can be very very granular about exactly what the application can do to that Linux kernel and that gives you the ability to kind of like hardened what that container can do against a Linux kernel now the challenge
+00:20:21 [W] Like understand what system calls that application is going to make and that's not trivial.
+00:20:28 [W] There are 345 system calls in the x86 64 architecture as of Colonel 5.8 and we need to determine for any given application.
+00:20:39 [W] what system calls are being used or being made.
+00:20:41 [W] Now before we get into like how to determine that let's look at some interesting hacking tools, right?
+00:20:55 [W] So like this is one that this is a project that was put out by Jesse Frizzle is called a my contained and it gives us a really good kind of introspection into how into the permissions that have been granted to the process running inside of our container, right?
+00:21:04 [W] Got what happens here. So in Docker other works by Jesse and a bunch of other folks at docker.
+00:21:20 [W] Well, they built a kind of a default seccomp profile that could be that would be loose enough to allow most applications to run inside of a container but tight enough to
+00:21:28 [W] Block some of the really important syscalls that you wouldn't necessarily want to run from inside of a container by default. Right?
+00:21:38 [W] And so let's take a look at that that list real quick.
+00:21:40 [W] Right?
+00:21:42 [W] So we have a capabilities list.
+00:21:43 [W] We're granting Joan deck override a phoner kept caps that uid, these sorts of things were grabbing net raw.
+00:21:51 [W] We're having that bind service.
+00:21:51 [W] This is an interesting this capability set because net bind service allows you to bind a port that is lower than 1024.
+00:22:01 [W] So like Port 80 or 443 if you don't have that capability won't be able to bind those things.
+00:22:08 [W] You'll only be able to find High courts and as a giver run Docker run nginx.
+00:22:10 [W] you don't have that problem. And this is why right? We're granting that bind service and then down below. We see seccomp filtering and filtering mode and there are 63 blocked calls and let's just take a look at a couple of them to understand why they're here, right?
+00:22:23 [W] There's a bunch here that are the result of research that would that was determined that these things could be used for to cause
+00:22:29 [W] Harm to the system itself, right and but there are some other ones that are pretty obvious. Right like would you necessarily want a container that's running to turn on or off swap. Remember that it's a shared Linux kernel for all of the containers all of the processes right
+00:22:44 [W] System-level thing.
+00:22:48 [W] How about this one? Reboot?
+00:22:54 [W] Would you want to be able to have allow for somebody to like, we're in a container and run reboot inside of that container and have it reboot the node right?
+00:23:02 [W] I mean there might be use cases where that makes sense, but it wouldn't be all of them.
+00:23:03 [W] So you got to really watch out for those things, right?
+00:23:09 [W] So these are the these are the blocks is calls that are implemented by Dockers default.
+00:23:12 [W] seccomp profile
+00:23:15 [W] Now, let's take a look at kubernative kubernative has a significantly smaller set.
+00:23:25 [W] All right. So Docker is said there are 63 block calls and kubernative said there are 22.
+00:23:29 [W] Hmm now there are some important ones in there, right? Like we block things like reboot.
+00:23:40 [W] We block things like okay exactly load like the ability to load the kernel modules that sort of stuff kind of by default turn off swap on Swap off those sorts of things, but it's not all of them.
+00:23:50 [W] and that means that our application has been running in a kubernative poddisruptionbudgets.
+00:24:00 [W] We have to think about like what that means a little bit.
+00:24:09 [W] Article there that really describes why this was done and how it was done and really gets into the nitty-gritty about what these what these different system calls do and what sort of like what the Threat Vector around the list but kubernative disables this default and it creates its own.
+00:24:30 [W] So why mostly it's an implementation detail of multiple containers in a pod each pod has at least two containers an infra or pause container. And the container.
+00:24:41 [W] is that you define and the pause container handles share things like Network namespaces and those sorts of things.
+00:24:47 [W] And and so by default we were kind of granting more and more privileged to that construct and that's not such a great thing.
+00:24:58 [W] So what do right like what do we do here?
+00:25:01 [W] There are some things that you can do very easily to improve the security of your running applications inside of kubernative before 119.
+00:25:11 [W] You can set an annotation on any pod or any container of runtime default for the seccomp security profile and this would actually
+00:25:17 [W] Input and this would implement the runtime default that is implemented by the container runtime that you're running inside of kubernative and it would greatly enhance the security of that application and it's again trying to Target that sweet spot between more
+00:25:32 [W] And not so constrained that the application whatever it is can't run or can operate so it's pretty good model. And then after 119, we're going to talk a little bit more about the future here. We change that API. So instead of having to specify it as an annotation now,
+00:25:48 [W] thing inside of the Pod and container spec and you have that capability to set that inside of the security context the seccomp profile and what type
+00:25:59 [W] you can set that time to localhost and use like a one that is a custom one that you created or you can just use runtime default. Like we showed you before and this is built in most container runtimes you can make use of it today. Nothing stopping you from doing this today.
+00:26:14 [W] So let's go back and look at that kubernative spot without runtime default enabled and we see that there are only 20 to block system calls and then after enabling runtime default, we have
+00:26:30 [W] All we did was specify runtime default, which is a built-in seccomp profile.
+00:26:40 [W] We got 67 block calls and things are still able to operate so definitely check that out.
+00:26:45 [W] It greatly increases the security of your of your runtime.
+00:26:46 [W] Why is this stuff important though?
+00:26:51 [W] Like why would you even do it? Like what's the point right?
+00:26:53 [W] So there are a bunch of different attacks.
+00:27:01 [W] The against containers that are interesting some of the more obvious ones are the supply chain attacks. Right? Like if you have a few folks just deploying images into a kubernative colonel where those images coming from.
+00:27:06 [W] Are they coming from Docker Hub?
+00:27:08 [W] Are they coming from a trusted Source where they built and where they validated against like CBE lists and those sorts of things.
+00:27:16 [W] Supply chain attacks are kind of like a really juicy bit of attack surface for contain for container orchestration systems.
+00:27:24 [W] Another one is exploitation application about existence been around forever. Right if you're running an application and you expose it to the internet if somebody figures out how to get it pat, you know to exploit like perhaps like a reverse tunnel or something like that.
+00:27:36 [W] Once they do that, can they get a shell? Right? Did somebody who was creating the image leave a bash shell behind and if they did sweet, right the attacker now has a bash shell to explore what else they can do against that given Linux kernel or against or just, you know, figuring out how
+00:27:51 [W] Tekton other containers and then the last one is really what we're here to protect right syscalls in the shared Linux kernel remember that can containers our process isolation.
+00:28:07 [W] So as you spin up more containers, you just have more processes running against the same Linux kernel, right?
+00:28:17 [W] And so these syscalls give us the ability to manipulate things either at the underlying system like rebooting the whole node or perhaps just within the construct of whatever we have access to so contextually,
+00:28:22 [W] Lee if I was sharing the pit namespace with the underlying node and I had the sysadmin capability I could get pretty wildly right I could like kill particular processes like I do all kinds of a funny stuff there.
+00:28:35 [W] So the obvious next question is like what syscalls are being used like what so if I were going to create a seccomp profile that was a little more specific right?
+00:28:50 [W] Then I wouldn't kind of need to know what's this calls were being used so that I could Define that seccomp profile and we're going to kind of go through some examples of this in the demonstration here.
+00:29:02 [W] So one way to finding that out is by leveraging the S Trace command. All right, and so in this example, I'm actually running the curl componentconfig.
+00:29:06 [W] - SS google.com and I'm grabbing the syscalls that are being used by that process. Right?
+00:29:15 [W] So the the an obvious next question is like what syscalls are being used like what so if I were going to create a seccomp profile that was a little more specific right now. I wouldn't kind of need to know what Cisco calls were being used so that I could
+00:29:23 [W] Bunch of others, dr. Slim gives you the ability to Minify a container and basically only mix like reproduce that container with only the content of that container that was tested against right?
+00:29:37 [W] So if you bring up a container and it's like an nginx container you would test to make sure that you're able to like curl against that nginx container that sort of stuff and then that would actually result in a minified container getting rid of everything in the in the container that you don't use
+00:29:49 [W] And it can also you can also use Docker profile against a container. Even if you don't want to slim it right even if you don't want to go through the process of like reducing the size of it.
+00:30:05 [W] You can just profile it and it will actually output a seccomp profile and a selinux profile and also a farmer profile. So it's a great way of learning like what you need to
+00:30:14 [W] Create that custom profile.
+00:30:20 [W] Let's get into our demonstration.
+00:30:22 [W] We don't have too much time left for about 18 minutes. Let's kind of get into the demonstration here.
+00:30:25 [W] So my demonstration is going to play a little bit with the future. I'm going to show you what's going to happen in 119, which have been pretty exciting.
+00:30:32 [W] It's right around the corner, but the demonstration environment also has like what it looked like for 118.
+00:30:39 [W] So we're going to kind of play a little bit with the future. We're going to play with some other interesting project in the space to do this demonstration.
+00:30:44 [W] I'm going to use kind which is a great project.
+00:30:46 [W] I cannot say enough about it.
+00:30:50 [W] It's awesome to be able to like bring up a multi node cluster locally and play with all the stuff. I'm going to be using a build of kubernative from version 1 19 S release Branch built just altinity.
+00:30:56 [W] while ago and then I'm also going to be using a relatively new project in the cigs k8s 2io repo called seccomp operator, which will be used to move around custom seccomp profiles on all of the nodes so that I can relax so that
+00:31:10 [W] When starting up containers and that'll make sense when we get into the demo.
+00:31:16 [W] So first if you're going to if you're interested in this you can go to docs.google.com to the tutorials under the cluster section and there's a new piece that was just put up by Dynamite gum.
+00:31:31 [W] It's not merged with main line yet, but it will be in the very next release 119 that's called restricted container system syscalls with seccomp and it takes you through an entire profile about how to do this stuff.
+00:31:41 [W] It's great documentation. I can't say enough about about that work and what the whole team syseleven
+00:31:46 [W] You're going to then your mind gum and polygons mother doing it's amazing.
+00:31:51 [W] Right? It's really great to see kind of the Improvement in the way that we do these things.
+00:31:57 [W] So here's our kind cluster.
+00:31:58 [W] I've gone ahead and brought it up.
+00:32:02 [W] I've got three worker nodes and one control plane.
+00:32:05 [W] Those cute cat all okay, pause it all get nodes.
+00:32:09 [W] We can see that we're running 119 here and that we have three workers and one control plane node. And so the next thing I'm going to do is I'm going to go ahead and start.
+00:32:17 [W] It up a couple of containers, but what we're going to explore here is some seccomp profile. So let's go do that first, right? So here are some demonstrations seccomp profiles and I'm going to take you through a couple of them.
+00:32:31 [W] audit dot Json.
+00:32:32 [W] Is a sec. It's a complete seccomp profile because it defines a default action.
+00:32:39 [W] Control plane node. And so the next thing I'm going to do is I'm going to go ahead and start up a couple of containers.
+00:32:41 [W] But what we're going to explore here is some seccomp profile. So let's go do that first, right? So here are some demonstrations seccomp profiles and I'm going to take you through a couple of them.
+00:32:43 [W] So the audit dot Json.
+00:32:43 [W] Is a second is a complete seccomp profile because it defines a default action.
+00:32:44 [W] This is like the simplest seccomp profile that you can apply.
+00:32:46 [W] It doesn't did not it doesn't limit any system calls.
+00:32:48 [W] So it's just whatever the default is and what it does do though is it kicks the the any system call that is made by that process to the activity log, right?
+00:33:01 [W] And so if you actually have a shared kernel or if you have a way of getting to
+00:33:03 [W] syslog you can actually see the system calls by number that a given process made as long as you associate this seccomp profile with that process and this is a way of exploring like what system calls were made and how you can
+00:33:18 [W] Made and how you can actually generate a seccomp list now. It's obviously it's a pretty hard way to do it but it's one way of actually understanding like how it's done. It's also really helpful and Diagnostics and stuff when you try to figure out like how what worked
+00:33:31 [W] So let's take a look at the fine grained one.
+00:33:38 [W] This is an example seccomp profile that does sort of what we were talking about before so we have a default action. That is a block right scmp act are number means don't allow anything and then down here.
+00:33:49 [W] We have a group of syscalls by name and here are all of us is calls that we're allowing and then we're and then for those syscalls, we have an action of scmp activity allow.
+00:34:01 [W] And that means that as long as the process is living within the means of this set of syscalls and the process will be allowed to run. But if it tries to make any syscalls outside of this it will be denied and likely bad things will happen.
+00:34:17 [W] amide. I might do all kinds of wacky stuff.
+00:34:19 [W] And then the last one is the violation Json and this one is basically a explicit deny, right? The default action.
+00:34:32 [W] One liner is scms CMP apt error know which means deny all syscalls all of them.
+00:34:40 [W] That's our that's part. That's our explicit deny that we see in the top of the custom on.
+00:34:40 [W] All right, let's go ahead and get these things to Floyd the way we're going to do that is we're going to actually deploy the seccomp operator. Is that project?
+00:34:48 [W] Sig's that case to IO
+00:34:51 [W] why - F seccomp operator deploy operator diamo
+00:35:00 [W] Namespace going to create a service accounts and roll Bindings that kind of stuff and then we're also going to go ahead and deploy a config map that has those that has those those different profiles within it and that's the demo profiles I am. Oh, so let's go ahead and deploy that
+00:35:16 [W] And that's the demo profiles I am. Oh, so let's go ahead and deploy that applied a chef profiles demo profiles and then let's take a look at that one last thing there.
+00:35:29 [W] So what I'm looking at here is a config map is scheduled to be in the namespace seccomp operator.
+00:35:33 [W] It's called demo profile. And then inside of there we have a few different files are we have representations of those three files that we saw right the audit dot Json the fine-grained one and then
+00:35:43 [W] Those are violation dot Json right? So those three files are be are now represented inside of this config map.
+00:35:54 [W] And the way the operator works is it's going to actually persist those files to disk inside of our lib cubelet seccomp.
+00:36:02 [W] And that's actually where we can reference them from within our pods. Let's take a look at how we would reference that real quick.
+00:36:05 [W] Okay, first I'm going to go ahead and dip these two because I want you to understand the difference here like we talked about before in 118.
+00:36:19 [W] This is how I would reference a given profile.
+00:36:26 [W] The runtime default is the built-in one. So that one's not super interesting for our output.
+00:36:27 [W] But how about this one here? Right.
+00:36:36 [W] So here's our seccomp profile for the Pod and we're actually specifying localhost which in this context means on the local node, and then cubelet so varlet kubelet seccomp.
+00:36:40 [W] Can see if it's there but in 119 and after once it's actually a stable API, then we can pretend we can provide it like this, right? So instead of actually using this annotation model we can just specify that in the spec for the for the pod which is great.
+00:37:02 [W] Let's go ahead and get this done.
+00:37:05 [W] So there's our bash runtime and this one is actually just using the runtime default and it's actually applying it down at the at the container rather than at the pot. So if I go ahead and apply this
+00:37:23 [W] we can see that it gets created and everything's great and it's running and all that stuff is wonderful.
+00:37:35 [W] And if I go ahead and apply the next one.
+00:37:36 [W] These are fine grain poddisruptionbudgets.
+00:38:05 [W] expose
+00:38:08 [W] We're going to expose them port 8080.
+00:38:14 [W] And then we'll do you cut all get raw.
+00:38:21 [W] We can see that it gets created and everything's great and it's running and all that stuff is wonderful.
+00:38:33 [W] And if I go ahead and apply the next one.
+00:38:34 [W] These are fine grain poddisruptionbudgets.
+00:38:36 [W] exposed
+00:38:36 [W] we're going to expose it on port 8080.
+00:38:37 [W] And then we'll do you cut all kit Raw.
+00:38:37 [W] And then what this will do is it'll create a get request and I'll proxy it through to the Pod using the API server.
+00:38:39 [W] And so it looks like things working. Right? Like I can actually get results back from this Echo server pretty neat tool gives me the IP address of the requesting IP shows me headers shows me the environment inside of the running poddisruptionbudgets all.com.
+00:38:45 [W] It's actually pretty handy and it's built by María Laura.
+00:38:47 [W] I really like it a lot.
+00:38:49 [W] So that one actually totally worked right?
+00:38:55 [W] We were able to create a custom profile associated with that pod actually make use of it.
+00:39:01 [W] Let's do ahead and apply this last one violation bod cat.
+00:39:03 [W] - Chef Kathy violation pods.
+00:39:13 [W] So this is the same tool but we're actually doing that implicit deny.
+00:39:19 [W] And if we do Cube Kettle get pods, you can see that it's in Crash lie back off if we do Q kettle
+00:39:22 [W] describe poddisruptionbudgets
+00:39:28 [W] You can see that it's restarting and restarting and restarting.
+00:39:35 [W] It's not great output from the logs yet on this kind of stuff, but it is telling me that the process died inexplicably and I know that the reason is because the can make any system calls and so it's not a great ux yet. But we're working on I were trying to
+00:39:48 [W] Results back from this Echo server pretty neat tool gives me the IP address of the requesting IP shows me headers shows me the environment inside of the running poddisruptionbudgets.
+00:39:49 [W] All.com. It's actually pretty handy and it's built by María Laura.
+00:39:49 [W] I really like it a lot.
+00:39:49 [W] So that one actually totally worked right?
+00:39:50 [W] We were able to create a custom profile associated with that pod actually make use of it.
+00:39:51 [W] Let's do ahead and apply this last one violation bod cat.
+00:39:52 [W] - F
+00:39:54 [W] Oh cat the violation pods.
+00:39:54 [W] So this is the same tool but we're actually doing that implicit deny.
+00:39:54 [W] And if we do keep cattle get pods, you can see that it's in Crash lie back off if we do Cube kettle
+00:39:55 [W] describe poddisruptionbudgets
+00:39:55 [W] You can see that it's restarting and restarting and restarting.
+00:39:56 [W] It's not great output from the logs yet on this kind of stuff, but it is telling me that the process died inexplicably and I know that the reason is because the can make any system calls and so it's not a great ux yet, but we're working on it.
+00:39:58 [W] Who really helped me with this particular demonstration the amazing Paulo Gomez and the incredible Sasha Gunner.
+00:40:07 [W] Thank you very very much and thank you for watching and giving feedback.
+00:40:13 [W] Here are the references for all the projects and things that I'm looking at including the seccomp and kubernative articles are written by Pablo.
+00:40:17 [W] Definitely check those out if this is your jam and thank you so much for attending coupon and it's virtual way.
+00:40:25 [W] way. I wish we were all together and maybe we will be again soon.
+00:40:28 [W] Thanks a bunch and see you next time.
+00:40:30 [W] Hey everybody.
+00:40:41 [W] I hope that was helpful. And I hope you enjoyed watching it as much as I enjoyed recording it and I'm really glad that you're all here.
+00:40:45 [W] So let's take a look at the Q and A. I got a few questions in the in the time before I do that. I do want to make a shout out here that you can go ahead and join the chat in.
+00:40:56 [W] Our signed to - Cube Khan - check ID - parsec - ID - policy Channel and that's where you'll find me and I'll be answering questions after the talk as well.
+00:41:12 [W] So some of the some of the questions that came in there were some really good questions.
+00:41:20 [W] First one is from Kristoff. And the question is is there a feature in town zoo or other VMware products to monitor pods for their syscalls, and there isn't anything built in yet. There is actually quite a lot of work that we're doing to integrate some of the products that we've actually
+00:41:27 [W] We been that have been through acquisition recently and there's some really interesting stuff that we're doing to like increase the security of container on times and those sorts of things but we haven't but we haven't got anything built into it just yet.
+00:41:40 [W] Let's stay tuned.
+00:41:42 [W] It's an exciting space and we're definitely pushing we're definitely moving into that area.
+00:41:47 [W] One of the next questions that came in there were a few people to ask about my font.
+00:41:54 [W] If you're talking about the rainbow font feature in the presentation. I use a thing called logcat and it just captured the output and dump.
+00:42:02 [W] Two wild card to give it a nice rainbow spins keep things interesting for some of these presentations. Another question that I had was.
+00:42:07 [W] I'm not sure I understand why k8s default settings block less this calls 22 then Docker 67, I struggle with this one as well. I suspect that.
+00:42:19 [W] into that area
+00:42:27 [W] one of the next questions that came in there were a few people that asked about my font.
+00:42:28 [W] If you're talking about the rainbow font feature in the presentation.
+00:42:29 [W] I use a thing called logcat and it just captured the output and dump it to Wild Card to give it a nice rainbow spins. Keep things interesting for some of these presentations.
+00:42:32 [W] Another question that I had was. I'm not sure. I understand why k8s default settings block less this calls 22 then Docker 67.
+00:42:34 [W] I struggle with this one as well. I suspect that.
+00:42:35 [W] There's actually some really great articles and some really great work by Paolo Gomez on the inside of the kubernative project that kind of gets into some of the challenges.
+00:42:39 [W] I think that they highlight that they identified as part of the work that is happening with the seccomp pro profile work.
+00:42:44 [W] If you're interested in that work, you could definitely check out the cube slack and go to the seccomp operator there. It's really knowledgeable people happening inside.
+00:42:46 [W] they're like looking into like how to solve some of those problems, but the specific set of things that I think that Apollo identified was that
+00:42:52 [W] the pods container right? Whenever you create a pod you get a pause container which represents an infrastructure container and then you get the other isolated processes in your pod which represent the containers that you've specified inside of the deployment spec or inside of the
+00:43:08 [W] Seccomp operator there.
+00:43:09 [W] It's a really knowledgeable people happening inside there that are like looking into like how to solve some of the problems but the specific set of things that I think that Apollo identified was that
+00:43:09 [W] the pods container right? Whenever you create a pod you get a pause container which represents an infrastructure container and then you get the other isolated processes in your pod which represent the containers that you've specified inside of the deployment spec or inside of the
+00:43:12 [W] For structure container kind of has perhaps it needs like a higher set of privilege than some of the others are maybe it does.
+00:43:20 [W] Maybe it doesn't depending on what you're actually trying to associate with it things get a little weird.
+00:43:27 [W] And so I think that initially this was done for convenience sake but get things working make things happen, but then after a while I think that we could certainly improve the space and so if you're interested in this work, like I said great places to check out our
+00:43:37 [W] Our kubernative security Channel and the seccomp operator channel in kubeflow C which slack channel will be used later on.
+00:43:50 [W] on. It's the six cube con SEC - ID - policy Channel
+00:43:53 [W] Kansas calls be blocked for specific arguments to that syscall.
+00:43:58 [W] I think that's a good question such as allowing access only allowing access to specific files.
+00:44:10 [W] Usually when you're getting into that level of detail, right like when it's where we see things like app armor and selinux come in right where you can build specific or you can protect the specific areas.
+00:44:21 [W] is a little bit of overlap in that.
+00:44:25 [W] I mean you can think of just call it kind of like the sort of grow screen access. Like I have the right capability or I have the read capability, but it's not going to but if this call is it going to like to limit my access to a specific file or a specific directory
+00:44:41 [W] Permission of permissions model within the kernel, right? Like if you're a regular user and you've given ownership of that directory or file to root or a different user than we have that we have those shapes.
+00:44:57 [W] We have those sorts of capabilities and they continue to operate just fine.
+00:45:05 [W] But we also have functionality like a farmer and selinux and these things can also be instituted as part of a pods configuration.
+00:45:07 [W] Or on saying thank you.
+00:45:09 [W] Thank you and we'll lead saying.
+00:45:10 [W] thank you.
+00:45:12 [W] I wish others followed your presentation big style.
+00:45:14 [W] Oh, I'm glad you liked it.
+00:45:15 [W] I was really working hard on it.
+00:45:16 [W] I'm happy that it worked out.
+00:45:17 [W] Thank you very much and with slides and the resources, I'll put a link in the channel, but the places that you can find it is k8s dot work - seccomp.
+00:45:29 [W] You want to call it second Cube Khan - seccomp oq can 2020 seccomp.
+00:45:36 [W] I'll put a link of the channel in just a minute and you can also find my resources in the event page.
+00:45:43 [W] I believe they've uploaded them and if I haven't been I'll fix that right away.
+00:45:49 [W] Now. Let's go to the chat and see how you all are doing there. Got a few minutes left to answer any questions that you might have.
+00:45:52 [W] Let's check it out.
+00:45:55 [W] Everybody.
+00:45:56 [W] Say hello and tell me I did a great job.
+00:45:57 [W] Thank you very much.
+00:45:59 [W] And the slides will be available.
+00:46:00 [W] I'll link them in the chat here in just a minute.
+00:46:01 [W] I appreciate all the positive feedback.
+00:46:05 [W] Y'all are awesome.
+00:46:05 [W] Thank you very much.
+00:46:06 [W] - seccomp oq.
+00:46:12 [W] Can't wait 20 seccomp.
+00:46:12 [W] I'll put a link of the channel in just a minute and you can also find my resources in the event page.
+00:46:13 [W] I believe they've uploaded them and if I haven't been I'll fix that right away.
+00:46:14 [W] Now, let's go to the chat and see how you all are doing their got a few minutes left to answer any questions that you might have.
+00:46:14 [W] Let's check it out.
+00:46:15 [W] Everybody.
+00:46:15 [W] Say hello and tell me I did a great job.
+00:46:15 [W] Thank you very much. And the slides will be available.
+00:46:16 [W] I'll link them in the chat here in just a minute.
+00:46:16 [W] I appreciate all the positive feedback.
+00:46:17 [W] Y'all are awesome.
+00:46:17 [W] Thank you very much.
+00:46:17 [W] No questions. Okay.
+00:46:20 [W] Well actually get some real questions further up that stock. Let's see.
+00:46:20 [W] I did answer some of them but there was one question. I should stay tuned for where was that?
+00:46:20 [W] So Brad says my friend Brad.
+00:46:25 [W] It's definitely a horrible Goose. But you know a good one that this is that's good heart.
+00:46:29 [W] What's the difference between runtime default for Docker container the cri-o and Padma and the answer is I actually don't know right off my off top my head, but I do know that they're different and I think that in my presentation I did.
+00:46:37 [W] Show the output of the output difference between Docker and containerd E. If you're watching for it, but one of the great things about this presentation is that I'm really trying to make sure that you have tools that you can use
+00:46:52 [W] What's the difference between runtime default for Docker containerd e cri-o and Padma and the answer is I actually don't know right off my off top my head but I do know that they're different and I think that in my presentation I did show that output of the output difference
+00:46:54 [W] Stuff really that's that's my goal.
+00:47:01 [W] So check out mi contain to check out those sorts of things and and that's where it's at.
+00:47:02 [W] So I'll be around after this and I'll be in the cube concept ID policy Channel. Thank you so so much for attending and I hope you have a great Cube con 2020.

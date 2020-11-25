@@ -1,0 +1,208 @@
+﻿Taming Data/State Challenges for ML Applications and Kubeflow: DGDN-8464 - events@cncf.io - Wednesday, August 19, 2020 7:37 AM - 50 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:04 [W] Hi everyone.
+00:07:42 [W] I'm Skylar Thomas and this is taming State and data challenges for machine learning applications. And kubeflow. I am the lead architect for hpe as Merle data Fabric and the hpe
+00:07:52 [W] Mlops kubeflow support now these products can really help with a lot of the things that we're going to be talking about today, but I'm not going to actually talk about the products capabilities.
+00:08:06 [W] I'm going to talk specifically about the challenges in a vanilla environment and how to solve those without special products if you're interested and you think some of the ways to solve things on bare metal or a little
+00:08:20 [W] And then I'll have Links at the end of the presentation.
+00:08:26 [W] You can check them out if you're interested, but today I'm really hoping to accomplish several things first.
+00:08:39 [W] I want to discuss the challenges that occur when you mix data scientists working on machine learning and AI with it operations next.
+00:08:43 [W] I want to give a brief overview of to flow workflows for people who may not be super super familiar with how machine learning works and Kuma.
+00:08:51 [W] kubernative and then I'm going to talk a little bit about the various State and data challenges that kubermatic saz and therefore kubeflow applications have finally I'm going to dive a bit deeper into very specific challenges talk about
+00:09:06 [W] You're with how machine Learning Works in kubernative and then I'm going to talk a little bit about the various State and data challenges that kubermatic saz and therefore kubeflow applications have finally I'm going to dive a bit
+00:09:08 [W] Tips on how to handle them when you run into them.
+00:09:11 [W] This is a very short presentation.
+00:09:13 [W] So we're not going to dive super deep.
+00:09:16 [W] There's a lot to discuss in this area, but hopefully we'll have time to answer some of your questions after we present and at the end of the session. I really hope you leave it more prepared to face the challenges that
+00:09:29 [W] With State and data in kubeflow and have some tips in your back pocket to solve them.
+00:09:36 [W] I'm sorry.
+00:09:40 [W] We're not together in person today. That would have been amazing to sit down and bounce things off of each other and at a conference, but hopefully we accomplished a lot and maybe we'll see each other at the next coupon.
+00:09:51 [W] Let's talk a little bit about data scientists versus it if you think about both groups, they have kind of antithetical goals.
+00:10:03 [W] What each group wants is almost the polar opposite of what the other group wants data scientists want really custom Hardware High memory gpus TP. Use it really wants cookie cutter commodity machines wherever possible
+00:10:17 [W] I want all the hardware they can get an it really wants to encourage efficiency and sharing it wants to standardize applications and reduce license costs data science really wants to use a variety of applications and Frameworks
+00:10:33 [W] Software that safe and supported data science once cutting-edge tools from Academia.
+00:10:44 [W] Finally it wants to carefully categorize and restrict data for security and Regulatory reasons data science really wants to use all it can to train their models.
+00:10:53 [W] There's really been no good way to solve these problems except to isolate data Sciences environment. Basically, the organization backs a truck up with a lot of
+00:11:03 [W] money and other resources and creates a an entirely separate environment with all the bells and whistles that data sites once and in certain use cases, this is efficient other use cases.
+00:11:19 [W] It's simply not sustainable for data scientists as we have more and more data science going on in organizations.
+00:11:27 [W] It becomes less sustainable.
+00:11:31 [W] Basically, every environment has to be hand rolled the cloud can
+00:11:34 [W] Help a little bit here, but there are challenges with gpus and CPUs and the cloud to so there's no perfect answer in the traditional way of doing things kubernative can help us
+00:11:48 [W] But before we think about kubernative, let's take a step back and look at how we were doing some of these data science and Big Data task before kubermatic.
+00:12:05 [W] We're using things like spark tensorflow and Hadoop and we learned a lot of things from those environments and the biggest thing we learned is hand-rolled environments are incredibly expensive that really brings us
+00:12:13 [W] Tensorflow and Hadoop and we learned a lot of things from those environments. And the biggest thing we learned is hand-rolled environments are incredibly expensive that really brings us to kubernative
+00:12:15 [W] And why kubernative is so exciting for machine learning and AI tools kubernative a solid several critical problems with these traditional machine learning and Big Data environments.
+00:12:29 [W] First Hardware doesn't need to be dedicated to data science.
+00:12:32 [W] We can use that hardware for other workloads when training job is not running.
+00:12:37 [W] Or we can rather train when the hardware is not needed for other purposes that tends to be the way we look at it complex scheduling allows different types of nodes to be used.
+00:12:52 [W] So IIT can have a lot of nodes that are normal and data science can have their GPU TPU. Hi ma'am Notes app containerization means many more types of apps can be supported.
+00:13:05 [W] But kubernative has a number of challenges, even though it solves a lot of problems in the data Science World the key to all of this is the name data science the data in that name is the clue machine
+00:13:21 [W] Ton of data and/or state to work and kubernative was really initially designed for stateless apps over time handling stayed in applications is approved and kubernative.
+00:13:36 [W] We now have things like persistent volumes and storage classes CSI volume based scheduling and others, but there are still major challenges.
+00:13:41 [W] So what is all of the state that we have to think about for machine learning applications?
+00:13:48 [W] Well, there are dozens of different types. But I'd like to focus today on really five of the key ones the first the first type is their notebooks and no bugs president presented a challenge in that
+00:14:02 [W] his want to share their notebooks with other users and there's a tendency to want to embed a notebook in a container and create this link between a single container and a single notebook,
+00:14:18 [W] In cases where it makes sense where users change some things and they want to want to share that data.
+00:14:28 [W] You really need to think about how to handle notebooks training data is probably the key type of data.
+00:14:33 [W] We work with customers doing self-driving cars that have sensor data that's multiple hundreds of petabyte-scale.
+00:14:48 [W] Do we move this data close to compute or how do we move compute rather close to the data?
+00:14:57 [W] Because it's very hard to move the data around.
+00:15:00 [W] How do we protect privacy of some of this data is sensitive.
+00:15:02 [W] How do we follow legal requirements libraries are yet another area if you have a container and it's running a spark job or tensorflow job. They're going to be certain compute libraries that you need.
+00:15:16 [W] To create a container every single time you need a new library. Do your data scientists have to be experts in the containers.
+00:15:25 [W] That's a challenge models.
+00:15:28 [W] How do we query and promote model files into production logs. All of these applications are generating massive amounts of logs many of these logs are critical for the data scientist be able to look at
+00:15:41 [W] Logs all of these applications are generating massive amounts of logs many of these logs are critical for the data scientist be able to look at to make modifications to their training jobs.
+00:15:45 [W] How do you handle those things? All of those types of state are challenging?
+00:15:49 [W] Okay, so we've talked a little bit about the problem space and the challenges we face and the types of state that were interested in but let's make sure and review the actual data science workflow that most people go through if you're not familiar
+00:16:05 [W] Most people go through if you're not familiar with it most vendors give workflows that are many steps long.
+00:16:12 [W] I've kind of simplified things here into four steps.
+00:16:16 [W] Really you capture some data.
+00:16:18 [W] This can be really challenging.
+00:16:21 [W] I'm not going to address it very much in today's presentation, but you need to deal with things like streaming.
+00:16:26 [W] You need to do data cleansing.
+00:16:28 [W] There are all kinds of challenges with capturing the data and making sure the data is
+00:16:34 [W] is okay that kind of bleeds in in a little bit of a grey way into exploration.
+00:16:45 [W] This is the work that a data scientist does within a notebook experimenting looking at data trying to think about it.
+00:16:49 [W] Try different regressions on the data. Try very simplified toy models with a data then they move on to training it in a distributed fashion across all of these nodes in our kubernative environment.
+00:17:03 [W] And finally, they serve a model that was created during training.
+00:17:11 [W] A lot of data science is automating the steps so you can do it over and over and over again, but that's really kind of the gist of things as I mentioned.
+00:17:21 [W] Notebooks are really the heart of the user experience that a data scientist has in the kubernative environment with kubeflow.
+00:17:31 [W] Notebooks are really what what these data scientists work with their canonical.
+00:17:32 [W] Jupiter is a technology that doesn't have to be container-based but most deployments are in containers and but most notebooks are Jupiter.
+00:17:50 [W] There are spark applications out there that use Zeppelin and these notebook containers run as a service account.
+00:17:58 [W] This leads to a number of issues.
+00:18:01 [W] We'll talk about those later in this presentation. What a data scientist is doing here their exam.
+00:18:05 [W] Meaning and scrubbing data, they're experimenting and visualizing data.
+00:18:11 [W] They're creating toy models and then they're launching large training jobs and automations.
+00:18:17 [W] Distributed training is really the thing that gets most people excited about running these machine learning jobs within kubernative.
+00:18:31 [W] They function very differently than these types of jobs on bare metal.
+00:18:39 [W] Most of these follow what we call a job operator pattern and these include the spok jobs that you run in kubernative.
+00:18:47 [W] He's tensorflow jobs poddisruptionbudgets.
+00:18:47 [W] Torch jobs and there are dozens more as beta pieces of kubeflow or other pieces out there the way a job operator
+00:19:03 [W] Works is that machine learning job custom resources. Some time is submitted the acute control or other client tool to the kubernative API server in kubernative.
+00:19:18 [W] There's a machine learning job controller of some type that sees that custom resource that's been submitted and it dynamically creates a set of control or parameter server part loodse and a set of worker pots
+00:19:31 [W] pods retrieve and manipulate training data via apis like CSI posix or S3 object storage or even hdfs as the training job progresses a
+00:19:47 [W] As as the training job progresses a model is created and logs are generated when the job completes. All of the pods are torn down so you don't have infrastructure.
+00:19:56 [W] Generated when the job completes. All of the pods are torn down so you don't have infrastructure staying around and taking up resources.
+00:20:04 [W] One of the cool things you can do in this environment is because the these patterns are almost always the same whenever you submit one of these llamo files you can always
+00:20:14 [W] Things you can do in this environment is because the these patterns are almost always the same whenever you submit one of these llamo files, you can always intercept that submission with an admission controller
+00:20:17 [W] a mission with an admission controller webicon even if you didn't build this type of job and look at the job submission and do certain things with the animal that was submitted to to your
+00:20:30 [W] To your job controller there, you can add various resources and to the namespace that the jobs going to run into this can help really significantly ensuring that the proper Secrets
+00:20:46 [W] sir, persistent volumes are created models serving is the final stage of the data science workflow that we were talking about models serving really doesn't typically require a lot of training data and
+00:21:03 [W] it's less data intense than the training side of things but it does still require some challenges from the state perspective the models that we created during distributed training must also be available for serving so
+00:21:19 [W] actually move this into production via some sort of pipeline or workflow engine or do we have some sort of distributed file system where both training and serving can get out that that model container for that
+00:21:35 [W] Put our models in a container and they're going to be serving responses to rest request.
+00:21:47 [W] But how do we actually put those model files in the container?
+00:21:50 [W] Do we generate a new container for every set of model files or do we actually mount a universal model serving container to a particular model?
+00:22:02 [W] These are the types of things that we want to think about?
+00:22:03 [W] I'm like Hadoop machine learning tools are really not unified around a single data access API different machine learning applications require different storage apis and that creates kind of a challenge for us
+00:22:18 [W] Some are challenges that we'll talk about and that's data API availability since we're in kubernative.
+00:22:32 [W] He's really the traditional way to think about talking to persistent storage is via posix.
+00:22:35 [W] Posix is great for a lot of things CSI works really well in a lot of machine learning applications.
+00:22:41 [W] It's great for Speed depending on the CSI driver that you select it fits the kubernative model really well.
+00:22:49 [W] And but there can be issues if you use a CSI driver for something that's not a distributed file system.
+00:23:00 [W] So CSI is not a Panacea all the time. When you want posix. You really have to have an underlying CSI driver.
+00:23:07 [W] That's that works.
+00:23:07 [W] Well object storage or S3 also fits in really well with machine learning kubernative.
+00:23:16 [W] is hasn't really had object storage catch up with posix.
+00:23:19 [W] In the CSI world yet, but that is something that's being worked on with the storage group. But from machine learning perspective a lot of the tools that we'll be using tend to work
+00:23:34 [W] Storage and object storage is a very simple way to do things.
+00:23:42 [W] It has a lot of performance in throughput issues.
+00:23:47 [W] So pulling your trade in training data in through object storage probably isn't the best way to do things. You could embed hdfs drivers in your pods hdfs is very
+00:23:57 [W] Mint way to go after storage, but it there's nothing built into the kubernative infrastructure to deal with it to the final interfaces NFS or database protocols.
+00:24:12 [W] There could be many others NFS we do see several machine learning applications out there that do require specifically NFS.
+00:24:23 [W] I wouldn't recommend it if you're designing things from scratch.
+00:24:26 [W] It has some speed issues and some
+00:24:28 [W] Issues with stability and security database protocols embedding those and containers anytime you have to embed drivers and containers it bloat your containers and make things more complicated,
+00:24:43 [W] reasons you want to do that hdfs being the canonical example that the key to really this part of the presentation is you need your data infrastructure to be able to support multiple Protocols
+00:24:59 [W] He didn't really this part of the presentation is you need your data infrastructure to be able to support multiple protocols.
+00:25:02 [W] Our Second Challenge is really how to deal with state that is used as libraries or various resources for the container. There are really two major schools of thought
+00:25:15 [W] Eat that is used as libraries or various resources for the container.
+00:25:16 [W] There are really two major schools of thought when you're putting together a notebook container or a training job container one is to build a container for each task.
+00:25:26 [W] So have a data scientist actually build the the container specially for that training job or for that notebook. The second school of thought is really mounting a
+00:25:34 [W] Volume for the various libraries or assets into a common container this lets you do things like store those libraries or asset files in a distributed file system and lets you avoid
+00:25:47 [W] In hundreds and hundreds of containers the container out does have a number of downsides the number of containers that you build your data scientists must be more skilled to some degree to create the containers. They have
+00:26:03 [W] That you really need to think about and container management and storage volume mounting takes more time and planning you have to create smarter containers. It probably requires a CSI provider with a distributed file system to do it if
+00:26:19 [W] In to go the route of creating a container for for each job or notebook.
+00:26:30 [W] I would recommend that you create pipelines or use a workflow engine like Argo to create those containers rather than creating by hand or via recipe scripting. It really breaks down fairly quickly.
+00:26:41 [W] Dealing with the gravity of training data data gravity is the idea that it's hard to move data around and that data naturally tat attracts compute closer to itself.
+00:26:53 [W] There are number of reasons.
+00:26:57 [W] Why data exact a gravity exists.
+00:26:59 [W] The first is that it costs a lot of time and money to move some types of data when you have hundreds of petabyte-scale.
+00:27:11 [W] Information you may have government regulations.
+00:27:17 [W] I can't move data from here to there.
+00:27:19 [W] It must reside within my borders. Finally privacy concerns.
+00:27:27 [W] I can't put this data in the data Lake and use it for our training because there are various privacy concerns that we have to deal with some tips to deal with data gravity first when data
+00:27:38 [W] The cloud and within a corporate firewall, you need to choose between allowing external compute in the cloud to Ingress into your data center or to create an on-prem kubernative environment
+00:27:53 [W] Out to Ingress into your data center or to create an on-prem kubernative environment in the vast majority of cases. We see the on-premise solution tends to be the solution
+00:28:00 [W] Majority of cases we see the on-premise solution tends to be the solution that works the best there are specific instances where running compute in the cloud and going to on-prem Works a little bit better but
+00:28:09 [W] But performance cost security legal reasons. Usually you want to have an on-prem environment to deal with that data many cases spinning up a quick kubernative a solution in the cloud might be useful to handle the worries
+00:28:23 [W] He has for data scientists rolling their own containers in those cases.
+00:28:31 [W] consider a shared cloud-based data Lake for a femoral data scientist kubernative environments to AllShare addition to the notion of data gravity.
+00:28:41 [W] There's a closely related issue of data locality.
+00:28:49 [W] The Hadoop world's been an extreme amount of time trying to ensure data locality and optimizing hdfs for this type of access as Network speeds of
+00:28:54 [W] and what we found at Matt Barr was that true data locality became less important with faster networks in many cases fast posix access to
+00:29:09 [W] Distributed file system is really enough block storage scheduler improvements and custom schedulers may all make true data locality in kubernative.
+00:29:22 [W] He's and kubeflow something that's reasonable for these machine learning Frameworks in the future.
+00:29:35 [W] But and spok the spark project has worked a lot on doing data locality in kubernative, but as
+00:29:40 [W] It's not something that I would suggest you spend a lot of your time and energy on early on there will be certainly use cases where it's important. But in most cases actually having the data
+00:29:55 [W] Knotted on a block device on that particular node is a very difficult thing to do and you should approach it with caution our final and probably the most complex challenges data security.
+00:30:10 [W] I use the term data security broadly and there are a lot of nuances we can't cover in this presentation, but I want to make sure you have just a few of the tips and just a way to think about it is security and some of the
+00:30:22 [W] There's complexity.
+00:30:27 [W] There are two main causes for these difficulties oner the way namespaces working kubernative and the other is notebook service accounts namespaces and data.
+00:30:39 [W] Don't really cooperate really. Well.
+00:30:45 [W] Let's talk about three types of data. There's globally shared data and that's data is shared between multiple teams users and projects. There's teams share data and that state is shared between team members.
+00:30:53 [W] Embers and user data and that's the data for a single user data scientists. When you combine that with the granularity and where the various kubernative he's
+00:31:08 [W] Data, and that's data for a single user data scientists. When you combine that with the granularity and where the various kubernative he's storage are two facts
+00:31:09 [W] Live like CSI persistent volumes and storage classes and how they interact with Secrets.
+00:31:17 [W] It can be problematic CSI uses secrets that contain the storage back ends credentials, and we need to actually have these secrets attached to persistent volumes or storage
+00:31:30 [W] That the driver can see those credentials and access storage securely the problem is that if you're in a shared namespace, it's hard to protect those secrets for multiple users.
+00:31:46 [W] So my tip is really to plan your name spaces and data owners very very carefully. You really need to sketch out.
+00:31:57 [W] what p v is live where who can access what in what name space when you're setting up this infrastructure. The security implications are really important the second area of data security that you have to pay attention to our
+00:32:11 [W] Setting up this infrastructure. The security implications are really important the second area of data security that you have to pay attention to our team resources.
+00:32:16 [W] Coop flow has this profile name space concept for individual users and this is where notebooks run, but at the same time most customers that we see actually
+00:32:27 [W] We're notebooks run but at the same time most customers that we see actually think a lot about resource controls and resource quotas one of the
+00:32:33 [W] Resource controls and resource quotas, one of the values of kubernative he's is that they can restrict 18 a data science team to a certain number of CPUs in a certain amount of memory and they want to enforce those quotas at A Team level.
+00:32:45 [W] They want to enforce those quotas at A Team level.
+00:32:50 [W] That means you probably want to run your training jobs in the team name spaces, but that means that various things like persistent volumes and various resources need to be there
+00:33:00 [W] Things like persistent volumes and various resources need to be there in the team name space as well as the username space.
+00:33:08 [W] So my recommendation is to use web hooks or in Mission controllers is CEO and Jupiter Hub to create resources like volumes and storage classes in your profile name spaces for team volumes, and
+00:33:18 [W] um, and if you're going to run your training jobs in the team name spaces have individual user volumes exist in that namespace, but make sure you spend a lot of time making sure the our back is is
+00:33:32 [W] It's secure.
+00:33:35 [W] finally service accounts and data security so data scientists live in notebooks notebooks living containers and those containers are launched by launch processes and its CEO routes
+00:33:52 [W] The browser requests the right container because of the way all of this works.
+00:34:03 [W] He's containers don't run as the user themselves. They run as a service account this but inside of the container the user needs to run training jobs as themselves. They need to talk to
+00:34:15 [W] Whereas themselves and this means they need credentials passed in one of the big tips is again use web hooks or Mission controllers to create secrets with these credentials intercepting the notebook
+00:34:31 [W] I'm in creating creating these resources be very careful about what containers you allow users to exact into because of the types of secrets that you'll want to
+00:34:48 [W] painters
+00:34:49 [W] Thank you very much for listening to this presentation.
+00:34:57 [W] There are some links in my email if you have questions.
+00:34:59 [W] Hi everyone.
+00:35:09 [W] Thank you so much for joining to answer the questions.
+00:35:16 [W] The most of the questions have been around slides.
+00:35:20 [W] I've been told that the slides will be available to all and attendees. If you do not have access to the slide debt, please feel free to email me at Skylar dot Thomas
+00:35:31 [W] Thank you so much for joining to answer the questions.
+00:35:32 [W] The most of the questions have been around slides.
+00:35:32 [W] I've been told that the slides will be available to all and attendees. If you do not have access to the slide debt, please feel free to email me at Skylar dot Thomas
+00:35:33 [W] Dot-com and I'll be happy to send them out to you or you can send me a message through conference chat Etc.
+00:35:44 [W] I guess there were I saw out-of-band one question around the the notion of these various
+00:35:56 [W] You with namespaces and data to talk a little bit more about that.
+00:36:02 [W] So the issue is this so kubeflow depending on how you deploy kubeflow kubeflow has a mode where it can deploy notebooks into a type of namespace called a
+00:36:16 [W] Kubeflow has a mode where it can deploy notebooks into a type of namespace called a called a profile name space if you if you want to think about that that
+00:36:24 [W] If you if you want to think about that and that namespace a little bit deeper.
+00:36:28 [W] that's an individual user name space and there's lots of really great things about that type of namespace everything that you set up our backs for and kubeflow does a lot of our back set up by
+00:36:40 [W] All of those our backs are individuals.
+00:36:46 [W] So any secrets that you store in that container, you're not going to see leakage out to other users, but the problem that we see is that that's great in the exploration phase when you're using things like
+00:37:00 [W] That's great in the exploration phase when you're using things like like notebooks, but if you're doing distributed training and you want those training jobs to run in a team name space then
+00:37:09 [W] Base then you need to create name spaces for your team's those team names faces become complex because things like secrets that you need to put in the name space may be available to all
+00:37:22 [W] Namespace and so you have to think about how you set up your our backs in a way that those secrets are available for your CSI drivers or for various other resources.
+00:37:38 [W] There's still not available to everyone on the team and and that's a very tricky thing to do around data.
+00:37:47 [W] So are there any other questions that I can help with before we close that out?
+00:37:56 [W] Okay.
+00:37:59 [W] Thank you very much.
+00:38:01 [W] I really do appreciate everybody. Thank you so much for coming my session.

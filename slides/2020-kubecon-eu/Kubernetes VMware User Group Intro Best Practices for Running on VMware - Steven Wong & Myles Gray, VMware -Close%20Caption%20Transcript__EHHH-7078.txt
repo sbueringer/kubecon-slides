@@ -1,0 +1,282 @@
+﻿Kubernetes VMware User Group Intro: Best Practices for Running on VMware: EHHH-7078 - events@cncf.io - Tuesday, August 18, 2020 11:41 AM - 55 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:03:27 [W] Hi, this session is presented by the kubernative.
+00:03:34 [W] He's VMware User Group.
+00:03:37 [W] This group is about running all forms of kubernative Ace on the VMware infrastructure platforms from a user perspective.
+00:03:44 [W] I'm Steve Wang co-chair of the user group.
+00:03:46 [W] I work on kubernative and a few other open source projects as an employee of VMware today.
+00:03:52 [W] I'm joined by Miles gray the other coast here.
+00:03:55 [W] Miles is senior technical marketing architect in the storage and availability business unit of VMware.
+00:04:03 [W] We'll give contact information and a link to the deck at the end.
+00:04:12 [W] Here's the agenda miles is going to start with a really quick summary of what the cloud provider and storage provider are will move on to address some recent changes in plan changes those topics
+00:04:26 [W] We'll give contact information and a link to the deck at the end.
+00:04:27 [W] Here's the agenda miles is going to start with a really quick summary of what the cloud provider and storage provider are will move on to address some recent changes in plan changes those topics
+00:04:28 [W] Nettie's on the vsphere platform, but we're also going to talk about running kubernative on the desktop hypervisors fusion and workstation.
+00:04:37 [W] Finally.
+00:04:39 [W] We'll wrap up with some links to resources.
+00:04:45 [W] Hopefully you like the talk and at the end they'll provide details on how you can become a member of the kubernative VMware User Group where we host ongoing discussions on subjects like the material in this talk.
+00:04:54 [W] Thanks a lot Steve.
+00:05:06 [W] So like Steve said I'm going to talk to you about the vsphere cloud provider the updated out of tree cloud provider and the container storage interface.
+00:05:11 [W] So we'll cover off the vsphere cloud provider. First on cloud providers are concept that sort of makes kubernative.
+00:05:13 [W] He's Cloud native.
+00:05:17 [W] It provides an abstraction layer between the apis from the underlying infrastructure whether that's vsphere or Google cloud or Amazon or what have you and The Primitives that kubernative.
+00:05:25 [W] And so it means that kubernative doesn't have to have core platform logic built into it in order to communicate with the underlying platform to ask for resources and that kind of thing. So the vsphere client provider and the cloud provider interface the entry and the other tree
+00:05:41 [W] Really do is they alive for labeling and locality for virtual machines on top of vsphere but in a way that kubernative can understand so you can put things into zones it
+00:05:56 [W] Sighs the underlying infrastructure.
+00:06:07 [W] So the VM concept into the kubernative a Slayer so it apply labels into particular nodes and kubernative based on what their VM ID is and that kind of thing.
+00:06:15 [W] So the cloud provider vsphere is an updated out of tree version of the vsphere client provider and the vsphere cloud provider is something that's known as an entry cloud provider.
+00:06:25 [W] Those are all being sort of phased out by about
+00:06:27 [W] Kubernative 1.20 1.21 the the migration timelines change a little bit but I think it's 1.20 at the minute. And basically the idea is the kubernative maintainers want to remove all of the entry Cloud
+00:06:43 [W] But kubernative is 1.21 that 21 the the migration timelines change a little bit but I think it's 1.20 at the minute. And basically the idea is the kubernative maintainers want to remove all of the
+00:06:44 [W] Is it add dead code into the code base?
+00:06:47 [W] It opened it up to security vulnerabilities.
+00:06:53 [W] It adds bloat to the core kubernetes binaries. It doesn't need to be there and it means that if there are changes that need to be made to a cloud provider the vendor for that cloud provider has to make changes to the core kubernetes code base rather than
+00:07:04 [W] In their own individual plug-in, which you can appreciate if there's a bug that you want to fix that means you have to upgrade your entire kubermatic platform.
+00:07:14 [W] So not really great solution.
+00:07:16 [W] So they've pushed all of the vendors including ourselves to creating a out of tree version. So more of a plug-in type architecture, so that's what I'm going to talk about.
+00:07:29 [W] I'm going to talk about the vcp the CPI, which is a cloud provider interface, which is the out of tree version of the vcp and the CSI driver. It's
+00:07:35 [W] self
+00:07:36 [W] So we'll start from a storage perspective because storage is sort of my thing and we've already talked about the vcp. And basically it was a minimum viable product. It was an entry cloud provider that allowed for
+00:07:51 [W] Meaning of storage on kubernative sighs. So if a pod was scheduled and it required a 100 Gig volume the vsphere cloud provider would take that call and translate it into something that vsphere would understand. So it would essentially just create a 100 Gig
+00:08:07 [W] And mount it into the appropriate kubernative worker node, so that pod can access some storage.
+00:08:17 [W] So that was all fine.
+00:08:28 [W] But like I say, it was a minimum viable product. It had kind of a hacky way of deploying storage and basically what it did was it would create a shell VM that had, you know, nothing in it other than a vmx
+00:08:32 [W] MDK it within detach the vmdk.
+00:08:41 [W] Delete the VM and then reattach the vmdk to whatever the target VM was.
+00:08:41 [W] So I think can you can appreciate that?
+00:08:45 [W] There's some work that's being done there that didn't really need to be done.
+00:08:59 [W] It also led to an interesting problem. And if you've ever worked as a sysadmin on vsphere systems, if you detach a vmdk from a VM, there's no real easy way to discover those so they become orphaned and they
+00:09:02 [W] Data storage consuming space but they are hard to identify that there's there's no mapping to them.
+00:09:14 [W] So we saw this move from entry to out of tree as an opportunity to rewrite that integration and its entirety like we basically just went from scratch and we used a completely different back-end that doesn't have some of those inherent
+00:09:23 [W] So that's what we sort of released with with vsphere 6.7 you three something called the CNN has plant form which is cloud native storage platform and it has basically the same features as the vsphere cloud provider, but in a much more supportable
+00:09:40 [W] Scalable manner so you still got your Dynamic provisioning of volume.
+00:09:50 [W] So if your applications require storage, they can still request that and have it assigned automatically.
+00:09:52 [W] There's no need to have a developer talk to a sysadmin to get stuff provision and frankly.
+00:09:58 [W] That's just not the way stuff works in this world.
+00:10:03 [W] So having Dynamic provisioning is a must that VM provisioning workflow.
+00:10:10 [W] I talked about where it created a VM with a vmdk attached and threw away the VM clearly.
+00:10:10 [W] IE a lot of API calls and a lot of functions going on there that didn't really need to happen.
+00:10:25 [W] So we change the back end from that what we call just a legacy VM provisioning back end to something called first-class discs and first-class discs are really nice because they don't have this orphan storage problem
+00:10:30 [W] Ninth, one of these first-class disks from VM.
+00:10:35 [W] We still track where it is.
+00:10:38 [W] We still track how much storage it's consumed, you know, where it lives on the file system all that good stuff.
+00:10:49 [W] So even when ever you scale out an application say a stateful set and you scale it back in from say 3 to 2 nodes.
+00:10:54 [W] It'll keep the disc there. The first class disc will still exist, you know persist it will still persist.
+00:10:57 [W] That's the point of it, but we won't lose track of it.
+00:11:03 [W] So the next time it goes to scale outside from two to three nodes, it will automatically take that volume and remount it back in and then the application can do it Delta sink on top.
+00:11:12 [W] So it removes some of the challenges around operationalizing it in addition.
+00:11:17 [W] We added a UI interview Center for all this stuff. So whenever you get a dynamically provisioned volume, all of those volumes show up in the vcenter UI so that you're if you're a developer, you're sysadmins can
+00:11:33 [W] Pew in debugging things if you give them a PVC ID, they can just paste it into our UI and I'll show them, you know, right the way down to the physical tin.
+00:11:41 [W] What disk that volume actually exists on so a lot of the refinement and feature additions that we made were really around making this more scalable making it more operationally viable.
+00:11:54 [W] To back in and then the application can do it Delta sink on top.
+00:12:00 [W] So it removes some of the challenges around operationalizing it in addition.
+00:12:01 [W] We added a UI interview Center for all this stuff.
+00:12:02 [W] So whenever you get a dynamically provisioned volume, all of those volumes show up in the vcenter UI so that your if you're a developer, you're sysadmins can help you in debugging things if you give them a PVC ID
+00:12:02 [W] Nude on that architecture and we added a few more bits and pieces in there.
+00:12:04 [W] So if any of you are familiar with vsphere storage, we added support for basic Vivo Primitives. So if you want a block volume that is to say if you want a read/write once volume and kubernative.
+00:12:19 [W] He's you can now use vmfs and fsv Saint or Viva. Also All Storage types for vsphere not supported in addition.
+00:12:29 [W] We had quite a few requests for read/write many volumes. So if you have a
+00:12:30 [W] A Visa and data store we can now automatically provision NFS file shares for you.
+00:12:41 [W] Just dynamically the same way we would for read/write once volumes and they will get mounted into you know, however many pods and worker nodes you assign that single rewrite many persist in volume 2.
+00:12:50 [W] So the big thing was the file based volumes based on Visa and like I said befall support as well, but we've also added per persistent volume encryption support using VM Crypt, so
+00:13:02 [W] you can ask for a volume to be provisioned using an encryption storage class and that will encrypt those volumes and their re-keyed whenever they get moved to another v m so if you have a node failure and I get moved to another
+00:13:15 [W] Volume will be re-keyed so it can be read by the Target VM which is quite nice as well. And we have persistent volume snapshots now.
+00:13:27 [W] I'll highlight this isn't the CSI snapshot feature there.
+00:13:33 [W] we don't have interrupt with the CSI snapshot API yet, but this is a plug-in for Valero. So if you use Valero for backup and restore of your kubernative applications, we have something called the VA DP plugin for
+00:13:46 [W] Arrow and that will take vsphere level snapshot of the persistent volumes before the data is read off them to ensure atomicity of the data as it's being read off to ensure that it's consistent when you back it up so that whenever
+00:14:01 [W] We'll be at least crash consistent.
+00:14:06 [W] We also added a first pass at volume resizing so we can now actually support offline volume resize so you would essentially remove it from your pod.
+00:14:18 [W] Delete the Pod change the specification of the PVC.
+00:14:29 [W] It'll automatically expanded in vsphere and then you can reattach it to your pod and we've added support for a mixture of tooling as well. So if you want to use wavefront you can
+00:14:33 [W] a wavefront but we realize that almost everyone here uses Prometheus. So we added knative Prometheus exporters into esxi as well as created a bunch of grow fonder dashboards for those that actually expose those
+00:14:46 [W] Use wave front you can use wave front but we realize that almost everyone here uses Prometheus. So we added knative Prometheus exporters into esxi as well as created a bunch of grow fonder dashboards for those that
+00:14:48 [W] You how to use them as well.
+00:14:53 [W] So if you have Prometheus in your environment, you can now use that to scrape metrics from esxi as well directly and have your applications react to changes on the underlying infrastructure.
+00:15:01 [W] So if we take a little look here just to do a brief sort of 101 of how this actually works everything you see in Orange here is the vsphere everything in blue is kubernative.
+00:15:18 [W] So you've got your vcenter installed on your vsphere infrastructure and CNS is just a Daemon that runs inside vcenter.
+00:15:23 [W] So when you install that it's just automatically there.
+00:15:28 [W] So the first thing you do is you create your spbm policy in vsphere and if you're not familiar with vsphere or spbm policies, its
+00:15:32 [W] Essentially just a storage class like they're basically identical Concepts but an spbm policy allows you to specify things like, you know, how many copies of this data do you want?
+00:15:46 [W] You know, where should it be located on what site that kind of thing.
+00:15:51 [W] So you create your spbm fault policy and then you create a kubernative storage class that point at that spbm policy. So super simple it just related by name.
+00:15:59 [W] Then we've got our CSI driver and the CSI driver is what does the translation between the Kate storage class and the spbm policy. So whenever a volume is provisioned that is how vcenter and vsphere know in what Manner
+00:16:15 [W] You create your spbm policy and then you create a kubernative storage class that points at that spbm policy. So super simple. They just related by name then we've got our CSI driver and the CSI driver is what does the
+00:16:16 [W] Volume and where to mount it into which kubernative node and then what poddisruptionbudgets akos and redeployment here and it says I would like a 100 Gig volume from this storage class.
+00:16:30 [W] So that storage class if you look at how that's constructed.
+00:16:36 [W] There's a provisioner and that would say this is the vsphere CSI provisioner.
+00:16:37 [W] So it says, okay.
+00:16:40 [W] Well, I'll hand this call off to the vsphere CSI provider.
+00:16:45 [W] It looks at that request and says, okay, we're going to send this to the vcenter that I'm registered with so
+00:16:46 [W] It sends it to the vcenter CNS looks at the request and says okay. This is a read/write once volume and it requires this spbm policy. So it sends out to the spbm engine and then it just creates that
+00:17:00 [W] What the policy said so it will create two copies of the data mounted up to enter the appropriate kubernative worker node format it with a file system and mind to into the Container. So end-to-end that is completely automated after you create the kubernative storage class, which is
+00:17:16 [W] And one thing I want to mention here is there are customers and people out there who have been using kubernative for a while that will have volumes provision through the vsphere cloud provider and you'll have to do a
+00:17:34 [W] Age from the vsphere client provider to the CSI driver because like I said, the Intrigue cloud provider is going to go away and the CSI will be the new way of doing things.
+00:17:50 [W] So in the new version of kubernative Xin 1.19 and the CSI driver we are adding beta level or what we call beta level support for vcp to CSI migration now basically
+00:17:59 [W] Is it allows you to have the vsphere cloud provider installed in your environment? You can then enable this migration feature with some feature flags and kubernative 1.19 and then you
+00:18:14 [W] Sigh driver and what it basically tells the CSI driver to do is to just intercept all requests that would go to the vcp and just provision them through the CSI instead or service them through the CSI. In addition.
+00:18:30 [W] It will actually change the back end this type from just a standard vmdk to a first-class disk so that whenever you are importing all of these volumes you get all of the nice new UI based tracking and all that stuff that comes along
+00:18:44 [W] Well, so the upgrade would actually be transparent to the application.
+00:18:52 [W] You don't need to change any of the application manifest.
+00:18:54 [W] We basically just intercept all of the calls that would go to the vcp Via like a web hook shim layer, and they get pushed into the CSI instead.
+00:19:03 [W] So we just take over all of those calls.
+00:19:12 [W] So this is really nice from like a day to perspective whenever you are upgrading your case clusters in future. You'll be able to just take your existing volumes and
+00:19:17 [W] import them into the CSI driver so that they get automatically included in the vcenter UI, which is really quite cool.
+00:19:22 [W] And we're just going to take a brief look here through some of the recently added features in the vsphere cloud provider before I hand it back to Steve and he's going to take you through desktop hypervisors.
+00:19:36 [W] So just real quick.
+00:19:43 [W] We're going to hit off the new things here and then you can click on the individual links with the deck afterwards.
+00:19:47 [W] So we actually have nsmcon slow balancers getting added into the cloud provider. So if you specify a load service type of load balancer we can enter up with nsmcon
+00:19:58 [W] And ask for those to be provisioned, which is really quite cool.
+00:20:03 [W] Additionally.
+00:20:11 [W] We're moving from like an I and II Type config config to a Yamaha bass convict just because you know, that's kind of how things work these days.
+00:20:16 [W] We are updating the cloud provider interfaces image account to be an en route account, which I'm sure you'll agree from a security standpoint is good thing to do and just adding a bit more robustness to the whole zones and
+00:20:28 [W] Were looking at are we are adding folder and resource pool traversal for those features as well.
+00:20:43 [W] So if you are using zones or tags, it will now be able to Traverse all of the resource pools or folders under that environment and figure out where stuff actually lives and like I said the rest of it you can read through in your own time with
+00:20:52 [W] You can click on the individual pull requests and see how those things actually work.
+00:21:01 [W] So I'm going to hand it back over to Steve now and he's going to take you through kubernative desktop hypervisors.
+00:21:06 [W] Thank you miles.
+00:21:09 [W] I'm going to move on to running kubernative.
+00:21:14 [W] He's on VMware desktop hypervisors.
+00:21:15 [W] The desktop hypervisor was actually vmware's first product back in 1991, and it was first hosted on Linux. This first generation of products was the origin of
+00:21:32 [W] server class hypervisor products even though VMware is best known in data centers the desktop hypervisors for Linux Windows and Mac are installed on millions of
+00:21:47 [W] Linux Windows and Mac are installed on millions of computers.
+00:21:48 [W] The fusion hypervisor is the version for mac and like workstation.
+00:21:54 [W] It's known as a type 2 hypervisor meaning it runs on and Os rather than directly on bare metal.
+00:22:04 [W] It's also worth noting that these desktop hypervisors Implement virtual networking to allow creation of multiple networks connected to the VMS they host.
+00:22:12 [W] This shows the latest versions of the production of products, but it turns out that a newer Tech preview beta is also running now participation in the beta is free and there are Player
+00:22:30 [W] cop hypervisors also available for personal non-commercial use
+00:22:36 [W] I'm going to show a kubernative install using the tech preview just because that's what I've got running on my laptop, but pretty much everything.
+00:22:49 [W] I'm going to show applies to other recent versions of these desktop hypervisors as well. The new 20h to version in Tech preview has support for running containers
+00:23:04 [W] The new 20h to version in Tech preview has support for running containers directly without composing a VM.
+00:23:08 [W] The experience is not unlike Docker at a command line.
+00:23:15 [W] You have push-pull run using a CLI in this case named V cuddle the difference.
+00:23:20 [W] is that these Docker and oci compliant container images run in the hypervisor in a lightweight fashion.
+00:23:27 [W] Kind the kubernative Xin Docker tool is not currently integrated into this Tech preview CLI, but I'm told that developers are pursuing this.
+00:23:37 [W] The top line here shows the download links for getting the production releases of the desktop hypervisors.
+00:23:52 [W] And by the way, the fusion hypervisor for Mac version 11 point five point five is already out with this container support So if you're running 11.5 first Fusion you can upgrade to
+00:24:02 [W] The top line here shows the download links for getting the production releases of the desktop hypervisors.
+00:24:06 [W] And by the way, the fusion hypervisor for Mac version 11 point five point five is already out with this container support So if you're running 11.5 first Fusion, you can upgrade
+00:24:09 [W] Five point five right now to get the containers for the next line here has links to the free Tech preview beta and a warning if you use the earlier Tech preview beta that was out at the beginning of
+00:24:18 [W] Tech preview beta that was out at the beginning of the year uninstall it before moving on to the newer version.
+00:24:30 [W] Also be careful about using Google to find this beta because the older version tends to show up first in the search results just because a lot of blog posts got out talking about it.
+00:24:37 [W] So I'm going to show a demo running minikube with a series of screen shots rather than as a video if if this had been a physical conference as originally planned, I would have done it as a live demo, but since we're
+00:24:55 [W] Online it can't be live. Anyway, and I decided that the screen content snaps suffer from last from bad internet and also allow cut and paste directly from the slides in the deck if you choose to follow
+00:25:10 [W] home
+00:25:14 [W] So I'm going to show this demo on Windows instead of Linux for a few reasons.
+00:25:22 [W] I'd rather show the more disruptive environment and windows simply tends to get lighter coverage in the blogosphere kubernative continues to open up Windows container support and
+00:25:35 [W] A lot of Windows developers who are struggling to new learn the new world of kubernative.
+00:25:44 [W] So I wanted to be inclusive and help people get a bridge from those millions of Windows laptops into the world of kubernative.
+00:25:56 [W] If you're on a Mac or Linux machine, don't fret it's very similar to what I'm about to show Mostly the difference is that you can cut out a few steps.
+00:26:04 [W] So start by downloading the five items listed here.
+00:26:05 [W] If you're watching from the recording, these links are two specific versions that probably have a shelf life of a month or two.
+00:26:17 [W] So if this is an older recording at the point, you catch it look for newer versions as needed.
+00:26:20 [W] In a few cases, you could flip the order of these installs, but this is what I tested if you're on a Mac or Linux, you can probably have get already so skip that step.
+00:26:35 [W] It doesn't likely make sense.
+00:26:40 [W] The summary here is I'm assuming you've already downloaded it from your collection of downloads start by installing the hypervisor than golang get finally
+00:26:50 [W] Cases you could flip the order of these installs, but this is what I tested if you're on a Mac or Linux, you can probably have get already so skip that step.
+00:26:51 [W] It doesn't likely make sense. The summary here is I'm assuming you've already downloaded it from your collection of downloads start by installing the hypervisor than golang get
+00:26:53 [W] from The golang Source install Cube cuddle and then minikube
+00:26:58 [W] the these downloads our installer package has so they're pretty simple to figure out I'm not going to make you watch step by step with these installs just find the installers that you downloaded and
+00:27:13 [W] The order here you should be fine.
+00:27:16 [W] Next we're going to configure minikube. The effect of these configuration settings is to specify the VM that kubernative is going to run in the settings.
+00:27:33 [W] I'm showing here are generous.
+00:27:36 [W] I did these big to allow enough to run pretty demanding things such as installing and running an sto servicemeshcon.
+00:27:48 [W] Only going to run a few simple apps and kubernative by the way.
+00:27:55 [W] I show an optional step here because I'm changing the default Network cider and change. This change is going to require some additional setup in
+00:28:09 [W] Hyper visor that I'll get to in the moment, I'm doing this simply because most minikube usage examples that you find out on the internet use the 192 168 99 cider range, and I wanted
+00:28:25 [W] To cut and paste out of any examples you might find off the internet.
+00:28:34 [W] So do the config steps shown here, but when you're done don't close the command prompt that you do this in because we'll be back to it shortly.
+00:28:44 [W] You'll follow the steps to configure each of these settings one at a time and that final step of minikube config view just Echoes back your configuration so that you can verify
+00:28:55 [W] by that you didn't have any typos.
+00:28:58 [W] Now I'm showing the configuration of the VMware Workstation hypervisor.
+00:29:10 [W] Like I say it comes with virtual networks.
+00:29:13 [W] There are some created by default.
+00:29:14 [W] You can create more if you need them.
+00:29:24 [W] But what we're going to do is change the the IP subnet that is being used by one of these pre-configured networks. So
+00:29:29 [W] Start by opening the workstation UI and we choose the virtual Network editor from the edit tab, by the way, you're going to need to have admin rights to your machine in order to edit these virtual
+00:29:44 [W] As for wait, otherwise if it's a view only scenario.
+00:29:49 [W] You start by hitting the change settings button on the lower, right and this triggers escalation to invoke your admin privilege.
+00:30:07 [W] Then you change the subnet prefix to 192 168 99 and then finally, press the DHCP settings button.
+00:30:13 [W] This shows the dialog box that's going to pop up. We're going to assign a block of ips to DHCP and keep the rest in reserve. So in the portion of the dialogue box circled in red
+00:30:30 [W] The DHCP octet range to hand out addresses from 128 to 254 and then hit the okay button.
+00:30:41 [W] Now it's time to go back to that command line prompt and start minikube, which is going to be a VM that will be running kubernative. The minikube start step is going to take a minute or two
+00:30:58 [W] Um, that will be running kubernative. The minikube start step is going to take a minute or two how long it takes exactly might even depend on the speed of your internet connection
+00:31:05 [W] Speed of your internet connection when you trigger this minikube start you're going to see log output as the VMS composed and started and the components are pulled installed and run.
+00:31:16 [W] Did and the components are pulled installed and run the VM is going to be underneath the dot minikube / machine / minikube directory inside your home directory on Windows.
+00:31:28 [W] In those and later, you can add that minikube dot vmx file to your workstation inventory using the file open menu if you want to see it in the workstation GUI.
+00:31:41 [W] after the command line shows done with an excellent exclamation point you can verify using minikube status and the cube cuddle CLI with Cube cuddle version is shown here
+00:31:58 [W] Is complete you have kubernative. He's running inside a workstation hosted VM.
+00:32:05 [W] We'll move to a moderately Advanced demo now, but you could do whatever you want.
+00:32:12 [W] minikube starts pretty lightweight, but I'm going to turn on some actual optional add-on feature since I gave this VM plenty of CPU and memory to allow this we're going to deploy load balancer or something. You might need
+00:32:27 [W] Play with servicemeshcon interact with the outside world. We're also enabling the kubernative is dashboard.
+00:32:35 [W] So do the command line steps shown here and you should get the results shown in blue.
+00:32:45 [W] when you do invoke the minikube dashboard command at the command line, this will open up a browser windows with the kubenetes UI the metal lb load balancer is
+00:33:03 [W] Winged eye peas from a pool like an eye Pam, but we need to configure it in order to specify the IP address pool that it issues ideas from when it provides load balancing
+00:33:19 [W] This has to be a different range from the range. We assigned to the DHCP server. Those ranges are issued two VMS as opposed to the metal lb load balancer issuing ipas2.
+00:33:36 [W] Those ranges are issued two VMS as opposed to the metal lb load balancer issuing IP's to to Burnett.
+00:33:38 [W] He's hosted services on the menu on the left inside the dashboard enable showing all namespaces then go down and choose config maps and
+00:33:53 [W] Says on the menu on the left inside the dashboard enable showing all namespaces then go down and choose config maps and
+00:33:55 [W] She added with metal lb. We're going to want to alter that config map.
+00:34:02 [W] As shown in the thing circled in red to assign the IP range ranging from 192 168 99.1 052 120.
+00:34:17 [W] Now we're going to display deploy a service and this is the hello minikube service example that comes straight out of the minikube docks.
+00:34:33 [W] We use Cube cuddle to create a deployment of a web service as shown here.
+00:34:37 [W] here. Then we use Cube cuddle expose to create a load balance service and make this web server publicly accessible after this completes. You can find a link to the service in the dashboard or you could also
+00:34:49 [W] Get the Earl from the command line.
+00:34:54 [W] I'm not going to show it here.
+00:34:55 [W] But if you do this later at home a hidden slide in this deck shows the steps to clean up the service the deployment and even the minikube VM.
+00:35:03 [W] So this content is brought to you by a kubernative user group. And if you're using kubernative Zon vsphere I encourage you to formally join this group.
+00:35:20 [W] We have a meeting each month where we discuss tutorials and best practices.
+00:35:22 [W] Topics including discussions of feature requests we've got to user tech leads Bryson Shepherd and Djoser see who helped get this group started, but they couldn't be with us today in this online
+00:35:41 [W] But they couldn't be with us today in this online presentation.
+00:35:47 [W] We're looking forward to Growing this group with a diverse set of worldwide users.
+00:35:53 [W] The group is also running a slack Channel, which is a great place to act ask questions and meet other users.
+00:35:58 [W] It's a good place to bring up vsphere specific topics. But if you want to talk about kubernative Xin General, perhaps the there is also a kubernative.
+00:36:07 [W] Is user Channel which might be more appropriate for Urgent really generic questions and discussions.
+00:36:16 [W] It's also the slack channel is also a great place to reach out to meet code contributors and documentation contributors.
+00:36:26 [W] So the next user group meeting is going to be September 3rd in the North American time zone.
+00:36:37 [W] You can go to the kubernative community calendar link shown here to get a conversion to your local time zone and to add it to your calendar.
+00:36:50 [W] You can become a group member by joining the joining the mailing list that shown in the link here and finally, here's a link to the group slack Channel.
+00:36:56 [W] So Miles and I are going to hang around for QA.
+00:37:04 [W] Nerd in the North American time zone you can go to the kubernative community calendar link shown here to get a conversion to your local time zone and to add it to your calendar.
+00:37:13 [W] On the user group slack Channel.
+00:37:14 [W] Thank you. And I hope to see you in a future meeting at this point.
+00:37:20 [W] I'm going to turn it back over to the cncf moderators.
+00:37:22 [W] So Miles and I are here for questions. If you've got any by Audio there we've also answered some in the chat.
+00:37:46 [W] So I see that there's one they're asking about will be support for a rewrite man vsphere storage class has I hope that that was addressed in the talk, but the answer is yes.
+00:38:05 [W] So if you use Visa and storage, we have support now already for read/write many volumes using these sound files Services as the backing data store for that.
+00:38:15 [W] And so yes that is supported today.
+00:38:19 [W] today. And then the next question is what is the benefit of others and I think I've just
+00:38:22 [W] Justified it there so it adds support for rewrite many volume simply because we need to be able to provision NFS shares on demand.
+00:38:30 [W] It allows us to do that and just because of the the architecture of e sin it's software-defined. It's a distributed system just like kubernative ziz.
+00:38:42 [W] For read/write many volumes using beasts and fowls Services as the backing data store for that.
+00:38:44 [W] So yes that is supported today.
+00:38:44 [W] And then the next question is what is the benefit of using compared to others?
+00:38:45 [W] And I think I've just Justified it there.
+00:38:45 [W] So it adds support for rewrite many volumes simply because we need to be able to provision NFS shares on demand.
+00:38:46 [W] It allows us to do that and just because of the the architecture of e sin.
+00:38:48 [W] It's software-defined.
+00:38:51 [W] It's a distributed system just like kubernative ziz. So it scales quite nicely the way that kubernative scales given it it's the same sort of architecture and it just removes the need to have to manage an entirely different storage fabric external storage arrays and
+00:38:53 [W] Textured and it just removes the need to have to manage an entirely different storage fabric external storage arrays and deal with different CSI providers.
+00:38:55 [W] One of the fuses singles looks like the butter.
+00:38:56 [W] So Miles, I'm going to have to drop so I'm going to lead turn it over to you for the questions.
+00:39:07 [W] I see another question here.
+00:39:12 [W] Will there be S3 support on be sin?
+00:39:18 [W] Not directly on peace and that's not in our immediate roadmap.
+00:39:20 [W] No, but we are keep an eye in this space for the next month or two and you'll see will be announcing some Partnerships in that area specifically to provide Object Store apis from V sin.
+00:39:34 [W] There's a question here on is there documentation for vsphere cluster monitoring via Prometheus. So there is an internal project that we're currently open sourcing at the minute, which is a full stack sort
+00:39:51 [W] Medias angriff Anna installation that pulls the metrics off of esxi hosts and vcenter. So every esxi hosts if you have version 7 or above as a Prometheus exporter in it built
+00:40:06 [W] So you can scrape this flash metrics URL.
+00:40:11 [W] I think that's what it is and it will get you whatever metrics are exposed by that but we are as I say currently open sourcing and operator that has all of that packaged up. So just watch this space once it does go ga if
+00:40:25 [W] Kubernative VMware User Group were more than likely going to have a talk about that whenever it does get released.
+00:40:32 [W] Okay, and then there's another question here.
+00:40:46 [W] Okay, will the vsphere integration support running pods or containerd right on the bare metal in a vsphere cluster or will they always have to have nodes provisioned?
+00:41:08 [W] So that's that's a good question at the minute. If you use the vsphere with kubernetes offering we have this concept called vsphere pods, and that is essentially a container running directly on the esxi
+00:41:19 [W] Of it creates this lightweight CRX runtime CRX is our built-in esxi containerd runtime instant and then run your pot in there. So that is already something that exists today.
+00:41:35 [W] it's not very well exposed to users yet because it was just a V1 but in subsequent releases that's going to be improved upon and may be easier to use but that that already does exist today and
+00:41:48 [W] I think that is basically it.
+00:41:53 [W] Thanks everyone for your time and thank you for attending the polka the podcast the webcast.
+00:42:01 [W] Have a great rest of the conference.
+00:42:01 [W] Goodbye.

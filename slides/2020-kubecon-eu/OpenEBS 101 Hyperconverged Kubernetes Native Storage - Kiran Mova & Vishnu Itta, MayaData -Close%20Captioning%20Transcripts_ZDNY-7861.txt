@@ -1,0 +1,253 @@
+﻿OpenEBS 101: Hyperconverged Kubernetes Native Storage: ZDNY-7861 - events@cncf.io - Thursday, August 20, 2020 7:41 AM - 44 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:03:42 [W] hi, everyone Thanks for tuning in to this cncf maintainer track session on openfaas openfaas joint cncf about a year ago and just completed its annual review and it's on
+00:04:03 [W] All clear the incubation stage.
+00:04:15 [W] I'm actually delighted to present this talk along with Vishnu here today.
+00:04:25 [W] Both of us are available on slack kubernative slack or ideas are there you can reach out to us for any questions related to the session as well as if you have any questions related to State little running stateful obligations in
+00:04:31 [W] We are really excited about the possibilities that kubernative offers for running stateful workloads.
+00:04:44 [W] Just a little bit of my data where we you know, which actually stands responses. Both of us.
+00:04:51 [W] We both completely work in open source, and with the community, my data is also like one of the top contributors in the cncf. It has donated openfaas that we will talk a little bit more today and it really
+00:05:02 [W] recently also founded and along with other companies donated litmuschaos as another project and weakness is used for enabling chaosmesh Engineering in a kubernative knative a in kubernative
+00:05:17 [W] actually both for straightforward and stateless workloads apart from working on openfaas and litmuschaos projects Vishnu and I also work on several other kubernative ecosystem projects, for example, I recently contributing
+00:05:33 [W] And if it's provision is project in the kubernative 6 where is Vishnu is actively involved in Valero, which is a disaster recovery or like a migration tool for kubernative applications both
+00:05:48 [W] So recovery, like a migration tool for kubernative applications both stateless as well as stateful.
+00:05:57 [W] So just to quickly give you a snapshot of what we are going to cover today will recap the state of stateful workloads in kubernative and some of the challenges or some
+00:06:06 [W] Just or some of the motivations that actually drove us to write new type of storage that we call as containerd attached storage, or you can kind of call it as hyper-converged storage.
+00:06:18 [W] In fact, hyper-converged storageos the category that cncf white paper uses to include openfaas as one of the storage auction that are available.
+00:06:30 [W] talked about like several engines that openfaas supports and this kind of stems from the
+00:06:33 [W] depth of container attached storage and you'll probably see why we need multiple storage engines as well as we go through the talk and we also present a few end user stories that have adopted the containerd attached storage concept and actually are running statement workloads
+00:06:48 [W] I'll kubernative as we speak with that.
+00:06:58 [W] I have a lot to cover. So I will jump right in to this one. If some of you are just getting started with the stateful workloads.
+00:07:05 [W] It's pretty straightforward as of today that you know, you start with PV PV c-- storage class and CSI.
+00:07:17 [W] These are the main construct that you need to know that provide you these volumes for your stateful workloads, but for some of us who have been
+00:07:19 [W] Around in the kubernative community. We have seen the evolution from volumes to in three volumes 2 Flex volumes, then Dynamic provisioning where the external portion ER. It's been a journey and in fact, like
+00:07:34 [W] What this a little more in the rest of the presentation, but Conway's law is something that keeps popping up every now and then in fact, we move of like, you know the project to shift all the in three volumes to
+00:07:49 [W] Wasn't the evolution of the CSI Traverse itself is a manifestation of how decoupled storage drive has or like, you know, splitting the storage wall youm code from the kubernative
+00:08:05 [W] Oh to its own Repose is increasing the a charity of making the kubernative releases and as well as adding more drivers as we Morlock CSI has become a de facto standard. Now a lot of people use it both vendors and users are getting
+00:08:20 [W] Has become a de facto standard now a lot of people use it. Both vendors and users are getting comfortable with it, but it's doesn't end there.
+00:08:28 [W] It's just in its early stages of defining the spec.
+00:08:31 [W] There are a lot of enhancements that are being worked on right now.
+00:08:43 [W] For example, like, you know, if you want to use capacity based scheduling or like, you know, the concept of pools which is something very common for these storage windows, but not so much in the kubernative community at all. Those things are definitely
+00:08:45 [W] Lee coming in so if you are interested in contributing to any of these in terms of use cases or like, you know code or like the spec, please join one of the working group called sound like the Mille Lacs of the slack channels.
+00:09:00 [W] One of my favorite is a data protection that recently started and you know, definitely needs a lot more help with that.
+00:09:11 [W] I think this kind of presence one of the architecture that's
+00:09:17 [W] And of becoming as a good stepping stone to introduce stateful workloads in kubernative you basically use CSI to connect any of your like externally attached storage, but there are a few challenges with
+00:09:30 [W] Architecture will try to go into the details of each of them. But it's um, it suffices to say that the kubernative enables a new Sleek coupled microservices architecture, but when we look at the storage that is
+00:09:46 [W] Locations that itself is actually downloaded using monolithic architecture and for it different time and period you the the Loosely coupled and the agility that you get the auto scaling capabilities like, you know both scaling up and
+00:10:02 [W] Get by running into microservices way. You kind of lose it when you go down and try to put everything into this shade storage.
+00:10:16 [W] And basically you lose your agility as well. Right?
+00:10:26 [W] One of the things that happens is like, you know, they shared storage will have to mix and match the different parameters while serving the different workloads. That would be like different demands for could be like can
+00:10:34 [W] And workloads versus like, you know less critical workloads all of them get the same kind of storage.
+00:10:39 [W] you need to handhold and make that happen.
+00:10:44 [W] So this is actually slightly older survey and I think a new surveys probably going to hit around the around the corner maybe like in this event that we are speaking as well,
+00:10:57 [W] One of the interesting things that I noticed in here is you know, even though kubernative was download for stateless workloads state is quickly becoming very popular or like, you know being used in many of the
+00:11:12 [W] This shows a wide range of different storage products that have used you can kind of divide this into a couple of categories. For example to run your kubernative workers. You do need storage. So some of these Cloud providers
+00:11:28 [W] For storage, but there are other projects here like openfaas en route cluster portworx.
+00:11:40 [W] These are the projects that are custom made to provide storage to your statement workloads.
+00:11:50 [W] So if users are using those products here are negative, they're responding the dead either you evaluating or put into production.
+00:11:53 [W] That means they're definitely running stateful workloads in kubernative other interesting thing to note is a lot of folks are
+00:11:59 [W] evaluating the content of a storage container attached storage option and openfaas is one of the leading implementation of that particular category of storage will see what that is in a little bit.
+00:12:13 [W] So I briefly mentioned about Conway's law that you know while talking about the storage or like, you know, the evolution of the CSA drivers itself.
+00:12:23 [W] So just to recap that a bit.
+00:12:26 [W] It's basically a cultural shift that we are seeing overall in the industry from
+00:12:29 [W] Every layer at the you know, if you have to briefly explain what this is it's about the way we compose our team's is the way we develop our applications the shift from having specialized
+00:12:44 [W] So to making the No No functional teams where you kind of put experts from different categories so that you can actually develop independent Services is the norm right now this you know, you
+00:12:59 [W] The devops culture or like it's the Congress layered play the diagrams that I have shown here or from a very good talk peace from thought works.
+00:13:12 [W] So do please check it out. And this is not just a theory you can see that within cncf.
+00:13:21 [W] There are a lot of into user stories where this has become a practice.
+00:13:27 [W] example, this is again, like from the previous kubeflow embarrassed even provided Bloomberg is describing how
+00:13:29 [W] they as a platform engineer.
+00:13:33 [W] He's supporting several thousands of small teams know sometimes the team could be just comprised of two who own of a service and to kind of enable such large teams with a small platform team.
+00:13:47 [W] You need to have very Loosely coupled architecture just like in your team even with the infrastructure products that you give open source, and the Loosely coupled architectures are the way.
+00:14:00 [W] To kind of make this happen and a lot of the companies that kind of have adopted kubernative actually see that power of ability the ability to kind of enable such kind of tupiza teams is
+00:14:15 [W] I strongly recommend to watch the video.
+00:14:30 [W] I kind of highlighted the places where Steven Bauer talks about the data management and how you know, they have moved away from shade to Distributors shade to your workload stacks.
+00:14:34 [W] So this is the kind of way in which Congress law applies to data management itself couple of things to note here is instead of using a monolithic database as we go towards more specialized teams. Each team wants to have
+00:14:50 [W] Type of database instead of basically like the database that really suits their workload or engine instead of trying to force fit their application to use an infrastructure that's already available and it may not really deliver on its
+00:15:05 [W] This is becoming becoming quite common.
+00:15:13 [W] In fact, like talked to a lot of community members where olap databases themselves or getting split.
+00:15:19 [W] I think one of the main challenge that they're trying to solve is the scaling problem and within kubernative you have this promise of Auto scaling which is not just about scaling up but also scaling down and that can only happen when you kind of break down these monolithic databases into
+00:15:31 [W] so one of the use case that we are currently working on is splitting a monolithic database that stores, you know, hun hundreds and thousands of user data into a single database with a hundred TV volume in
+00:15:47 [W] Leslie microservices paste overlap with a hundred different pots trying to write to a 1tb volume and have a shorting of like the user data into different things.
+00:16:02 [W] So you can kind of move the user data into some of these parts and you can kind of release the data on back some of the volumes if you are scaling down as well, which is kind of a humanist ask if you are trying to do with
+00:16:13 [W] Having a monolithic database on top of which or you're basically running that on a shared storage platform.
+00:16:21 [W] So few of the things that happen with the shared storage platform or also what we call this data gravity did a gravity is this notion where the storage system that you use has a tendency to pull in all the applications towards it, you know this happens.
+00:16:36 [W] Initially probably based on the familiarity with that system. But then as you put in more data and for latency reasons, you have to be closer to that storage system and it kind of locks you in into a technology that will be
+00:16:52 [W] Away from and even though it takes a lot of operational cost as well to think of something else.
+00:17:06 [W] You kind of get locked in because of the data gravity and you end up spending more as well.
+00:17:15 [W] So, you know while Converse law and like data gravity or some things that you can easily relate to buy your day-to-day operations.
+00:17:21 [W] There are a few other things that are happening as well in terms of software and Hardware. So for example, like the
+00:17:24 [W] Ocean of the hardware systems that are coming out.
+00:17:33 [W] It's pretty common now to kind of get get and Hardware with 96 core CPU with 1GB flash drive, like the one that I showed here from supermicro, but the thing about such kind of high-powered
+00:17:43 [W] You cannot use an application that was returned to run on 8 to 16 core and try to put it on a 96 Ford machine and expected to deliver at a higher performance.
+00:17:58 [W] You do need to change the way you write the application of like, you know, the way you architect that one and I'll show you some examples.
+00:18:06 [W] for example, the sketchy architecture has been around for a while and if you are trying to use that to access the data, then you're kind of limited by.
+00:18:15 [W] A maximum of 1 K commands that you can process in parallel versus using an nvme that allows you to process around 64 K commands in parallel and also like, you know using this nvme which is like
+00:18:29 [W] Um technology of like, you know the protocol that's kind of becoming very popular, especially with NVM you of haptic becoming available by of different Cloud providers as well. As you know, you can kind of just
+00:18:44 [W] But as well now it allows you to implement that in a user space as well.
+00:18:54 [W] As you know, it's kind of easy to implement compareto like implementing as a striver. You can completely bypass the carbonyl. There are some use cases where you may want to do that for example, like this chart from print and Kirk kind of shows that as
+00:19:06 [W] The the as you increase the number of system calls you end up increasing the latency of like, you know you it starts degrading the performance.
+00:19:22 [W] So one way to counter that would be go towards using user space Technologies and actually like the languages now support that for example, like rust is one thing that we use for telepresence my store.
+00:19:38 [W] It's actually a storage engine that you've written completely new user space that makes use of nvme as well as writing in the user space but gets the same same performance that you would get by dolloping it in the kernel, right?
+00:19:51 [W] So talking about the kernel is
+00:19:55 [W] Not just about the physical interfaces, but it's also about the algorithms that are changing. For example pole motor driver is something that's kind of becoming popular to scale up the applications if I wore a sari aiyo that was kind of pretty common
+00:20:09 [W] You go around eight horse.
+00:20:16 [W] So I will ring and I owe you in polar things that you want to use in your application to get most of it.
+00:20:23 [W] This is not just about storage. We see that this kind of analysis and reworks are happening in other Stacks as well.
+00:20:32 [W] For example, cdep and VP from the network domain are all having some kind of rewrites to make use of the latest technology.
+00:20:41 [W] And providing higher transactions per second.
+00:20:52 [W] And we think that the same thing applies to storage as well and that's what actually motivated us to come up with the containerd attached storage.
+00:20:58 [W] So, you know few things that we kind of considered. We are anyway, trying to rewrite the applications. Why not also think about how do we do the control plane?
+00:21:09 [W] And when we started openfaas if you years ago kubernative was just on the race, but
+00:21:10 [W] We all saw the potential of the way in which you can write the control plane is in a declarative way.
+00:21:24 [W] So we have decoupled the control plane of the storage engines to be handled by kubernative itself.
+00:21:30 [W] So in some sense kubernative is actually your orchestrator for the storage as well.
+00:21:37 [W] Considered we are anyway trying to rewrite the applications.
+00:21:40 [W] Why not also think about how do we do the control plane?
+00:21:41 [W] And when we started openfaas if you years ago kubernative was just on the race, but we all saw the potential of the way in which you can write the control plane is in a declarative way.
+00:21:41 [W] So we have decoupled the control plane of the storage engine has to be handled by kubernative itself. So in some sense kubernative is actually
+00:21:42 [W] your orchestrator for the storage as well, especially if you're using vocal UPS, and it comes with the benefits of being a completely declarative way of operating it and
+00:21:45 [W] Creating it and then you can kind of put gitops which is kind of the way you manage your infrastructure these days, right?
+00:21:55 [W] The microservices pattern is another thing that we see provides you the needed agility.
+00:22:03 [W] So the storage that we kind of saw that that shade storageos kind of now split into microservices page storage architecture kubernative and microservices architecture or
+00:22:10 [W] is that we adopted as well as trying to make use of the latest Hardware that's available so that we get better performance for these storage that we invest in right when we download openfaas
+00:22:25 [W] Interesting thing that came out of the whole thing was it's the ease of operations.
+00:22:37 [W] So the Persona of folks that are running the storage now is also changing.
+00:22:37 [W] There are no longer specialized storage administrators who are going to run stateful workloads.
+00:22:49 [W] It's going to be the kubernative sassari and kubelet accessories are will be more comfortable. If you have a storage that speaks the kubernative native language, so just like how they get comfortable with the networking Concepts and the scheduling concepts by modifying some am
+00:22:56 [W] In files, you can actually do that for the storage by using this new category of storage that we call as cash.
+00:23:07 [W] So to just give a snapshot of that one instead of trying to put the storage for like the state outside of the kubernative cluster. You have a lot of power available with your kubernative worker nodes so
+00:23:18 [W] So to just give a snapshot of that one instead of trying to put the storage for like the state outside of the kubernative cluster.
+00:23:19 [W] You have a lot of power available with your kubernative worker nodes so you can make use of the storage available with tan to drive your stateful workloads.
+00:23:28 [W] And this all happens in a microservices way where each application gets its own storage controller instead.
+00:23:33 [W] Of having like some stage system.
+00:23:40 [W] So even in case you want to move one workloads from one cluster to another cluster.
+00:23:41 [W] It's going to be easy.
+00:23:44 [W] So the state moves along with the application to another cluster and we kind of realized as we started developing that one storage in does not meet the needs of all the applications that users are bringing to
+00:23:56 [W] The kubernative Clusters. In fact, the applications themselves are changing.
+00:24:04 [W] They're becoming more distributed in nature.
+00:24:08 [W] So we came up with a different set of applications that we want.
+00:24:10 [W] These are huge list of adopters that have already started using openfaas.
+00:24:16 [W] Just want to highlight a couple of them. The first one is the opto row which actually uses this. I become burst mode of storage and
+00:24:26 [W] and the main reason for them to move is not having a complicated distributed system outside of the cooker. It is cluster to manage for this Dreadful workloads. And as you can see they've migrated most of this type full stack into kubernative itself.
+00:24:40 [W] This is an end-user company. Similarly we
+00:24:43 [W] thanks again for giving us the background how the story is evolving and the workloads are changing and how the how the CPU cause assistant calls are all like having a cost on
+00:26:03 [W] thanks again for giving us the background how the story is evolving and the workloads are changing and how the how the CPU cause assistant calls are all like having a cost on
+00:26:05 [W] No, one of the slide where we want to mention about how the applications are themselves kind of doing the replication and then once it has a storage with it, so to provide the
+00:26:21 [W] From the storage which is hyper-converged attached to the notes itself, like openebs have couple of levers host path blocked division locals here face in the next slide.
+00:26:39 [W] I will be trying I will explain about how this workloads are kind of having STS is one of the work toward and it have multiple replicas of the micro series, which it is going to run and they
+00:26:49 [W] For having STS is one of the workload and it have multiple replicas of the microservices which it is going to run and they the pods now have their own TV series.
+00:26:55 [W] And now the storage provision is the one who will be like going out the data the storage card out from the devices the storage device attached to the node. So that's what we have the PV will be graded by the stores provisioners.
+00:27:07 [W] I will be created by the stores provisioners.
+00:27:10 [W] So the three couple of flavors are having the local PV is the one where the opening is. This provisional users. The entire disk will be given as Ro device to the poddisruptionbudgets as like
+00:27:22 [W] We'll pass into the mountain path of the file system. The other part we have the ZFS local P which is the have CSS driver which allows to once a pulsar created the ZFS puts a greater on the nodes.
+00:27:38 [W] So this CSA provisional will car vote is dead wall on the volume or the the ZFS data set and mount it into the pod.
+00:27:49 [W] So the other other one we see the local TV in this the host path. The is the very
+00:27:54 [W] where the provisional creates dynamically on the demand the directories and attach it to the Pod and also on the during the Depression time. It takes care of violating them and takes care of fidelity of the data as well.
+00:28:09 [W] So this this slide is about when apps which want the storage features from the engines itself.
+00:28:20 [W] So with the app is kind of having using the storage from using a PVC and then have a pivot Target.
+00:28:33 [W] So from the previous slides we saw how the Loosely coupled is really helps in making this microservices and then easy to manage, right? So the openfaas have ganga Castle texture have
+00:28:40 [W] Dynamically on the demand the directories and attach it to the Pod and also on the do the deep ocean time.
+00:28:54 [W] It takes care of violating them and takes care of fidelity the data as well.
+00:28:54 [W] So this this slide is about with apps which want the storage features from the engines itself.
+00:28:55 [W] So with app is kind of having using the storage from using a PVC and then have a pivot Target.
+00:28:57 [W] So from the previous slides we saw how the Loosely coupled is really helps in the Kings microservices and then easy to manage, right? So the openfaas have ganga cast architectural have
+00:28:59 [W] Levels of that like zebra sister and my store where they will be like Target pods and then the replica Parts which are providing the storage to these applications and they are again maintained in declarative way using the
+00:29:06 [W] Declarative way using the kubernative samples. Each subsequent is is a kind of orchestrator. Once it's open with prodyna creates.
+00:29:08 [W] I am else and then set some the notification to the status and the animals so kubernative circus traitor itself will make sure that we will have the target power in the replica part standing in the nodes. So in this in this
+00:29:16 [W] Autumn replica part standing in the nodes. So in this in this slide, we we have very deployment and there's multiple copies of it and we have a pod and then the PVC is a storage requirements and in the PBS
+00:29:28 [W] In the BBC's know the opening solution comes into picture here where so here this iSCSI Target.
+00:29:41 [W] It creates which in this case, even if the pots moved from different nodes across the nodes due to the iSCSI Target can connect with the network.
+00:29:49 [W] So this target training in different node also helps to get them storage Vault it and and when the storage is available on three nodes when the due to as we see here
+00:29:58 [W] are the three copies of the data is keptn T3 different nodes. So even in node goes down where I did one copy is there if it wants it comes back the target takes care of rebuilding the data into the one which went down. It came up.
+00:30:11 [W] So one of the engine is so here.
+00:30:19 [W] We are occurring the c-store here. If you see the towards the right side, there are like set of days which are the admin use them and create a c-store pool and increase the storage classes.
+00:30:32 [W] So now when the PV is the PVC request comes through the ice, the CSS driver request comes CSL ever comes into picture and creates a iSCSI Target and then and then this
+00:30:43 [W] About - to the node where the application poddisruptionbudgets lies because it is crazy protocol and then it gets mounted into the pod.
+00:30:51 [W] and which provides a low latency and provides a high which is a pole new driver and it's flexible to work with any kind of disability nvme or is sketchy days, and if you see them the
+00:31:13 [W] There are like F5 o providing awesome numbers with ATK for each favorite right here.
+00:31:22 [W] Given that the data production the data in terms of Disaster Recovery is how we protect the data how we recover the data So openfaas Stories engines have their own plugins based out of Valero.
+00:31:41 [W] We have our previous has a volatile plugins which allows to take a copy at to take the backup of the product application.
+00:31:48 [W] Yama's along with the data and also this works the openfaas volumes can be actually along the applications can be protected.
+00:31:55 [W] It is the Kasten other kubevirt their data motor create greater migration Services, which are available.
+00:32:04 [W] h.
+00:32:04 [W] So with that we are open for questions and answers and here are the links which you get more material and the engineering team and then our users are active on the slack channels in the kubernative and feel free to
+00:32:21 [W] Available.
+00:32:21 [W] Yeah.
+00:32:21 [W] so with that we have open for question and answers and here are the links which you get more material and the engineering team and then our users are active on the slack channels in the kubernative and feel free
+00:32:23 [W] To open any questions and this thanks a lot for joining the session.
+00:32:27 [W] Hi everyone.
+00:32:39 [W] We do have a lot of questions that have come in already. So they will try to take them up.
+00:32:45 [W] Thanks for joining today and posting the questions one question has repeated multiple times.
+00:32:50 [W] It's about the slides.
+00:32:51 [W] Yes.
+00:32:54 [W] They are going to be uploaded on the shed Jewel in a moment and we'll also share them on the slack channel for maintainer track sessions. The second question was related.
+00:33:04 [W] To other people using openfaas in production.
+00:33:10 [W] Is it good to put critical workloads?
+00:33:11 [W] The answer is yes.
+00:33:17 [W] I think the last slide talks about the different users that have already put it into production. Also, there's an end user community that come up it's called data on kubernative.
+00:33:26 [W] Feel free to join their and learn from other end users.
+00:33:35 [W] It's not just about openfaas, but it's generally about running data on kubernative itself.
+00:33:38 [W] So this lot of material there that can help you. I think that link will be posted shortly on the chat Windows here.
+00:33:44 [W] So one of the interesting questions Vita probably you can take this is about what are the features that have released as part of opening PS2 dotto. Can you start by talking about your favorite features?
+00:34:04 [W] attractions
+00:34:57 [W] or maybe unmute I guess so, can you check that?
+00:34:59 [W] So while he settles that one I can probably talk about a couple of things that I really is about the new flavor of local TV that we have just released which can help you in force capacity
+00:35:21 [W] Well, he settles that when I can probably talk about a couple of things that I really is about the new flavor of local TV that we have just released which can help you in force capacity
+00:35:23 [W] And also we are working towards a CSI driver for host path volumes.
+00:35:33 [W] So that's a great thing to check out.
+00:35:36 [W] It also has fixes for the g-value.
+00:35:43 [W] Umm stability fixes in terms of reclaiming the space that usually cheaper takes in for creating internal snapshots. In addition see store has enhanced greatly in terms of data operations, and now you can control
+00:35:52 [W] To be replaced as well as the expanding the pool with additional discs. All those features have come in as well.
+00:36:00 [W] Cool, let me take another question now.
+00:36:08 [W] So this is about it deployment pattern. The question is if there are a large number which is to have both storage and k8s in the same cluster nodes.
+00:36:25 [W] It is a good use case to present.
+00:36:32 [W] I want to take this up.
+00:36:58 [W] In case I'm not able to hear him, so I think it's through Valero integration.
+00:37:33 [W] There are some you can also use CSI to kind of take the snapshots and clone them for taking the backups within the cluster.
+00:37:41 [W] But if you want to move them out of the cluster you use when a row which is great for helping you take a snapshot of the data along with the applications and then send it out of the cluster ability to restore and all those
+00:37:49 [W] Features are available. You can even schedule the backups.
+00:37:53 [W] I think I got most of the questions.
+00:38:08 [W] Yeah, so there is one question about when should we use local storage or shared storage provided by openfaas local storage is good for applications that can do the
+00:38:15 [W] I have an ability or failure of a note.
+00:38:20 [W] This is a good example like say mongodb is a great example or you know, Cassandra is another good example.
+00:38:29 [W] They Cassandra are mongodb are capable of handling the node failures.
+00:38:35 [W] So local PD is a great choice for these distributed applications. What you really need is low latency storage volumes a related question on this is if a node Goes Down And if you're part get stuck,
+00:38:44 [W] Need is low latency storage volumes a related question on this is if a node Goes Down And if apart get stuck, what do we do?
+00:38:48 [W] So there are a couple of things if you use just like a regular stateful set then it's possible that you kind of stuck with that node.
+00:39:00 [W] So there are some manual operations required to kind of identify that the board is not getting schedule because anode is not there delete the pot and let it the schedule.
+00:39:05 [W] But at the same time all these things can also be automated by operators.
+00:39:13 [W] For example, if you are using Cassandra operator instead of using a Cassandra stateful set that can take care of this for you easily.
+00:39:23 [W] One other thing that's happening within the communities Community is to enhance the support for stateful sets where better PV PV c-- management is coming up.
+00:39:31 [W] So it's definitely worth checking out and we are going to help you with writing this operator. See if you really need them.
+00:39:35 [W] Another question related to local previous is between host part device that CFS which one to pick up I do have like one slide that I didn't present here that kind of talks about the differences but to quickly provide
+00:39:52 [W] Host part is when you have a lot of space on your note coming from a single device or like, you know from the operating system disk itself, but you you don't have a choice in your cloud provider or your environment.
+00:40:08 [W] maybe like you're creating from openstack where you cannot attach external devices whose path is a great choice device and GFS is when if you have devices like example exam boxes come with a drives or like nine drives that you can dedicate.
+00:40:22 [W] is when if you have devices like for example exam boxes come with a Trials of like nine tribes that you can dedicate or you know by the partitioning them or directly to an workloads is a good time to use device
+00:40:29 [W] Use our device ZFS is when you have let's say like hard disks or that are available on a node and you want to have resiliency of protect against the
+00:40:44 [W] That are available on the note and you want to have resiliency of protect against the issues that are coming up with the disc. So this you can mirror the tool itself a fondant on top of it.
+00:40:49 [W] I think that's all the questions we had today on this chat.
+00:41:06 [W] Take the leader. Press star now.
+00:41:09 [W] I'm speaking, but I can't hear you.
+00:41:31 [W] Thanks.
+00:41:37 [W] Okay.
+00:41:42 [W] The question was on data protection.
+00:41:52 [W] What are the enhancements that are happening in the data protection aspect yet.
+00:41:56 [W] We used when it was the the tool open source tool which will be used for the making of applications along with the data.
+00:42:10 [W] So it will previous we have the sisters click in or whatever which allows us to take the incremental snapshots of a few storage volumes.
+00:42:13 [W] Yeah.
+00:42:14 [W] Okay, I can repeat the question now I can hear you.
+00:42:15 [W] Yes, the question was on data protection.
+00:42:16 [W] What are the enhancements that are happening in the data protection aspect we used when it was the the tool open source tool which will be used for the
+00:42:18 [W] Sitting down and doing this for time the entire application restored and then B, so it is a very very well dressed in our state to
+00:42:29 [W] Thanks for that. The other question is on again. This is related to data protection is it is openfaas used in production and where you have to avoid the
+00:42:52 [W] loss in all situations
+00:42:56 [W] from the neck open rapidly that we have a lot of users using it in production and the reduction strategies.
+00:43:09 [W] They're playing the they take the local snapshot and then they also send it to the relocation anything compatibilization. This is for some days so we had eviction cases where
+00:43:24 [W] All right.
+00:43:46 [W] There's a question here about like 2 dot or features and will be get into the internal support that yes, there is a block that's going to be soon published on that aspect and reach out
+00:44:05 [W] Thanks for asking this question and thanks for supporting openfaas as an end user and also contributing to the helm charts. Thank you.

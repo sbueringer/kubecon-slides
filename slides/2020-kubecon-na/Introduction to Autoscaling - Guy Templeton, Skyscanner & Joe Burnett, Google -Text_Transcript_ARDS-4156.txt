@@ -1,0 +1,230 @@
+﻿Introduction to Autoscaling: ARDS-4156 - events@cncf.io - Wednesday, November 18, 2020 4:57 PM - 36 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Welcome to say Kata scaling. This talk is going to be both a quick introduction to kubernative out of scaling and a little bit of a deep dive.
+00:00:11 [W] My name is Joseph bernetta here with Brad Templeton.
+00:00:14 [W] Who is the co-lead of sagada scaling so he'll take over in the second half and run you through some some practical tips.
+00:00:23 [W] So this is the agenda.
+00:00:25 [W] I'm also going to touch up talk on a couple of upcoming features so you can get a preview for what's coming in. The future will save about 10 minutes for questions at the end.
+00:00:35 [W] Okay?
+00:00:40 [W] so kubernative out of scaling like the rest of kubernative is sort of divided into two levels the workload which is the pods and the infrastructure which are the notes and
+00:00:55 [W] So kubernative out of scaling like the rest of kubernative is sort of divided into two levels.
+00:00:57 [W] The workload is the pods and the infrastructure which are the notes and the workloads can scale out or in you can make more or fewer of the same kind of pot.
+00:01:16 [W] The workloads can scale out or in you can make more or fewer of the same kind of pot and they can also scale up and down which is making the resource requests larger or smaller and the
+00:01:31 [W] Others are the HPA in the vpa the horizontal products killer in the vertical part of the scalar.
+00:01:36 [W] So the same concepts of vertical and horizontal apply to Cluster Auto scaling as well cluster autoscaler scales anode pool in and out by making more in fewer nodes, and it's also capable of scaling
+00:01:51 [W] Selecting different node pools. So if you have no pools of different sizes in your cluster, it can make Intelligent Decisions about which one to use but to kind of make it real concrete for you.
+00:02:03 [W] I'm going to walk through a practical example.
+00:02:07 [W] So here we have the happy little cluster. You have to workloads deployed here. There's the blue pods and there's the purple pod and they're deployed on three notes.
+00:02:18 [W] Now both of these workloads are out of scale.
+00:02:21 [W] Let's say the blue and purple workloads are out of scale horizontally on CPU utilization and vertically on memory and the cluster is out of scaled as well.
+00:02:34 [W] So when they are new nodes new nodes will be created when the nodes are needed. So suppose that blue service gets some more traffic and the HPA will notice that the average utilization.
+00:02:48 [W] Nation is slightly higher than the target.
+00:02:51 [W] It will figure out how many pods it needs to create in order to bring that back down to the Target value and it will cause those to be created now the HPA doesn't actually make the pods here what it does is
+00:03:06 [W] It looks it looks at the scale Target ref. So it takes a scale sub resource.
+00:03:10 [W] It looks at the pods that are selected by the label gets the current scale and when it has a recommendation when it thinks we need more it just updates that scale and if this is for example pointed at a deployment that deployment will turn around and
+00:03:25 [W] Recommendation when it thinks you need more it just updates that scale.
+00:03:20 [W] And if this is for example pointed at a deployment that deployment will turn around and adjust the size of the replica set and the replica set will create the pots and then the scheduler will see these pods and
+00:03:35 [W] That will create the pots and then the scheduler will see these pods and we'll schedule them onto a node and the node will see the pods in the pods will be started.
+00:03:46 [W] So the autoscaler is actually sort of just a controller around this one scale sub resource map. But ultimately the cluster creates two more notes or two more pods because the
+00:04:01 [W] That's because the autoscaler thinks that we need more so here they are and then get scheduled on to this node because there's room for it.
+00:04:08 [W] So then maybe a little more traffic comes in for the purple service.
+00:04:13 [W] Well same thing with the HPA will notice that we're a little above Target it'll decide we need to replicas instead of one and it will adjust the deployment and a pod will be get created.
+00:04:26 [W] But as you can see there's not a node for this pod.
+00:04:29 [W] The scheduler is unable to place it anywhere and this is when cluster autoscaler kicks in so cluster autoscaler.
+00:04:38 [W] Stu unscheduled pots not like the underlying resource metrics. So cluster autoscaler will say oh I clearly need to scale up the cluster and what it does is it runs a simulation
+00:04:53 [W] As if I was able to if I create another node, will this pod be able to be scheduled and if the answer is yes, then that's the thing to do and it can do this across multiple nodes pools and it can do it, you know and more than one note
+00:05:08 [W] So it actually has a little simulation of the scheduler because it's ultimately up to the scheduler where these pots go. So the cluster autoscaler says, yes, we need another know this sounds good.
+00:05:13 [W] It creates the new node scheduler puts the pot on that node, and then the purple service says scale out so over time
+00:05:28 [W] Shame to the actual resource usage usage as compared to the request May notice that the purple Services asking for way more memory than needs.
+00:05:35 [W] So it's going to draw the histogram and figure out like a conservative place to draw the line and it's going to recommend a smaller pot size.
+00:05:43 [W] So the recommender makes this change and then there's an updated process that comes through and we'll carefully delete the pods one by one and cause them to be recreated.
+00:05:56 [W] It's the updater is going to delete this pod and a new pod will be recreated because the replica said I will always try to replace the pods and it will be recreated with a new smaller size.
+00:06:07 [W] So this is this is how vpa actually causes pods to change their size and you may notice that it's actually a little bit disruptive because you actually have to delete pods
+00:06:22 [W] Using Auto scaling effectively is being able to control and manage that disruption. And so guys going to tell you in a little bit how you can do that point to some tools and best practices for managing disruption.
+00:06:35 [W] then
+00:06:33 [W] VBA update is going to delete the next pod and it will get recreated as well.
+00:06:37 [W] And you'll notice that actually there's an empty node here now and cluster autoscaler will notice this too.
+00:06:44 [W] It's able to delete that node and scale the cluster in so you can see the cluster autoscaler goes out and in usually these nodes are what you pay money for.
+00:06:55 [W] for. So it's good that it can scale down because that's what's actually going to cost that's going to save you money.
+00:07:04 [W] Now suppose that maybe at the end of the day the blue service line loses some of its traffic and just this HPA decides to naturally scale down because utilization is really low. Some more pods will be deleted and they're not going to get rescheduled because they just
+00:07:20 [W] Possession is really low some more pods will be deleted.
+00:07:23 [W] They're not going to get a reschedule because they just don't need them anymore.
+00:07:26 [W] So you may be in a situation where you could actually fit more on the nodes that you have and cluster autoscaler will notice this and it will go and it will delete a pod so
+00:07:41 [W] Rescheduled onto the existing nodes in effect will do some defragmentation for you.
+00:07:47 [W] So again, it can free up notes and scale your cluster in so this is kind of a quick view of the way that vertical and horizontal auto-scaling go in and out.
+00:08:01 [W] The cluster goes out and back in again.
+00:08:03 [W] again. And yeah, that's that's the summary of the problem space. So
+00:08:09 [W] This is the End state of your cluster
+00:08:13 [W] And I wanted to mention a couple upcoming features.
+00:08:18 [W] So I talked a little bit about CPU utilization or memory utilization. And when you use HP a rupee a you point at target your point in one of these resource metrics and you say I'd like you to
+00:08:33 [W] There can be more than one container inside of the pot and an upcoming feature is for HPA allows you to set the individual targets for each container.
+00:08:46 [W] example, if you have a sidecar that it is likes to use a lot of CPU, you don't necessarily need to scale on that side car and it may overwhelm your calculations or if you have a side car that has a very generous resource request and it's mostly idle.
+00:09:02 [W] It may water down your metrics.
+00:09:04 [W] And so take a look at this cap. Here.
+00:09:07 [W] It does.
+00:09:08 [W] It's already gone through a peer review and it's just going to land very soon and it's a nice way to focus the HP on specifically which containers are most important to you in your auto scaling and the second thing that
+00:09:23 [W] It may water down your metrics.
+00:09:19 [W] And so take a look at this cap. Here.
+00:09:21 [W] It does.
+00:09:22 [W] It's already gone through a peer review and it's just going to land very soon and it's a nice way to focus the HP on specifically which containers I most important to you in your auto scaling and the second thing
+00:09:53 [W] Segata scaling group is graduating the V 2 Beta 2 API to stable.
+00:10:00 [W] It's been around for quite a few years and it definitely needs to get graduated the all of the ability to scale on multiple metrics and custom metrics are a part of the V2 API.
+00:10:14 [W] So the been around for a while. So we're going to work on making sure taking all the boxes and making sure we can get it to a stable state. So let's go
+00:10:23 [W] A bit about auto-scaling. I'm going to turn it over to guy now who will walk you through some practical tips about running kubernative a spot of scaling and production.
+00:10:34 [W] Okay.
+00:10:34 [W] Thanks.
+00:10:38 [W] So just for a bit of context here.
+00:10:41 [W] I'm a senior software engineer at Skyscanner. And so a lot of what we do is running workloads that are involved in scrape other getting prices from online travel.
+00:10:53 [W] Agents are Airlines and I'm doing fellas training and that sort of thing this will this will come into play in a couple of the examples. I get for things that we should consider.
+00:11:03 [W] So I think as a lot of people watching will know a lot of the hardest problems in Computing on technical problems there people problems. And this is one of the spaces where the complexity of all the options and all
+00:11:18 [W] it treatable parameters and knobs that kubernative games developers and cluster admins and can overwhelm developers, especially on the first getting started and I think a lot of the time developers
+00:11:33 [W] Exactly flop what options they need to consider when looking to scale workloads safely and performing in a performant way.
+00:11:32 [W] So I'm going to go over a few of these options that I think developers should at least be aware of and potentially if your cluster admins and providing your developers same defaults to work from and
+00:11:47 [W] If I get developers need to or want to so the first one is lifecycle hooks. So in our in Sky scatters case, we occasionally have some very long running request for
+00:12:01 [W] Fetch prices or reach out to Partners who will make buildings with and in that case. We don't want to drop an in-flight connection, especially if it's making a booking and so instead what we want to do is set up our pods such that
+00:12:14 [W] Scaling accident, wherever possible they gracefully terminate and finish the work that they're currently doing before shutting down.
+00:12:21 [W] And so this is where priests top lifecycle hooks can come in.
+00:12:25 [W] So if you define a pre stop lifecycle hooks, which can either be an HTTP request or an exec.
+00:12:31 [W] So I command into the Pod to pull a binary for instance and the
+00:12:37 [W] the kublr playing terminating that portal execute that lifecycle hooks at the same time sending in a sectarian. So you can either set up your application to handle the Sig term gracefully or instead. You can make use of say an API endpoint that can be happy either the
+00:12:53 [W] It use that to gracefully finish any work and refuse new work potentially and then allow their Qibla to shut it down.
+00:13:00 [W] And so these priests top hooks.
+00:13:02 [W] they're blocking and will block up to grace period so if you need more than the default are two settings to gracefully time Nate, you'll need to set us up in your pods back. But by default it will give you 30 seconds for that command to complete and you can also make use of
+00:13:17 [W] Start Hooks, and again, these can be hvr exact some support.
+00:13:16 [W] They're not guaranteed to run before the are containers entry point.
+00:13:21 [W] But if you need to do some sort of environment dependent set up work to make useless and the next thing is lightness and Readiness probes.
+00:13:31 [W] So these are these are fairly key. If you're workloads for instance for own startup need to do some sort of runtime compilation or something similar.
+00:13:41 [W] To ensure that you're giving your users the best possible experience.
+00:13:46 [W] And so in this case, you can use license probes to mark your poddisruptionbudgets healthy.
+00:13:51 [W] So the kublr wont restart the Pod.
+00:13:54 [W] However, you can use Readiness probes to state that the poddisruptionbudgets ready to receive traffic and and that can be particularly useful in combination with he's gay so the HPA and when a pod is not
+00:14:10 [W] Em and that can be particularly useful in combination with he's gay so the HPA and when a pod is not marked ready.
+00:14:11 [W] So if it's doing some CPU intensive work to begin with the HPA will not consider those that pods metrics until it is marked ready.
+00:14:22 [W] So that that ensures that the HPA is not seeing new pods come up use a lot of CPU and then going all I need to over scale again.
+00:14:32 [W] And the next thing is prodyna tation.
+00:14:35 [W] So in the case that you might have say a machine-learning workloads where if you interrupt that pods and the eschewing or the cluster also stairs trying to pin pack you might end up with the workload interrupted and effectively losing
+00:14:50 [W] And in this case, you can Mark pods with this cluster autoscaler safe to affect annotation. And if you mark that as safe to evict equals false effective when the cluster autoscaler is considering been packing it will notice that that
+00:15:05 [W] Hold on it which is not safe to vector and therefore not considered as a candidate for scale down.
+00:15:05 [W] And so theoretically you can spend up workloads which are marked s safe to affect equals false and then either update that annotation or remove that the safety of 8 equals true at the point where there they are then safe to evict again and
+00:15:20 [W] Meditation are removed at to set of 8 equals true at the point where there they are then safe to evict again and to ensure that your workloads are not interrupted by the cluster autoscaler.
+00:15:30 [W] It's important to note that this doesn't prevent any interruptions or Hardware failure Etc below or manual deletion of nodes will still impact that pod but the cluster autoscale, I won't interrupt it and and vice versa you can also
+00:15:45 [W] and vice versa you can also use that annotation set to true to override some other behaviors, which generally the cluster autoscaler will Mark pods astronauts safe to vetted and so things like if it's if
+00:16:00 [W] Storage cluster of scalar by default will consider that poddisruptionbudgets safe to effect because it doesn't know what data it's right in to local disk.
+00:16:08 [W] It doesn't want to cause data loss therefore it's it will not try move that Padre end. However, if you can tolerate the loss of that data, then you can Market it and yourself a safety event in the cluster also scale it would take that
+00:16:24 [W] And so poddisruptionbudgets are probably one of the most important thing. So going back to Joseph's example at the BPA where it was recreating poddisruptionbudgets a changing the resources
+00:16:39 [W] They cluster of skill and BPA both respect their poddisruptionbudgets.
+00:16:41 [W] So this this is a really granular way of service owners being able to Define how much disruption there's their workload can tolerate so fr7 service can tolerate say 20% of its Pods at any one time being moved around and being unavailable.
+00:16:58 [W] Without harming the user experience. The poddisruptionbudgets is the way of defining that and then the cluster auto-scaling vertical coordinate system or will take that disruption in to count and therefore never
+00:17:13 [W] Shimmer which would cause that budget to be exceeded
+00:17:14 [W] And it's important to note that this is this is the way to define this so that other components respect how Services want to be moved around deployment rollout strategies, which are sort of more course
+00:17:30 [W] The people may be more familiar with those aren't respected by these tools because they're that's not what they're set up to look at and finally for this like Padre Ortiz. So this this allows you to decide which
+00:17:42 [W] I'm and finally for this like a pot priorities.
+00:17:44 [W] So this this allows you to decide which workloads are or should be prioritized when your custard currently doesn't have enough capacity frog pose. So if we think back to Joseph example again where one of the services was scaled up
+00:17:59 [W] One of the services was scaled up and there was not enough room in the cluster for all of those pods.
+00:18:05 [W] If instead one of those workloads was the pilot of the White Cloud that had been scaled up was of higher priority than the sum of the existing pods some of those existing pods if they could have been evicted and higher
+00:18:21 [W] Then some of the existing pods some of those existing pods if they could have been affected and higher priority pods being scheduled those would have been affected so you can effectively say if there is not currently enough room on the cluster.
+00:18:35 [W] I want to prioritize this user impact in workloads, and I'm okay with this background task workloads, which I've marked as lower priority being addicted for a period of time the cluster autoscaler would still then.
+00:18:50 [W] Kick in once those lower priority pods were unschedulable and skill at the cluster so that they could be scheduled again, but it allows you to get the higher priority workloads scheduled faster.
+00:19:08 [W] So horizontal part of scaling and so there's a few things here, especially around making sure that you do you optimize your scaling with respect to costs.
+00:19:19 [W] So in potentially you could have service owner misconfigure their horizontal. POTUS killing rules may be a metric that is that it's never quite reached a Target utilization
+00:19:34 [W] Scaling one way of handling.
+00:19:35 [W] This is namespace level resource quarters.
+00:19:38 [W] So this allows you to effectively say a number of Dimensions.
+00:19:42 [W] So pods CPU and memory.
+00:19:44 [W] What is the maximum resources? This namespace can ever make use of so never let this never let pods in this name space take up more than a hundred CPU cores see and that that
+00:19:59 [W] The horizontal part of the scale will still work.
+00:19:59 [W] It will try and increase the desired capacity of whatever its Target is but the resource quarter will then prevent new pods, which would cause that resource quarter to the exceeded from being created.
+00:20:13 [W] So it's really important for preventing any runaway scaling potentially costing you hundreds or even thousands of dollars.
+00:20:22 [W] Then have some Matrix sources for non Resource Management based Auto scaling.
+00:20:26 [W] So this has been covered in great detail by previous sagat's killing coupon talks, but you can scale as well as on resource metrics on custom or external Matrix.
+00:20:38 [W] So the in this case a lot of cases, there will be a better metric than say CPU or memory utilization for scaling on so you that could be number of HTTP requests in flight or
+00:20:50 [W] Something similar and that's that's a way of optimizing the scaling far but far more than CPU for instance.
+00:20:59 [W] We've also got Potter fan at ease.
+00:21:02 [W] So if you want to spread your pods out or schedule a workloads.
+00:21:20 [W] Those metrics on custom or external Matrix.
+00:21:02 [W] So the and this case a lot of cases there will be a better metric than say CPU or memory utilization for scaling on so you that could be number of HTTP requests and flight or something similar and that's
+00:22:29 [W] the pot of entities however are quite coarse and there's a New Concept coming in and that is slightly better for these stills of already mentioned Beware of the current behavior on resource metrics is
+00:22:44 [W] Cross the entire part and is particularly an issue. If for instance you're injecting sidecars like you've got servicemeshcon your in dating Logan containers or something like that and it's particularly if you've got small containers and you're running
+00:22:59 [W] Sto.
+00:22:56 [W] You're injecting.
+00:22:57 [W] Nsmcon voice a car if that's doing a lot of work you can end up causing unintended scale up particularly if your developers aren't where these and and finally the the more fine-grained version of politics East Paul J spread constraints.
+00:23:12 [W] This is only in beta out of 118.
+00:23:14 [W] So I'm guessing a lot of people wouldn't have had a chance to play around with it.
+00:23:19 [W] However, it's implemented as a scheduling plug-in. So it allows you to Define either hard or soft scheduling constraints to schedule pods over different failures Orleans, whether that's a holster Iraq or and availability Zone and the cloud and it provides more flexibility
+00:23:34 [W] Is an anti affinities and allows you to try and balance your pods as best. You can offer as many fault zones as you can and so for an example of this you can see this graph here.
+00:23:48 [W] There represents a different instance type and this is one service and Skyscanner and it you can see despite the fact that Skyscanner currently Support over 20 instance types in our clusters over 50%
+00:24:00 [W] Services pods are scheduled on just to instance types increasing our potential impact of the loss of one or both of those instance types do to spot a teacher or something similar and this is without using
+00:24:14 [W] It's instance types do to spot a teacher or something similar and this is without using spread constraints.
+00:24:20 [W] We'd really like to make you some told this lie limits Behavior like this going forward.
+00:24:29 [W] Vector couple daughter scaling so memory-based vertical scaling isn't suitable for every language and I'm being a bit facetious here in that jvm. Languages can now be tuned through JDM parameters etcetera to give
+00:24:44 [W] So memory-based vertical scaling isn't suitable for every language and I'm being a bit facetious here in that jvm. Languages can now be tuned through JDM parameters etcetera to give kubernative
+00:25:10 [W] To view into what the actual memory usage of a potter's wheel and however, it takes a lot of expertise. So it's not it's not simple.
+00:25:18 [W] I'm suggest it's probably not worth heading down that rabbit hole unless you really know what you're doing in terms of like chilling jvm.
+00:25:25 [W] He parameters Etc and but it can be done most of the time I would suggest it's probably not worth doing and you can also try combining horizontal and vertical coordinates going on the same metrics say so if you tried
+00:25:40 [W] Say horizontal horizontal and vertical part of scaling on memory on the same workload.
+00:25:48 [W] This'll it generally lead to unintended Behavior the to will end up fighting with each other and generally one or both will end up not understand understanding what has gone on due to Resource is changing underneath it and
+00:26:03 [W] generally, you can you can combine horizontal and vertical bar daughter scaling on different metrics, but don't don't try doing both of them on the same metric and same time and and finally into a resource policies are set and so this is
+00:26:18 [W] Taking up the same role as the resource quarters were taking the cholesterol to escape with the horizontal products skin. So and so this is preventing runaway scaling by saying this is the maximum size.
+00:26:23 [W] I am ever won a certain container within this target to scale to so you can tell make sure that the vertical daughter scale and never gets into a situation where it's runaway scaling up and a given
+00:26:38 [W] Just Target to scale to so you can tell make sure that the vertical dr.
+00:26:42 [W] doctor scale and never gets into a situation where it's runaway scaling up and a given container or given poured to the point where it's you're getting ever bigger loads and costing yourself money again.
+00:26:58 [W] So cluster of the finally cluster Auto scaling and so the the number one tip I would have is to prioritize node startup time.
+00:27:05 [W] So this not only has the benefit of your cluster scaling up faster pods being able to be scheduled from unschedulable faster and also allows you to choose a number of parameters from their detail defaults on the cluster autoscaler so that you're more tolerant
+00:27:21 [W] It defaults on the cluster autoscaler so that you're more taller and to Cluster autoscaler realizing that nodes have developed a fault whether that's due to Kibler dying or Hardware failure or something similar
+00:27:38 [W] Also beware that occasionally the simulation that Joseph mentioned inside the cluster autoscaler.
+00:27:44 [W] So when it goes if I bring up on your note of this node group plot, will it look like what will its resources be occasionally?
+00:27:51 [W] that doesn't always match reality.
+00:27:53 [W] You can occasionally see instances in the cloud where for instance the memory very slightly from node to node and potentially cluster autoscaler will think they're can schedule a new pot on a new note.
+00:28:07 [W] And a given node group, but that doesn't actually match when the new node is brought up and finally and always ensure the system kublr have enough resources on the nodes so you can set up how much resources
+00:28:22 [W] Forward the keep letting the system to make sure that they are operating.
+00:28:26 [W] However, if for instance you're bringing out really big notes and your scheduling a load of pods on them that are trying to do a load of CPU workloads startup time. You could if you've not said these high enough you can end up either starving the system or the kublr result
+00:28:41 [W] Startup time you could if you've not said these high enough you can end up either starving the system or the kubelet result in effectively killing off the kublr because of resource starvation at which point all the pods that just
+00:28:53 [W] telling us to keep that because they'll freeze or starvation which point all the pods that just being scheduled and done CPU work on that node become unready get potentially are killed try to be scheduled on to Newport New nodes end up
+00:29:07 [W] Up to Newport New nodes end up in a cycle of them and giving you a very bad afternoon slowly you tell more and more of the cluster but due to Resource starvation.
+00:29:21 [W] That was pretty much it in terms of sort of best practice tips.
+00:29:25 [W] We've got a couple of links to previous egg Auto scaling Toc. So the cube Connie you earlier in the year. There's some good stuff there on them custom metrics and other bits, and we've got a couple of
+00:29:40 [W] I'm some nice board posts about best practices for auto scale.
+00:29:46 [W] Thank you very much and any questions.
+00:29:58 [W] hello, just bring it here and here for some live QA and we've gotten quite a few good questions already in the chat and I try to answer as many as we could me and guy are both been going through there and answering questions,
+00:30:13 [W] Sabrina here.
+00:30:10 [W] I'm here for some live QA and we've gotten quite a few good questions already in the chattin.
+00:30:16 [W] I try to answer as many as we could mean Gaia both been going through there and answering questions, but I'll take a few now.
+00:30:25 [W] Let's see here.
+00:30:35 [W] Think this one's answered.
+00:30:37 [W] So I just give me a moment.
+00:30:44 [W] So there is a question here.
+00:30:45 [W] We would like to Scale based on custom metrics.
+00:30:52 [W] Our team needs to be able to Scale based on the Kafka leg as mentioned several times right now.
+00:30:58 [W] You have to overcome it. We have to over-provision our cup.
+00:31:31 [W] And the resource metrics and so you need to stall an adapter in your cluster which will be able to fetch those metrics in for example in gke you can install
+00:31:46 [W] And so are so wherever the that Kafka leg is you can install an adapter to get to it and set it up as an external metric.
+00:31:54 [W] You can Target an average value and just say for whatever the leg is we would like, you know, this many pods for this period of this number undelivered messages or you know, take a look at those
+00:32:09 [W] Metric docks and that should be something that can help.
+00:32:15 [W] It's definitely possible to do and if you have questions about it stopped by the slack channel auto-scaling selection on the grenade. He's workspace.
+00:32:26 [W] Okay. Let me go to another question here.
+00:32:31 [W] Hopefully that answered that so Carl asked a question.
+00:32:38 [W] If a Target raw value is set the wrong metric values are used directly the controller then takes the mean of utilization of the raw value.
+00:32:50 [W] Could you please elaborate so it sounds like Carl's talking about external metrics and I'll maybe I'll take a moment to clarify something that I think is kind of confusing about the API.
+00:33:06 [W] When you specify a target for external metrics, you can say value or average value and these to behave differently when you say I would like to Target
+00:33:21 [W] You for this external metric the HPA by default every 15 seconds.
+00:33:23 [W] We'll take a look at where the metric is now and where you want to be and it will it will scale out or scale in to try to achieve that.
+00:33:34 [W] And it will keep doing that.
+00:33:36 [W] So if the metric doesn't change it'll keep scaling up up up up or down down down whichever way you need to go in a feedback loop.
+00:33:43 [W] However, if you set average value not value but average value then instead it actually reconciles directly to the metric without regard to how many pots there are currently so if for example you
+00:33:58 [W] Rich value not value but average value then instead it actually reconciles directly to the metric without regard to how many pots there are currently so if for example you say I would like at average
+00:34:07 [W] At the average value of five pods, they're five undelivered messages per pod. So you're targeting average value of 5 on undelivered message queue then.
+00:34:22 [W] You won't get more pods. If the value doesn't change your just keep reconciling the same number.
+00:34:27 [W] So I hope that answers that question so a little bit subtle, but it could be clarified by like maybe looking at the examples.
+00:34:40 [W] So if you're reconciling done delivered messages average values the one that you want, okay?
+00:34:47 [W] Guy, we're there any that you wanted to pick out an answer?
+00:34:52 [W] I just just having it back quick. Look, I think there was there was one about whether there were recommendations by adding cluster all to skill annotations to pods the we I've achieved this in the past
+00:35:07 [W] Dacians by adding pastoral to skill annotations to politics and the way we achieve this in the past is giving the pods in a deployment themselves and the service account and Ally being that service paint,
+00:35:23 [W] Surface paint to add and remove annotations to those those pods effect. Like they're only allowed to modify themselves and that way they can prevent that but I think that's
+00:35:38 [W] Cha site time for answering questions on the coal.
+00:35:41 [W] However, we're going to continue trying to answer any questions people may have heard or we have managed to get to on-site channel to - coupon - maintainer. So and if you've got any questions
+00:35:56 [W] feel free to put some over there and we will try and get to
+00:36:02 [W] thank you very much.

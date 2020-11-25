@@ -1,0 +1,266 @@
+﻿Seccomp: What Can It Do For You?: BQZK-2200 - events@cncf.io - Friday, November 20, 2020 4:02 PM - 37 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello.
+00:00:00 [W] Welcome to Cape Cod.
+00:00:02 [W] I'm today.
+00:00:03 [W] I'm going to be talking about seccomp what it can do for you and I'll go all about what we've been doing in seccomp in the container because there's determine what is it?
+00:00:12 [W] And why does it matter and what is there what work is there to do in future?
+00:00:19 [W] so
+00:00:22 [W] I'm just in Commack. I'm an engineer at darker in Cambridge. And I've also on the cncf TOC and an H3 maintainers.
+00:00:30 [W] I'm and I'm very much involved in the container security ecosystem.
+00:00:40 [W] So what what is that cam anyway, and why does it matter?
+00:00:43 [W] So come is a thing that stands for secure Computing which sounds like a really great thing.
+00:00:50 [W] It's a bit of a ambitious name perhaps back in 2005 when it was first created. It was basically an extreme sandboxing method when extreme sandboxing wasn't actually that common a thing
+00:01:05 [W] His name perhaps back in 2005 when it was first created. It was basically an extreme sandboxing method when extreme sandboxing wasn't actually that common a thing.
+00:01:00 [W] It was really just for code that just does computer operations and get any read or write from existing files and basically exit it wasn't used very much because they're actually I'm very many programs that
+00:01:15 [W] Actually, I'm very many programs that literally just read and write from files and can't for example make new network connections or anything like that at all.
+00:01:22 [W] So in 2013 a more General version was introduced which is called seccomp BPF but is usually just called seccomp because it's the most commonly used version and there's a lot of small
+00:01:38 [W] Ppf programs have bof is a technique originally used for in the network stack.
+00:01:43 [W] You've probably heard about recently about his grown-up EB P f-- extended version. But BPF is the kind of original simple version lets you write very simple programs to decide a system calls should be allowed or not or if they're not allowed to whether
+00:01:59 [W] will be logged or Kevlar processes running them so effectively because system calls are the interface between applications and the colonel this is basically as a method of controlling what programs
+00:02:14 [W] Programs can actually do outside just Computing stuff.
+00:02:15 [W] So what kind of interaction they have with the outside world, which sounds really useful So in theory, you can take a look at what the program is doing system calls are shown by a stray.
+00:02:26 [W] So I'll share in the S trace of just an LS and for each of these system calls, you can basically say yeah, that's fine.
+00:02:34 [W] No, that's not fine.
+00:02:36 [W] You even got permission to do that. You can pretend the system called us.
+00:02:40 [W] It exists at all, which is a you know, serious or any other kind of operation.
+00:02:46 [W] So that's the theory in practice.
+00:02:49 [W] It's not quite like that for so for examples there when you open a file with seccomp, you don't actually get your program doesn't actually go to see what the file name was unfortunate because it just seems the direct argument of the system
+00:03:04 [W] Kind of operation.
+00:03:05 [W] So that's the theory in practice. It's not quite like that.
+00:03:09 [W] So for examples there when you open a file with seccomp, you don't actually get your program doesn't actually go to see what the file name was unfortunate because it just seems the direct argument of the system call and the argument
+00:03:35 [W] It for a open system call isn't directly astraying.
+00:03:41 [W] it's actually just a pointer to a string and all you get this is the pointer and you can't follow the pointer to see what it pointed at which is the name. So you have to make decisions actually based on quite limited information compared to what you might want.
+00:03:56 [W] Asians actually based on quite limited information compared to what you might want and and so and yours this is kind of limiting.
+00:04:08 [W] You also can't know what kind of file descriptors been used. If someone's doing a read it could be read from a network or read from a local file and you might want to allow one and not the other you can't do that.
+00:04:18 [W] There's also weird peculiarities and you also didn't really get any context. You're just called every time the system call.
+00:04:26 [W] And you can actually keep state in between those so you can't say you can do this after you do that, but not before or anything like that very easily.
+00:04:36 [W] So there's a bunch of real serious limitations.
+00:04:42 [W] the history of applied to the container ecosystem back in early 2016 one of the first things I worked on when I started talking over Jesse Frizzell was adding seccomp support for darker and it was enabled by default which
+00:04:58 [W] Thing to have done and most people don't disable it.
+00:05:01 [W] So most people get it got you know, I've had the benefit of using it since then kubernative spent a long time working out on its implementation and really only in 119.
+00:05:14 [W] So not very long ago now finalized the API or and it does not enable it by default.
+00:05:27 [W] And it's still somewhat complicated to manage and giving us this because seccomp profiles tend to be at the moment very long files. Like it the darker default one is 800 lines long and apparently 800 more lines of
+00:05:42 [W] Too much.
+00:05:34 [W] So you have to work out how to distribute files with as configuration on if you want to customize the nurse or you can just use the runtime default setting which will give you something that's pretty much like the like the darker
+00:05:49 [W] Has given you by the runtime, it'll be the darker one of your using darker. If you're using containerd a it'll be or cryo. It'll be similar. But do you so kind of Maintenance things are not exactly the same
+00:05:56 [W] Things are not exactly the same.
+00:05:59 [W] In the sort of oci sort of structure of hierarchy we have in the container thing where we have kubenetes and then cri-o and then we have run times.
+00:06:11 [W] It's kind of complicated setup because we talked about this a little bit more later but there's a bunch of abstraction layers. There's goes through effectively. Everything's just passed down all the way to run see which then
+00:06:27 [W] And it calls the gay binding to leave set Camp which is a simplified version of what the actual seccomp EPF looks like and this and these simplified calls are generated from a Jason
+00:06:43 [W] the way to run see which then it calls the go binding to live set comp which is a simplified version of what the actual seccomp EPF looks like and there's and there's simplified
+00:07:15 [W] You know, it's basically abstracts again the kind of rules that you can use with with lipstick cam.
+00:07:21 [W] So there's this weird and then the runtime actually might have a different form of the Json which as if has different runtime customizations.
+00:07:29 [W] There's a kind of messy kind of process of converting Jason to Jason to go to see to ppf to run in the kernel. So it's it's a bit kind of messy.
+00:07:41 [W] What's the point of this oil is what are we actually trying to achieve?
+00:07:43 [W] I think it's very important to understand that there's some system calls in learner acts which are not really considered safe isolated programs to use
+00:07:59 [W] Very large attack surface and they've been a lot of CVS around them / vent open is one of those user name spaces were in BPF.
+00:08:08 [W] We'll talk about a bit later.
+00:08:09 [W] These are just very large subsystems that in general most containers don't actually need to use often.
+00:08:19 [W] These are used by runtimes and other sort of software rather than actually end-user applications.
+00:08:28 [W] And there have been a lot of TVs that are basically meant that you can escape from a container. If you can access these so-called so blocking them is actually proven to be useful.
+00:08:38 [W] We talk about specific examples of where there's been a benefit later.
+00:08:41 [W] Some says calls can disable security features such as the pr cuddle a Duran Duran demise, which basically disabled aslr address space layout randomization, which is a security feature that's been added for good reasons.
+00:08:56 [W] So we applications can simply turn it off which is really unhelpful and some things are obsolete. It's just there's a cyst cattle as opposed to using csfs which in Linux has historically been generally has been deprecated
+00:09:03 [W] Some decades now and has some attack surface and is not really maintained its some distress.
+00:08:58 [W] I think I've removed this now but all of them and then there's always been some things that have not been namespaced time name is base is a very very new and it came out a few months ago and keyring namespaces don't exist yet.
+00:09:11 [W] So there's a bunch of stuff that in a container system. It makes sense to just remove the ability of applications to use it.
+00:09:20 [W] So what have we succeeded in doing with the setup cart that comes up system user name spaces?
+00:09:27 [W] There's this quote from Angela Demers gear undergoing the maintainers, you know, basically saying that the huge attack surface from user name spaces as huge risk and of unprivileged users can
+00:09:42 [W] With a bound to be some privilege escalations.
+00:09:42 [W] He said this was before this was you know, this was actually quite a few years ago before when there's functional house.
+00:09:49 [W] He was kind of new and Stuart Lee after that.
+00:09:52 [W] I think the same year we saw Stevie 2016 33 1 3 4 and a bunch of related CV is here where indeed the iptables code had some bounce checks missing and you could basically exploit this to get full
+00:10:07 [W] Raising container Escape. Normally, this needs cabinet admin, which is not granted. So normally it's safe. But if you have using namespace as you get captain admin in your user name space, you can call these commands in your user name space.
+00:10:14 [W] just brute iptables functions, but you can compromise the kernel so it doesn't really matter whether it's actually which names base its and there's was mitigated by Dockers default policy and so users using that
+00:10:24 [W] more recently again the BPF verify which again is is a is a new feature for extended ppf had some bounce checks on 32-bit operations that
+00:10:38 [W] Not enforced and you could read and write kernel memory which basically means you can control the entire host again an unprivileged user with access. The ppf Cisco could do this again the darker policy blocks use the ppf by
+00:10:50 [W] Um, and I see you actually Grant caps as admin which is basically a privileged access anyway.
+00:10:56 [W] So this sounds good.
+00:10:57 [W] what went wrong actually because a lot of problems for users during the last five years with seccomp.
+00:11:05 [W] I had a bit of a war on emacs.
+00:11:09 [W] I stopped people running a Max in containers with seccomp enabled for many years.
+00:11:15 [W] This was a really strange story.
+00:11:19 [W] story. It really surprised me when this the complaints came in about there's quite early on.
+00:11:25 [W] Max had this very very strange thing that a lot of people didn't like that other reasons the muzzle lipsey maintainer was against it because it didn't work with muzzle lips are as well.
+00:11:38 [W] But basically it in order to make startup of Emax faster. It used to during a build time. It would start running the binary then dumped the output and then instead of
+00:11:53 [W] Generated this the initials as up. It would just load them the memory snapshot basically, but the way it required to do this was very humble, but it required memory locations to be loaded exactly the same way as they were before and if you had
+00:12:04 [W] The case because memory locations would be randomized and so wouldn't work. So it does abled it by disabling randomization. But this was one of the things is explicitly blocked because this basically is allowing application to bypass
+00:12:08 [W] He I'm medication eventually emacs realized that well computers were fast enough.
+00:12:12 [W] He could just run the startup code normally like a normal application and not stop being so good quite so weird.
+00:12:18 [W] And so this problem has gone away and now you can happily run emacs and containers.
+00:12:25 [W] But really I just felt it was not worth changing the default policy to basically reduce security for everyone just so the impacts could be run.
+00:12:35 [W] More effectively with it's weird things in a container worse than that though worse than Breaking emacs.
+00:12:43 [W] I also broke steam.
+00:12:44 [W] This was not on purpose and not something I wanted to do.
+00:12:48 [W] Lennox has made a bunch of changes to 32-bit.
+00:12:53 [W] It's called ABI and steam happens to run 32-bit binary is and is widely used in containers.
+00:13:00 [W] And this was something that happened really quite early on that Debbie and had I think has a habit of doing these things.
+00:13:05 [W] Fast they changed from the old socket calls as call. That was some was a weird. Multiplex says call that does that could do socket or bind or connect or any of the other socket calls and switch two separate sets goals, and we hadn't actually
+00:13:21 [W] Bet Cisco labi and steam happens to run 32-bit binary as and is widely used in containers.
+00:13:24 [W] And this was something that happened really quite early on that Debbie and had I think has a habit of doing these things first. They changed from the old socket calls as call that was some was a weird multiplexes call that does that could do socket or bind or connect or
+00:14:01 [W] Allowed for this change and I think they've been did it earlier and they did the same thing with 64-bit time suppose on those two-bit systems.
+00:14:10 [W] They again they switched early before it was officially upstream and these were all temporarily blocked by seccomp until we fix this problem. So it is a problem and a fragility issue with seccomp that because it requires exact
+00:14:26 [W] I'm news out of this calls that suddenly everyone starts using had to come along you really have to update the code quickly, which is really problematic and apologies to the steam users.
+00:14:38 [W] There's also a performance issue is actually a lot of rules because we list the Cisco has you can use and not the ones you can't use and the list is very long and it's not process terribly
+00:14:53 [W] That as mostly somewhat flexible but require a lot of work only really I oh in terms of applications will notice this and so actually very few people complain but a few people have and they've generally
+00:15:04 [W] Um, and so actually very few people complain but a few people have and they've generally disabled seccomp rather than actually fixing it.
+00:15:05 [W] And then there's some interesting areas security issues where seccomp didn't actually help at all and we didn't do anything to help users. One of which is my probably my favorite Colonel cve that Jan horn found
+00:15:21 [W] This is a really interesting security issue and that X is cache invalidation bog. Basically, there's over there was a thirty two bit counter and if you did the right thing at the
+00:15:36 [W] Wrapped around back to zero again.
+00:15:38 [W] You could basically exploit the colonel and his gave the or container and all you had to do to do this was some memory mapping and some cloning of processes, which is all
+00:15:53 [W] Normal normal stuff that we couldn't possibly block with seccomp.
+00:15:55 [W] So there was just no way we can protect against this kind of thing.
+00:16:01 [W] It eventually was changed but I fixed by changing a counter to be 64 bits 32 bits is too small for any kind of security on anything.
+00:16:11 [W] You can always overflow or thirty two bit counter but overflowing a 64-bit counter is pretty impossible because it's so huge. Actually it was actually in-toto.
+00:16:21 [W] interesting that there were this was a this is still a very interesting CV and worth looking at but it was hard to exploit without having some additional source of information to know when exactly you'd hit the conditions for the exploit
+00:16:37 [W] Actually, we fixed an information leak that made it actually relative made it actually relatively exploitable in containers because of the information leaked rather than actually because of the seccomp but
+00:16:51 [W] Could definitely not protect you against that.
+00:16:47 [W] The question though is like should we be using seccomp in this way in the container ecosystem?
+00:16:53 [W] Why is the container platform basically responsible for the that the poor kind of state of Learners Colonel Security in the fact that there are containerless Cape vulnerabilities in lurks, and you know, what, isn't that the Colonel's problem
+00:17:10 [W] Generally, I think the answer is that we do want efficient isolation without going into using version virtual machines for every thing.
+00:17:14 [W] It's actually relatively the number of of container escapes as be exploits has been not too bad over the years for most people is level of security is actually kind of fine.
+00:17:29 [W] Is for most people is level of security is actually kind of fine.
+00:17:29 [W] And also most of our applications don't use a whole, you know, the whole an excess calls base most applications user kind of narrower subset that doesn't include, you know, the sort of
+00:17:45 [W] Lennox doesn't most people's Carrie doesn't run.
+00:17:47 [W] My application code doesn't run BPF.
+00:17:51 [W] It doesn't run user name spaces. Those things are being used for security critical applications and often for control plane applications, but end-user applications basically just use networking and storage and I mean
+00:18:06 [W] Should just use the posix subset and and Linux. The lettuce is called spice is just way too expensive.
+00:18:12 [W] I mean, I think there's arguments about what the boundaries of what normal applications should care about our but and it is does change over time with kind of performance reasons that for using different
+00:18:27 [W] You know, it's there is actually a kind of set of things that most applications don't use and it's sensible for us to isolate them off for security because the common says goes the basically mostly
+00:18:40 [W] Other than that CV I just want to do that generally are actually safe seccomp was designed every application would write its own profile. But this is really rich and really really difficult for user to do
+00:18:50 [W] Designed for kind of platform administrators and like if you read the documentation we kind of doing it wrong in the container space, but it's actually too difficult for end user applications to use and you only find very very specialist applications things like, you know
+00:19:04 [W] And a few other things but the number of General applications that actually have seccomp profiles is really really small and it's incredibly difficult to use for that function. So I'm not really surprised.
+00:19:19 [W] I'm going to go through the things that we could do choose your adventure.
+00:19:22 [W] What future paths. Could we take what?
+00:19:24 [W] What should we do in this space?
+00:19:26 [W] I think it's definitely the case that things need doing.
+00:19:31 [W] I'll talk about whether they will be done.
+00:19:33 [W] later.
+00:19:34 [W] One option is almost the status quo really is that almost?
+00:19:38 [W] No one will use seccomp, especially with kubernetes.
+00:19:41 [W] It's optional.
+00:19:42 [W] There's a few large companies. I know who take it very seriously and think
+00:19:47 [W] Portent Docker uses got it by default, but gradually as people shift over to using you know, kubernative directly and things like that where even if you're using Google has with darker kubernative disables the
+00:20:02 [W] I won will use seccomp, especially with kubernetes.
+00:20:02 [W] It's optional.
+00:20:03 [W] There is a few large companies.
+00:20:06 [W] I know who take it very seriously and think it's important Docker users.
+00:20:11 [W] got it by default, but gradually as people shift over to using, you know, kubernative directly and things like that where even if you're using Google is with darker kubernative disables the darker seccomp policy Dockers mostly now
+00:20:38 [W] Policy dog is mostly now development platforms.
+00:20:42 [W] I'm not sure it makes sense for Docker to enforce it anymore.
+00:20:45 [W] If you're not going to use it.
+00:20:49 [W] I recommend you update your Colonel weekly.
+00:20:51 [W] That's a that's a burden maybe using seccomp means you can do it less often than that.
+00:20:58 [W] Maybe you get a higher rate of zero days, but the rates relatively low.
+00:21:03 [W] maybe you can live with it. I I suspect that a lot of people are going to just continue to ignore it.
+00:21:08 [W] It and just live with us vulnerabilities.
+00:21:15 [W] I'm I do you think we could actually rationalize the policy we went for an allow this not a block list at the beginning because of the whole issue.
+00:21:27 [W] I mean, this is the recommended thing with seccomp.
+00:21:29 [W] It's the recommended thing with most security things.
+00:21:31 [W] Just you know, you know what you was safe you list what safe and then everything else is blocked. And so if there's a new danger a Cisco all added and many arguably the news is called.
+00:21:44 [W] Officers often do have security issues more than the old ones then you're safe.
+00:21:50 [W] However, the list of things we block is now quite small and writing the block policy is much easier and it's easier to understand
+00:22:05 [W] Just you know, you know what you was safe.
+00:22:08 [W] you list what safe and then everything else is blocked.
+00:22:11 [W] And so if there's a new danger a Cisco all added and many arguably the news is cause obviously often do have security issues more than the old ones then you're safe.
+00:22:24 [W] However, the list of things we block is now quite small and writing the block policy is much easier.
+00:22:35 [W] Mayor and it's easier to understand is less likely to break something when new safe syscalls are added like the the time 64 ones for 32-bit systems, which were you know, these things it turns out that there's
+00:22:59 [W] break something when new safe Cisco loodse are added like the the time 64 ones for 32-bit systems, which were you know, these things it turns out that there's new safe Cisco has added a lot of the time
+00:23:14 [W] Baker the partly because of stupid things like that weren't enough flag is allocated on Cisco loodse and there's now use his skills with more flags being added for everything things like that.
+00:23:23 [W] These block policies will be easier to understand because you can see what they do rather than try and work out the negative of what they do.
+00:23:32 [W] They wouldn't be 800 lines long.
+00:23:35 [W] would be maybe 10 lines long so we could actually in line them in the yeah mole. We have to obviously change the kubenetes sitcom format again to
+00:23:44 [W] Do this but you know, I think this would be kind of nice if you could say allow BPF to remove the default block list approach to be PF and that would be the one line.
+00:23:57 [W] You need a Lobby bof.
+00:23:58 [W] Allow it even perfe event that kind of thing.
+00:24:02 [W] So I think that would be easy to understand they'll be less maintenance work wouldn't get people complaining things don't work and ended only fix them. A lot of these problems have been
+00:24:14 [W] Cross architecture problems with architectures have differences calls and new changes and people running, you know, just throw that expect one kernel on another and it behaves differently.
+00:24:25 [W] So those kind of issues could be improved the error the error support would probably be better.
+00:24:34 [W] We're things like that. So
+00:24:37 [W] okay, so but I think this is attractive and I think it's definitely worth considering we have a huge problem in the given s is ecosystem bar whose problem
+00:24:53 [W] We have a huge problem in the kubenetes ecosystem bar whose problem is this should users really have to understand about seccomp.
+00:24:53 [W] No should applications have to understand it too difficult.
+00:24:56 [W] Is it but should it be done at the kubenetes level where you have to configure it now or should it be the responsibility of the cri-o?
+00:25:12 [W] His kind of terrible we why don't we have run times that provide actual security guarantees instead of just letting you configure it and making it your choice.
+00:25:22 [W] We are starting to see some of these runtime as I mean arguably gviz, which I took about a second and VM run terms are basically trying to make better security guarantees, you know, but why if we push down
+00:25:38 [W] We have run times that provide actual security guarantees instead of just letting you configure it and making it your choice.
+00:25:43 [W] We are starting to see some of these runtime is I mean arguably gviz which I took about a second and VM run terms are basically trying to make better security guarantees, you know, but why if we push down
+00:26:12 [W] But you lists a bunch of Cisco holes in Json, which is also this coal handling roles in Json, which is what we're doing is it's not a good design and there's a definitely a layering and responsibility issue that we need to solve gee visor.
+00:26:27 [W] GMOs is a really interesting response to this it basically it basically re-implement some large portions of urks in go basically a kind of you know has a goatee zp
+00:26:42 [W] Basically a kind of you know has a goatee zp stack and everything.
+00:26:46 [W] It basically says well Linux wasn't very secure.
+00:26:48 [W] We're going to re-implement it in go in user space in a memory safe language and then we're going to wrap this up.
+00:26:56 [W] We're going to use seccomp internally in it just to make because it doesn't actually use many Cisco calls. It has a performance here and it potentially has compatibility here, but it's a just like cut out all this security issues from Linux is as
+00:27:09 [W] a solution.
+00:27:11 [W] It's a really interesting solution and definitely worth looking at something that I called the Lambda like solution.
+00:27:19 [W] I don't know is Lambda kind of solves all of these problems by having a very restricted I think container on time.
+00:27:26 [W] it's strict.
+00:27:28 [W] I mean people don't think of it as container, but it's a very similar problems base.
+00:27:31 [W] It uses said calm. I haven't actually proved its policy to see what exactly what it does and doesn't allow it has a
+00:27:40 [W] Custom lenses kernel with features removed which is what a lot of people who run secure systems do is just disable a lot of parts of the Linux kernel, let us has thousands and thousands of subsystems that are not generally very secure.
+00:27:55 [W] And you can often access them by from users based by opening weird kinds of sockets that you don't really use in practice much and things like that.
+00:28:04 [W] But the Lennox distro is a very general purpose and they tend to ship with a kernel that does everything has everything as a module loodse anything because you know a general purpose you might want to do anything
+00:28:20 [W] People that have locked down.
+00:28:12 [W] let's kind of configs again. You probably should consider doing this but everyone's kind of lives with their vendor conflicts for support reasons and stuff like that and the vendors are not actually necessarily
+00:28:27 [W] Security interests all the time.
+00:28:24 [W] Also in Lambda now applications can run as root. It just doesn't allow it again in containers based.
+00:28:31 [W] We haven't forced that again that's left of the user to enforce that.
+00:28:34 [W] You know, there's a restricted runtime API most of the file systems not writable and things like that and Lambda we could do something very much like this.
+00:28:44 [W] We could have a you know, a container runtime that made these choices and had a clear delineation.
+00:28:52 [W] Asian of what you can and can't do and security model and testing and things like that and Away the the sandbox flag proposal for communities is kind of like this, but it doesn't Define any kind of specification.
+00:29:06 [W] It's a bit kind of some things can be sandbox and some things might not be but and they can decide what sandboxing is but there's no kind of Linux runtime that makes these decisions in effect the things like the firecracker containerd
+00:29:21 [W] The sandbox flag proposal for communities is kind of like this but it doesn't Define any kind of specification. It's a bit kind of some things can be sandbox and some things might not be but and they can decide what sandboxing is, but there's no kind of Linux.
+00:29:56 [W] Kind of make those decisions for you. It's but but there isn't a kind of normal containerd runtime that does that.
+00:30:08 [W] As of lurks 5.7.
+00:30:10 [W] There's something that we've been talking about for a really really long time that got emerged as the ebmargit bof LSM LSM is no security module module.
+00:30:19 [W] These are things like selinux and app armor, but as he listened have armor give you a kind of general purpose way of configuring these LS these security hooks in Lennox for general
+00:30:34 [W] Was the epfl SM basically says you can inject at each other decision points in the carnal where it decides.
+00:30:41 [W] Can I use a do or not do something and there are a lot of these points. They're much more than just at the Cisco all there. They're all sorts of places like and there and you get much more specific information about what's going on at these
+00:30:56 [W] You do this.
+00:30:50 [W] This is called a bi you can basically run an eb-5 program that can make real programmatic decisions about can this application do that this at this point and it can maintain it and while State and
+00:31:05 [W] Is it have much more information to make those decisions? This is not simple.
+00:31:07 [W] I think as I said, it's a start-up sighs problem potentially or perhaps an NSA says problem like the NSA right selinux in the first place and basically defined the kind of shape of what it looks like
+00:31:23 [W] You know the NSA is an organization is interested in this type of problem. But it has that sort of thing that you could you could potentially do with a, you know, a small medium-sized team and work on this problem
+00:31:37 [W] Is this is very much like you as a technical solution.
+00:31:38 [W] It doesn't solve the human problems of really what kind of what kind of policies do you need to enforce and what kind of model you've actually got here and how does the human communicate intense over this problem?
+00:31:51 [W] things like that? So there's still a lot of human problems that you have to solve.
+00:31:55 [W] So what is going to happen with seccomp? I my prediction is the the if
+00:32:03 [W] You look at the state of the container ecosystem. Now, there's a continuing lack of investment in the low levels of the stack.
+00:32:10 [W] There's really not many people working on these problems.
+00:32:13 [W] It's not clear.
+00:32:15 [W] Who's who's going to Care work on these problems.
+00:32:23 [W] people seem to expect someone else to do it and not get involved themselves. I think setting up an EB bof. LSM containerd security startup is probably
+00:32:33 [W] For is to get funded but the other options might not even happen the Syria service providers like the cloud providers are basically just using VMS.
+00:32:43 [W] And so that's why you're seeing quite mature things like a firecracker.
+00:32:49 [W] Other bare metal. So most of them don't have the option of using VMS for containers at this point.
+00:32:54 [W] So even though their stock is becoming relatively mature.
+00:32:59 [W] Most people are simply not using it.
+00:33:01 [W] So we're probably say the split where more and more people are using it, you know provided services like, you know, collaborator services and they will just use
+00:33:16 [W] we're probably say this black where more and more people are using it, you know provide our services like, you know, collaborator services and they will just use VM s VM based containers via providers or
+00:33:31 [W] containers fire providers or things like that like, you know things like, you know, there's the fargate containers of kubernative AWS things like that, which are all the am based and just scale as
+00:33:48 [W] That like, you know things like this the fargate containers kubernative AWS things like that, which are all VM based and just scale as as containers rather than as hosts.
+00:34:02 [W] We're not suing security vendors solving this type of problem.
+00:34:06 [W] There's a there's lots of reasons for this summer stallions done a bunch of talks are which are interesting talk to me. If you're interested in the question about why the security industry isn't
+00:34:18 [W] interested in this kind of problem and end user has given us his find it difficult to contribute back to the sort of problem because these problems are quite technically difficult.
+00:34:30 [W] There's not a lot of people who have a bright kind of expertise around the Linux kernel and how things actually work in containerd runtimes and have time to work on these
+00:34:45 [W] Difficult, there's not a lot of people who have the right kind of expertise around the Linux kernel and how things actually work in containerd runtimes and have time
+00:35:10 [W] The pressing problems to work on it's kind of difficult.
+00:35:15 [W] I mean even very large end users have very attentive very little and it's Colonel expertise and the gender work mostly higher up in the stack. So we're not really saying much at the moment much end user contribution to solving these problems.
+00:35:30 [W] Actually not optimistic that I love this stuff will happen quickly.
+00:35:34 [W] It's like a long time, you know to get where we are and there's been little investment.
+00:35:42 [W] So thanks very much for that and I'll be around too.
+00:35:50 [W] Answer questions and hope you enjoyed that talk and it's been fun working on seccomp. But I think you know, there's a lot of interesting problems that could be solved and actually aren't being so if you're looking for a fun
+00:36:05 [W] Called. It's absolutely open for doing that.
+00:36:31 [W] Hello, we haven't got time for questions here.
+00:36:36 [W] But Zachary I will answer your question in the slack.
+00:36:40 [W] .
+00:36:41 [W] It's it's the cncf that cute to cube concept ID policy and happy to answer questions there. If you got questions about seccomp, generally, please do pay me.
+00:36:53 [W] I'm on I'm on a roll of slacks kubenetes all cncf and I'm happy to answer your questions.
+00:36:58 [W] I think what's great about this.
+00:37:00 [W] Area there's lots of exciting things to do and I this talk was kind of about the thing I learnt. So if you're interested in that, please get in touch.
+00:37:09 [W] touch. Thanks a lot.

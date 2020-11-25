@@ -1,0 +1,278 @@
+﻿Turn It Up to a Million: Ingesting Millions of Metrics with Thanos Receive: ZHGF-0110 - events@cncf.io - Wednesday, August 19, 2020 6:54 AM - 58 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:04 [W] Hi everybody.
+00:05:54 [W] Welcome to turn it up to a million ingesting millions of metrics with unobtrusive.
+00:05:57 [W] I hope that everyone's doing well home and I'm happy to be here with you. So I originally proposed this talk because I'm excited to share some of the work that we've been doing inside of red hat on the observability team. And also inside of the tunnels project around ingesting large amounts
+00:06:09 [W] horizontally scalable way
+00:06:11 [W] My hope is that at the end of this talk you'll come away with some concrete ideas around how to build and also deploy a scalable metrics ingestion stack.
+00:06:21 [W] So who am I and why am I talking about this?
+00:06:28 [W] My name is Lucas had a marine.
+00:06:29 [W] I'm Spanish.
+00:06:31 [W] I'm a twin and I love penguins. And I'm also a principal software engineer at Red Hat where I work on the observability platform team where we primarily work on building distributed systems for monitoring opentracing.
+00:06:44 [W] Keith at work get to contribute a lot to open source projects and I get to work as a maintainer Thanos the Prometheus operator and a bunch of other things and you can find me on GitHub as at squat.
+00:06:56 [W] Okay, so this talk is assumes some familiarity with a nose. So I recommend that you take a look at the talk that my fellow thought has maintainers are giving it this your scoop con called intro to Thanatos.
+00:07:10 [W] We'll also talk a bit about it right now.
+00:07:13 [W] So.
+00:07:14 [W] the goal of the tunnels project is to provide a global query view of all of our data to be compatible a hundred percent with Prometheus to provide long-term retention so that we can query data from months
+00:07:30 [W] Is ago and also to provide compaction downsampling so we can speed up our queries.
+00:07:36 [W] Thomas does this by providing a set of components that we can compose into custom-built distributed monning distributed monitoring Stacks that suit our needs for different scenarios
+00:07:53 [W] Really common deployment pattern forth on us looks like this.
+00:08:00 [W] We have one Central monitoring cluster with a Sonic Warrior and maybe a griffon annexed to it.
+00:08:07 [W] And then we have a bunch of different clusters or environments with Prometheus servers that we want to query. So we want to from one single location query the data from all these different Prometheus servers.
+00:08:18 [W] When we go ahead and type a query into the thought of you I found those pulls the data that it needs from the Prometheus servers by making a grpc request to the thumb side cars in each cluster and the tunnel sidecar intern.
+00:08:32 [W] proxy that requested the Prometheus API
+00:08:35 [W] Alright so far so good.
+00:08:41 [W] But what happens if we don't have Ingress access to the Clusters that we want to query. For example, what if the Clusters are owned by customers and they want to share some metrics with us, but they don't want to expose all of their data to the internet or what happens if the customer is want to share
+00:08:52 [W] Some data with us, but not all the metrics.
+00:08:55 [W] One option we have in this case would be to switch from a pull based model to a push based approach.
+00:09:05 [W] It turns out the Prometheus has an API exactly for this use case. It's called the Prometheus remote write API and the implementation is really nice.
+00:09:10 [W] So when Prometheus is configured to remote right to an end point.
+00:09:16 [W] It's essentially tailing the right ahead log for the database and sending all of the time series to this remote and point.
+00:09:19 [W] The API has built-in retry logic request batching and back offs and a lot of configurable features that make it really good for for replicating data.
+00:09:26 [W] So the Thunders receiver essentially answers the question of how can we build athamas component to accept metrics sent over the Prometheus remote write API.
+00:09:41 [W] This component should be able to ingest metrics that are sent from lots of clients into one local TSD be so far so good, but imagine what happens when instead of having 2 or 3 or 4 or just a few clients we go to having an arbitrary amount of
+00:09:50 [W] So one single component ingesting metrics from thousands of clients is going to eventually break.
+00:09:57 [W] We need a way to make this component scalable and that's exactly what this talk is about.
+00:10:01 [W] Okay. So how do we make the founders receiver scale the approach that we took with the design the receiver as a hash reading of many replicas collaborating to ingest data together?
+00:10:14 [W] So when Prometheus remote writes data into the hash ring, the request gets load balance and initially lands on one of the replicas this replica hashicorp received time series and their labels and it finds a corresponding replica.
+00:10:25 [W] that should handle this request and it forwards the request to it. So this internal forwarding of request is what allows us to
+00:10:32 [W] Reload equally across all of the rough cuts and more importantly it also allows us to scale the ingestions that correspond to lie.
+00:10:40 [W] The way that we can figure the founders of siiver allows you to place different replicas in two distinct hashicorp.
+00:10:46 [W] Swear at each hashicorp spawn to some number of tents where for example a tenant might be a general-purpose Telemetry system or maybe a company-wide metres ingestion service if we know that one of the hashtags has to serve
+00:11:01 [W] That has a lot of clients and ingest a lot of data that we can scale that Hashem independently, for example hashicorp be might have to serve thousands of clients in to have bigger and bigger Hashmi with beefier machines.
+00:11:15 [W] We can accommodate that on the other hand if we know that has been see only has a serve a few different tenants that are sending very few metrics than we can scale that Hashem down.
+00:11:24 [W] But what happens now if one of the replicas is experiencing problems for any reason, maybe we're rolling out a new version or we're adding more memory to it whenever this replica is down.
+00:11:40 [W] The hash rate has an entire set of hashes. So an entire set of Time series and labels that it can no longer forward anywhere.
+00:11:48 [W] So this means that the hash man is scalable, but it's not highly available.
+00:11:52 [W] We saw this inside of Thanos by providing the option for a kind of dynamic style replication.
+00:12:02 [W] That means that for example, if we choose to replicate our data always three times, when we receive a request the initial replica will forward this request to three different nodes in the hashing and as long as two of the nodes respond with yes,
+00:12:13 [W] Then we returned back to the client a 200mm you say this was written successfully into our Tuesday be this now allows us to have both a scalable and highly available injection system.
+00:12:29 [W] This replication scheme means that we can tolerate having one node down at any given time and that means that we can perform a rolling upgrade of our hash rate whenever we need to without having any loss of ingestion capacity if we want to tolerate having more notes
+00:12:41 [W] All we have to do is increase the replication Factor.
+00:12:47 [W] So for example, if we change the replication factor from three to five replicas, then we can tolerate having two nodes on at any given time.
+00:12:52 [W] Now that we've designed our Thunders receiver to be both scalable and highly available. We're able to ingest data from thousands of clients in tortillas DB.
+00:13:00 [W] But since were ingesting so much data and tortillas to be storage is likely going to become an issue on these notes.
+00:13:10 [W] We're going to be creating so many TSE be blocks with so many samples and time series that is going to occupy a lot of space so stores going to become a bottleneck the way that we solve this inside of Thanos is by uploading all completed tsdp blocks into object storage
+00:13:20 [W] Just cheap and essentially infinitely scalable so we can upload all the data. We want their we later make this data variable by using a component called the fond of store or the funnest or Gateway this essentially exposed the same grpc
+00:13:36 [W] API for querying data, except instead of reading data from disk or from a local kids TV is reading it from object storage until now we've seen the purpose of the founders receive component has inside of the Thanatos project.
+00:13:50 [W] We've also seen from a high level how it's - design allows us to run it as a scalable and highly available metrics injection system.
+00:13:59 [W] But how do we actually run such a system? And how do we automate it so that it scales horizontally in a platform like you were Nettie's let's take a look at the details.
+00:14:08 [W] You mentioned earlier that the funders receive componentconfig yard into hash with today.
+00:14:15 [W] This configuration works by using a Json file to explicitly map the addresses of the different replicas two distinct hashicorp.
+00:14:34 [W] In is intentional and actually allows us to keep the tunnels project simple and focused because we don't have to put any non-metric domain logic in the project, but it also means that we have to lean on other tools to automate configuring our hash rings when Thon has deployed onto the platform
+00:14:50 [W] We have an effective pattern for solving these types of problems in the communities Community namely controllers and operators.
+00:14:56 [W] At Red Hat we've written a small project called the founders deceive controller for the sole purpose of automating the configuration of our hash browns.
+00:15:09 [W] This kubenetes controller works by watching all of the staple sets to match a specific label selector, whenever the rebel accounted for one of these staples sets containing thongs receivers changes the controller regenerates the hashicorp figuration, Json file and update the config map holding it
+00:15:19 [W] The Thunder was he replicas in turn watch the file system for changes to the configuration. So when the kubelet updates the volume out for the configuration file the Thunder fancy replicas reload and update their in process representation of the hashtags to reflect the new state of the world.
+00:15:34 [W] With this in mind, let's consider the simplest possible deployment of a thong receive hashicorp.
+00:15:41 [W] Let's automated on communities.
+00:15:45 [W] The deployment would include one thought of receive controller replica managing the configuration for one single fund receive hash ring that contains only one replica.
+00:15:55 [W] So admittedly this setup might not seem like very much but it's actually foundational for any more complicated and more capable setups that will deploy in the future. It's also true that this stock probably won't
+00:16:04 [W] and all very much load, but with one single indication of a coupe CTL scale command, we can take this single replica hashicorp Lu 3 or 5 or 20 replicas and really handle as much load as we want to
+00:16:17 [W] now let's try to do exactly this and of quick demo.
+00:16:26 [W] Let's deploy this super simple automated Thunder seed hash ring onto a grenade.
+00:16:26 [W] he's cluster. Well, then run one process next to this that produces metrics in the remote, right API format and send them to the hashtag for ingestion. By the way, all of the commands instructions and manifested am using these demos from I talk can be found on my GitHub
+00:16:41 [W] Connie you 2020
+00:16:44 [W] what we're going to do is deploy a thoraseal hashtag and also a thunderous receive controller along with it to configure the Hatchery. So let's begin by creating the namespace for cluster is going to be the funnest thing space.
+00:17:00 [W] And now we're going to create all the Manifest that we have in the directory for our first demo.
+00:17:06 [W] All right, great.
+00:17:17 [W] Now let's take a look at what manifest we actually deployed.
+00:17:20 [W] We have a bunch of manifest corresponding to the fun has received controller itself and then some manifest corresponding at the bottom to the Thunders see pastoring for our default a shrink here.
+00:17:29 [W] We have a staple set with one single replica.
+00:17:32 [W] So we take a look at the pause. We have one single Thunders receive pot in the default hashicorp. And we also have the Thunder received controller pot.
+00:17:39 [W] Let's take a look at the configuration of the Thunders of see controller generated for us.
+00:17:50 [W] You can see that from the one pod that we had in our sample set. We generated one endpoint for hashing.
+00:17:51 [W] Perfect.
+00:17:52 [W] Now let's run a second process in another terminal where we're actually gonna be generating some metrics to ingest in the hash right here. We're going to be using a binary that we wrote. It red hat called up the simply sends one single metric and up metric to an end point that you specify via the
+00:18:08 [W] And now let's scale up our hash rate from one replica to three replicas.
+00:18:16 [W] Let's take a look at the pods and it seems like everything ruled out perfectly.
+00:18:23 [W] And during this rollout process.
+00:18:27 [W] We didn't drop any remote right request. It seems like
+00:18:28 [W] so now let's look at the hashicorp figuration of the generated by the receive controller.
+00:18:36 [W] And as you can see now that we have three replicas the receive controller updated our - configuration and coredns points are right now is 3 n points in it exactly what we expected.
+00:18:46 [W] And now when we quit the up binary you can take a look at some statistics and we can find that we send 100 or Mo right request.
+00:18:51 [W] We send one request per second.
+00:18:56 [W] We just saw how we were able to effortlessly deploy a half and other communities and then with a single command scale that has four not for example to handle increased.
+00:18:59 [W] Topic, I think that these kind of easy wins are oftentimes underrated. In fact inside a red hat.
+00:19:11 [W] We're running essentially exactly this same stock as part of the open ship monitoring platform. One of the services that we run is a thunderous received hashicorp with six replicas that in jest metrics from on the order of 10,000 ovhcloud stirs.
+00:19:21 [W] Bunch of clusters report data to this platform regularly throughout the day so that we can identify an alert if these platforms of these clusters are experiencing any issues for example, something wrong with the control plane or something going on with your notes.
+00:19:38 [W] Of course since we're the observability team, we closely monitor all of the services that we run.
+00:19:47 [W] So with pretty easily able to get some statistics around the amount of data that were ingesting as of late July. When I recorded this talk were regularly handling around 10 million active time series and were ingesting on the order of 30,000 samples per second.
+00:19:58 [W] Really low frequency data for the amount of Time series that we have and that's because each of the clusters of reports data to our platform only sends data about once every five minutes for a pretty limited set of Time series.
+00:20:11 [W] In the case of this opens up monitoring Production service that were running were able to pretty accurately estimate the load that we're going to have this week next week in a month or in a quarter.
+00:20:23 [W] And this means that we are able to plan the capacity effectively for the size of our ingestion.
+00:20:26 [W] hashman appropriately. This is possible because we have a good idea of how many open to clusters there was going to be in the wild and we know exactly which time series cluster will be sending and how often but nevertheless every few months.
+00:20:40 [W] We need to resize our cluster resize the hash rate.
+00:20:41 [W] In order to accommodate the increased load which means that we have unnecessary toil for engineer's and this problem is even more pronounced for workloads that are spiky or nature than ours are so imagine that the amount of Time series and samples that hash. We need to ingest.
+00:20:57 [W] Are varying wildly from Peak to trough this kind of volatility means that it's going to be really difficult to appropriately sized ingestion service.
+00:21:10 [W] So without good Automation in these cases, the best option that we have is to over-provision the service so that it's able to handle the highest peaks. But obviously this has a downside of causing the service to be really underutilized in times of low traffic.
+00:21:22 [W] So we're going to be wasting both resources and that means we're going to be wasting money as well in the case of the thumb.
+00:21:30 [W] Has received controller we can use the horizontal poddisruptionbudgets hash ring up when the hashtag that is swamped and using too much CPU and then we can use the Thunders of controller to automatically regenerate the configuration for this hashtag and then have everything
+00:21:42 [W] Working for us just out of the box.
+00:21:48 [W] Let's try running this exact configuration of an auto scaling Thunder to see the hash ring in the new demo.
+00:21:53 [W] This is going to look a lot like the first demo we had the Thunder receive controller generating the configuration for upon receive hashing. But with the added change that the hash with is going to scale automatically when we're increasing the load on it using the horizontal poddisruptionbudgets,
+00:22:04 [W] On the part of scalar in turn is going to depend on the availability of the resource metrics API in the cluster. So in our case we're going to be using the communities metric server to provide that.
+00:22:14 [W] And another thing we're gonna be doing here is we're going to be generating a lot more load than before.
+00:22:20 [W] We'll be sending hundreds of thousands of Time series that are going to be changing every few seconds to really stretch this hash rate a little bit more to its limit and see how it stabilizes and how it performs.
+00:22:34 [W] All right, let's begin again by creating the thongs namespace and then we're going to deploy all of the resources in the directory for our second demo.
+00:22:42 [W] And you can see a lot of these look like before but let's take a look at the few things that are different so namely look at the fund receives table set and one of things we can see here is that were deploying a new sidecar inside of the Thunder of seed pod.
+00:22:57 [W] This is a sidecar called config map to disk and the purpose of this is automatically synchronize the config map that's in the API to a file on disk instead of avoiding the long resync Loop that might take when the kubelet has to update the volume Mount
+00:23:09 [W] And it wouldn't take much changes in the API can take a long time for them to reflect on disk. So here we're just trying to have the hashicorp Json configuration file update a little bit faster. The next thing is different in this demo is that were deploying a horizontal poddisruptionbudgets land here.
+00:23:24 [W] We're setting the minimum replica count to five replicas.
+00:23:38 [W] This means that we're always going to have at least some ingestion capacity in our - and that means that a minimum I replicas the thing is notable here is we're scaling based on the average CPU utilization of the hash browns. So when the average
+00:23:39 [W] utilization of all the pods and hashtagging which is 50% of the CPU that they requested then we scale up.
+00:23:50 [W] Let's take a look at all the positive we have and everything rolled up correctly. We can also see that the configuration generated by the Thunder see controller should be there.
+00:23:53 [W] This looks good.
+00:23:55 [W] So let's take a look at the pods.
+00:23:56 [W] All right.
+00:23:57 [W] this looks good.
+00:24:01 [W] let's run in the second terminal of process is just watching the horizontal part across or so. We can see the decisions is that is going to be making real-time and now in one last terminal will run a process to generate load against our hashicorp.
+00:24:10 [W] in this case we're going to be using fresh tracks has Avalanche project which is a binary that generates remote write requests against some end point that you choose one thing to note here is that we're using a fork that I made that's
+00:24:25 [W] Only called log errors.
+00:24:30 [W] So the original binary when it reaches 20 errors it just exits. And in this case the we want to avoid exiting and just keep logging her. So that should serve a little bit as an indication of where this demo is going to go.
+00:24:41 [W] Another thing to note here is that we're going to be deploying a thousand metrics each with a hundred different times here. He's pretty soon the horizontal but autoscaler scaled the hash rate up to seven nodes and when this occurred the process generating the
+00:24:55 [W] Started logging a lot of errors.
+00:25:00 [W] This means that our hash one is in some kind of unstable State soon after that the particle ER skills. Once again, the - up to the next ten minutes of this the next ten minutes of them were pretty uneventful.
+00:25:12 [W] The hashing is super stable at 9:00 pods, and we're not generating any errors.
+00:25:17 [W] So let's fast forward a little bit in the top screen.
+00:25:21 [W] We're now running poop CTL top to see in real time how much CPU and memory each of the Thunder seed pods is using one thing we can see is
+00:25:28 [W] is that whenever the process that generates load changes the times use that it's ending the characteristics of the CPU utilization changes. Well, the reason for this is because every single time that we change the time series that we're sending
+00:25:40 [W] Change which final thunderously replicas these hashes end up on so it means that the characteristics of which pause receive how many metrics and with pause have to forward metrics to with other pods changes.
+00:25:56 [W] so we might in sometimes have a very smooth distribution of metrics and other times we might have very lumpy distribution of metrics were a lot of Time series get clumped up on one node now at around 23 minutes the Avalanche process reconfigures itself, and
+00:26:11 [W] Tradition of Time series in this case is causing a really uneven distribution of metrics and increasing the CPU utilization of the hash rate.
+00:26:23 [W] This is causing the hashtag to become unstable and is going to require a scaling event now when this has been scales up, we further destabilize the hash rate because some of the nodes are unavailable for
+00:26:36 [W] It causes more errors in the house ring causing more soup utilization etcetera Etc.
+00:26:41 [W] Now when this occurs we end up scaling the cluster up all the way to 20 replicas, which is actually the max that we set on our horizontal poddisruptionbudgets.
+00:26:56 [W] Around the thirty one minute Mark the hashicorp finally stabilizes and the CPU utilization will begin to drop now the CPU elevation will keep dropping so much that the horizontal poddisruptionbudgets hash ran all the way down to 12 replicas
+00:27:14 [W] Seems to be pretty stable and at some point we just quit the process because this has been this has given us already a lot to think about.
+00:27:22 [W] Compared to the first exercise where everything is rainbows this demo didn't quite go as smoothly as we would have hoped.
+00:27:31 [W] Yes. We did finally reach some stable state where the hashicorp able to ingest all of the data that we were throwing at it but along the way every time that we had a scaling event.
+00:27:42 [W] We had inconsistent states where we were dropping request and we couldn't ingest the data that we were being requested to do.
+00:27:45 [W] Even though these experiments don't go a hundred percent smoothly.
+00:27:54 [W] They provide a super good Insight that helps understand the systems were designing in the case of the Thunders receiver.
+00:27:59 [W] We can begin to ask questions. Like why is this hash for you behaving so erratically or is it's so unstable one of the ways we can imagine a system is that we can describe it as being an unstable equilibrium.
+00:28:09 [W] would be for example, if we're balancing a really tall and slim item vertically or if we have some kind of public that lands in a local Minima.
+00:28:19 [W] Any small disturbance might nudge this thing out of its equilibrium State and into some totally chaotic state.
+00:28:26 [W] In fact, this chaotic state that we're Landing in is some kind of positive feedback.
+00:28:28 [W] We're generating more instability the more unstable that we become to help understand the instability of the system.
+00:28:35 [W] End of time with a lot of Errors.
+00:28:45 [W] So one of the notable instances was when the horizontal poddisruptionbudgets hash ring up to 20 pots.
+00:28:45 [W] What was occurring was that there were only 15 pods in the system, but the Staples that resource had 20 replicas in the spec.
+00:28:58 [W] The reason for this was that the Stables that controller only created 15 pause in the cluster because we only wanted to have one unready Potter the time the end result is that there was a mismatch between the amount of
+00:29:04 [W] Jacques that we had in the end points configuration file for our hash rate in the amount of replicas were actually available.
+00:29:15 [W] This means that we had tons of requests that were destined to end points. It didn't even exist. And as a result, we had a lot of failures a lot of remote work us failures.
+00:29:26 [W] These remote right request failures end up causing more Network load more CPU load and if there hadn't been a hard limit of 20 replicas it might even cause our hashtag to be scaled up even higher.
+00:29:37 [W] Another issue that we spoke about earlier.
+00:29:41 [W] is that the hash we can figuration loading can take a really long time and is non-deterministic.
+00:29:44 [W] So some of the pods might load it before others.
+00:29:46 [W] This means that we can have a split brain in our hash rate where some of the pods have the old - configuration and some of the pods have the new hashicorp Eurasian the way that we chose to address. This was to have a sidecar that automatically loads the new hashicorp figuration whenever the
+00:30:00 [W] The API, however, this has some other downsides to it namely when all of the pods up to the configuration at exactly the same time.
+00:30:14 [W] There is an instant of time when none of the paws are available.
+00:30:25 [W] This is because when the hashicorp figuration changes the founders receiver takes itself offline temporarily when the flushes it's TSD be we flush the TOC be whenever the hashicorp equation changes because we don't want data from one tenant to leak into the
+00:30:29 [W] Tenant, because when the housing configuration changes we might also be changing the tennis the correspond to a pod.
+00:30:36 [W] This downtime can take a lot of time and it means that all 15 of our pods might be done at exactly the same time and this could take a minute and during this entire minute.
+00:30:48 [W] We have no ingestion capability.
+00:30:56 [W] So even though we have a replication factor of 3, for example, it doesn't really do us any good because all the pods are down.
+00:31:03 [W] Another option we could have is to perform a rolling update of the configuration where we only allow one pot at a time to update its - configuration. However, the downside of this is we have a longer amount of time.
+00:31:10 [W] where we have this kind of split brain effect where some of the pause in the beginning have already have to do configuration and deposit the end haven't
+00:31:14 [W] At the same time whenever the pods are updating.
+00:31:19 [W] They're still going to be getting traffic forwarded from the other pause in the hashtag this because the Thunder receive controller doesn't consider the Readiness or unreadiness of a pod when it produces the endpoints array, even though unready paws are taken out of the load balancing group for requests are coming
+00:31:33 [W] P these pods can still get request forwarded directly to them from pods in the hash rate.
+00:31:45 [W] So when a pod is temporarily crash looping or maybe it's temporarily offline because it's flushing.
+00:31:49 [W] It's TSE be the other pods in the Hatchery are still getting making grpc request to it and causing extra load on the spot and causing more trouble for this problems already struggling one way that we can address. This issue is by using back off logic and
+00:32:01 [W] in fact, we actually already have a PR in the thymus repo in fomenting exactly this maybe by the time you see a stock it's already merged a further Improvement would maybe be for the Thunder of see controller to consider Padre dienes when generating the endpoints array finally one big issue that we have in Farmers receive
+00:32:16 [W] Is the way that we forward requests in the hashing so normally remote right request contain a lot of Time series and each time Series has to a unique value that Destin's it to one node in the Hashmi when there's enough time series in the remote
+00:32:31 [W] Quest statistically, it's very likely that sometimes your he's will be destined for every node in the hashing.
+00:32:41 [W] So we might have one incoming requests and it can result in 15 outgoing requests inside of the hash rate. Even though the fund receiver batches requests that are destined for the same node all together.
+00:32:53 [W] We're still end up having a lot of traffic inside of the house during for one single request.
+00:32:59 [W] This means that each incoming request is multiplied by the number of nodes in the Hatchery. Although each request is proportionately smaller.
+00:33:06 [W] - some gains that you would have had from compression.
+00:33:09 [W] So the larger the hashing the more intro hashing traffic is generated for each request right now.
+00:33:19 [W] We're in the process of investigating some different solutions for this and we're specifically looking into having tiered layers of hash from this kind of the same way that the alert manager project has tiered routing trees.
+00:33:25 [W] So what's the deal with the Honda receiver?
+00:33:26 [W] Is it stable or not stable?
+00:33:27 [W] Can we use a hash and stuff?
+00:33:30 [W] The answer is that yes, but it's complicated as we saw earlier when we have a stackrox.
+00:33:32 [W] Double-size hash ring, we can happily ingest all of the data that we send to it.
+00:33:39 [W] But it's when we have a scaling event that we trigger some instability that leads to more instability.
+00:33:43 [W] This means that using automated tools like the horizontal poddisruptionbudgets.
+00:33:50 [W] We can partially mitigate some of these uncertainties.
+00:33:55 [W] Implementing policies scaling policies in the horizontal autoscaler, which is something that's new in the V2 scaling API.
+00:34:02 [W] Another thing we can do is we can start to work on the lot of the improvements that address the problems.
+00:34:08 [W] We identified earlier. One of the things that we could do just off the bat is eliminate the need for down time whenever a hashicorp a change occurs as I mentioned earlier whenever the hash rate is reconfigured the thunder of the seed pods temporarily take themselves off by male flusher TSD
+00:34:23 [W] One thing we could do is essentially pivot to an alternative TSD be and keep ingesting data while we're flushing the old one.
+00:34:31 [W] yes, there's going to be some trade-offs where we have higher CPU and memory utilization but a lot of the recent improvements that the cortex folks have been making and Prometheus and TSD be have improved significantly the resource utilization that might even allow us to make these
+00:34:47 [W] of trade-offs
+00:34:48 [W] Another thing we could do would be to use consistent hashing.
+00:34:55 [W] So one of the problems that we see when we have the split rain effect in their hashicorp.
+00:35:17 [W] All right, so that gives us a lot of ideas for ways that we can improve the thumbnails project. So hopefully some of you feel inspired to contribute and I hope to see you all on GitHub.
+00:35:28 [W] Thanks a lot for watching.
+00:35:31 [W] That's what I have for you today and I will stick around for questions.
+00:35:32 [W] Hi everybody.
+00:35:37 [W] So yeah, if anybody has any questions, I'm super happy to take a look at these right now.
+00:35:50 [W] We did get some questions in the live Q&A chat and I can go over some of these.
+00:35:56 [W] So one of the main questions was what happens if one of the nodes dies during the scaling event, so and this no doesn't have time to
+00:36:12 [W] All the data into the cloud or n 2 S 3. So how would we take care of this?
+00:36:27 [W] And the way that we do this is that we try to use persistent volume claims and instana receiver always so that if the thumb receiver doesn't have time to clean these shutdown and upload all data to S 3 then we still have it on
+00:36:32 [W] The PVC and can always you know back up the data or restore it or recover it as needed.
+00:36:38 [W] Yeah, another question we got was how do we deal with?
+00:36:48 [W] Yeah, how do we deal with duplicate data in the has rings and object storage?
+00:36:59 [W] So yes block storage is cheap, but it's not free says the question asker and that's totally true.
+00:37:08 [W] true. So whenever we use replication inside of the hash right thing will be replicating our data three times. For example, the way that we try to take care of this and Farmers receive is or rather in the thymus project in general is that we use
+00:37:20 [W] Often people caishen provided by the thumbs compactor.
+00:37:23 [W] So this will come little compact all of the data that was duplicated three times in our object storage and to just one single time series DB block file and this means that will regain all of the data that we had our all of the space that we had taken
+00:37:38 [W] An updo to replication and their way through ups and space.
+00:37:41 [W] Oh, yeah, this will also mean that our aquarium is faster because the thumb is query doesn't have the duplicate live whenever you're acquiring instead. It will be duplicated offline.
+00:37:52 [W] And see we had some more question.
+00:38:03 [W] Oh, yeah, we have some live ones right here.
+00:38:06 [W] Can you show again the deployment diagram in kubernative?
+00:38:12 [W] I actually don't think I can show this but all of the live out sorry, all of the slides are uploaded to the shed and you can look at it there.
+00:38:21 [W] Let's see.
+00:38:28 [W] I had a few local issues and missed the start of the presentation.
+00:38:29 [W] So I might have missed something is that under the siiver approach not leveraging on early Earth on a sidecar.
+00:38:37 [W] It's done us abandoning its son of sidecar approach.
+00:38:40 [W] So these are actually intended for two different things in the thermocycler were always pulling data from Prometheus and the thymus receiver is meant for situations where maybe you have to push data or you don't have direct access or Ingress.
+00:38:54 [W] To the cluster the spoke clusters that you want to get the data from.
+00:39:01 [W] So in these cases we want to push data out from these spoke clusters into our Central monitoring cluster. And this is kind of the situations where the thumb is receiver is ideal.
+00:39:09 [W] Yes.
+00:39:15 [W] I think that these are all of the live questions we have one.
+00:39:23 [W] What is the least amount of data to consider a deployment like this?
+00:39:25 [W] This is a pretty open-ended question.
+00:39:33 [W] You could use a deployment like this. If you're only sending one time series per second or per hour as long as you don't have access to this book cluster or to enjoy it for Ingress access to this book cluster
+00:39:46 [W] And that's when we couldn't use a fan of soccer cart. So even in this really basic situation something like this be useful, but probably you wouldn't need to use the funds controller and the horizontal Potter scalar Etc.
+00:40:01 [W] We really start benefiting from this when we have spiky workloads.
+00:40:12 [W] Let this one of the things that we mentioned earlier that like if we have a stable stable one of data that were ingesting constantly then maybe we don't need this the scalable infrastructure, but if it's very spiky and
+00:40:16 [W] And fluctuates a lot then we really benefit from it.
+00:40:19 [W] Do you have the option to get the option to choose would you recommend pulling or pushing performance-wise?
+00:40:35 [W] It's really not a question of performance data all in this case performance wise if you if you're able to pull the data then pull it because you're not sending.
+00:40:44 [W] You're not sending everything the right ahead lock for Prometheus around constantly and you save a lot of processing effort.
+00:40:51 [W] Yeah, so if you don't need to replicate the data to to a centralized cluster, which is what we are doing in founders of see if it's essentially a Time series database replication ski, then we don't want to then we don't you do it.
+00:41:05 [W] Yeah, so I would say if you can pull pull that's that's even easier.
+00:41:11 [W] All right.
+00:41:13 [W] Why not using the thumb of sychar as a starting over sidecar avoiding rerouting request intra cluster shorting aware sidecar, this is something I don't exactly understand this
+00:41:29 [W] Question, but maybe we can chat on a slack afterwards because it seems pretty nuanced.
+00:41:33 [W] Hello. Do you have any answers for the questions raised in the VQ slide?
+00:41:42 [W] I don't have them posted.
+00:41:44 [W] But if you want to ask me any of those questions, I'm super happy to answer them on slack or here or anywhere.
+00:41:49 [W] and
+00:41:55 [W] okay.
+00:41:59 [W] Sorry. I thought this was ending.
+00:42:04 [W] Um, let's see my question.
+00:42:06 [W] How should we assess through was more focused on having one set on the hash rate replicate x x + 1 Kappa PS3 hopefully on replicated back and like Seth why not use a hash one directly.
+00:42:19 [W] You said the to duplication of that replication.
+00:42:24 [W] Is there more reduction?
+00:42:27 [W] I don't understand this question directly.
+00:42:29 [W] Again, please reach out to me on slack and I'm happy to answer this.
+00:42:33 [W] Okay can thumbs be configured to pull from other Prometheus based on a bunch of queries can find those pull other Thanatos?
+00:42:48 [W] Yes. So everything is component except poses with honest or API, which is something can use for pulling data from the Thunder csdb.
+00:42:55 [W] And so farmers can pull data from any other funnels and from a previous indirectly to the funnel Sidecar.
+00:43:03 [W] And how is the Thunders receiver different from cortex?
+00:43:08 [W] They're essentially the same now.
+00:43:10 [W] we've been collaborating a lot funnels in cortex and in the future is becoming more and more similar and the community is benefiting from all the code reuse.
+00:43:21 [W] Yeah, so it's kind of going this Direction.
+00:43:23 [W] All right, so we don't have any more time and please reach out to me on Slack.
+00:43:26 [W] Thanks a lot.

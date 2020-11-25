@@ -1,0 +1,261 @@
+﻿Vitess: Introduction and New Features: WFRE-4476 - events@cncf.io - Wednesday, November 18, 2020 5:47 PM - 37 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello today, we'll be talking about vitess will give you a brief introduction.
+00:00:04 [W] And we also give you a few demos that cover some of the new features that we have recently developed.
+00:00:10 [W] I am super super modern and co-creator of vitess and also CTO at planetscale and I'm joined with DTC.
+00:00:34 [W] Hello today, we'll be talking about vitess will give you a brief introduction.
+00:00:39 [W] And we also give you a few demos that cover some of the new features that we have recently developed.
+00:00:44 [W] I am so gue sukumaran and co-creator of vitess and also CTO at planetscale and I'm joined with DTC Garrity who is lead maintainer at the test and also software engineer at planetscale.
+00:00:56 [W] What does vitess vitess was initially developed as a my SQL scale?
+00:01:04 [W] Solution at YouTube, but it has evolved into a cloud knative database.
+00:01:11 [W] With us is a cncf graduated project.
+00:01:14 [W] It was donated by Google to cncf and January of 2018. And as an incubating project and it graduated from cncf in November of 2019. It was the eighth
+00:01:30 [W] And see if graduated project. It was donated by Google to cncf and January of 2018 as an incubating project and it graduated from cncf in November of
+00:01:45 [W] from cncf and the first storage project
+00:01:50 [W] What do we mean when we say that with us is a cloud native database.
+00:01:54 [W] Stateless storage in kubernative is not an easy problem to solve but with with us had a head start because it had been built to work in Borg which was the precursor to kubernative.
+00:02:10 [W] And because of that.
+00:02:12 [W] vitess was ready to run and kubernative even before version 1.2 of kubernative and some of the features in vitess that made this possible are the way in which we test runs
+00:02:27 [W] quill instances in our primary replica configuration so that when there are events like a pot deletion if kubernative decides to kill a pod then you can fail over
+00:02:40 [W] without any disruption to the traffic
+00:02:43 [W] the other feature of witness that we want to highlight is its scalability, which is this massively scalable and we have not so far hit the limits of how much you can you can scale it as long as
+00:02:58 [W] Where there are with us implementations which are running literally millions of queries per second with no problems.
+00:03:07 [W] With us is also highly available.
+00:03:09 [W] And this is a result of the primary replica configuration in which we discussed was typically run and the seamless way in which you can fail over from a primary to a replica in case of
+00:03:25 [W] Attempt done time vitess is right. Now my SQL compatible. It runs against any my SQL flavor Community Enterprises. Percona Maria DB Etc.
+00:03:33 [W] It does not work with postgres as of now.
+00:03:43 [W] It does servicemeshcon zuv queries per second in production at various companies some of the biggest users of vitess R JD.com and slack and they both have very
+00:03:58 [W] And slack and they both have very high traffic instances. JD is the largest Chinese retailer, which means that it is the largest online
+00:04:09 [W] Old and slack as most of you know is a collaboration tool that has serving many many large Enterprises.
+00:04:19 [W] Some of the vitess users run it on their own Hardware many of them run it in the cloud and some of them run it in kubernative and vitess can run in any of those configurations.
+00:04:36 [W] Few key Concepts in vitess. The first one is key space.
+00:04:38 [W] In a traditional database architecture people usually have a monolithic database in vitess you break that monolithic database into segments Each of which is
+00:04:53 [W] This and a key space can itself consists of multiple individual databases, but it is a logical database and a bit as cluster can contain multiple key
+00:05:07 [W] The Logical data bases Each of which may contain more than one physical database the next concept we should understand is that of sharp A Shard is pretty much the small smaller
+00:05:19 [W] k space so key space if you think of it as a logical database A Shard is the way you split up tables in that logical database across individual my SQL instances in order to get
+00:05:32 [W] That people are looking for with us all depends on a topology server a distributed key-value store that serves as a central location for vitess components to
+00:05:45 [W] Let's look at the vitess architecture in this picture.
+00:05:50 [W] We are showing and shards and all of these shots together comprise a key space or a logical database and it consists of multiple physical data bases and for each of those physical
+00:06:05 [W] run componentconfig, um ET tablet which takes over the management of those physical data bases in terms of doing backup restores and providing protection against
+00:06:18 [W] Good queries that might overload the database and things like that.
+00:06:19 [W] Traffic to the vitess cluster is routed through another component called VT gate this serves as a gateway to the cluster and application stock to VT gate which then decides where to Route individual queries.
+00:06:34 [W] Rita gave speaks the my SQL protocol which means that applications can interact with it as if it were a single my SQL instance and it provides the logical single database view that we test gives you across.
+00:06:49 [W] the shards
+00:06:49 [W] there is also a control componentconfig witty ctlt and this is a Daemon process that can be used to manage the cluster and serves as an entry point to various cluster management functions
+00:07:06 [W] We will show you the demos of some interesting things features new or otherwise in vitess.
+00:07:12 [W] We'll start with showcasing the my SQL compatibility and then move on to be replication online schema changes and automatic failover.
+00:07:24 [W] All right, parsec and address and we want to talk to you about my SQL compatibility.
+00:07:29 [W] We believe that the test provides a valuable illusion for its users.
+00:07:34 [W] It's the illusion of a single database when reality your data might be spread out across multiple replication coasters. It's the illusion of working directly with my SQL find seven when in reality you are connected to a go service.
+00:07:50 [W] Finally, it just makes it seem like you have a good connection to your database when in reality your queries are being sent through a connection pool. And we're two queries coming up on different servers. This solution has to work with many different systems.
+00:08:04 [W] It has to convince your connection libraries that use connect directly to your database to send your queries these libraries often sends and Preamble and follow-up queries and expect them to answer in very specific ways as to work with objection.
+00:08:18 [W] Object relational mappers pulls the translate from the objects and struts your work you're working within your host language too complicated sweet SQL queries that the test has to be able to understand and but we also want your old code to work with the test.
+00:08:33 [W] Use projects forcing our users to have to change old SQL queries.
+00:08:34 [W] It's not a good idea. If we want to have the users lastly. We want you to be able to use an application that works well with my SQL and make it scale by placing the tests in front of my SQL when we started working with this project and last spring
+00:08:49 [W] Take the word, press s to thing that we were aiming to support.
+00:08:27 [W] Here.
+00:08:27 [W] We are.
+00:08:27 [W] We have our newly installed my SQL cluster and we have a test in front of it and we are configuring WordPress to talk first directly to the backing my SQL cluster.
+00:08:41 [W] We have installed it. We now are able to just write a little blurb and not new blog post about the up-and-coming k8s a total release.
+00:09:04 [W] There's the blog post published and we can see here on the status page. We need to get that no cars are coming in.
+00:09:13 [W] If we now change the connection Port, so instead of talking with the backing my SQL we talked with the test.
+00:09:21 [W] We go back to the WordPress admin page here. We can see that cars are starting to trickle in we can list existing pages.
+00:09:37 [W] But it seems to work pretty seamlessly.
+00:09:38 [W] For me to get that no cars are coming in.
+00:09:40 [W] If we now change the connection Port so instead of talking with the backing my SQL we talked with the test we go back to the WordPress admin page here. We can see that cars are starting to trickle
+00:10:50 [W] Once the test and then the bottom pane you can see the curve been received by the dtk 10 declares the BTK tends to the tablet.
+00:10:59 [W] Now if we're dealing with a lot of data, we don't want to see all of it in one go.
+00:11:05 [W] So we're going to use limit that's going to show is the data but what if you're showing a lot of data and you want to provide education you want to know what the full number would be SQL code Founders.
+00:11:18 [W] That's bad.
+00:11:19 [W] It provides the data with the limit, but it returns found Rose as if you have run the query without
+00:11:29 [W] limit
+00:11:31 [W] Turk cement this what we had to do was to store this value in the debate session.
+00:11:38 [W] So when we evaluate the Down Rose, we never send anything to the tablet which won't be an entirely different template. So we wouldn't have this information. Anyway, the last piece of the illusion that I want to show here is
+00:11:53 [W] What we have to do was to store this value in the debate session.
+00:11:58 [W] So when we evaluate the Down Rose, we never send anything to the tablet which might be an entirely different topic. So we wouldn't have this information. Anyway, the last piece of the illusion that I want to show here is
+00:12:23 [W] find variables this is something that lives in the session States on my SQL and because we can trust which my SQL and opened we had to do the same thing copy these values into the session state that we dedicate level
+00:12:38 [W] To the top of it necessary or evaluate directly when we can.
+00:12:45 [W] Here's an example of us having to send down the information in form of a parameterised query to the tablet.
+00:13:35 [W] Hello in this short demo we go over a migration workflow early adopters often used to try witness in production.
+00:13:42 [W] We show how to move tables from your existing set up to serve them using vitess with replications move tables working. Then we see how easy it is to roll back to your existing setup.
+00:13:52 [W] Let's get to the demo.
+00:13:54 [W] This is the data we have current server.
+00:13:58 [W] We first talked all the vectors components that are needed.
+00:14:02 [W] The topology is TLD and vtk.
+00:14:05 [W] Manage tablet, which is just a tablet proxy which points to the existing database server.
+00:14:14 [W] Once that is done. We start the vitess cluster.
+00:14:19 [W] Wilke tables which are
+00:14:23 [W] in your database
+00:14:25 [W] start three tablets one will deem as the master the other replicas and the third is that you
+00:14:40 [W] tablets and started to wonder is the master now we can initiate replication workflow called move tables, which lets you move number of tables from Source Commerce is what we called.
+00:14:55 [W] Sing database that's the key space customer was the new witness cluster and we copied over customer and see order from Commerce to customer.
+00:14:54 [W] You can see here.
+00:14:55 [W] We did command shows you that all the tables have been copied.
+00:14:59 [W] It's a very small table. So it's happened very quickly.
+00:15:02 [W] And you can look at the metadata of be replication.
+00:15:06 [W] It shows you the which position it's running at sinking currently from Commerce to customer at this point. Your existing database is still contains all the data. It's where the app is pointing to.
+00:15:20 [W] and you can see when you insert into the
+00:15:25 [W] existing database gets synced and Target still has the new row that you've created.
+00:15:32 [W] Now, we start switching over to the it is cluster is which reads or read-only and replica. And then finally we switch over the rights which way is all traffic from your app is going to live it as cluster.
+00:15:47 [W] Note that we are still running a reverse application at this point and we switch rights keeping your original existing database server in sync with the vitess cluster.
+00:15:58 [W] We can look at this by looking at the reverse workflow that is automatically created by vitess and you can see that the position is in sync.
+00:16:08 [W] Act which is the vitess cluster.
+00:16:02 [W] and you will see that we'd application reverse replication has kept it in sync the GT IDs will
+00:16:10 [W] Increase by 10 which is the number of rows that we inserted through Vita gate by sea otter and 5 in customer.
+00:16:23 [W] So which means your existing server has all the data and you can switch back to it at any point.
+00:16:37 [W] Let's initiate the Switchback.
+00:16:47 [W] So to do this to switch back we do the reverse which reads back to your existing.
+00:16:55 [W] Database and then we switched rights in which case now the app is pointing to your existing database, which is cluster is just the in the back down.
+00:17:05 [W] It is still the forward replication is still running.
+00:17:08 [W] So if you the app is now inserting data into existing database that we discussed earlier still is kept in sync.
+00:17:18 [W] We see that here.
+00:17:23 [W] insert a row
+00:17:24 [W] Winding through your existing database, which is cluster is just the in the back down.
+00:17:06 [W] It is still the forward replication is still running.
+00:17:09 [W] So if you the app is now inserting data into existing database that is cluster still is kept in sync.
+00:17:20 [W] You see that here.
+00:17:24 [W] insert a row
+00:17:27 [W] the existing server and then we confirm that.
+00:17:34 [W] our
+00:17:36 [W] Target has moved forward that is the which is cluster is in sync.
+00:17:45 [W] We replication can also be used for applications such as flexible Richard E change data capture materialized views anonymization and aggregation.
+00:17:55 [W] It has proven itself at scale in several massive high-performance production setups with huge databases serving very high QPS.
+00:18:06 [W] Thank you.
+00:18:09 [W] Hello, my name is longer walk. I mean engineer with planetscale and today I'd like to present online ddl in use experimental feature in vitess 8.0 which comes to solve the issue of schema migrations and of the fact that in all TT table.
+00:18:24 [W] You nice views and atomization aggregation.
+00:18:28 [W] It has proven itself at scale in several massive high-performance production setups with huge databases serving very high QPS.
+00:18:38 [W] Thank you.
+00:18:42 [W] Hello, my name is stronger.
+00:18:44 [W] I mean engineer with planetscale and today I'd like to present all my ddl in you experimental facial in vitess 8.0 which comes to solve the issue of schema migrations and of the fact that in Alta table in large PC
+00:19:44 [W] Large PC systems takes the power out of the developers hands with my skill on large and busy systems and alter table is a risky operation.
+00:19:54 [W] It is blocking. If not on the primary done on the replicas.
+00:19:57 [W] It will create replication lag.
+00:19:59 [W] It is resource-related can consume so much.
+00:20:02 [W] I'll that your environment is unable to serve production traffic. It is inaudible and uninterruptible.
+00:20:08 [W] You can't expect to know what the status is or hit control C and expect things to just come back the way they were
+00:20:14 [W] they were workarounds exist in the form of external tools like ghosts PTO on a schema change or Facebooks online check on a schema change.
+00:20:25 [W] These are tools that require that require operational Knowledge from the engineer.
+00:20:31 [W] They need to run in in the production environment.
+00:20:35 [W] They need to know they need to get at the identities of the affected service.
+00:20:40 [W] They need service Discovery. They can do throttling, but they need to understand how to do.
+00:20:45 [W] Opening which service to throttle by what is the environment?
+00:20:48 [W] What does the environment look like?
+00:20:50 [W] So the usage of these tools although popular requires an operational domain operational domain knowledge that some Engineers do not have and therefore the engineers need to relay
+00:21:06 [W] Schema migration operation into the hands of dbaas who will most commonly run these migrations manually.
+00:21:14 [W] The situation is undesired. And this is why vitess is happy to present a new syntax for online.
+00:21:23 [W] Ddl and Ultra.
+00:21:24 [W] We'd go stable altar with PD on my schema change table putting the power back into the developers hands and abstracting away all of the complexity of running schema migrations.
+00:21:37 [W] Let's look at a quick demo.
+00:21:41 [W] For starters, we're now logged in into vitess. We have this simple table called eggs.
+00:21:48 [W] It's populated with a few rows. It's actually only shorted environment with for shards, but when I select from the table, it makes the appearance of just a normal monolithic table.
+00:22:01 [W] I'm going to begin with the normal altinity able that's a blocking operation in production are you wouldn't run that that could take minutes hours or days to run but of course here on this very small table. It returns instantly.
+00:22:16 [W] Ready? We see that vitess is very useful to us here because abstracts away the need to know what are the affected shards how many shots are therefore this table? Who are the primary
+00:22:19 [W] Stables this is something that vitess already is aware of and abstracts away.
+00:22:13 [W] But again, this skin of migration is blocking and therefore we introduce this new syntax.
+00:22:20 [W] I'll do with go stable eggs modify it etc. Etc.
+00:22:25 [W] And the first thing we note is that we get back this job description job ID, which we will use later on to track will be able to use this value to control immigration audit
+00:22:40 [W] We get back this job description job ID, which we will use later on to track will be able to use this value to control immigration audit immigration cancel
+00:22:56 [W] Cancel a torrid right now. The next thing we see is that the table has not yet been migrated.
+00:23:03 [W] That's because this operation goes asynchronous and offline the test becomes the owner of the scheduling of this migration.
+00:23:15 [W] In fact, every shot in itself owns the scheduling of the migration it can take place in the next minute or in the next hour depending on whether there is
+00:23:26 [W] ER running migrations at long last we will see that the immigration is Success successful. We can see that the skin will change has been altered of course tracking the
+00:23:41 [W] And I shall create a will show creators loodse undesired and vitess offers us in interface to look into the status of running migrations. The same interface allows us to control cancel throttle
+00:23:56 [W] It or retry running migrations, there's a lot more to this and please look at the documentation and release notes for vitess 8.0.
+00:23:58 [W] Thank you so much.
+00:24:01 [W] Hello everyone.
+00:24:03 [W] I'm going to give you a very quick demo of the orchestrator, which is actually a new component of vitess.
+00:24:09 [W] It has has previously had what we call as planned fail overs, which means that if you plan to deploy software or if a pot goes down and it hits an event it does automatically performs failover. Swear, it changes the
+00:24:25 [W] Stan Fields over and got promotes another replica as new master but operating with us in that level won't give you huge High availability that people get with it.
+00:24:32 [W] Usually what they do for that is the integrate a new another component called the orchestrator authored by Swami know H, which is a popular tool for MySQL and vitess works has an external integration with that
+00:24:47 [W] What we have now done is for that offer. Our that orchestrator and made it a core component of attacks, which means that this new orchestrator called BT Arc actually works hand-in-hand with the vitess topology can understand all those
+00:24:55 [W] They take action is Tighter and a lot smoother.
+00:24:53 [W] So here I'm going to give you an example of that orchestrator and the things it can do.
+00:24:58 [W] So I have a cluster here, which is a single share which is an Uncharted key space and if this key space, I have a master and for replicas of which one is not an eligible master, and
+00:25:13 [W] and now that I've also brought up the orchestrator which is stunning and the orchestrator also has the same view of the topology except if you'd actually has a better UI you can see that it's now beautifully graphically represented and shows
+00:25:27 [W] Connected with the what you can do here.
+00:25:27 [W] for example is I can go to vitess and say do a plan tree pattern which is failover from the master from hundred to let us say hundred and one so I say do any parent so as soon as you do a real parent then
+00:25:42 [W] What it has done it has performed the failover. But as soon as it does a failover the orchestrator notices that it has happened and adjust itself.
+00:25:47 [W] seeing that see now 111 is the new master so they are both in agreement, but you could also go to the orchestrator and say Hey, you do the feel of it for me instead of asking VTC TLD to do it and that can also happen like for example, I will say
+00:26:03 [W] 1710 one as master and you dr.
+00:26:02 [W] Stator is a nice drag-and-drop UI you can say.
+00:26:05 [W] Hey, do you really want to make 101 the master?
+00:26:07 [W] Yes.
+00:26:08 [W] I want to make 101 the master and the orchestrator perform that act and if you go look at the test, it actually should have updated itself to 101 and the orchestrator will soon refresh it screen to show that it's the case, but what can
+00:26:24 [W] My SQL crashes underneath it can actually detect it and proactively perform available.
+00:26:25 [W] So I am going to do that. I'm going to bring down 101 to show you which is my my dong-won.
+00:26:32 [W] So as soon as I go down you will see that this is the log of the orchestrator after a few seconds. It will notice that something is off and it says okay. I'm going to perform some functions.
+00:26:44 [W] These are I'm running it in verbose mode, but if you refresh here 101 was
+00:26:49 [W] Previous master and now if you see it says hey I have now converted 100 as a master because 101 is done.
+00:26:56 [W] What I can now do is go back and bring that one on I'm still waiting for Krell shutdown English. And if you see here do a refresh you should see that hundred is now the master 101 is actually down effect.
+00:27:11 [W] Click on the status.
+00:27:12 [W] It has a system.
+00:27:13 [W] So now I'm going to bring back.
+00:27:14 [W] to no one.
+00:27:18 [W] As soon as everything at 101 I can go to orchestrator.
+00:27:21 [W] It will say hey 101 is back up and it looks like everything is fine.
+00:27:25 [W] I'm going to now point it back at the new master.
+00:27:28 [W] So the way orchestrator works you SQL Works in this thing called the desired State any component is not in the correct state it goes and fixes it. So it makes this a tire cluster self-healing even even a but then it's beyond just looking at the state.
+00:27:43 [W] Whether something is a reserve traffic of this component of orchestrator will soon be available as a operator component.
+00:27:50 [W] So in the operator there is actually this pull request which should be submitted by the time you see this video. If not, it is pretty quest number 130 and you should be able to build off of this oc1 initial branch and once it is there
+00:28:05 [W] If not, it is produc west number 130 and you should be able to build off of this oc1 initial branch. And once it is there you should be able to use the new vitess operator to deploy this orchestrated and there is a sample
+00:28:03 [W] The new vitess operator to deploy this orchestrated and there is a sample yeonggil that is submitted here.
+00:28:10 [W] Which will there is a sample, um, well which is under example the under the operator example, but it's called hot questura Campbell and you can look at it to see this section, which is the
+00:28:26 [W] And that should show you how to set up the orchestrator for your question.
+00:28:31 [W] Thank you very much.
+00:28:32 [W] We invite you to visit us on the web at the website with a star I/O where you can learn more about vitess do join us on slack.
+00:28:43 [W] We have a very vibrant and welcoming flat community.
+00:28:46 [W] You can also find us on GitHub or talk to us where we are Twitter and we'll take questions.
+00:28:55 [W] next
+00:29:19 [W] We are misaligned.
+00:29:21 [W] Let me align myself.
+00:29:30 [W] No questions in the Q&A so far.
+00:29:35 [W] Good.
+00:29:38 [W] That means it was also so clear right?
+00:29:42 [W] There's also an office hours tomorrow in case no on Friday night in case yeah Friday have more questions.
+00:29:51 [W] There are some questions coming up now.
+00:29:52 [W] s preserve preserve a client connection across key spaces
+00:30:05 [W] to multiple key spaces.
+00:30:07 [W] It's a it's a usually the impression that you are connected to a single MySQL server and each key space is like a database within that MySQL server, but under the covers, it can be any number of connections depending on how many shots each key space has
+00:30:22 [W] Chartered sometimes it could be Master. Sometimes you could be replica but they all appear as if they are a single connection as far as the application is concerned.
+00:30:18 [W] So it gives you the semblance that you're connected to a single database. But in under the covers they may actually result in a number of my SQL connections.
+00:30:31 [W] And so and some of which are pulled connections from.
+00:30:38 [W] Right. You want to take the next week's question?
+00:30:41 [W] Yeah.
+00:30:44 [W] Can we replication be used to migrate from Aurora to vitess the answer is yes, and we do know of some people who have actually already done this.
+00:30:55 [W] Yeah, the couple of things that caviar to add is most people don't configure our to be gtaeid enabled if you can enable gtaeid next migration easier,
+00:31:11 [W] You are using non gtaeid configuration.
+00:31:12 [W] You have to set up with test to use what we call five position based.
+00:31:17 [W] We replication which requires a few extra step.
+00:31:33 [W] Can we?
+00:31:45 [W] That is a clear message to us to say that we we do have to give attention to this.
+00:31:54 [W] with some other postgres evangelists and at this point it is just a question of focus and resourcing vitess itself architectural e, especially the query serving for the short aquarii serving path can
+00:32:10 [W] Say that we do have to give attention to this.
+00:32:07 [W] and with some of the postgres evangelists and at this point it is just a question of focus and resourcing vitess itself architectural e, especially the 20 serving for the short aquarii serving path can
+00:32:35 [W] Actually easily adapted to use and leverage postgres.
+00:32:40 [W] So we cannot make any promises but in planetscale as soon as we have the bandwidth, we will allocate resources to work on supporting postgres.
+00:32:54 [W] How do you join a query across T spaces?
+00:32:57 [W] How do you join a query across key spaces? That is something that with us. Does it at the BT gate layer?
+00:33:03 [W] You might remember the demo that enter escape the way we the way we test does it is actually pulling Rose from the from one one charred and then
+00:33:19 [W] Rose from the other shark it is not very efficient. So it is not something that you can use.
+00:33:34 [W] Join plans. There are two of them that that we have proposals for one is we called a hash sign where you hatched the entire source of the smaller table and use that to join with the other side and the other one
+00:33:49 [W] Designed with the other side and the other one is a merge join where you order the results and then join them as they come.
+00:33:52 [W] I'll take the question on custom my SQL. Do you run a customized my SQL back end?
+00:33:59 [W] We don't let us is compatible with any my SQL whether Community or Enterprise or percona or even Maria DB so the various vitess installs people have chosen to run with whatever
+00:34:14 [W] flavor of my SQL is
+00:34:21 [W] I think there is another post best question. So hopefully my previous answer worked.
+00:34:25 [W] This is really exciting to hear there is so much interest in perspective because we were not sure about how how much traction that could be. This this makes us think that we should we should think seriously about this one.
+00:35:06 [W] In case you haven't if you haven't if you did not attend the TOC from slack, I would recommend you watch the recording. It happened. It's called the name of the talk is code name with a little.
+00:35:33 [W] In case you haven't if you haven't if you did not attend the TOC from slack, I would recommend you watch the recording. It happened. It's called the name of the talk is codenamed refill.
+00:36:01 [W] So if you have any more questions, you can pop into our with a slack Channel and ask them and we are also going to as I mean.
+00:36:31 [W] I can't hear so go over there the last part of it cut out.
+00:36:36 [W] So I'll just repeat that the project maintainer office hours are happening on Friday at 12:00 Eastern.
+00:36:43 [W] So 9 a.m.
+00:36:44 [W] So we hope to see some of you there and we can answer any further questions.
+00:37:11 [W] Looks like we're done.
+00:37:15 [W] Thank you everyone who attended?
+00:37:18 [W] And we hope to see you on the vitess slack.
+00:37:27 [W] Goodbye.

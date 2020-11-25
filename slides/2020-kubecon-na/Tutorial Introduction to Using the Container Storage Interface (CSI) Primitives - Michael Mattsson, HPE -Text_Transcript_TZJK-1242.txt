@@ -1,0 +1,636 @@
+﻿Tutorial: Introduction to Using the Container Storage Interface (CSI) Primitives: TZJK-1242 - events@cncf.io - Friday, November 20, 2020 5:06 PM - 86 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi everyone.
+00:00:01 [W] Welcome to this tutorial.
+00:00:02 [W] Well, I will introduce the container storage interface Primitives and how to use those in kubernative.
+00:00:08 [W] My name is Michael Madsen.
+00:00:11 [W] Cube cone virtual 2020 and if you're watching this live, thank you so much for hanging in there.
+00:00:17 [W] This is on the last day and if you're watching this as a rerun, thank you so much for for watching this content.
+00:00:24 [W] I hope you find it interesting.
+00:00:25 [W] So this tutorial is basically all about CSI and what you can do with it in kubernative and that is sort of the introduction to see aside. I'm going to talk about some of the CSI.
+00:00:40 [W] Drivers that are out there and what CSI is e the second part of the presentation, we'll talk a little bit about Dynamic provisioning offers persistent volumes in kubernative.
+00:00:50 [W] I think it's important that we can't nail down the basics before we go into the more advanced topics and I also want to talk a little bit about how pots and controllers attached to persistent storage as that is also a very important primitive
+00:01:05 [W] Working with persistent storage the more fun stuff kind of begins when we start talking about CSI snapshots and using data sources and you're persistent volume claims to be able to clone external storage into a new pod.
+00:01:10 [W] And leverage data sets that already exists on your storage system using raw block volumes is something that is introduced and CSI as well as been around for a while.
+00:01:14 [W] I'm going to show you how that works and how those different use cases around using raw block volumes work. Another interesting concept is using ephemeral volumes with the viewer.
+00:01:30 [W] pods and that basically makes your external persistent storage volume act like it is a container right and there are various different ways on how to attach those ephemeral volumes to your two pods, and we're going to
+00:01:44 [W] I'll touch those ephemeral volumes to your to apologize and we're going to talk a little bit about how that works at the end of the at the end of the presentation.
+00:01:52 [W] I will kind of summarize what we talked about and there will also be a live q a right. So this session is pre-recorded, but at the end of the session there will be a live q a I will be there in person answer any questions you might have on this presentation or
+00:02:07 [W] Shin is pre-recorded.
+00:02:08 [W] But at the end of the session there will be a live q a I will be there in person answer any questions you might have on this presentation or anything that kind of relates to this subject.
+00:02:18 [W] I will also hang out in the slack Channel and I'll been I've been in the slack channel for throughout the event as well.
+00:02:26 [W] And one important detail. I kind of want to touch on as well hear that I'm obviously going to deploy a lot of llamo files and things like that and run through a lot of Hands-On Labs.
+00:02:38 [W] I got 11 Hands-On labs for you.
+00:02:40 [W] So this presentation really goes to 11 and I kind of put together a GitHub repo where all these config files and there's also asked anemic ask files.
+00:02:54 [W] So just if there's any thing you actually
+00:02:56 [W] And see in the demo in the video, you can use the cast files and play it on play them on your local computer and basically copy and paste the text from from the demo, right? Because that is really difficult to capture from
+00:03:11 [W] get up repo where all these config files and there's also asked anemic ask files so just if there's any thing you actually see in the demo in the video you can use the
+00:03:57 [W] In to our terminal and so that is the repo that we are going to use throughout the entire tutorial.
+00:04:04 [W] So let me start off here and kind of talk a little bit about what is CSI, you know that CSI stands for container storage interface, but what is actually behind it?
+00:04:20 [W] Basically a specification right?
+00:04:21 [W] It's a is a set of a specification in the lack for a better comparison.
+00:04:25 [W] It's sort of like the cinder for kubernative right with a benefit of that the drivers and the entire Frameworks live outside the the main kubernative project, right? So the drivers and all
+00:04:40 [W] All the side course.
+00:04:40 [W] I'm going to talk a little bit about this later.
+00:04:42 [W] They don't they're not part of the main kubernative Upstream tree, right so that their the side called lives in their own Repose. All the CSI drivers are delivered by vendors in various different ways, right?
+00:04:56 [W] It's also governed by the special interest group kubernative Sig storage.
+00:05:02 [W] They meet on a regular Cadence and also put some links here into the CSI documentation in-toto.
+00:05:08 [W] itself, and I'm going to reference that in a in in some of the demos as well on how you kind of find stuff and such and the main goal for the CSI specification is to provide an interface
+00:05:23 [W] To provision and attached storage to containerd orchestrators that is often referred to as a CEO. Right and we obviously going to talk about kubernative today, but you can also use CSI for
+00:05:38 [W] Klaus home Foundry and mezzos and those are like the less popular ones.
+00:05:38 [W] I know that Nomad years called CSI support in in that container orchestrator as well.
+00:05:45 [W] So we'll probably see a few more use cases for that comment coming up.
+00:05:51 [W] So I just want to kind of touch a little bit on the history of CSI how it kind of came to be right. So if we kind of go back to the early days of kubernative
+00:06:03 [W] we have these like entry persistent volume plugins, right and the to example plugins. I have are like fibre Channel and iSCSI and they were kind of introduced in communities 101 iSCSI in 0.15, right, but there's I'll slew of different plugins
+00:06:19 [W] and that is part of the main communities distribution, right and somehow this became really unwieldy really early on because what happens is that every vendor needed to learn how to contribute to kubernative
+00:06:32 [W] Wasn't really are easy feedback then right and everything needs to be cold reviewed and you also stuck to the release Cadence of kubernative and that prohibits the vendor to kind of innovate at his pace and always have to wait for the next
+00:06:42 [W] New features or bug fixes and things like that and that was pretty unmanageable.
+00:06:47 [W] What came along in kubernative 1.2 is the entry Flex volume plug-in and and that introduced the concept of allowing vendors to write Flex volume drivers and flex volume drivers were kind of useful
+00:07:03 [W] Pretty decent stopgap, but somehow that become became very unusual friendly as well.
+00:07:09 [W] Right because they're flexible.
+00:07:10 [W] Um driver itself. It was a it's a self-contained binary that needs to be needed to reside on every kubelet in the cluster That was supposed to attach persistent storage and it did not have any
+00:07:25 [W] Meaning support either.
+00:07:24 [W] So if you had a if you were a vendor and want to provide a flexible Doom driver. You also have to write your own provisioner to be able to satisfy persistent volume claims with that driver and and that's what kind of
+00:07:39 [W] Into the face of the container storage interface is it's just completely lives outside of kubernative.
+00:07:38 [W] There's like nothing inside kubernative that depends on the CSI delivery vehicles of CSI or the velocity of how things are introduced and such. Right and the entire framework
+00:07:53 [W] Livery vehicles of CSI or the velocity of how things are introduced and such right and the entire framework is actually deployed on top of kubernative, right?
+00:08:04 [W] So nothing lives in tree and that allows vendors then to once you have all the CSI side course and such installed on your kubernative cluster vendors. Can then provide their CSI Controller driver and their CSI.
+00:08:19 [W] Why they're CSI control the driver and their CSI.
+00:08:22 [W] No driver, right? And that is the vehicle that I'm going to talk about today on how to install CSI drivers and how to use the particular feature that is CSI driver provides.
+00:08:36 [W] So I also have this simplified architecture view of CSI, right?
+00:08:43 [W] So you kind of have the decide course that I've been talking about first.
+00:08:47 [W] You have to know driver registrar and you will see like I'll ever know to have CSI drivers on them.
+00:08:51 [W] You will see what drivers they have and some of the features that they provide like topology keys and such and then you have the older the side cars like the provisioner the attached to the resize or the snapshot. ER they are all
+00:09:04 [W] By the kubernative Sig storage communication, right?
+00:09:08 [W] And then you have the external component and which is the CSI control the driver and the CSI.
+00:09:14 [W] No driver that that then talks to a external storage system.
+00:09:20 [W] The storage system can actually run on kubernative itself or it can be outside the cluster entirely, right? So if you have like an external NFS server or block storage server
+00:09:33 [W] That can leave it entirely outside and then you have the container knative storage or containerd a storage solutions that are out there.
+00:09:41 [W] He's using a grpc interface.
+00:09:44 [W] So some of these components they need to run on the same notes, but the external storage system or disorder system component.
+00:09:51 [W] They can talk over an entirely different interface like using rest and nice cozy and what known?
+00:10:00 [W] Another detail you can see up there in the in the light bulb there. Is that CSI drivers today to May provide either file or block storage and we're also seeing that there are a few kubernative
+00:10:15 [W] in the light bulb there is that CSI drivers today to May provide either file or block storage and we're also seeing that there are a few kubernative enhancement proposals around providing object storage
+00:10:36 [W] Around providing object storage with sort of similar semantics or will surely looking forward to that.
+00:10:44 [W] And we all almost have over a hundred drivers.
+00:10:50 [W] There is 90 some drivers available today, right?
+00:10:53 [W] So if you go to the URL that is on the slide there you will see a list of the different drivers and also what kind of features they support.
+00:11:04 [W] So I'm going to use the HP CSI driver Kuma needs in the Hands-On labs and such but it doesn't really matter what CSI driver you use as long as it supports.
+00:11:13 [W] The different features and a different specification levels of the CSI specification and if you pull up this page, you will then be able to see that there are certain aspects of each
+00:11:29 [W] I just took a good example here in the driverless.
+00:11:31 [W] It's fs and and Seth or DB which provides block storage and they provide sort of like different aspects of the spec that that it supports and different features, right?
+00:11:46 [W] so we can see that the modes that the driver support is persistent.
+00:11:52 [W] doesn't support a femoral. So the mode could be the persistent were ephemeral the access mode if you look at cephas.
+00:11:58 [W] Yes, they can do read write multiple pods.
+00:12:00 [W] I'm going to talk about that later in this tutorial what that actually means but this is just a way for you to kind of assess the different drivers depending on your use case.
+00:12:10 [W] You can see that the block storage.
+00:12:15 [W] Driver will only support read write a single port and different features that are very similar. The only difference here what you can see here. Is that the raw block volume or the block volume driver will support raw block
+00:12:30 [W] Report topology and and those keys are not needed for using Seth the file system component, right? Because it's a distributed file system will be available everywhere and it does not have any block keep abilities,
+00:12:40 [W] so depending on your use case what kind of apps you're deploying you kind of want to assess the driver list to make sure that the driver using supported the specific capability that you're looking for
+00:12:44 [W] all right
+00:12:46 [W] so these are the different features that we're going to talk about today and kind of run through the different tutorials for provisioning storage and show you how to attach roadblock volumes and so forth and these
+00:13:01 [W] From maturity levels within kubernative today like we have the the features made GA and a few data features.
+00:13:10 [W] We also have one alpha futurewei going to talk about today.
+00:13:13 [W] The generic ephemeral volumes. You got got introduced in 119 and it's a pretty neat addition to if you compare that to the ephemeral local volumes, and I'm going to talk in depth about the difference around that when we get
+00:13:28 [W] So that's and this is also something you need to consider when you want to use persistent stories with your workloads in kubenetes. And it also the fact that different communities distributions.
+00:13:37 [W] They may maturities features on on a different Cadence or a faster Cadence depending on
+00:13:47 [W] The particular use cases that particular vendor want to cater for so that is also something to keep an eye out. I out on and all these different features are described in depth on the
+00:14:02 [W] CSI gitops people as well and we're going to cover most of these I'm not going to talk that much about topology.
+00:14:06 [W] I'm going to touch a little bit about that when we walk through the storage class volume limits. I'm not going to talk about that either but that's a way for to CSI driver vendor to put a node limit on
+00:14:21 [W] In volumes, you can provision from that particular driver to that particular node, which is quite useful. But the rest of the capabilities here, I'm going to show volume expansion from a local volumes volume snapshots and also use
+00:14:31 [W] Using the data source stanza in the persistent volume claim.
+00:14:29 [W] So we have a full agenda for sure.
+00:14:33 [W] And so we kind of approaching the first kind of Hands-On lab here, right?
+00:14:38 [W] So and that is basically installing and inspecting CSI driver, right and drivers. Are you can find most drivers on artifact Hub dot IO most of them install as Helm charts some of them.
+00:14:53 [W] The have fully blown operators and some of the drivers you just reference and a configuration file that points to lives in a ghetto bleep or our webserver and that will install the driver for
+00:15:08 [W] And once you have a driver or if you have access to a cluster now, what you can do is just to do a cool little get CSI drivers that will list the drivers that you have installed a new cluster and and the capabilities of the driver and if you do a
+00:15:21 [W] You will see what notes in your cluster have a CSI drivers on him and you can do it like a verbose output and see what driver they actually have installed. Right?
+00:15:26 [W] So now we are going to install a CSI driver.
+00:15:31 [W] That's our first Hands-On lab in this tutorial.
+00:15:34 [W] So I'm going to switch over to my terminal and hang on for one second.
+00:15:40 [W] all right, as I mentioned I'm going to use the HP CSI driver for kubenetes and you install that with hell, right, and I'm just going to add the helm repo to my cluster to helm repo update and then
+00:15:55 [W] A separate namespace for that driver that what I want to install it.
+00:16:00 [W] Do Helm install?
+00:16:05 [W] namespace vendor
+00:16:09 [W] CSI driver named I've obviously made a typo there.
+00:16:14 [W] Want to give the release a name because this is something switching from Helm to to help them three obviously provides a headache and once the drivers install you can do a cubicle get CSI drivers, you will see the capabilities of the driver and
+00:16:29 [W] And you also see on your nodes that you will have I have for working notes in my cluster and they all have the driver installed.
+00:16:34 [W] The drivers also have a way to configure themselves, right? So for the csiro HPC is our driver for kubenetes.
+00:16:45 [W] I'm I need to provide a secret that provide a means for me to find the back end that I want to use right. So for me to be able to store provisioning storage from Storage classes and such.
+00:16:56 [W] I need to create that secret to make sure that the CSI provisioner attacher and such will they be able to
+00:17:04 [W] To find that secret when they need to talk to the HP CSI driver, so I'm just going to go ahead and create that and there we go.
+00:17:14 [W] Driver installed.
+00:17:16 [W] So now when we have the driver installed we can do a lot of things. Right? And the first thing I want to talk about is how we can do Dynamic provisioning of persistent volumes and dynamic provisioning and kubernative sizzling.
+00:17:32 [W] Of to CSI drivers in any way right?
+00:17:29 [W] So if we just imagine for a second here that we might be using at kubernative Centre storage place in we might be leveraging Cloud providers manage communities service to provide persistent storage and so forth or we might be using
+00:17:45 [W] Driver, so on the left-hand side here. You will see that the cluster administrator.
+00:17:36 [W] He will create something called a storage class and that will reference the provision. Are you want to use and you want to give it a name and you also you might have a list of parameters that are specific to that particular.
+00:17:52 [W] Dinner for CSI drivers you need to have a list of keys that references the the secret to the different side cars. And if you're you have your own side cars, you need to call them out there as well.
+00:18:02 [W] You want to specify things like file system type and things like that and there are some other keys in the storage class that I'm going to talk about later in the presentation. The middle piece here is the user aspect of it is that users
+00:18:17 [W] In claims and a persistent volume claims or namespaced, right? So and that will in turn he will request the access mode.
+00:18:24 [W] I'm going to talk about that later as well.
+00:18:25 [W] But that is and then you request a storage size, right?
+00:18:30 [W] that is where you specify the capacity in you can do either terabyte gigabytes of kilobytes megabytes, whatever you new unit you want and you might want to call out this towards class. There is a altay shin you can do on the storage class.
+00:18:44 [W] And I'm going to show you how that works as well that will allow you to specify default storage class.
+00:18:50 [W] And that means that any persistent volume claim without a storage class name called out explicitly will be provision from that storage class.
+00:18:59 [W] Once that persistent volume claim has been submitted to the cluster the dynamic provisioner which listens to the that provide specific provision or name Will provision something called a persistent volume and that
+00:19:15 [W] I'll stanza that basically describes the backend storage, right? So that's where you will have your your driver name and your implementation specific keys and such and how to find the volume on the back end
+00:19:30 [W] You will also have a bunch of Secrets and things to to be able to attach and detach that storage from a particular node at any given time.
+00:19:30 [W] Right and you will also have the access mode and all that metadata that the community's needs to be able to attach and detach the volume and provision the volume so forth.
+00:19:46 [W] So diving into the different object here to if you look at this towards class here, right as I mentioned that having an default storage class is usually good hygiene, right?
+00:19:57 [W] So if you provision a managed kubernative cluster on any of the public Cloud providers, you will see that you will have a storage class. Right? So you are cute Cole get storage class you will see that there will be a storage class there. It's more active fault and that
+00:20:12 [W] Eiders storageos Lucien to provide persistent storage to your to your workloads in the case of CSI.
+00:20:10 [W] You will have these keys that says CSI dot storage - Kate's thought I oh and a set of published secret names or secret name space for the different side course and you need this for every site called right?
+00:20:25 [W] Or and we need a secret and a publishing and and a few others that you need to reference in. The storage class needs to be pointed out there explicitly.
+00:20:26 [W] You also have the ability to set the reclaim policy on the persistent volume.
+00:20:33 [W] So he's basically when I user deletes a persistent volume claim what is going to happen when that persistent volume claim gets deleted. Will it be will the persistent volume that references the backend storage be retained on the clock?
+00:20:46 [W] Stir or will it be deleted another key here?
+00:20:52 [W] I'm showcasing is the volume binding mode and if there's going to be immediate or wait for first consumer and that is important if you're using topology with in your cluster, right?
+00:21:03 [W] So if you have a driver that supports topology, you might want to be able to separate your different controllers or your paws in different zones in your cluster, right?
+00:21:17 [W] And when you provision storage you want to make sure that you attached storage that is close to the node, right?
+00:21:23 [W] So what happens is once kubernative is have selected an Ode to provision your pod.
+00:21:29 [W] That's when the persistent volume gets provision and the persistent volume will then be attached to those set of nodes right?
+00:21:38 [W] We be able to be attached to those particular sets of nodes if you want to allow the or if the CSI driver you want to use allows the expansion you will set that in the storage class as well.
+00:21:50 [W] Right?
+00:21:50 [W] So if it allows expansion you would set that to true and you will then be able to resize your persistent volume claims as you desire or not resize that's the wrong term because you can only expand you cannot shrink and I'm going to show you how that works as well.
+00:22:09 [W] So looking at the persistent volume claim its is very straightforward very basic and you need to specify the access mode.
+00:22:19 [W] I in my next slide.
+00:22:21 [W] I'm going to talk a little bit broader about what access modes are and then you need to specify the the resource request the capacity that I mentioned, right?
+00:22:31 [W] So in this example, I'm going to provision or I'm going to actually request a two terabyte volume.
+00:22:37 [W] The volume mode is set to file system per default.
+00:22:41 [W] But this is where you would specify volume or block. If you want to provision a block device and the underlying driver supports that and you will also do also be able to specify the storage class name or room omit the storage class name if you have a
+00:22:56 [W] In clusters where you have multiple tiers are stored say they have a gold silver bronze style thing or you have like fastest is the or slow media kind of segregation, right?
+00:23:04 [W] It might be useful for users to be able to make that distinction between provisioning fast towards or slow storage because there's usually cost associated with that and the billing and accounting apartment is will be happier if
+00:23:19 [W] Workloads is running at the right place.
+00:23:11 [W] So PVC access mode or persistent volume climaxes modes.
+00:23:16 [W] This is a graphic a put together to kind of like illustrate what types of applications require different types of storage, right?
+00:23:25 [W] So one of the absolute absolute most popular kubernative controller to use a persistent storage is a stateful set, right and you will find like Mongo Mineo Rook right is canonical.
+00:23:40 [W] Got all these different workloads that you run on top of kubernative the use something called a state for state full set and staple set in itself.
+00:23:49 [W] I'm not going to cover that in detail. But that is a controller that has a has ordered starts persistent Network naming and also persistent naming of the volumes that gets attached to each of the parts as well.
+00:24:03 [W] Right? And what happens is that each Port its towards up will basically
+00:24:10 [W] have its own file system. So each part will benefit greatly by having a read/write once persistent volume claim, right? Because that storage will then be private to that part for the duration of that
+00:24:25 [W] Controller that has a has ordered starts persistent Network naming and also persistent naming of the volumes that gets attached to each of the parts as well.
+00:24:32 [W] Right? And what happens is that each Port it starts up will basically have its own file system.
+00:24:42 [W] So each part will benefit greatly by having a read/write once persistent volume claim, right because that storage will then be
+00:24:51 [W] Vut to that part for the duration of that state full set, right? So if you delete the part in portable attach the exact same storage at the same time and storage will also be provisioned dynamically, and I'm going to talk about this in detail
+00:25:22 [W] You delete the part deportable. Attach the exact same storage at the same time and storage will also be provisioned dynamically, and I'm going to talk about this in detail later in the tutorial as well.
+00:25:34 [W] Another very popular pattern for deploying Legacy applications.
+00:25:41 [W] All kubenetes is to use something called a deployment.
+00:25:43 [W] and in this case if you're using single replicated formants, they usually leverage read right ones.
+00:25:53 [W] Persistent volume claim so as you can see here. I have my SQL both in the Legacy app single instance and the shared-nothing distributed because you can run that database into different modes, right you can have the replicated one as a stateful set where you have.
+00:26:08 [W] Main instance and multiple replica instances and you can also run it as a single replica part where you only have one single part accessing one file system.
+00:26:18 [W] So that is a matter of preference.
+00:26:20 [W] However, you would like to run that particular application and the same goes for postgres is also postcodes also has the same pattern as MySQL in the state will set as well. If you want to run it in our shared nothing distributed architecture.
+00:26:36 [W] And when we get to scalable distributed applications that require shared storage, right?
+00:26:43 [W] So you say that you have nginx undistributed front end with a lot of content, right? It's really practical to kind of have them reference the exact same storage across the cluster.
+00:26:54 [W] So when you scale replicas up and down it will exact it will attach the exact same storage to that particular Pond. Also a lot of the
+00:27:05 [W] The AI am L based workloads like you're running your Jupiter Hub or kubeflow.
+00:27:10 [W] They kind of see storage as a data Lake, right? So every instance that you spin up of ubirr or you certain aspect in your AI mlperf
+00:27:25 [W] Across the cluster. So when you scale replicas up and down it will exact it will attach the exact same storage to that particular Pond.
+00:27:31 [W] Also a lot of the AI am L based workloads, like running in Jupiter Hub or kubeflow. They kind of see storage as a data Lake, right?
+00:27:41 [W] So every instance that you spin up of Huber or you certain aspect
+00:27:48 [W] You're AI mlperf Spire all the different replicas of that particular workload access the exact same storage in any given point in time and you are accomplished that by using something called a read/write many persistent volume claims. So
+00:28:17 [W] Different replicas of that particular workload access the exact same storage and any given point in time and you are complex that by using something called on read/write many persistent volume claims. So then multiple Parts can access the same storage at any given
+00:28:34 [W] So if you look at the contents of an aspect of it where you want to provide feed right many access in read-only mode, essentially.
+00:28:46 [W] I see some of the use cases I see that you want to provide a read-only content to nginx to serve static content.
+00:28:54 [W] You might have a Jenkins server that attached storage, but you don't want your build jobs to screw up your
+00:29:02 [W] Storage so sort of thing and and and running those jobs on are read-only file system makes sense for that particular purpose, right? And in the way that you kind of attached read-only many stores is essentially
+00:29:17 [W] You have to specify it in the request that you do are read-only many. And then in the mount point you said I want to request this read only and that is basically how you request a read-only many or ore wo ore. Wo
+00:29:30 [W] So I hope that clarifies the different aspects of the persistent volume claim access modes.
+00:29:35 [W] So with that said so the last slide kind of in the dynamic provisioning piece here is just want to lay out a persistent volume overview here for our CSI driver and this is kind of slightly abbreviated this object contains a lot of information,
+00:29:51 [W] The CSI provisioners provided instana stated this persistent volume.
+00:29:56 [W] It will have a lot of metadata or around the driver what parameters the driver needs to attach it. All the secrets will be enumerated.
+00:30:03 [W] They will also be something called a claim reference which which claimed the PV is buying bound to and so forth.
+00:30:13 [W] Also, you see the volume mode air and the volume handle their actually references the back end. That doesn't
+00:30:19 [W] basically the idea that you sent to the backend storage to be able to see what to be able to look up the volume and attach the volume and so forth and there's also a bunch of final icers up there at the top to do be able to see so
+00:30:34 [W] It essentially means that you cannot delete person volume if there's a Peavy holding a claim against it and Sachin and you can add other finalizes on there that are all specific to your driver as well.
+00:30:48 [W] So that leads me to Hands-On lab number 2. We're going to create a storage class.
+00:30:48 [W] We're going to create a persistent volume claim.
+00:30:51 [W] We're going to attach our workloads to that persistent volume claim and also going to show you how to expand a volume for that running workloads.
+00:31:05 [W] All right.
+00:31:06 [W] So what I'm going to do here first is I'm going to show you the storage class that I'm going to use here.
+00:31:11 [W] I want to make this storage class the default storage class.
+00:31:14 [W] This is the only storage class we're going to use for the entire tutorial and it supports all the different capabilities that that I talked about in the introduction there and we need to specify all the different keys for the sidecars.
+00:31:29 [W] if I want file system, we want to use in this case X FS when a specified reclaim policy and we want to allow volume expansion and we want to make sure that the
+00:31:44 [W] And we want to allow volume expansion and we want to make sure that the volume binding mode is immediate is so when the TV gets bound to the PVC we can use
+00:31:49 [W] Any mode is immediate. So when the PV gets bound to the PVC we can use it immediately and we don't care where it could be need is schedule said we're going to create that the next step here
+00:32:04 [W] Creating a persistent volume claim and you can also see here that in this particular storage cost. We marked it as default.
+00:32:17 [W] And this is the persistent volume claim.
+00:32:19 [W] I just going to give it a name specify access mode read/write ones because it's a block storage back-end.
+00:32:25 [W] So I'm using and I'm going to make that volume 32 gig initially.
+00:32:30 [W] I'm going to resize this later.
+00:32:32 [W] I'm going to show you how that works.
+00:32:33 [W] So we just going to create that.
+00:32:42 [W] This is the volume claim created.
+00:32:45 [W] And we can see here that the status is bound and the volume is actually a reference in there in the volume column is referencing the actual PV which is which shows here even more metadata about that particular.
+00:33:00 [W] Persistent volume.
+00:33:02 [W] All right.
+00:33:05 [W] Let's see what we can do next.
+00:33:07 [W] Let's yeah, so I'm going to deploy my SQL with the helm.
+00:33:12 [W] I'm going to specify MySQL root password is admin don't recommend that and I'm going to use my existing claim that I just created right? So I'm just going to do a Helm install MySQL reference the
+00:33:24 [W] The values file specify stable / my SQL and I managed to get the Helm syntax right in this example. Just going to wait for the SQL deployment to come up.
+00:33:42 [W] We're waiting.
+00:33:45 [W] The dolphin.
+00:33:46 [W] there we go. Successfully rolled out and then I'm going to exact into the Container here and we're going to depart I'd say and and do some inspection here for you to show her how things are wired up.
+00:34:00 [W] So I know that the mount point for my SQL is usually my SQL something.
+00:34:06 [W] just going to grab that will see that we have in the we have a multipath device mounted on / morally my SQL. It's
+00:34:15 [W] Access file system and we can see here with the disc free Command that we have a 32 gig volume mounted there and I'm just going to jump into the database here and create a new database and you will
+00:34:30 [W] that a database gets created on the
+00:34:33 [W] on the volume.
+00:34:34 [W] There we go.
+00:34:37 [W] pop back out
+00:34:40 [W] and when you can now see that we have that database living in file system.
+00:34:48 [W] Which reference is that persistent volume?
+00:34:53 [W] All right.
+00:34:54 [W] We're going to pop out in the Shell here again, and I prepared a separate persistent volume claim llamo specification that will essentially expand the volume.
+00:35:07 [W] So I'm going to double the size of the volume and we also reference the same PVC there.
+00:35:14 [W] So I'm just going to apply that what you can do different methods here. Right? So you can you can edit the PVC. You can do a cube call at
+00:35:23 [W] And reference the PVC on the running cluster, you can also use the cube cuddle patch command to patch it and and and it doesn't really matter which way you go, right?
+00:35:38 [W] I mean you will get the exact same results.
+00:35:41 [W] So I'm just putting a cubicle get on my persistent volume claim here, and I'm just going to wait for the capacity to expand here. So what happens here in the background, is that the
+00:35:54 [W] Towels the underlying CSI driver to expand the volume the volume gets expanded on the backend storage system. And once that operation completes, then there's a node expansion operation and happens that talks to the
+00:36:09 [W] Driver and that will essentially expand the file system on the Note itself.
+00:36:16 [W] Right?
+00:36:16 [W] So you will do xfs resize there we go 64 gig now and once we kind of clear this watch here, we'll jump back into the container and see that we can actually
+00:36:32 [W] Actually leveraged out extra capacity.
+00:36:33 [W] Yeah. So there we go 64 gig mounted on / Fort Lee might SQL and you don't need to restore anything or doing any other operation. So that is basically how simple it is to expand the volume
+00:36:48 [W] Sigh driver that supports it.
+00:36:51 [W] And this is all used to driven right? So since the persistent volume clients are namespace. They will then be able to the end user will basically be able to expand a persistent volume claimant.
+00:37:08 [W] Alright, that was a dynamic provisioning 101. I'd say I just want to talk a little bit about the work load controllers here. You notice I deploy the application using a Helm chart which is kind of
+00:37:23 [W] Ultimate home and how you would manage applications on on kubernative, right?
+00:37:28 [W] But what you see here in these two windows here is sort of like most controllers. They reference volumes in the Pod specification, right?
+00:37:40 [W] So you specify amount path and then you give the volume out a name which is my Mount and then you have a volume section which points to the persistent volume claim claim name, and that's kind of how you key those two.
+00:37:52 [W] Together right on the right hand side on this slide. You will see the state full set. And that is slightly different from the other controllers right there.
+00:38:02 [W] You have a construct called a volume claimed claimed template and that is basically a it's more of a less a inline specification persistent volume claim specification where you call out the storage class name
+00:38:17 [W] So you can leave that to the default want to resolve it or and you also provide like how much capacity each of the volumes or supposed to have and but you still use that keying with the volume mount for particular path
+00:38:26 [W] Template right?
+00:38:21 [W] So what happens here is when you deploy to stay full set say to you deploy our single replica stable set double provision want one volume and nephews as you scale the the state for set. It will provision a new volume for each replicate. It comes online right
+00:38:36 [W] As you scale the the stateful set it will provision a new volume for each replicate it comes online. Right and and that's why it's very practical to use read/write one storage with with with a stateful set because that individual part will have private
+00:38:49 [W] words with the Dell stateful set because that individual part will have private access to that particular volume and that is that was a short slide because we already on Hands-On lab number three where we will deploy an application
+00:39:04 [W] A single state full set so high only at well, I'll switch over to my terminal.
+00:39:10 [W] So what I'm going to do here is deployed right is I'm going to deploy with Helm chart as well.
+00:39:20 [W] And this is the values file.
+00:39:22 [W] I'm going to provide use password equals false, and I'm also going to provide prepare a watch command here by so just watch command will watch my state full sets my point in my pvc as ready to comes up right so
+00:39:37 [W] Pods and my pvc as ready to comes up, right. So I'm just going to do our Helm install called my radius reference my values file and we're going to use the bit Nami distribution of radius and here we
+00:39:56 [W] And here's my Watch Commander that had prepared and you will see here that the the main instance is already coming up and there's also a replica instance being set up as well and
+00:40:11 [W] Persistent volume claims you will see that there are two claims.
+00:40:12 [W] there has been fulfilled and now you can see that there's another pod coming up and it automatically created a new persistent volume claim, right?
+00:40:21 [W] And once all these parts have started all this that means that all the storage has been detached from the persistent volume claims that were dynamically provisioned, right and although you're using a Helm chart. Here it is.
+00:40:37 [W] Set that right is leverages and you can see by the persistent naming of the volumes here that there are derived from what you call the release name and and so forth and that that means that you have
+00:40:47 [W] The volumes and the same thing with the with the network naming and staple sets as well.
+00:40:47 [W] That means that the pods and the instances that runs into those pods will be able to find each other.
+00:40:53 [W] I'm just going to say insert a key here Q Khan status.
+00:41:00 [W] What do we think?
+00:41:00 [W] It's awesome, right.
+00:41:02 [W] So I'm just going to put that key in here.
+00:41:03 [W] make sure that we we flush the store to disk and because I'm going to I'm going to use this in subsequence.
+00:41:13 [W] Labs throughout the presentation. So we have a Q Khan status is also going to exit there and I will go back to my PowerPoint.
+00:41:26 [W] All right in this next section, we're going to talk about CSI snapshots and using PVC data sources and this is kind of where it stores to get interested.
+00:41:35 [W] We interesting because we cannot past all the basic stuff now, right?
+00:41:40 [W] So the way CSI snapshots work in kubernative is that it works very similar to how persistent storage works, right? So you have something called a volume snapshot class, which allows users to create something called a volume snapshot.
+00:41:55 [W] And you will have the CSI snap shoulder will create something called a volume snapshot content that will basically point to the physical resource that references the external snapshot.
+00:42:07 [W] So what we'll start the next Hands-On lab by creating the first of all, yeah, I forgot to mention this right? So the CSI snapshot sitecore is not installed by default by the
+00:42:22 [W] The CSI snap shoulder is provided by the kubernative distribution, right?
+00:42:15 [W] So you need to check with your kubernative distribution vendor. If the CSI snapshot or side core is installed on all in this exercise since I'm leveraging vanilla Upstream kubernative.
+00:42:26 [W] I'm going to deploy the external snapshot as part of the Hands-On lab, but once we cannot pass this, what you can do is when once you have all these cri-o is installed you can create a volume snapshot class and
+00:42:41 [W] reference the again the CSI driver that you
+00:42:47 [W] that you have installed on your cluster some some CSI drivers provide custom keys to set different values for the parameters that you provide to the volumes natural Cloud very similar to what you would do in that storage class if you have any
+00:43:02 [W] the CSI driver that you
+00:43:03 [W] that you have installed on your cluster some some CSI drivers provide custom keys to set different values for the parameters that you provide to the volumes Natural cloudbees Area similar to what you would do in that storage class if you have any specific
+00:43:31 [W] As you want to supply to the driver when you're done it when you provisional snapshot we're provision a volume on the storage class case, right?
+00:43:39 [W] And the volume snapshot is also very simple.
+00:43:42 [W] All you have to do is specify a source is just what actual persistent volume claim.
+00:43:47 [W] Do you want to take a snap shot off and that then we'll create a point in time copy of that persistent volume claim with the content that's in that volume at that point in time and the volume snapshot content again
+00:44:02 [W] System volume claim do you want to take a snap shot off and that then we'll create a point in time copy off that persistent volume claim with the content that's in that volume at that point in time and the
+00:44:40 [W] It is sort of like the physical representation on how your back-end storage system will be able to find that piece of storage and reference that in that particular snapshot.
+00:44:50 [W] So with that I'm going to dive into Hands-On lab number four what I'm going to start deploying the CSI snapshot are going to create a volume snapshot class and I'm going to create some volume snapshots.
+00:45:04 [W] So let's go ahead and switch over to my terminal one second.
+00:45:10 [W] All right.
+00:45:10 [W] Let's start by cloning the kubernative CSI external snapshot ER Repository.
+00:45:22 [W] And then we need to create some resources that are provided in that repository.
+00:45:28 [W] So it's the CRTs that provides the volume snack shop classes volume volume snapshot contents and volume Snapchat.
+00:45:36 [W] I just talked about and then you actually need to deploy the actual CSI as snapshot controller itself and this you kind of need to do once per cluster and once that's deployed you can go right ahead and create
+00:45:51 [W] I'm going to create a default volume snapshot class.
+00:45:54 [W] I'm only going to leverage one in this particular exercise.
+00:45:57 [W] I want to point out which driver I'm going to use and I also need to reference the particular secret decide cord needs to talk to the back end at we deployed.
+00:46:15 [W] All right.
+00:46:15 [W] We're going to create the volume snapshot class.
+00:46:22 [W] Here we go, and I prepared a bunch of volume.
+00:46:29 [W] Snapshots and this will essentially create new snapshots of the red is instance that I deployed right?
+00:46:38 [W] So here are the three parts that make up my running redis instance and I'm going to create a snapshot on each of those persistent volume claims that God created when I deployed that radius instance.
+00:46:55 [W] There we go.
+00:46:55 [W] Going to create those.
+00:47:00 [W] They're usually create a quite fast snapshots or nothing is not usually a heavier operation for the backend storage so I can do I get there.
+00:47:08 [W] We can see that they are immediately ready to use the source PVC that we're referencing and the restore size you can see in the column.
+00:47:18 [W] on cated and you can check the outputs in the
+00:47:15 [W] in the asking me my cast files, but they're also there are a bunch of other columns there as well.
+00:47:20 [W] So and that was actually how easy it was to create a volume snapshot class and create a bunch of snapshots that references existing PVCs.
+00:47:31 [W] And now we have pointing time copies of our particular Regice instance.
+00:47:37 [W] So I'm going to switch back to my PowerPoint here.
+00:47:42 [W] In this first exercise where we created a volume snapshot class and volume snapshot.
+00:47:49 [W] What I want to be able to do is to create a new persistent volume claim that references my volume snapshot. So this is an example persistent volume claim how you would reference a snapshot when you create the PVC, right?
+00:48:02 [W] So you have the data source stanza here which calls out the snapshot name you want to use what kind it is. It could be a volume snapshot or
+00:48:12 [W] Persistent volume claim so so far.
+00:48:15 [W] There are other things coming here.
+00:48:17 [W] that's not been released yet. And then when you're using volume snapshot since the volume snapshot is update our feature. You need to call out the API Group as well that you want to look for this particular kind right
+00:48:32 [W] A very important detail that I want to just call out here.
+00:48:23 [W] is that when you create persistent volume claims from existing snapshots and such is that the storage request needs to match what the actual snapshot is? So you cannot say that you took out snapshot of a volume and it
+00:48:38 [W] Not say that you took out snapshot of a volume and it was two terabytes. You actually need to create a new PVC with the exact sign its exact same size as the the volume volume
+00:48:46 [W] Volume snapshot. So without further Ado. I'm going to dive into lab number five here with a Hands-On lab number 5 and create a new PVC from the volume snapshots that we just created and
+00:49:01 [W] Instance to that, so I'm just going to switch over to my terminal.
+00:49:06 [W] So I'm going to use the the volume snapshots that we just created right and I'm going to attach those is basically I have a set of PVCs that references those
+00:49:21 [W] Right. So in my data source stanza here.
+00:49:23 [W] I reference the the snapshots. I want to use for each of the snapshot. So I'm basically going to start up a new redis instance that I created initially in this tutorial.
+00:49:37 [W] And see if I have my key that are inserted in the first exercise, right?
+00:49:44 [W] So now I'm going to create those PVCs from the snapshots.
+00:49:49 [W] I have a bunch of yeah Mel here that you might have already seen now created a persistent volume claims and you can see here since the state full sets have predictive naming. I know what those persistent volumes are going to be called,
+00:50:04 [W] Up, my red is instance.
+00:50:05 [W] I know what persistent volume claim is going to ask for right?
+00:50:08 [W] So that's so what I named my new instance.
+00:50:12 [W] My new red is that means that it will either dynamically provision a persistent volume claim of that name or use the existing one, right? And since I pre created these Precision ball and claims that what
+00:50:27 [W] Essentially happens is that those prisons volunteers claims will be attached to the right is instance.
+00:50:29 [W] There we go.
+00:50:30 [W] Just want to make sure that the instance come up here before we before we start poking around in it.
+00:50:41 [W] Thankfully how makes it easy to find the resources that we want to look at so we can see here that my new red is instance is coming up here.
+00:50:51 [W] I do not list the position versus involving claims here because since I created a persistent volume claims and Helm did not create that resource.
+00:50:59 [W] I wouldn't be able to qualify the label with release equals my new red is but I know that there are the correct persistent volume claims are getting connected.
+00:51:16 [W] Right, we're up and running.
+00:51:20 [W] So I'm just going to accept into that right?
+00:51:23 [W] this instance that I just created.
+00:51:29 [W] typos or Coleman
+00:51:32 [W] I'm going to run to right a CLI directly and I should be able to get the cube con status key.
+00:51:42 [W] There we go.
+00:51:42 [W] Awesome.
+00:51:44 [W] Instance is coming up here.
+00:51:45 [W] I do not list the position volume claims here because since I created a persistent volume claims and Helm did not create that resource.
+00:51:53 [W] I wouldn't be able to qualify the label with release equals my new red is but I know that there are they correct persistent balding claims are getting connected.
+00:52:10 [W] Right, we're up and running.
+00:52:14 [W] So I'm just going to exact into that right this instance that I just created.
+00:52:23 [W] typos or Coleman
+00:52:26 [W] I'm going to run the radio CLI directly and I should be able to get the cube con status key.
+00:52:35 [W] There we go.
+00:52:36 [W] Awesome.
+00:52:37 [W] So that is basically how you would clone a an application leveraging multiple persistent volume claims from multiple snapshots using predictive naming.
+00:52:50 [W] thanks to the state full set.
+00:52:53 [W] Right?
+00:52:54 [W] So now you would be able to provision as many instances you want of that particular application and since the snapshot PVCs that you just created or
+00:53:05 [W] Not impacting production you would be able to do destructive changes on this particular application.
+00:53:11 [W] Add Keys remove keys and connect an external application to it to do some testing.
+00:53:18 [W] Obviously.
+00:53:20 [W] This is a very tiny data set but it wouldn't really matter if this could have been a multi terabyte database, right?
+00:53:26 [W] And that is very popular for ci/cd use cases where you want to attach production like data into into your
+00:53:35 [W] Your tests in Dev environments. So I'm just going to switch back to my PowerPoint here. Right? The next demo I'm going to do is basically create a new persistent volume claim from
+00:54:48 [W] Multiple snapshots using predictive naming thanks to the state full set.
+00:54:55 [W] Right.
+00:54:55 [W] So now you would be able to provision as many instances you want off that particular application and since the snapshot PVCs that you just created or not impacting production you would be able to do
+00:55:32 [W] Existing president volume claim and that means that you won't have a intermediate snapshot right?
+00:55:40 [W] So you will create the new PVC directly from the from The Source 1 and this does not require the external CSI snapshot or so, as long as the the CSI driver supports data source, consistent
+00:55:55 [W] Snap shoulder. So as long as the the CSI driver supports data source, consistent volume claim data source, I'd say you will be able to use this capability and features.
+00:56:07 [W] So without further Ado, I want to switch over to Hands-On lab number six and create a new PVC from an existing PVC and attach an application.
+00:56:19 [W] Let's switch back to my terminal.
+00:56:21 [W] Alright, so I'm just going to show you the my PVCs from PVCs.
+00:56:25 [W] And this is very similar to what I showed in the PowerPoint slide here the datasource what I'm going to use.
+00:56:31 [W] Yeah again, I'm going to use predictive knative naming and I'm going to use my clone radius as the name the data source.
+00:56:39 [W] going to specify is a persistent volume claim and these are the existing claims that got created initially.
+00:56:48 [W] Going to create those PVCs from PVCs.
+00:56:55 [W] And you will see that they will be instantly created as well.
+00:57:01 [W] Our forgot to list them here.
+00:57:05 [W] But rest assured they will be provisioned.
+00:57:09 [W] So I'm going to install a third reticence here and I'm going to call it my clone right as I'm going to watch it.
+00:57:27 [W] Listed by label release equals my clone redis.
+00:57:32 [W] from PVCs
+00:57:35 [W] and you will see that they will be instantly created as well.
+00:57:41 [W] How I forgot to list them here.
+00:57:45 [W] But rest assured they will be provisioned.
+00:57:49 [W] So I'm going to install a third reticence here and I'm going to call it my clone right as I'm going to watch it.
+00:58:07 [W] Listed by label release equals my clone redis.
+00:58:17 [W] Hopefully all my cluster nodes have the right is image by now.
+00:58:20 [W] So this should be fairly quickly.
+00:58:30 [W] It's creating.
+00:58:35 [W] There we go, all the instances or up and running.
+00:58:45 [W] Not running yet.
+00:58:46 [W] It's not ready yet.
+00:58:48 [W] There we go.
+00:58:49 [W] There we go.
+00:58:49 [W] There we go.
+00:58:49 [W] There we go.
+00:58:49 [W] There we go.
+00:58:49 [W] There we go.
+00:58:49 [W] There we go. Ready? 1 1 all right, so we should now be able to accept into my new clone redis.
+00:59:01 [W] Conrad is instance.
+00:59:03 [W] Yep.
+00:59:03 [W] That's right.
+00:59:04 [W] That's the name.
+00:59:06 [W] And run is ready CLI, and I should be able to observe the key that we inserted in the initial deployment and there we go.
+00:59:16 [W] It's awesome.
+00:59:26 [W] And just to illustrate here.
+00:59:28 [W] Right a CLI and I should be able to observe the key that we inserted in the initial deployment and there we go.
+00:59:37 [W] It's awesome.
+00:59:46 [W] And just to illustrate here.
+00:59:48 [W] I'm just going to list the volume snapshots and volume snapshot contents that we had and in this only references the original snapshots that we created. Right and what this basically means is that there is a
+01:00:03 [W] It's a snapshot that could be neat. It is unaware of so, it's only the CSI driver that knows how to create a snapshot from that existing PVC and attach that to
+01:00:18 [W] The PVC that is running in the Caribbean is cluster and and resolve that and make sure to get staged and attached properly.
+01:00:27 [W] Alright, that concludes lab numbers six, I believe it was.
+01:00:33 [W] Yep number 6 I'm going to
+01:00:38 [W] Show something very similar here.
+01:00:41 [W] So in this particular case here, what is fairly popular?
+01:00:47 [W] Let's say that you accidentally delete a application, right?
+01:00:54 [W] But you still have the volume snapshot say that you you delete the you do a Helm on install and you wipe your PVCs and all of a sudden.
+01:01:03 [W] Oh that was not my intention. You just want to install the app and
+01:01:08 [W] Reinstall the app would you accidentally wiped the BBC's but if you have a volume snapshots you will then be able to create a new a new instance from those with the original names that you had when you initially deployed application and sort of revert
+01:01:23 [W] Your state if you so well, right.
+01:01:24 [W] So say that you would have a that's the other use case for using the restoration procedure.
+01:01:32 [W] Right? So you would essentially
+01:01:36 [W] yeah, how would I would describe this say that you're running your instance in production?
+01:01:42 [W] You would exact accidentally trash your data set, right, but you know that you have a snapshot from two hours before what you can do is that you can on deploy or uninstall the helm chart in this case and then
+01:01:57 [W] PVCs and then create new PVCs from the snapshots that you just created.
+01:01:50 [W] So I'm just going to dive into Hands-On lab number 7 and restore an application from a volume snapshot.
+01:02:00 [W] Just going to switch over to my terminal.
+01:02:02 [W] We're back in the terminal and first I'm
+01:02:09 [W] going to accept into my
+01:02:15 [W] Production instance and what I'm going to do here is I'm going to delete my status key, right? So you will see that I will actually so this is kind of an accidental deletion use case, right?
+01:02:27 [W] So you will see that I've deleted the key doesn't exist there anymore.
+01:02:31 [W] I know that I have a good snapshot that I want to be able to leverage to restore my right is instance.
+01:02:40 [W] I'm just going to inspect the PVCs that I want to recreate and I'm going to recreate these with with the original names.
+01:02:48 [W] Right and the original rate names of my volumes is just my read is no clone. Not my new whatever and the data source.
+01:02:56 [W] I'm going to reference is the snapshots that I know I have and we know that those snapshots are good because we already restored to a new application with with those particular snapshots. We're going to a helmet on install my radius.
+01:03:10 [W] I'm just going to inspect the PVCs that I want to recreate and I'm going to recreate these with with the original names.
+01:03:16 [W] Right and the original rate names of my volumes is just my read is no clone. Not my new whatever and the data source.
+01:03:24 [W] I'm going to reference is the snapshots that I know I have and we know that those snapshots are good because we already restored to a new application with with those particular snapshots. We're going to a helmet on install my radius.
+01:03:42 [W] and I'm also going to wipe the persistent volume claims that
+01:03:49 [W] God created when we deploy that so I'm just going to filter by label and now the claims are gone.
+01:04:00 [W] And before we install the redis instance, I'm just need to create my persistent volume claims make sure that those gets recreated.
+01:04:13 [W] I'm just going to list them here.
+01:04:15 [W] We can see that Yep. They're bound.
+01:04:19 [W] they're good. We wanted then attach. The red is instance.
+01:04:23 [W] I'm going to install the exact same instance name that we did for the initial production. And this should now.
+01:04:32 [W] Bring back our cells to the state.
+01:04:34 [W] We were when we took the snapshots and these will be ready to serve production yet again.
+01:04:44 [W] You want to wait for the instance who come up here?
+01:04:56 [W] The main instances running we have one of the replicate instance instances running.
+01:05:02 [W] We wanted then attach. The red is instance.
+01:05:06 [W] I'm going to install the exact same instance name that we did for the initial production.
+01:05:11 [W] And this should now bring back our cells to the state.
+01:05:18 [W] We were when we took the snapshots and basically be ready to serve production yet again.
+01:05:27 [W] You want to wait for the instance who come up here?
+01:05:40 [W] Main senses running we had one of the replicate instance instance is running.
+01:05:52 [W] All right, the second replica is up and we should be able to exact into the right has instance and list are key.
+01:06:07 [W] Awesome.
+01:06:08 [W] We've now successfully restored the application to the status. It had when we took the snapshot beautiful.
+01:06:16 [W] All right.
+01:06:18 [W] I'm going to switch back to my PowerPoint here and the next section is going to talk about using raw block volumes.
+01:06:30 [W] And with that.
+01:06:31 [W] just want to say that we can have concluded that CSI snapshots and cloning and using
+01:06:37 [W] Volume data sources. So using raw block volumes is quite quite a Nifty.
+01:06:45 [W] So you have this in the Precision volume claims back in that stands that are you have volume mode block and you will also have the same ability to specify particular storage class or not.
+01:06:58 [W] And but that is essentially everything you need to do to request a block volume from a CSI driver that supports block storage.
+01:07:07 [W] And the way you would reference a roadblock volume in the pot specification is slightly different from how you would do if you were a file system, right? Because all of a sudden you're dealing with devices you don't have file systems on them,
+01:07:22 [W] Halt and you will also have the same ability to specify particular storage class or not, but that is essentially everything you need to do to request a block volume from a CSI driver that supports block storage and
+01:07:50 [W] That's why the the volume mounts stance has been replaced by volume devices and instead instead of a mountain path.
+01:07:57 [W] You have something called a device path and that's where you call out the virtual device and it's also ordered right?
+01:08:04 [W] So the first device that comes out comes to mind is the xvd a you would still have the volume stanza persistent volume claim and the claim name that you would reference and in this particular example, I'm going to not yeah. I'm just going to switch over to the
+01:08:20 [W] Hands-On lab number 8 here and create are all block device and attach our workloads to that.
+01:08:26 [W] But this is a very simple example on how this works.
+01:08:29 [W] So bear with me here for a second.
+01:08:34 [W] So first, I'm going to show you my block PVC here.
+01:08:37 [W] So I'm basically going to create a two terabyte block device with a volume mode set to block. It's also always default set to file system.
+01:08:51 [W] It's going to create that.
+01:08:56 [W] And then I'm going to run the very simple part. It is the same specification.
+01:09:00 [W] I had in the power point actually and it's just leveraging a tool called eye-opening and it calls the claim name that I just created and here we have the stanza that calls out the volume device and the device path
+01:09:16 [W] And then I'm going to run the very simple part.
+01:09:19 [W] It is the same specification.
+01:09:20 [W] I had in the power point actually and it's just leveraging a tool called eye-opening and it calls the claim name that I just created and here we have the stanza that calls out the volume device and the device path
+01:09:42 [W] all of this is essentially that we will this to lie you're paying will
+01:09:49 [W] Will perform perform an I/O on that particular device once per second per default and you will see the results of that.
+01:09:58 [W] So I'm just going to wait for the Pod to come up here and then we'll simply look at the logs and
+01:10:06 [W] see what it looks like.
+01:10:14 [W] Alright, we're up and running.
+01:10:19 [W] I'm going to tell the log here on that particular portworx.
+01:10:48 [W] Roblox storage from your from your pod in kubenetes
+01:10:53 [W] All right, and that concludes lab number eight and I'm going to switch back to my PowerPoint here and you might know you might wonder why would you need raw block storage in kubernative sand?
+01:11:09 [W] To be quite Frank with you.
+01:11:10 [W] There are not a lot of cloud native workloads out there that leverages this Paradigm, but there is one in particular that leverages Roblox volumes and that is the cncf project called Rook which leverages the Seth
+01:11:25 [W] And I'm not by any means a rook or SF expert for that matter, but I'll can talk a little bit about what it is.
+01:11:20 [W] Right? So it's an open source Cloud native storage location for kubernative.
+01:11:24 [W] It provides both file block and object to communities and its uses Seth as I mentioned and the key differentiator here is that it allows you to manage distributed storage running on kubernative would
+01:11:39 [W] The key differentiator here is that it allows you to manage distributed storage running on kubernative would knative controllers on kubernative pretty effortless rights. You install it as an operator and then you create something called
+01:11:51 [W] Kubenetes, pretty effortless, right? So you install it as an operator and then you create something called a safe place to see Rd.
+01:11:58 [W] And it may end in the key aspect here is that you can leverage existing PVCs right now where you can create PVCs like volume mode with volume mode block the most common pattern is that you simply leverage our Raw?
+01:12:13 [W] Assisting PVCs, right and over you can create PVCs like volume mode with volume old block the most common pattern is that you simply leverage our raw block device that are attached to the server so you don't have to use upper
+01:12:29 [W] device that attach to the server so you don't have to use upper external provision at all, right, you would just use you just statically map in like an nvme device or whatever you have attached to the server,
+01:12:45 [W] Or whatever you have attached to a server. But if you want to deploy multiple clusters and kind of get rid of the business of managing local hardware using a CSI driver that can provide volume old block is quite practical actually.
+01:13:00 [W] So the Hands-On lab number nine is I'm going to show you how you would deploy Rook with the with volume old block when you see a sigh driver. So I'm just going to switch over to my terminal here one second
+01:13:15 [W] I've been running throughout this tutorial. I have not sped up and this one.
+01:13:22 [W] I'm going to have to speed up because it pulls down a lot of images images for the operator itself.
+01:13:29 [W] It doesn't pull down as much content.
+01:13:31 [W] But once you create yourself cluster, it takes it took me around 10 minutes for the cluster to actually get created and come up so I am going to speed up.
+01:13:44 [W] This particular demo when we get to that point, right? But first we I'm just going to show you how the the operator gets installed. And then I'm going to show you the ceph cluster stanza the crd that instantiate the cluster.
+01:13:59 [W] So, let's see if this operator comes up here soon enough.
+01:14:03 [W] have prepared ourselves to other llamo file here and this is vanilla Seth cluster. I just copied this from the The Rook
+01:14:15 [W] Documentation and here you specify something called a volume claim template, right and you set the volume old to block the access mode read/write ones. I omit the storage class and once you kind of create this
+01:14:30 [W] If cluster it will dynamically provisioned storage resources that it needs from the default storage class.
+01:14:38 [W] So it uses actually there's three volumes being created once per replica for the Seth application with a rook application depending on how you see it and then you will have 40 actual data pool this
+01:14:54 [W] Or that always these as it's called in Seth terminology will provision a block PVC and this is the point where I'm going to pause.
+01:14:53 [W] And speed up the presentation and once it comes back, we're going to start chatting on what we're seeing.
+01:15:01 [W] So there it's finally up now.
+01:15:04 [W] So what you can see here what got provision dynamically is that you have file system volume says been provisioned named Rook SEF mon ABC and then you have the data volumes that
+01:15:19 [W] References a block device, right and that is because the application components require a file system and the actual distributed file system the set file systems require requires block storage.
+01:15:29 [W] So that's why it's very practical to have a driver that can do both of those things to provide persistent storage to read right ones stateful sets which itself is in percents. So at this point you basically have a set of cluster.
+01:15:44 [W] We're running on your kubernative cluster.
+01:15:47 [W] So you would be able to install this F2 ball tool box and start creating new storage classes to provide data services on top of your kubernative, but is still backed by your back-end CSI driver being that
+01:16:02 [W] Sorry could be your Cloud providers is storage block service.
+01:15:51 [W] So now you're more in the pattern of kind of controlling your own destiny because you have your data services running on the kubernative cluster itself, and that concludes the the use case overview for Rook.
+01:16:03 [W] That was lap number nine.
+01:16:05 [W] I'm not going to switch back to my PowerPoint. Alright, the next section and the last section is actually about ephemeral volumes. So something that is very.
+01:16:16 [W] Very comforting in the world of containers and kind of one of the biggest selling points in my opinion is that when you start a container, you're more or less guaranteed that it will store the exact same way on
+01:16:31 [W] In cloud in your data center.
+01:16:28 [W] It doesn't really matter and it kind of eliminates eliminates the whole problem of it runs on my computer.
+01:16:34 [W] Right and but once we kind of start talking about huge amount of data, right it becomes very impractical.
+01:16:44 [W] I remember patterns back in the darker days where we had a customer's shipping production data bases inside the container itself right seemed
+01:16:55 [W] Shipping I mean this wasn't a large database see what it was.
+01:16:59 [W] It was less than a terrible.
+01:17:01 [W] I remember that much but still that is a very impractical amount of content to store in a in a container right because you need to pull that instance down from a registry and it's just all that bandwidth and needs to consume
+01:17:16 [W] Locally and it becomes a bit of a burden and it just like grows exponentially as you just you just becomes worse and worse and worse at the database grows basically, and this was for a Dev test to use case. Obviously it wasn't for production or anything like that,
+01:17:24 [W] Worse and worse at the database grows basically and this was for a Dev test to use case.
+01:17:25 [W] Obviously it wasn't for production or anything like that, but that became very impractical but so that is sort of where ephemeral local volumes engineer give ephemeral volumes are going to talk about in the next section
+01:17:45 [W] That became very impractical but so that is sort of where ephemeral local volumes engineering is ephemeral volumes aren't going to talk about in the next section is that that allows you to attach a piece of
+01:18:00 [W] God they will look exactly the same each time right by default.
+01:18:05 [W] You will obviously just provision an empty volume, right? But you can use our storage vendors capability to to perform a snapshot to clone a volume or have other pre-populated content in that volume. And that means that each
+01:18:20 [W] That's restarted that data gets reattach the way it looks right the obvious use case here. If you just use this as a means to store data like an empty file system is that this is the
+01:18:34 [W] Case to use screw useful scratch disks, right and the other up take on this is that imagine that you have a high very high performance workloads.
+01:18:42 [W] Umm, a lot of compact capacity in the compute phase of of that particular workload is that it needs to store a lot of data locally and by default if you would store the data
+01:18:57 [W] Overlay file system of the container is that it will battle for iops and capacity of all your other applications on that particular Mount point where you have all your containerd running, so provisioning and external
+01:19:10 [W] On that particular Mount point where you have all your containers running, so provisioning an external volume as an ephemeral entity.
+01:19:16 [W] You will be able to temporarily use that scratch disk for that compute workloads and it will consume storage resources, wherever you have the configured right?
+01:19:23 [W] It's it could be your Cloud providers high performance here for using flash disk. So you can might be using a cheaper tear for your temporary storage. Right?
+01:19:32 [W] I mean the thing is you can kind of slice it and dice it. However you want right?
+01:19:36 [W] But at the end of the day is that you don't want to have your workloads that you know are ephemeral and you know that iot intensive. You don't want to have them into gen-pop of your applications, right?
+01:19:48 [W] You want to segregate them some vendors provide means to set very fine-grained quality of service controls as well right to throttle those workloads and also ensure the capacity limit or met, right?
+01:20:02 [W] So looking at this very simple stanza here, is that you you
+01:20:06 [W] Well familiar with this at this point right where you have a volume mount to mount the coals out a name volume and here's kind of where the the secret sauce comes in right?
+01:20:17 [W] You have the CSI stands.
+01:20:19 [W] I hear you call out your driver and these are the volume attributes that you will supply to your driver, right?
+01:20:25 [W] You will say you will tell the driver. I want an ephemeral volume if the driver supports ephemerality and then you specify the secret where you can find.
+01:20:36 [W] All you want to provision storage and so forth.
+01:20:39 [W] There is also a slightly different way to reference the secret. Right? So if you have your secret to your back-end storage system sitting in a namespace with the application that you're actually where you deploying the Pod or the state will set the helm chart whatnot.
+01:20:54 [W] You can just reference it by name right?
+01:20:46 [W] So you give the alternative syntax here by node publish secret preference and name it CSI.
+01:20:55 [W] I already skipped over to my hands on lab number 10 slide here about how to use a formal local volume. So I'm just going to switch over to my terminal here real quick.
+01:21:07 [W] I have a very simple example here in my in line. Don't gamble.
+01:21:13 [W] I will have a mount path of an nginx web server, which is just a very simple stupid container and very stupid example, but it illustrates the point.
+01:21:23 [W] I want to make right so we have these this inline stanza where I'm going to provision a volume. I'm going to wait for the port to come up.
+01:21:32 [W] Then going to exact into the container and simply put a file there to prove my point.
+01:21:38 [W] So I'm going to go to slash user share nginx HTML Echo Cube Khan rocks into index dot HTML.
+01:21:50 [W] There we go.
+01:21:51 [W] Content is there and then I'm going to do the brute thing of Simply replacing the pawn, right?
+01:21:58 [W] Is that we're going to have a new volume provision there?
+01:22:02 [W] So I'm going to exit into the Pod gonna Mount points.
+01:22:06 [W] There we go.
+01:22:07 [W] It's empty.
+01:22:08 [W] There's no index dot HTML file there and that concludes the first part of the ephemeral volumes use case. I'm just going to switch back to my Powerpoints and I'm going to talk about something they got introduced and kubernative 119 and that
+01:22:23 [W] Generic ephemeral volumes and this is a little bit simpler to comprehend in my opinion is because what this does is essentially it it kind of copies their behavior a little bit like you do with a stateful set.
+01:22:32 [W] specify is essentially a ephemeral volume claim template that looks very similar to a inline persistent volume claim and it supports like labels annotations and all those things that you would expect to work in a
+01:22:40 [W] A Precision volume claim right and and the key here is that it will be able to leverage any storage class.
+01:22:46 [W] You don't have to have a CSI driver that supports ephemerality. You can just use the existing existing CSI drivers to support persistence, right?
+01:22:59 [W] So I'm just going to switch over to my last lab here and show you real quick how this works.
+01:23:07 [W] I'm going to switch over to my terminal so I have a llamo file here my ephemeral llamo and here you can see that I have a vault ephemeral volume claim templates in put some metadata there. So I will be able to find the application and you can see
+01:23:22 [W] Access mode how much storage I'm requesting and the the custom label.
+01:23:28 [W] I'm going to create that and then I'm going to do the exact same exercise.
+01:23:31 [W] I did in the previous example with the inline local volume example.
+01:23:39 [W] I'm going to wait for the Pod to come up.
+01:23:42 [W] It's running.
+01:23:43 [W] I'm going to get the PVC by my a playable. You can see here that we have our determine a mypod my mouth and that maps to the port name and the volume Mount name that you saw in the
+01:23:58 [W] You saw in the animals down.
+01:23:54 [W] So again, I'm going to exit into my pod there.
+01:23:59 [W] We see. We have a multipath device mounted.
+01:24:03 [W] on usage share nginx
+01:24:06 [W] que con rocks into index dot HTML. There we go.
+01:24:14 [W] I'm going to do the same replace operation that I did on the previous example.
+01:24:20 [W] Going to delete the pod.
+01:24:22 [W] It's been replaced.
+01:24:23 [W] All right, let's accept back into it.
+01:24:27 [W] After it has come up I'd say.
+01:24:31 [W] It's been a long day.
+01:24:33 [W] How you hanging in there?
+01:24:34 [W] There we go up and running.
+01:24:36 [W] All right.
+01:24:37 [W] We'll see here that yep.
+01:24:39 [W] The directory is empty.
+01:24:41 [W] There's no file their the generic ephemeral volumes functionality worked as advertised.
+01:24:48 [W] Although is Alpha feature.
+01:24:50 [W] Be careful and you'll also see that the PVC has been replaced from my default storage class there as you can see that the if you compare the IDS of the
+01:25:03 [W] Volume names they're they're different.
+01:25:06 [W] Alright that concludes Hands-On lab number 11.
+01:25:10 [W] I'm going to switch by back to my PowerPoint and congratulations you're done.
+01:25:17 [W] You to CSI drivers are Dynamic provisioning Works in kubernative all CSI snapshots CSI restore and using PVC cloning in depth and how you access road block volumes and roll block storage.
+01:25:33 [W] the last few examples here how to use ephemeral volumes both local volumes using the inline stanza and using generic generic ephemeral volumes using your standard storage classes
+01:25:31 [W] In the source files the llamo the PowerPoint the asking me my cast files are all available in this particular gitops repository.
+01:25:39 [W] check out the CSI specification and and you can also see the ultimate past meetings and and the members of the communities special interest group for storage on the GitHub URL there
+01:25:55 [W] Now the CSI documentation for more information about the development of CSI and the different maturity levels of different drivers and features and God knows won't so with that said,
+01:26:08 [W] Watching if you're watching this live at Cube Khan, please stick around we're going to shut down this video stream, and we're going to switch over to the live QA and until if you're watching this offline later,
+01:26:19 [W] Free to reach out to me. If you have any questions. You can find me on Twitter and all its social media networks out there. The address is in the beginning of the video. So thanks so much for watching.
+01:26:30 [W] Take care.

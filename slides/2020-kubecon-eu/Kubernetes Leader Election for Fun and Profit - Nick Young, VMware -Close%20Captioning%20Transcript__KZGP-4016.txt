@@ -1,0 +1,175 @@
+﻿Kubernetes Leader Election for fun and Profit: KZGP-4016 - events@cncf.io - Wednesday, August 19, 2020 6:59 AM - 50 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:13 [W] Hi everybody.
+00:00:16 [W] Welcome to kubernative Slater election for Fun and Profit.
+00:00:17 [W] My name is Nick Young.
+00:00:18 [W] I am a staff engineer with VMware and I'm here to three three things today firstly.
+00:00:23 [W] What is leader election?
+00:00:26 [W] And how do you implement it my guidelines for using it and then some common patterns that you can use when you're using it so
+00:00:34 [W] Let's hit let's get straight into it.
+00:00:41 [W] So I seem to have some witness with my slides anyway the area so what is leader election?
+00:00:48 [W] Well kubernative leader election allows you to use the same leader election code that the API server does and other parts of kubenetes for any of your controllers what that lets you do is it's a distributed lock coordinated and managed
+00:01:02 [W] By kubenetes it lets your app. Essentially elect one instance as the leader.
+00:01:08 [W] What can you and the important part here is that only one instance actually makes changes now.
+00:01:18 [W] So what can you use it for?
+00:01:19 [W] So there's a few patterns you can use it for firstly this one the basic controller pattern wants one instance watches the kubernative API and writes changes back other instances will just be sitting there doing nothing until they become the leader.
+00:01:32 [W] A slightly more complicated pattern is where one instance watches the kubernative kpi takes actions outside the cluster and then writes the result back.
+00:01:43 [W] I'd call this an operator pattern. Whereas the previous one is a controller pattern.
+00:01:44 [W] Another patent is one where each instance watches.
+00:01:52 [W] It could be known as API and only one right to status back maybe because the other ones are doing some sort of synchronous asynchronous operations that don't require status updates or some other sort of updates and lastly
+00:02:04 [W] The catch-all bucket of other more complicated things.
+00:02:08 [W] I've got some example got an example of that.
+00:02:09 [W] I'll talk to you about later.
+00:02:14 [W] So all of these things they let you make your app more reliable by just springing that little bit of har on it.
+00:02:17 [W] So the important part of the everyone wants to know is how does it actually work?
+00:02:24 [W] Well, there's an election process that updates a shared object that functions as the lock now this shared object is you obviously a kubernative object this whole thing is built on kubernative.
+00:02:38 [W] He's and the shared process is literally just done using the standard kubenetes leader election code the exact same code that the API server controller manager and other kubernative components use the shared object canonical.
+00:02:47 [W] Be one of two things depending on your kubenetes version before kubernative 114.
+00:02:54 [W] It was you could only use a config map.
+00:03:03 [W] Well, actually I tell a lie there you could use the endpoints object but that was deprecated very quickly in favor of the conflict map and only the config mappers recommended up until kubernative 114 greater than or equal to communities 114 you can use the config map.
+00:03:09 [W] Or the nude lease object which duplicates all the functions of the config map but in a dedicated object in the case of conflict map, the info is actually stored in an annotation for least. It's actually stored in the spec. So that object
+00:03:24 [W] Specifically designed to do this exact use case.
+00:03:28 [W] It's also used for holding information about the nodes that about their leases on certain network data.
+00:03:42 [W] So but in either case your apps are going to need Union and to make sure that your your role has the permissions to update the the type of object. You're doing either config Maps or leases.
+00:03:47 [W] The module to read the docs is here. It's a client go tools leader election resource lock that one.
+00:03:55 [W] Just the reason to check. That one is it just has the details of how the how the objects actually get instantiated but also if new types of objects are added that's where that's where the code to add them is added and there's also an interface there so
+00:04:09 [W] You can actually swap out this type very easily.
+00:04:13 [W] Okay, so if you're implementing leader election, and you're using Cube it up I've got good news for you.
+00:04:24 [W] It's probably already available. If you're using the generation tools, it's certainly available or you've got to do is use the - and able leader election flag on the command line and boom leader election is enabled and working for you.
+00:04:38 [W] you. I would strongly recommend doing this if you're running a queue border controller if you want to have a bit more detail or you've written your own things or
+00:04:46 [W] Wanted to check that it's there. If you look in your new manager call, you will see some extra options that you need to add here.
+00:04:54 [W] They are here.
+00:04:56 [W] There's a leader election, which is bullying and a later election ID. Now, the leader election ID just ensures that your particular leader election is unique.
+00:05:05 [W] So if you want to implement it using the old way informers, then it's a little bit more complicated.
+00:05:16 [W] This one's relevant to me because I'm a maintainer on Project contour and this this is what we do.
+00:05:19 [W] So using a form is means that you have 2 jobs firstly getting that letter election running and secondly watching the channel That the letter election gives you obviously sorry.
+00:05:35 [W] So getting informers means that you have two jobs firstly getting that later election running and secondly watching the channel That the leader election gives you obviously sorry.
+00:05:41 [W] I didn't say this before but obviously I'm talking mainly about go code here because the the API server and all of the kubernative supporting code is written in go not making any statements here about how easy this is to do in other languages.
+00:05:45 [W] So but given that the leader election process just gives you a channel that you watch.
+00:05:49 [W] In Contour, what we do is we start the standard kubernative selector this returns and I became leader Channel and then basically you can watch that channel and when you become the leader that channel will be closed.
+00:06:03 [W] So in Contour the second thing that we do is we have a dedicated go routine that runs that watches when we become leader by watching that channel when we do become leader, it fires off an update and then does nothing for the rest of the lifetime of the program.
+00:06:20 [W] You other parts of Contour running separate go routines that will check the status of that channel as well.
+00:06:30 [W] And if it's been closed and they know that it's the leader and the and they will send updates to the to the API server via being the because they're the leader.
+00:06:43 [W] That's how we do things in Contour because we're using that multi reader writer is the leader pattern. This means that all of the different
+00:06:51 [W] Aunt instances can read from the API server and on the leader will actually write things back.
+00:06:56 [W] The main package for actually using this is the cargo tools leader election.
+00:07:08 [W] That's the actual one that has all the calls to start the leader election to run it some helpers that sort of thing.
+00:07:10 [W] That's where I'd suggest you go to do the things you need now.
+00:07:14 [W] Sorry, actually, I forgotten something there. The there is there is another example of someone doing this.
+00:07:24 [W] But I've no sorry.
+00:07:27 [W] I'll put that in one place.
+00:07:31 [W] So anyway, so let's get on to the usage guidelines.
+00:07:34 [W] This is this is the main thing that I need to tell you about.
+00:07:41 [W] So my first guideline is don't try and clean up if your instances depose somehow use kubernative instead what I mean by that is if your instance is deposed.
+00:07:48 [W] Of the object were edited by something else and made you not the leader anymore now. So what we need to do in that case is you need to go around and restart the leadership again the
+00:08:06 [W] In that case is you need to go around and restart the leadership again the leadership election again in order to be able to make sure that your that you can rejoin as new instance.
+00:08:15 [W] Now you could do this in Code by you sending yourself back to the Stars starting some new co-routines cleaning up after yourself doing all that sort of stuff. But instead of doing that is much quicker that if you do happen to get the post as the leader you just closed down and then kubernative will restart you
+00:08:28 [W] And then kubernative will restart you and you'll come up as a regular member and participating later elections.
+00:08:32 [W] Maybe you'll be the leader.
+00:08:33 [W] Maybe you won't it's a much easier way and ensure the much cleaner flow through your program.
+00:08:42 [W] So it's definitely strongly recommend it.
+00:08:46 [W] Secondly, this is a human scale lock not a machines go one.
+00:08:47 [W] What do I mean by that?
+00:08:49 [W] will the default timeouts for this?
+00:08:52 [W] There's two failed checks the leader. The leader should be heart beating in some the Abdu shared object every 10 seconds. And if you mrs.
+00:09:03 [W] To then all the other things say, oh no, it's time to do another leader election.
+00:09:08 [W] And that leader election can take sort of 5 to 10 seconds. So the the total time for this from you at the actual leader poddisruptionbudgets,
+00:09:22 [W] What that means is don't use it for stuff that sub 30 seconds.
+00:09:29 [W] So if you're if you need guaranteed leader operations happen and you can't have them disappear for 30 seconds.
+00:09:35 [W] This is not the distributed lock for you.
+00:09:41 [W] You should be using some other more advanced Distributing looking function thinking that is great for is you just run a model pods.
+00:09:46 [W] It's okay if they if whatever it's doing doesn't run for 30 seconds. And usually that's for you know, you're running some controller that reconciles on
+00:09:52 [W] Seconds thirdly be aware of what you're using to distribute look for I've mentioned a couple of the different patterns.
+00:10:07 [W] I'm about to go on and talk a little bit more about them in detail.
+00:10:15 [W] But the you the key thing here is you just need to make sure that you're understanding what the your what's the key thing that you're trying to get out of using leader election.
+00:10:21 [W] Maybe it's just a I've got a simple controller and I want it to be haproxy.
+00:10:28 [W] at
+00:10:29 [W] Okay. So let's talk a little bit more about specific patterns the most simple one is the basic controller or operator. I sort of alluded to this a little earlier.
+00:10:45 [W] This is one where it just watches cooperate any is objects and does stuff based on it.
+00:10:50 [W] It doesn't pretend present its own endpoints for anything other than health checking on metrics and the stuff that it does could be in Kosta or it could be reaching outside the cluster.
+00:11:00 [W] The trick is here.
+00:11:02 [W] Just use the little lock to block the code that actually does stuff.
+00:11:07 [W] So if you again it is using kublr then a lot of this stuff is handled for you because of the way the whole framework is designed. If you're doing something over that you've that you've written then that's the trick is if you're doing this sort of basic basic block, then just have the have the lock
+00:11:18 [W] The area of the code that actually does the stuff that you want only the leader to do.
+00:11:24 [W] so yeah, as I said before for Kube orders the reconcile as our leader elected, so only one instance will actually do anything if you haven't used Cuba before the way it works is you add any cides you want to manage and then
+00:11:41 [W] Also that you want to manage you have a reconcile method that will take the name of the thing that has changed been added or deleted and it will figure out if it's been changed added or deleted do whatever it's got to do and then write any changes back to the API server.
+00:11:56 [W] This thing's be later elected as greater means you can have as I said you can sprinkle that bit of har en by having lots of them running and only one of them will be actually trying to do this at once so you don't end up with races and life and locking problems there with the
+00:12:12 [W] The easiest way is actually just a block mine on becoming the leader.
+00:12:17 [W] So you do a bunch of setup get everything running that needs to be running and then just start the leader election and then just select on that channel and wait until it's and wait until you become the leader to actually do anything or obviously until you receive a signal to stop.
+00:12:32 [W] So, yeah, so yeah.
+00:12:35 [W] Sorry I said that the wrong way the you can either shut down or you lose the leadership in which case you just shut down and that's why using kubernative to restart you is sort of makes it super clean make a really easy to understand.
+00:12:48 [W] a clean up logic the complicated clean up logic is just completely subsumed in the fact that you shut down drop your state on the
+00:12:58 [W] - I'm sorry technical glitch there.
+00:13:01 [W] So if you are going to lose leadership in if it's alright, if you are going to block or your main make sure that your health and metrics in points are initialized first.
+00:13:16 [W] I know this because I created some out some outages by adding in leader election inter-service and forgetting to initialize the health the health said I'm going first and so all of the
+00:13:27 [W] Just continually restarted because I never became healthy.
+00:13:32 [W] So top tip make sure you initially make sure you are completely clear on all of the things you need initialise.
+00:13:38 [W] Okay.
+00:13:43 [W] So another pattern is the multi read multiply read leader rights pattern.
+00:13:50 [W] This one watches kubenetes objects serves out endpoints of its own for some reason.
+00:13:51 [W] and the leader may it may take actions and update objects in response.
+00:13:59 [W] So that's what you want. The leader to be the one that's actually taking any actions and updating objects. So that again only the there's only one of them taking object so you don't end up with race problems.
+00:14:04 [W] So Contours and example Contours whole purpose is to watch kubernative objects and translate it to Envoy XDS endpoints that config that allows Envoy machines to connect to those endpoints and configure themselves appropriately.
+00:14:20 [W] So for Contour the every instance does that and then the leader is the one that actually writes status updates back to Contour C IDs.
+00:14:32 [W] Our CID is called HTTP proxy.
+00:14:34 [W] And so if you create a HTTP proxy Contour will write some information back to that HTTP proxy after it's done.
+00:14:47 [W] its pausing of it to just indicate if the haproxy is has been passed correctly in that everything is okay. I mean if it hasn't then it can Surface exact errors all that sort of stuff.
+00:14:51 [W] So it's very simple example of the sort of information that you'd write back to to an object. But it's sort of So Co illustrate here cubed is web hooks are another example of this pattern where the reconcile is as I said before I later elected
+00:15:06 [W] As the reconciling but the but the non leader instances conserve defaulting conversion and validation webassembly.
+00:15:17 [W] So the and those those are the ones that allow your CID to use those features.
+00:15:25 [W] Okay, so and there's one more advanced pattern which I thought was pretty nifty, which is a / CID leader election k8s.
+00:15:36 [W] Does this and breaks out the leader election by the object type.
+00:15:42 [W] So I think Kane ATF has four or five different cides. And so they actually have a paper type CID per type election. Sorry.
+00:15:54 [W] And so what that does is it on it allows you to spread the reconciliation. Okay, knative breaks out to the
+00:15:57 [W] Later election by object type.
+00:16:06 [W] So what that means is can never has for I think or five different see IDs and you can split up the actual reconciliation and the of each of those things across instances.
+00:16:14 [W] So if you if you're running five instances of your of your controller, then you can have five different instances holding each one holding a the lock for a particular type of CID.
+00:16:25 [W] CID. Okay in summary we have
+00:16:28 [W] Leader election is great and you should use it for all your communities controllers.
+00:16:32 [W] DIY and you just it's a little I'd say it's involved but not difficult.
+00:16:50 [W] Let kubernative handle the deposed Case by restarting your app is my absolute number one top tip and lastly think carefully about what you're going to use your lock for make sure that the way that you're using your lock
+00:16:58 [W] Options that you need if you're using it in a simple way for a basic controller you it's much easier to just make it so that you only have one instance doing any changes at once if you're using more complicated things.
+00:17:13 [W] It'll have necessarily necessity be more complicated. Anyway, thanks very much and looking for to answer some entering some questions.
+00:17:19 [W] Hi everyone.
+00:17:27 [W] I believe we live hopefully everyone can hear me.
+00:17:33 [W] So thanks very much.
+00:17:34 [W] There's been a few questions answered in the queue and in the Q&A area. Please ask more we've got plenty of time.
+00:17:45 [W] And so I think there's only one that I haven't answered in the chat and that's thanks Alex for your question about what I mean by human skull best machines car locks.
+00:17:52 [W] I think that's just about how long the lock loss for the the key. The key thing.
+00:18:03 [W] The machines got a lock is intended for sort of second or subsequent resolution where you know, you might have a file that you want to open and you only want one thing or something like that or you want to go grab a lock for some iot you want to do outside of your cluster.
+00:18:16 [W] would not use leader election for that. It's as I said earlier it's intended for times when you've got like three or four through three or more.
+00:18:22 [W] What I mean by human skull first machines garlock's I think that's just about how long the law class for the the key.
+00:18:29 [W] The key thing. A machines Garlock is intended for sort of second or subsequent resolution where you know, you might have a file that you want to open and you only want one thing or something like that or you want to go grab a lock for some iot you want to do outside of your cluster,
+00:18:30 [W] So and that the key part is that with the default settings?
+00:18:36 [W] The leader election will only sort of realize that the leader has gone away after 15 seconds or so, and then it will take another 15 seconds or so to actually finish a leader election, hopefully, so I'll put that
+00:18:47 [W] Yep, and so there's another one there from Ricardo distributed leader election between clusters.
+00:18:58 [W] Oh, that's a great idea th esting idea.
+00:19:00 [W] Yeah.
+00:19:01 [W] I'm for that one.
+00:19:02 [W] You would definitely need to do some sort of you need to you need to maintain your unlock outside. Somehow.
+00:19:11 [W] I'm you could probably do something similar to what the leader election code actually does.
+00:19:13 [W] the leader election code actually just attempts to write an annotation to the conflict map or
+00:19:19 [W] R to update the lease object and the first person to be able to update successfully with their update they get the
+00:19:25 [W] They get the little lock.
+00:19:33 [W] So yeah, so I would say for that you could Implement something similar yourself.
+00:19:43 [W] I'm I think that by default the leader election code expects to be running in the same cluster that you working in so you would have to basically copy the existing leader election code. Yeah, so
+00:19:51 [W] Yeah, I think I think that's what Anna does anyone else have anything.
+00:19:57 [W] Yeah, I think for me the thing that that I have found the most useful about this thing is just that it is once you get it working.
+00:20:04 [W] It's not too hard to get it running and once you do it do it does just let you make things a lot easier.
+00:20:25 [W] Well seems like there's a no other questions coming in.
+00:20:49 [W] I guess we can I will be online in the in the custom extend Kate's list channel on the the same cncf suck.
+00:20:59 [W] I guess we couldn't I will be online in the in the custom extend Kate's list channel on the the same cncf slack ready
+00:21:01 [W] The answer any other questions you might have.
+00:21:04 [W] thanks Mike.
+00:21:06 [W] That's a really nice.
+00:21:11 [W] I might just thank me for that useful talk.
+00:21:12 [W] So yeah.
+00:21:17 [W] Yeah, and please feel free to hit me up either on the cncf slack.
+00:21:18 [W] I'm young Nick there.
+00:21:20 [W] You can hit me up on Twitter at Young snyk or on the community slack.
+00:21:25 [W] I'm also young snyk so with that, I think we're done.
+00:21:29 [W] Thanks very much everybody and look forward to seeing you around the traps.

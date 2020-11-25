@@ -1,0 +1,223 @@
+﻿Virtual Cluster - A Practical Kubernetes Hard Multi-tenancy Solution: RSAE-8552 - events@cncf.io - Wednesday, August 19, 2020 10:54 AM - 1183 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:52 [W] Okay.
+00:00:56 [W] Good afternoon everyone today.
+00:00:59 [W] I'm going to present the virtual cluster a practical component is hard multi-tenancy solution.
+00:01:03 [W] So Marty Tennessee has been as required by many kubernative users for a long time from company's perspective Mahdi, Tennessee impact both the infrastructure cost and of the are the efficiency choose things that are very important
+00:01:21 [W] nice growth however in kubenetes
+00:01:26 [W] That multiple users should consume the shared class of resource in your ass already to manner is not easy.
+00:01:42 [W] This is because in Regional communities design the design was focusing on a single candidate use cases and it works great for single tenant to use use cases.
+00:01:48 [W] if we want to provide a strong isolation in communities, most of the core components in Korean is control plan and a data plan need enhancements.
+00:01:56 [W] Some Innovation have been down.
+00:02:00 [W] For example nowadays coredns is support sandbox runtime to provide VM level computer resource isolation and the communities API server provides namespace API for metadata isolation, but there's still many isolation
+00:02:11 [W] not being met
+00:02:14 [W] let us reduce the problem scope a little bit little bit by looking at the control plane only is this possible for the native Community to support of the following Monday vote and only users wrong there workloads in a shared resource pool manager to buy a
+00:02:31 [W] but each users can only manage their own workloads and parts and no matter what they do other parents shouldn't get be affected in terms of the security stability and a manageability in other word
+00:02:47 [W] Possible to provide a complete control plan as a relation in Gwinnett is another problem is can this be done natively?
+00:02:57 [W] Yes, we can view the another possibility or to encapsulate the kubernative Custer Q provides complete control + Elation, but this over introduce non-trivial integration cost for the tenant in order to use the new pests.
+00:03:13 [W] Unfortunately, the native communities cannot achieve both in this talk.
+00:03:23 [W] We will see how what your cluster can provide complete control panel as Elation natively so that the users doesn't need to pay any integration cost.
+00:03:30 [W] I'll leave you a brief introduction to myself.
+00:03:39 [W] My name is fake. Oh, I'm a senior staff engineer from Alibaba Cloud.
+00:03:42 [W] I work in the crown knative application platform team.
+00:03:49 [W] I'm currently leading a few communities related to projects in the area of serverless kubenetes. What are the management and the edge compute?
+00:03:52 [W] Here is an outline of today's talk first.
+00:03:57 [W] I will pretend to the virtual class to architecture design now, I will talk about some technical challenges that we face and how we solve them.
+00:04:11 [W] I will show some experimental results to show that virtual cluster is a practical solution.
+00:04:12 [W] Projects Staters lot in the end. I will give a short demo.
+00:04:23 [W] Okay, before I move on I want to emphasize that this talk Saudi aggresses kubenetes control pronunciation problems and the data prior isolation technique techniques.
+00:04:36 [W] We are not be discussing this talk and the some of the existing Solutions may be referred if they are publicly available, for example, the sandbox containerd technique.
+00:04:45 [W] Okay.
+00:04:49 [W] Before we design our Marty people mod tenancy solution. We need to be clear about the threat model that we are tackling.
+00:05:02 [W] So we assume that the tenant to users are not trustworthy.
+00:05:06 [W] Therefore exposing cross scope resources dangers. There can be security concerns when doing well when doing this of course the talent the users shouldn't be granted permissions to
+00:05:17 [W] Stop Resource as well.
+00:05:20 [W] The Tenon to use of May generate harm for usage patterns, for example, the denial of service attacks, but sometimes rose rose harmful patterns is not generated on purpose.
+00:05:34 [W] It can be an accident so and and and lastly the tenant and users may serve other users as well.
+00:05:48 [W] So it will make their you make it even harder to predict that canonical users Behavior.
+00:05:49 [W] We assume that the content has a lot of safe.
+00:05:55 [W] So overall you look at this threat model.
+00:05:56 [W] They are typical in cloudevents, but they may also apply in the internal organization as well. Let's see how Upstream communities can do about this.
+00:06:06 [W] Namespace is the community building API for 10 and abstraction, but with a shared control plan using named head space Odin is not enough to provide a strong isolation by sharing the controller.
+00:06:21 [W] We have a legacy and a classic noise neighbor program.
+00:06:24 [W] For example, you've Talent a may have a lot of pots and the if he keep listing his pots and the Tenant and be may get a slower response from the API server.
+00:06:39 [W] It will become the even worse if Tenon be runs a more important application compared to 10 days application.
+00:06:43 [W] Which means a tenant May list all the name spaces in the API server, which can be a problem because sometimes the namespace name can make contain the sensitive information.
+00:07:00 [W] The Talon the users cannot install cost gold resource, which means they cannot install ci/cd s webhooks create a cusp scope Rosie sent from this limitation can be a big head mode for many many kubernative
+00:07:16 [W] Is over a we need to find a way to harness the current namespace spaced body fantasy model in a kubenetes.
+00:07:25 [W] I think they are they are many possible solutions to achieve a stronger as a isolation model in Kuma mirantis, but when we design a virtual cluster, our primary concerns are in four aspects, the first is a compatibility.
+00:07:43 [W] Stronger I said isolation model in Kuma mirantis, but when we design a virtual cluster, our primary concerns are in four aspects. The first is a compatibility we need to make we need to make sure our solution doesn't
+00:07:47 [W] We need to make we need to make sure our solution doesn't change any API existing API. So in order to reduce the pain of the users integration cost the second one is a complexity.
+00:08:00 [W] So we aim to leverage your communities extensions and don't change any humans called components.
+00:08:04 [W] For scalability. We we targeted to use cases to support hundreds or even thousands tenants.
+00:08:13 [W] To share one kubernative Custer.
+00:08:20 [W] So the solution has to be scaled.
+00:08:22 [W] The last way is the cost.
+00:08:23 [W] I think it is.
+00:08:27 [W] Okay to have a trade-off between the isolation level and another cost but the cost has to be as small as possible.
+00:08:32 [W] Now, let's look at their our design in Virtual cluster each tendon. A user has a dedicated hand control plan, which we call that Elena master.
+00:08:45 [W] Attending the masker includes a pi server controller manager and etcd.
+00:08:57 [W] The tender Master life cycle either is managed by a 10 and an operator which runs in the super master. The super monster is the kuma knative customers at managing the actual node resource.
+00:09:03 [W] The tenant of user operates in the tendon the master directly and the there is a single controller which copies the objects from a calendar Master to receive a master for pot pour vision.
+00:09:15 [W] Super master and the create create the actual container using the sandbox runtime for computer resource isolation since the kubelet in the node holding connects to the super master.
+00:09:33 [W] We need to find a way for 10 and a user to access their pass using logging or streaming API is in order to do this. We add a proxy each node called V in agent.
+00:09:44 [W] In the talent of Master. There is a version of the object which maps to the physical note that the attendant part is actually running on the version of the object points to the reagent so that the reagent
+00:09:59 [W] All the tenants are requested to the kubelet.
+00:10:02 [W] Overall, if you look at this architecture concept of wise now the silver Master becomes part of resource provider and the other tenant part of objects management and Arabic control happens in the tenant master.
+00:10:17 [W] And all the work load controllers extensions cri-o BS operators are installing the tendon or muscle directly based on the user's demand.
+00:10:28 [W] Okay, let's see how this design fits this in our criterias.
+00:10:37 [W] from compatibility perspective
+00:10:40 [W] We didn't change any objects API and semantics and we are always support the Upstream kubernative versions people may ask the differences between a virtual object and a virtual kubelet in Virtual in Virtual cluster each
+00:10:56 [W] When you are mapping to the actual physical node, which means the part of finiti and the partner and his Affinity semantics are the same as before but a virtual kubelet does not necessarily represent and fiscal note in many cases it represent a
+00:11:12 [W] Hence, the notice Mantic actually changed.
+00:11:15 [W] In terms of the company complexity complexity our seeing corroding think 12 a pair of Jack's from attending the Masters forced to the super master not all of the tenant objects and everything is done using
+00:11:32 [W] Tensions the complexity is limited.
+00:11:35 [W] For scalability. We find that one Sinker can support hundreds of hen in the Masters without much performance impact so we will show some of these permanent readers later overall this solution is scalable.
+00:11:51 [W] The talent of Master cause he's always constant.
+00:12:01 [W] But if you look at the communities design, it is actually similar to neelix microkernel.
+00:12:07 [W] The API server is concise and small and the most of the logic I remember in the client side. Also one kubernative Master Pro tenant user is a kind of standard in many cloud service product
+00:12:16 [W] The UK s and the article the ASX over I think the cost is acceptable.
+00:12:22 [W] Where are the benefits of this design are clear?
+00:12:28 [W] There are no noise neighbors anymore and when canonical Nazi other tennis objects at all.
+00:12:32 [W] If one tenant heats the security vulnerability and only that canonical affected the telling the user has a full control over the tenant Master which provides the best user experience.
+00:12:46 [W] Next I'm going to describe some challenges that we face when we implement the virtual cluster.
+00:12:54 [W] So the biggest challenge we have is actually to provide what your cross the video for each tenant. Let me expand it.
+00:13:05 [W] In Virtual cluster one tenant path has three entities one part of ejected in Canada.
+00:13:14 [W] Master are part of object in super master and a pod containers running in nodes created by the kubelet.
+00:13:20 [W] The Sinker doesn't change the pot name, but it has to change the problem space in order to avoid potential naming conflict in a super master. Basically, we will add the prefix to each namespace in a super master.
+00:13:34 [W] that is instead of the super master, which means inside the Pod the service service account DNS settings and namespace has to have to represent a tenant config configure tenant Master configurations
+00:14:01 [W] To have to represent attend an config configure pain in the master configurations.
+00:14:05 [W] in sounds like we have to change the kubelet to achieve this.
+00:14:06 [W] But in fact that we didn't do that the Sinker doesn't magic it manipulates the part template like a mutation web hook for all the environment variables service account has Secrets post a lines and the
+00:14:22 [W] As config so that auto-configuration independent master I used.
+00:14:26 [W] The singer also ensure the data and the data consistency between the tenant must and a super master.
+00:14:38 [W] Basically the tenant Master is the source of the truth for the objects back and the Summa Master is the source of the tooth for the object status in the end.
+00:14:47 [W] The user is not aware of the supervisor at all.
+00:14:53 [W] Literally. You don't need to change any of you llamo files when using 10 and a master. It should just work.
+00:14:54 [W] The Sinker is a very powerful controller. You want your Caster? It has a full control over all the Masters, but we have to make sure that the sink it doesn't generate a too many requests queue all the Masters for consistency check.
+00:15:11 [W] We leverage the kubernetes least and watching my canonical if you look inside the Sinker. They are per object.
+00:15:23 [W] We Can Sailor which synchronize the object based on the state's in the tenant Master informal caches and the silver Master informal cash.
+00:15:29 [W] The idea is that by looking kubectl impairing the cash stays we can minimize the pressures and a sinker May apply to your order Masters regardless, how many objects needs to be synchronized?
+00:15:40 [W] Okay next I'm going to hear presents some experimental results.
+00:15:48 [W] If you look inside a sinker, they are per object.
+00:15:53 [W] We Can Sailor which synchronize the object based on the states in the tenements informal caches and the silver Master informal cash.
+00:15:54 [W] The idea is that by looking kubectl Perry in the cash stays we can minimize the pressures and a sinker May apply to all the Masters regardless how many objects needs to be synchronized?
+00:15:56 [W] Okay next I'm going to be presenting some experimental results.
+00:15:56 [W] We conducted some stress test in experiment. We serve a hundred ten in the master during Conquering the product creation. The number of created Parts is increased from 1 k 2 10K.
+00:16:02 [W] And there is only one single controller in a semester.
+00:16:08 [W] We install a hundred virtual kubelet to simulate a hundred know the custom which also means that the times depending in know that during part of creation is skipped because we use what you create.
+00:16:20 [W] This has mailing evaluate the performance of the control plan.
+00:16:25 [W] The left figure shows the histogram of Park creation time in 10k parsec case though. This is a very stressful parallel workloads.
+00:16:56 [W] Are created within the Baseline Hamlet time range?
+00:17:00 [W] The VC has a longer Tails because of the curing latencies in the sinker.
+00:17:06 [W] The right figure shows the Walker of time of creating our parts for different number of Parts the smaller value the better.
+00:17:16 [W] We see doesn't bring significant to put a gradations in the very stressful 10K parsec case.
+00:17:33 [W] There is about a 70 percent of slowdown, which I think is acceptable. Now, let's look at the singers cost the single. The resource consumption doesn't scale.
+00:17:43 [W] because the super master has its own stupid limit. So the Sinker cannot grab the low the infinitely by burning weaveworks.
+00:17:50 [W] Resources and the other cues in the Sinker back of rate limited cues.
+00:18:00 [W] The Sinker is established in the 10K Parts case.
+00:18:01 [W] We find that the skater recovered time for the Sinker can be is less than one minute one single restarts.
+00:18:08 [W] In the worst case we are singer really becomes a bottleneck. It can be horizontally scaled easily.
+00:18:15 [W] In a normal are stressful case the extra latency added by the Sinker is usually less than a few milliseconds.
+00:18:27 [W] Okay, what you currently is not the first trial.
+00:18:30 [W] There are the solutions that address the community's control plane isolation problem.
+00:18:36 [W] I think case 3 V is probably the Chloe's the one comparative virtual cluster. You can k3s user has a dedicated control plan, which is a modified case k3s AKA server
+00:18:49 [W] Across the we didn't change up stream API server also increased 3 V IU follows appurtenant Sinker model, which I think is not necessary.
+00:19:05 [W] If you look if you look at the experiment experiment results. I show just now one Sinker can support multiple tenants.
+00:19:10 [W] There is another project called lactose which modifies the API server to support the new tenant apis.
+00:19:21 [W] I think all the existing plugins have to be changed as a consequence also in octaves. If you use a shared control plan for all the you for all the users then the noise neighbor problem still exists.
+00:19:32 [W] From high-level Constable wise the single controller and the virtual kubelet have similarities but the virtual kubelet use simplified provider interface.
+00:19:48 [W] So it always has some compatibility issues.
+00:19:49 [W] Okay last last let me give a quick summary about this project.
+00:20:00 [W] So what your cluster is a Mardi tendency working group project in the past 99% of the kubernative conformance test the failed one another supported. For example, there is a one field test case as for changing the super master
+00:20:11 [W] Supporting what your cluster which across has complete unit has an engine test cases which covered More than 70% of the code.
+00:20:24 [W] It is suppose both the cloud and on-premise kubenetes clusters.
+00:20:30 [W] The solution has been used in re cloud service product and it gains more and more interest from the community as well.
+00:20:35 [W] well. So feel free to give a try and let us know your thoughts in the comments and the requirements and we appreciate your help.
+00:20:42 [W] Okay next.
+00:20:46 [W] I'm give a quick a short demo for virtual cluster.
+00:20:48 [W] I'm awful. What's your costume?
+00:21:42 [W] Hello, everyone.
+00:23:10 [W] Hello, everyone.
+00:23:16 [W] Yeah, so I think there are some I hope you guys can hear me.
+00:23:27 [W] It seems like there are some technical issue. The demo video is not showing up in the screen, but I think I upload my host lies in the
+00:23:35 [W] Thank you.
+00:24:30 [W] You will now be placed into conference.
+00:24:31 [W] since forted
+00:24:33 [W] mayadata
+00:24:38 [W] Thank you.
+00:24:42 [W] You will now be placed into conference reported.
+00:24:42 [W] Oh.
+00:24:56 [W] Is the phone Bridge not coming in?
+00:25:34 [W] Okay. Sorry.
+00:25:50 [W] I think that was some type of a difficulty to play with the demo video.
+00:25:52 [W] Let me see how kind I think I need to work with the team to make sure that the record the record the session has a video shows up. Another thing is I think in the
+00:26:06 [W] Back directly and the video is embedded in the slide deck.
+00:26:20 [W] So if you guys have time you can just try to create don't call you if I downloaded the PBT.
+00:26:23 [W] Let me see if I can do that after session.
+00:26:25 [W] But by now I can try to answer some of the questions that some guys already asked.
+00:26:32 [W] I think Mark Mark just Mark colored.
+00:26:46 [W] Just ask question. How do you manage it and never awoke isolation to actually prevent our wanted to traffic.
+00:26:49 [W] I think that's a great question for our order in the module Tennessee area, but as I mentioned it slide, so this rice doesn't cover the the country. Mayadata Players Association. Of course, the network solution is in part. I think
+00:27:01 [W] they combine both the control preservation and their preservation and I do believe there are a lot of ways you try to prevent The Unwanted traffic in a monetization model, but I didn't include it as a general practice
+00:27:17 [W] I want the traffic in a monetization model but I didn't include it as a general practice best practice because the network setup the all the different vendors are so different for instance in some wonders call vendors using a PC
+00:27:26 [W] Funds for you.
+00:27:27 [W] Thanks in some wonders called Windows using EPC to do know another isolation for individual part.
+00:27:29 [W] So, you know scenario even the community service.
+00:27:37 [W] So Upstream community service may not work because the could be foxy help you, you know access the nodes in a network stack.
+00:27:43 [W] Basically, I want to make a thing is the latest thing for there were a few things that we can give you first. We see if we use the VC model one way that
+00:27:51 [W] we have tried internally the we kind of changed the could be property to inject two rows into the each no part directly instead of importance with directly instead of the host.
+00:28:06 [W] Never namespace. That's one way you can do I do if you don't use the BBC Network and something that we can do is we can use the Upstream in our Network policy to let PR a CSA
+00:28:19 [W] You would do the Network's isolation between the namespaces the nice thing of what your customer is.
+00:28:34 [W] The order tellin em spaces are synchronized to Super muscular. So exactly that is one who were mapping between the 10 and then space and a super mess the namespace. So one way that I see some of the VC user has try days they can come up with their own
+00:28:40 [W] Clears throat policies into the 10 in the master and the super master gotta think the policy and the senior party in can order Rose policy then to to provide Network relation between them spaces as
+00:28:57 [W] Bags does I hope I've read some of your constant. But if you did have more conscious let's chat later inflectional about the network solution.
+00:29:12 [W] There is a one question from with a catchy who asked is what your costs are using production by any any users So currently we have a virtual class has been Unity some internal product, but
+00:29:25 [W] The opposed to end the use of yet. So in our model is the service product so there is a small, you know, popularity encapsulated a virtual cluster.
+00:29:39 [W] So the the end user doesn't it directly access to the virtual cluster, but I don't think there is a technical difficulties to use pose the virtuosity and the user because any Theory many of the existence of this
+00:29:50 [W] There is a technical difficulties to use pose the virtuosity and the user because the any Theory many of the existence of this product Kuma themselves with dance does all the same thing each tenant has its own tenant
+00:29:56 [W] It's about that double on the same thing. Each tenant has its own tenant the virtual card telling the master and that's the Innovative can provide only additional counselors that I can think of is.
+00:30:06 [W] Ditional concept that I can think of is the Privileges that are you hovering new thing about what are the rights, you know, so it's a count kind of what are the Rights Commission that these Chinese or can operate on the
+00:30:18 [W] For not exactly the security perspective most likely is for the stability perspective.
+00:30:27 [W] You don't want elements you to nope, usually two to make some mistakes and break down this way to Custer.
+00:30:33 [W] The tuning wise I see some challenges on the tooling. So I usually as far as I can see now the biggest challenge is the DNS the we have to increment a model we have
+00:30:48 [W] And if you look at our GitHub page, I think how do you restore the tenant and EAS?
+00:31:04 [W] They're probably just has a one-line change to the Upstream Cordelia to order to incorporate the cooperate with this model for the to make sure the tenant DNS works, but that we provide a
+00:31:11 [W] It is very straightforward and then you can either answer and what I'm trying to do in there in the to allow that the DNS work.
+00:31:23 [W] Oh, okay.
+00:31:38 [W] I got the latest question is the question is from away.
+00:31:48 [W] The question is I cannot link the Mahdi tendency to project if you serve this concept, so, okay. So do you have any sauce on it?
+00:31:57 [W] So let me explain a little bit. So in my opinion the serverless in a service contract subject of cover of the whole problem.
+00:32:01 [W] The idea is we will have a node which is shared by multiple tenants.
+00:32:08 [W] So just depending the users.
+00:32:09 [W] Doesn't have the the ownership over the node resource.
+00:32:19 [W] They only have ownership to the pottery source. So that's the whole idea of having this. You know, what you'll cross the object. Basically, we allow the, you know, Stephen Master, which is we treat which actually measure the node resource, but
+00:32:29 [W] The results can be provided by many many tenants.
+00:32:35 [W] So in all the models, so you all the Mahdi cross the models each tenant of your have a dedicated customer, but Rose steadily customers also connect to dedicate to of notes.
+00:32:46 [W] So Rose. No tell me used by one of the tenants in order to provide a strong correlation.
+00:32:59 [W] problem is the you know, degeneration cannot be optimized because if the tenant doesn't use or roast known resource than those we have become just idle the
+00:33:02 [W] the the whole purpose of this servicemeshcon always try to improve the node utilization make sure you know, the the heart of a resource can be used to buy many tenants without any interference or any, you know
+00:33:15 [W] Between those tenants, so that's why we stopped you stop this project.
+00:33:28 [W] And if you look at our model is the know that we do expose our like virtual kubelet.
+00:33:36 [W] So the node is company the abstracted we try to know maximize the know the node cemented in the kubernative.
+00:33:40 [W] So that's why in our virtual cluster. We have a virtual object which actually maps to the real note so you can see the
+00:33:45 [W] Everything that you probably about a load capacity no name, what are the parts of money the load so those information available?
+00:34:01 [W] So from the tenants perspective, but but the users just can cannot say that I'm dominating know that nobody else can use it at this moment know that it's just a part of the research provider.
+00:34:09 [W] There's no ownership for the note. So notice ownership is belongs to Siva master. So that's so
+00:34:17 [W] That's mighty you to know matching this project that you are so blessed come concept I hope I address your content so if you do have more questions about this so we can check later in the channel
+00:34:29 [W] Let me see.
+00:34:34 [W] Okay, that's all the questions I have got so far.
+00:35:04 [W] if I miss anything.
+00:35:04 [W] Yeah, I do apologize that the the demo video is not shown up.
+00:35:21 [W] Yeah, we have some powers of while I do the video video recording.
+00:35:23 [W] I hope we can resolve it later. And especially if you have a replay in the YouTube somewhere that demo will show up.
+00:35:36 [W] Also I try to you know, see if I can upload the PowerPoint directly in the project page. All right, it's almost time.
+00:35:42 [W] Thanks, a lot of to join this session and I am going to be online on the select Channel.
+00:35:51 [W] Upload the PowerPoint directly in the project page.
+00:36:16 [W] All right.
+00:36:16 [W] It's almost time.
+00:36:16 [W] Thanks a lot of to join this session and I am going to be online on the select Channel.

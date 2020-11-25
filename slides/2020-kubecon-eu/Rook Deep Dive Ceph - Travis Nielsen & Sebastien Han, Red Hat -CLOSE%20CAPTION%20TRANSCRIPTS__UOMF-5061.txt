@@ -1,0 +1,283 @@
+﻿Rook Deep Dive: Ceph: UOMF-5061 - events@cncf.io - Thursday, August 20, 2020 11:50 AM - 163 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:08:11 [W] Alright hello and welcome to TU con.
+00:14:42 [W] We're happy to be here with you today to talk about rook and except in the Deep time.
+00:14:43 [W] I'm Travis Nielsen from Red Hat one of the maintainers focusing on the ceph operator here with Sebastian.
+00:14:48 [W] Hi, everyone.
+00:14:52 [W] happy to be here as well in this virtual event.
+00:14:53 [W] I'm Sebastian.
+00:14:55 [W] I work with Travis we both had red hat and I'm one of the Rook maintainers as well and I'm focusing mainly on the step integration the step back and provider.
+00:15:05 [W] Yeah, let's see if we can get this virtual event figure it out and I'm going to turn off our videos so we can focus on the slides so next slide here.
+00:15:18 [W] Alright, so you've heard a bit from Jared and Alexander in The Rook introduction talk a couple of days ago.
+00:15:27 [W] Hopefully if you didn't have a chance to go check that out.
+00:15:29 [W] I definitely recommend it.
+00:15:36 [W] We know what's happening in Rook just to recap what they might have already said, so the we've been a cncf think you'll be competing projects since September of 2018
+00:15:44 [W] I'm Travis Nielsen from Red Hat and one of the maintainers focusing on the ceph operator here with Sebastian.
+00:15:46 [W] Hi, everyone happy to be here as well in this virtual event.
+00:15:46 [W] I'm Sebastian.
+00:15:46 [W] I work with Travis we both had red hat and I'm one of the Rook maintainers as well and I'm focusing mainly on the step integration the setback in provider.
+00:15:48 [W] Yeah. So, let's see if we can get this virtual event figure it out and I'm going to turn off our videos so we can focus on the slides so next slide here.
+00:15:50 [W] Alright, so you've heard a bit from Jared and Alexander in The Rook introduction talk a couple of days ago.
+00:15:54 [W] Hopefully if you didn't have a chance to go check that out.
+00:15:54 [W] I definitely recommend it.
+00:15:55 [W] We know what's happening in Rook just to recap what they might have already said, so the we've been a cncf think you'll be competing projects since September of 2018
+00:15:55 [W] Going through the the final phases of graduation.
+00:15:56 [W] The Voting is in progress as of recording today, and we're really hoping fingers crossed that the Voting is all completed and we can announce graduation at cannot now we hope for your vote there as well.
+00:16:02 [W] It's just been a great journey and I'm looking forward to do that being done.
+00:16:08 [W] Our latest release is version 1.4.
+00:16:14 [W] So check it out.
+00:16:15 [W] Try it out.
+00:16:16 [W] We'd love your feedback.
+00:16:18 [W] We always value the feedback and the community to make the product better and better.
+00:16:22 [W] So again, what is Rook so to start off Rook is an open source project Apache 2 license and it is a collection of storage operators for kubernative for multiple storage providers
+00:16:38 [W] And Cassandra NFS and a few others. But today we're going to focus on the self operator for this deep dive. So Rook fundamentally its job is to automate the management of ceph.
+00:16:55 [W] Seth as a software-defined storage system is now it's complex and it led needs to be deployed configured when it's time to upgrade.
+00:17:10 [W] There are tasks that we just want to make sure work smoothly that work well and do it in a way that works in an absolutely integrated way with kubernative.
+00:17:21 [W] There's no reason for doing things outside kubernative when you can do it all inside your same kubernative coredns.
+00:17:25 [W] Esther you need storage come to rook and ceph to get that that storage.
+00:17:32 [W] So next.
+00:17:36 [W] what is f many of you? I'm sure have heard of it, but it is also a separate open source project and it is the distributed software to find solution storage solution provides.
+00:17:50 [W] Block shared file system and object storage. So think of block storage as what we typically think of as you need read/write once volumes are wo volumes and communities.
+00:18:05 [W] Walk volume typically a shared file system.
+00:18:10 [W] You need multiple clients to share the same volume rwx typically used for that and then object storage if you need an S 3 m point set up also can provide
+00:18:23 [W] And then object storage if you need an S3 and point Seth also can provide that layer of the storage.
+00:18:25 [W] That's F in a nutshell.
+00:18:32 [W] So what does this look like?
+00:18:33 [W] We've got a few diagrams here before we get the diagrams.
+00:18:37 [W] Actually, we talked about three layers of the system that are just as important and helpful to understand the difference.
+00:18:46 [W] So Rook the operator has an operator Force F. And it owns the management of stuff. That means it deploys Seth it manages everything about kubernative integration.
+00:18:56 [W] with Seth
+00:18:58 [W] Okay, that's the first layer second layer is CSI.
+00:19:08 [W] So CSI allows you to dynamically provision and attach your your client pods or applications to the storage layer now CSI is the the interface for
+00:19:18 [W] kubernative integration with Seth
+00:19:19 [W] Okay, that's the first layer second layer is CSI.
+00:19:19 [W] So CSI allows you to dynamically provision and attach your your client pods or applications to the storage layer now CSI is the the interface for
+00:19:20 [W] Any any storage volume for in kubenetes and other platforms, but there's a CFCs. I driver that then provides that in Road and to the right of self storage and then finally the third layer
+00:19:34 [W] The data layer with Seth.
+00:19:38 [W] I mean it's f as already mentioned absolutely provides that data connection rook and no way is involved in the data path. Once all of this is set up and running and so let's take a look now at these diagrams
+00:19:52 [W] Is set up and running and so let's take a look now at these diagrams of what what it looks like from Rook perspective. So layer 1, what does Rook like look like see if I can plant with my mouse here. So The
+00:20:01 [W] The Rook operator is is the core the core component in the system of managing Seft. The operator is the brains that decides how to deploy SEF,
+00:20:16 [W] Or is they are called all the kubernative apis and works to make sure Seth is just working seamlessly.
+00:20:26 [W] So a comment about the color coding here, the blue pods are considered as Rook coredns Rook pods.
+00:20:38 [W] Like we've got Discovery demons that are running on those to discover.
+00:20:39 [W] What devices are available but most things are not actually core root bud.
+00:20:50 [W] These green pods then are layered to with these CSI plug-in CSI driver for Steph.
+00:20:52 [W] And then the red pods are going to be all of the ceph Demons.
+00:21:03 [W] So Seth has a number of different demons that the have their responsibilities to provide the storage and you've got the mons that are the brains Force F got the osds that actually manage the individual data devices where
+00:21:13 [W] Just it's bound on on an actual node.
+00:21:23 [W] And anyway, we don't have time to go into all what all these demons are, but just know that it's a rook is deploying these pods and services and other kubernative resources to manage SEF and
+00:21:33 [W] It's I drive okay.
+00:21:36 [W] So level Layer Two and Layer Two.
+00:21:42 [W] We've got the CSI driver. So we're at the point. Now where if player one is deployed. We're assuming okay Seth is ready to go. It's ready to be consumed.
+00:21:50 [W] Now, let's figure out how to consume it.
+00:21:56 [W] So you create your app and you define a storage class.
+00:22:02 [W] So here let's start on the left we so you define a volume claim a PVC where you want to claim that storage.
+00:22:10 [W] That request that from the our bodies storage class are beti. Is this F block layer?
+00:22:21 [W] So you define the storage class and then the ceph CSI driver for RBD Provisions that that volume and returns it back to the application Padma ounce it in that
+00:22:34 [W] Sorry, buddy. Is this F block layer?
+00:22:35 [W] So you define the storage class and then the ceph CSI driver for RBD Provisions that that volume and returns it back to the application Padma
+00:22:36 [W] Okay, and the same basic pattern happens for the shared file system.
+00:22:41 [W] I mean, you've got the PVC that request the storage from this ffs storage class. Now sufferfest is the shared file system. And then the CSI director Force F of s is the one that
+00:22:54 [W] And then the CSI director Force FS is the one that Provisions the volume and again mounted for the application Bible.
+00:22:58 [W] and the third type of storage we've got here is object with the S3 or rest endpoint and we've got in Rook a bucket claim a concept very similar to PVC but it's for
+00:23:14 [W] Type of storage we've got here is object with the S3 or rest endpoint and we've got in Rook a bucket claim a concept very similar to PVC but it's for object storage.
+00:23:17 [W] Kit from a special kind of object storage class which we Define and then the bucket provisioner creates the bucket and returns it to the application.
+00:23:29 [W] Okay.
+00:23:34 [W] So now that we've deployed rook and layer one.
+00:23:37 [W] We got the CSI driver attaching all the storage to your pods and layer 2 now. It comes time to actually write data to Seth player 3.
+00:23:47 [W] So when in this this picture the layer 1 to really out of the picture we're just talking about your application now needs to write data. So goes to the
+00:23:59 [W] Mount here for RBD.
+00:24:03 [W] There's an RPG kernel driver that knows how to go talk to all of these SEF demons, which are running near the Mondo is these and just abstract all of that for you and makes it work.
+00:24:17 [W] The and same Force F of s and object store or just storage you.
+00:24:25 [W] Yeah, the the client just talks to the volume or the S3.
+00:24:35 [W] I used S3 client like it would any other targeting S3 or targeting volume and underneath the covers set the best kernel driver handles the connection to SEF or the S3 client and
+00:24:43 [W] The RDW and point for that object storage. Okay.
+00:24:51 [W] Wow time is flying.
+00:24:54 [W] I wish we had even more time to dive in here.
+00:24:55 [W] So what does it take to get started with Rook?
+00:24:59 [W] We've made it as simple as possible and kubernative is and you also hopefully saw that demo in the intro talk on on it actually working, but there's basically three manifest or gamma files that you needed
+00:25:12 [W] So you start off with one that called commandant? Yeah mold at gives you your are back settings gives privileges to the operator basically, so you create the operator and then you define how you want Rook to deploy the Seth
+00:25:28 [W] The cluster llamo on the right here.
+00:25:38 [W] We've got a snippet that we don't really have time to talk about but basically we tell we tell this tells Rook how to deploy Seth in your cluster.
+00:25:46 [W] Once you've deployed Seth then again that layer one this picture kind of shows a layer 2 and 3 where you define the storage class. You create a PVC free application.
+00:25:54 [W] And then if your application might Define its pods spec something like this where the volume has a PVC that refers back to that volume.
+00:26:09 [W] It's been claimed and from there.
+00:26:13 [W] It's just like any application that has the local volume and can write and read from it.
+00:26:17 [W] So let's back up a second and say okay that seem too simple.
+00:26:23 [W] Well, yeah, you probably need to plan a little more ahead for how you want to deploy in your production servers, you know. Do you want to deploy in one bare metal?
+00:26:36 [W] Do you have your own data center or you deploying to the cloud?
+00:26:37 [W] Do you have local devices or do you have something else?
+00:26:44 [W] So whether you're in the on bare metal or in the cloud you need you can decide well do I want to provision storage that stuff uses provision that from our PV if I'm in the cloud like maybe I want to
+00:26:55 [W] You probably need to plan a little more ahead for how you want to deploy in your production servers, you know, do you want to deploy in one bare metal?
+00:26:57 [W] Do you have your own data center or you deploying to the cloud? Do you have local devices or do you have something else? So whether you're in the on bare metal or in the cloud you need you can decide well, do
+00:26:58 [W] To back Seth.
+00:26:59 [W] buy an e BS or Google volume, whatever storage provider or cloud provider man. I should be able to consume its storage and put stuff on top of it and we'll talk more about that in a minute that scenario
+00:27:13 [W] The consume its storage and put stuff on top of it and we'll talk more about that in a minute that scenario or if I'm in my data center and and I just have Rod devices.
+00:27:21 [W] Okay, maybe I want to use all our devices maybe I want list all the nodes and devices individually because I don't trust Rook or don't want Rook to use all devices, or maybe I want a lot more flexibility for these for A
+00:27:34 [W] For A New Concept called SEF Drive groups and Rook lets you configure those dried groups in our latest release.
+00:27:42 [W] And again when you're setting up your cluster topology your you got to think about your failure domains.
+00:27:57 [W] Where do you know if you have a node or a or a Zone holds on go down? You know, how can you keep your your cluster working?
+00:28:02 [W] You won't need to spread the different Rook components and subcomponents across those value domains because if one failure domain goes down if it's set up properly your storage keeps on working and it
+00:28:13 [W] That is designed for that resiliency.
+00:28:16 [W] And also, you know as you're doing that Rook is as flexible as possible within their means that kubernative provides so you can have no definity.
+00:28:34 [W] You've you're tainting your nose and you can add Toleration to rock.
+00:28:37 [W] You can pot any tea Etc.
+00:28:39 [W] whatever options for placement the kubenetes offers we do our best to expose that through
+00:28:46 [W] And one more and so back to this topic on cloud environment.
+00:28:54 [W] So why would you want to run rook and stuff in a cloud environment?
+00:28:59 [W] So you can have no definity, you know, you've you're tainting your nose and you can add Toleration to rock.
+00:29:06 [W] You can pot any eyefinity Etc.
+00:29:06 [W] Whatever options for placement the communities offers we do our best to expose that through book.
+00:29:07 [W] And one more and so back to this topic on cloud environment.
+00:29:08 [W] So why would you want to run rook and stuff in a cloud environment? You might ask because the cloud provider already has storage.
+00:29:09 [W] Well, there's a few important Concepts here. So first having a consistent storage platform wherever kubernative is deployed.
+00:29:13 [W] is a powerful concept Rook gives you that storage apps traction where you can run Rook everywhere kubernative runs.
+00:29:16 [W] store it our Cloud providers do have shortcomings that we hear about whether it's having storage across a Z's or slow failover times limitations of the number of peavey's per node and even
+00:29:32 [W] These runs store Cloud providers do have shortcomings that we hear about whether it's having storage across a Z's or slow failover times limitations of the number of TVs
+00:29:33 [W] The perfect example of large volumes not small volumes so you get that with Rook.
+00:29:39 [W] And then finally, you know, if you can run Seth Seth components so the moms and the osds are the two that are stateful and that story all the state first off.
+00:29:54 [W] You can run them on PVCs.
+00:29:57 [W] you don't need direct access to local devices. These can run request PVCs from the cloud environment.
+00:30:04 [W] All right, and now I'll hand the torch over to Sebastian to continue on some other key features and Rook take it away.
+00:30:14 [W] Yeah.
+00:30:14 [W] Thanks Travis.
+00:30:16 [W] So now that we are familiar with Rutgers what it does and also what's f is and what it can provides to us in terms of functionality. Then let's dive into some of the key features that route provides to you.
+00:30:29 [W] All right. So one of the beauty of Rook is that everything is automated and that's it's essentially it is really what the goal of every single operators is is
+00:30:45 [W] Oppression or knowledge and just just put it into a logical entity where it could really benefit of years of experience of managing upgrades and actually upgrades is probably
+00:31:01 [W] Managing upgrades and actually upgrades is probably always one of the most painful and difficult thing to achieve when it comes to software.
+00:31:11 [W] So fortunately Rook is here for you and Rook can handle that.
+00:31:16 [W] So there are two things right?
+00:31:19 [W] The first one is I'm getting Rook on its own and it's super easy. You just need to update the image Speck of your
+00:31:26 [W] Moment and then communities will go ahead and roll out a new version of your operator.
+00:31:36 [W] Obviously, once we we do a big step to a new version of Rook, for example, we just released 1.4.
+00:31:48 [W] So if you go from 1.3 to 1.4, then there are steps that you would have to apply so to using using the upgrade guide so that cri-o definitions can be updated.
+00:31:56 [W] as well as necessary our bags to have Rook keep on working and then probably the most interesting piece here is the ceph upgrade on its own where Luke rule really be handling everything
+00:32:12 [W] And it is really simple. The only thing you have to do here is just to update the step to stir custom resource and change its image by new one Rook supports pinpoints updates as well as
+00:32:27 [W] Force F and all of the intricacies and all the details that you have to all the things you would be doing manually per se all of these things would be would be handled by Rook Rook will go one
+00:32:43 [W] Demon, and make sure that they're all healthy before moving to the next one as part of its own reconciliation.
+00:32:52 [W] Sopia our grades are I would say finally made really simple and really easy to do and actually we just have really good feedback from the community.
+00:33:08 [W] It's really super straightforward to good rook and not painful at all.
+00:33:13 [W] all. So moving on now to the CSI driver obviously as Travis mentioned we can deploy Rook deploys ceph maintains it through its entire life cycle.
+00:33:22 [W] But there is no point of Simply deploying a storage technology.
+00:33:29 [W] Also, what you have to do is to use it so that you can provide persistent storage to your containers in this is where CSI particularly set C and side plays a big role as part of the latest version of Rook.
+00:33:41 [W] We also introduced in released at the same time 3.0 version of the CSI driver as we saw earlier, it still supports Dynamic provisioning for all the access methods are WRA.
+00:33:52 [W] Relax, and for both block devices as well as the system, but what's really new about this is read the snapshots including functionality.
+00:34:02 [W] There are actually better and ready to be consumed as some kind of tech preview. Let's say
+00:34:08 [W] Upgrade will be supported and you can continue on using it but obviously this is where the community is moving.
+00:34:23 [W] It is moving out of flex driver or CSI.
+00:34:29 [W] So it's really highly recommended to move the to CSI. But still we support Flex.
+00:34:33 [W] All right.
+00:34:40 [W] So X naught is the connection that was probably one of the most desired feature two or three releases ago. And essentially what we do here is that it is not always about Green Fields, right?
+00:34:49 [W] Not everybody has moved to fully kubernative environments yet and maybe some of you will never do because you already have a Brownfield environment and yourself Crysta is already there.
+00:35:01 [W] it's serving of the purposes. Maybe it's connected to openstack.
+00:35:03 [W] is connected to your proximus hypervisor, whatever it may be and what this excellent mode allows you to do is basically start this consumer producer relationship where the producer is
+00:35:18 [W] Is a go and essentially what we do here is that it is not always about Green Fields, right?
+00:35:19 [W] Not everybody has moved to fully kubernative environments yet and maybe some of you will never do because you already have a brown Phil environment and your step cluster is already there. Maybe it's serving of the purposes. Maybe it's connected to
+00:35:21 [W] Through and the consumer at this point is Rook.
+00:35:26 [W] So the major difference here is that look at this point won't be managing the resources. It will only consume them and the beauty of that is that it is really simple.
+00:35:37 [W] So the only thing you have to do is to inject a couple of details from your external cluster and and you're ready to go CSI would get those information and then you can go ahead and create your PVC start your pods and
+00:35:49 [W] you got your storage.
+00:35:51 [W] Object picket provisioning so AKA OBC we have already discussed that briefly in one of the diagrams that Travis showed you earlier, but essentially it is really similar to the
+00:36:06 [W] Is where this point you don't do block devices. You just do bucket as a user.
+00:36:16 [W] You don't want to really go into the say well the pain of having to create a bucket many having to create a user manually. The only thing you care about is give me a bucket give me credentials so that I can start playing with this F3 API
+00:36:29 [W] Connect my application to it and Rook basically provides you that that support.
+00:36:35 [W] All right, here it is the latest and greatest release of Rook super excited about all the things that everyone has been doing all the contributions. We received from from the community and here are some
+00:36:51 [W] first off we multitask
+00:36:58 [W] First we will introduce voltage during the one that three cycle and we actually marked it as experimental. The reason why we marked it as an experimental is because we have a we had half of the picture complete and
+00:37:14 [W] Acted as experimental is because we have we had half of the picture complete and what I mean by that is in 1/3. We were already able to consume motifs by.
+00:37:23 [W] Altice by basically bootstrapping the entire Rook cluster using dedicated network interfaces, but was what was not available yet is the connection through CSI what we would be added
+00:37:36 [W] For release is basically the ability to connect CSI.
+00:37:43 [W] Through voltar's so that application pods can consume the storage via a dedicated Network.
+00:37:57 [W] So if we step back a little bit like and motifs, why would you need to have noticed if you if you're using a burner environment and then you really want to take advantage of
+00:38:07 [W] So if we step back a little bit like and motifs, why would you need to have noticed if you if you're using a burner environment and then you really want to take advantage of
+00:38:09 [W] Interfaces that your that basically boat for for your hard work then this is where multis comes into play.
+00:38:21 [W] We don't really want to use the hosted working mode because it has some security implications since we expose the entire network stack from the host into containers, but
+00:38:31 [W] We can actually we can actually decide which IP which network interface we want to expose into a given containerd.
+00:38:45 [W] So we just get best of both words still we the way notice is supported is through the worry about Saipan.
+00:38:56 [W] It is really preferred and as the essentially the only one with Super 8 though, it's probably the one that
+00:39:02 [W] it works best at scale because there is no DHCP involved and and whereabouts does its own IP management internally.
+00:39:10 [W] So it is more than a year old and of really active development, so obviously we don't have the full picture yet and things are missing like supporting services.
+00:39:26 [W] We still cannot create services that are backed by multi-state works basically, but this is coming and what we have today is really consumable. So we're super excited about this. Okay
+00:39:39 [W] Replication. So this is a feature that's been around in Seth for its object get with for four years now and it's probably one of the most desired feature that Community has been asking for for the best here
+00:39:54 [W] Feature that really has been asking for the past year is the basically ability to do object through multi-site either you have geographically separated
+00:40:04 [W] separated data center between regions may be in the idea here is to replicate objects between Rook subclusters dhara that are distant distant to
+00:40:18 [W] There's dhara that are distant distant to to each other's with that.
+00:40:24 [W] We added new Concepts and there are coming straight from Seth like Realms Endzone groups and Zone which gives us they really give us a thin regularity on how to configure this geometric
+00:40:36 [W] So it is marked as experimental because we only have the controllers as well as the new custom resources and in 1 5 will be working to basically get all the pieces together to get a complete.
+00:40:52 [W] Spits in Mission Control in you cannot actually validate everything through the API validation from your label from your llamo definitions. Also, you don't necessarily want to
+00:41:08 [W] your
+00:41:10 [W] CR CR speculation through the controller so through the operator because essentially once you do that, it is a little bit too late to see the CRS been injected and now they have been has to go through the logs and see why
+00:41:25 [W] The be but what's really good about the admission control is that the admission control will effectively intercept the creation request on the custom resource, even before the operator be concise and knows about it.
+00:41:41 [W] Is really useful because straight from after the straight after the injection, you know, if something's wrong and badly configured.
+00:41:52 [W] So yeah it is.
+00:41:58 [W] it was also one of the most desired features. We have not enabled it yet. But we will do that soon the toolbox. The toolbox has been around for like since since Rook actually started.
+00:42:07 [W] There's a little deployments that allows us to get Hands-On access to the step environment.
+00:42:20 [W] You just bootstrap it like a normal part. And once you exact into it, you can run any of the staff comments just like you would be like just like you would do normally.
+00:42:29 [W] And in one for what we added is essentially is jobs. That would do specific actions such as day two operations again, we don't
+00:42:45 [W] Of Rook is to make storageos e easily consumable easily configurable and easily maintained and self-maintained as well through Rook.
+00:43:00 [W] So the idea here is to have no manual intervention and we have jobs that would do specific actions.
+00:43:11 [W] For example, if the disc is is dead, then we can simply remove it and for that we would have a specific job that would occur.
+00:43:15 [W] Take care all.
+00:43:16 [W] That would take care of that.
+00:43:19 [W] It will just remove the OSD remove all the keys in all the little details that you would have to do manually.
+00:43:25 [W] But again, this is fully automated and more more templates and more jobs will be coming as we move forward.
+00:43:35 [W] We improved our external mode as mentioned before this was really one of the best features that we delivered in 1/3 and we have been building on top of what we
+00:43:46 [W] So it's even more stable even more robust right now.
+00:43:57 [W] We added the support for Gathering external metrics from the external cluster through the staff manager Prometheus to six Porter.
+00:44:03 [W] So if you have an external Second Story, and if you have your kubenetes environment with Rook, then you can connect both and then you can basically have metrics coming from your external cluster information use and then you can generate generate alerts
+00:44:13 [W] So it's basically getting the best out of Prometheus onto an external environment, which is which is kind of cool.
+00:44:28 [W] Also we extended the external support to the staff Object Store. So now you can actually connect to external gateways and they will be integrated in the exact exact same fashion as when you do the converges to mode so
+00:44:37 [W] Pass the Gateway IP addresses and they will be integrated as a kubernative service.
+00:44:45 [W] That is also a very nice feature.
+00:44:47 [W] And much more. Unfortunately, we don't have much time to discuss into many details all the good things all the good contributions. We received in that wonderful one for cycle, but some of the few last items
+00:45:03 [W] Tells all the good things all the good contributions we received in that wonderful one for cycle, but some of the few last items worth mentioning encryption for always dealing PVC.
+00:45:08 [W] So essentially just doing encryption at rest on the on the drive health checks and loudness probe configuration Rook as some internal health checks, like checking the months or in Coram checking the status of the
+00:45:22 [W] Eggs, like checking the months or in Coram checking the status of the cluster checking the OSD status. And these are now can be more thinly grained configured as well as the Latins probe for each individual demons
+00:45:33 [W] This probe for each individual demons. Also nonetheless them all the Rook CR these have been converted to use the controller until memory.
+00:45:41 [W] So we are really moving with the community were by using the same framework the same Primitives as the as all the other operators out there.
+00:45:54 [W] Just a cleanup was already available in 1/3, but we added a nice announcement as part of the cleanup for the drives now downloading you can clean up the drive, but you can also apply specific and actually
+00:46:10 [W] Sanitizing functionality for your drives. Also just like Travis mentioned earlier we did there is a new set of Drive groups tender to Define OSD drives, and this has been
+00:46:26 [W] to the separatist OCR
+00:46:29 [W] and I guess with that this really concludes our presentation.
+00:46:37 [W] It was a really interesting experience.
+00:46:40 [W] But first I guess so, hopefully you will enjoy that.
+00:46:46 [W] Don't forget to reach out to us.
+00:46:52 [W] Go on Rook that I owe you will see all the materials all the doc how to get started where to find us go and get up as well and I will be really happy to hear from you.
+00:46:58 [W] Yeah, thanks Sebastian.
+00:47:03 [W] It's been great to be with you today. And we definitely look forward to all your questions or contributions.
+00:47:06 [W] find us on slack and GitHub and all that and hopefully we'll talk to you soon.
+00:47:10 [W] Thanks, everyone.
+00:47:12 [W] All right.
+00:47:13 [W] Thanks.
+00:47:14 [W] Stay safe.
+00:47:14 [W] Take care.
+00:47:15 [W] Bye bye.
+00:47:16 [W] Alright, hello, everyone good to be with you.
+00:47:22 [W] Hello.
+00:47:24 [W] So we just have a couple minutes left for questions.
+00:47:30 [W] So hopefully we've answered all your questions and chat there, but couple we wanted to discuss here real quick.
+00:47:33 [W] Well, the first one was are there or one of the best practices for we're deploying Road and it's an interesting question. I'd say my answer is that everything we do in Rook is to deploy SEF with the best practices
+00:47:45 [W] So you don't have to worry about deploying set up in an incorrect way and really everything in Rook is about customizing that storage so you can deploy for your environment. Every environment is so different.
+00:48:00 [W] You've got the are you defining the cloud? Are you two playing on bare metal? Do you have Rob discs or do you want to provision the storage under Seth? Dynamically, like depending on your cloud provider
+00:48:14 [W] As for for deployment that you need to deploy it according to what how your kubernative cluster is your architecture.
+00:48:29 [W] So it's really up to you to change those settings according to your needs and and Rook we just do our best to implement those best practices for you Sebastian anything to add to that.
+00:48:42 [W] Yeah, I guess planning planning ahead is also really important.
+00:48:45 [W] aunt once you build our infrastructure once you buy the hardware as well have to decide whether you go with dedicated nodes or if you go full hyper-converged and this will also really determine how performant the crystal will be and but but again
+00:48:59 [W] Most of that for you, too.
+00:49:07 [W] I think one of the other questions we have we got two questions really similar and it's it's I'm really glad to see that because it seems that we kind of manage to bring with the bring interest.
+00:49:17 [W] So the question was can I migrate existing workloads from an existence that Cristo onto a rook Lobster or do we provide any tool to migrate data?
+00:49:29 [W] So at this point is something we have been really evaluating its
+00:49:30 [W] it's in the pipeline.
+00:49:33 [W] It will it will come it's not for right now, but I guess the intermediate step at this point is if you have an existing step closer that lives outside, then what we really recommend at this point is to use the external mode functionality so you can just
+00:49:47 [W] Cluster and get the best out of the experience that kubernative provides.
+00:49:52 [W] Sounds good.
+00:49:59 [W] Yeah, I don't think so.
+00:50:02 [W] Come to The Rook slack.
+00:50:05 [W] We're happy to answer questions there after the conference is over.
+00:50:09 [W] That's where we live most of the time and we'll see you there.
+00:50:12 [W] 31
+00:50:15 [W] bye. Bye. Bye.

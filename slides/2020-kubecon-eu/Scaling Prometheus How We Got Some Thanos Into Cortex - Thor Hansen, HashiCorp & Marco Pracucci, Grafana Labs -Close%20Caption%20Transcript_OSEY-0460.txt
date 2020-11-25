@@ -1,0 +1,261 @@
+﻿Scaling Prometheus: How We Got Some Thanos Into Cortex: OSEY-0460 - events@cncf.io - Tuesday, August 18, 2020 11:35 AM - 62 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:01:14 [W] This tall guy. We're going to show cortex and specifically a new storage engine. We have built into cortex leveraging containers before that.
+00:10:22 [W] Let me do a quick introduction about cortex cortex is a distributed time series data base built on top of Prometheus cortex is horizontally scalable and highly available and offer a durable long-term
+00:10:35 [W] time series data cortex supports a multi-tenancy and the typical use case is to have a global view across multiple Prometheus servers over the years cortex
+00:10:51 [W] See and the typical use case is to have a global view across multiple Prometheus servers over the years cortex also spent a lot of effort in order to
+00:10:55 [W] I spent a lot of effort in order to optimize the red path and today cortex hovers.
+00:11:00 [W] very good. Query performance has cortex is a cncf Sandberg project and we are currently in the process of moving to incubation.
+00:11:11 [W] The typical use case of Cortex is that you have multiple Prometheus servers usually in configured in haproxy and you configure Prometheus to remote right to a central
+00:11:27 [W] We're all your time series are written and then you configure Griffin and or the quilling tool of your choice to query back.
+00:11:39 [W] There's metrics from cortex cortex internally vendor Prometheus and we use the same exact Prometheus prom ql engine.
+00:11:50 [W] This guarantees hundred percent compatibility on your queries.
+00:11:53 [W] If you look at the microservices architecture of Cortex cortex is composed by different Services interacting together different Services, which you can independently Horizonte scale
+00:12:10 [W] On the right path sir.
+00:12:17 [W] You have a Prometheus configured to remote right to the distributor and the distributor is the Ingress for the right path and this responsible to chard and replicate your series across a pool of investors
+00:12:28 [W] Keep the received serious samples in memory and periodically flash there's the series to the long-term storage under the foot. The long-term storage is actually composed by two different data stores
+00:12:44 [W] And an indexed or the double check store is like GCS or S3 is used to store chunks of compressed time stem value pairs, which we call chunks and the
+00:13:01 [W] Dynamo DB or Cassandra is used to store an inverted index which we use to look up the chunks by the label the query label measures and the query time time range.
+00:13:17 [W] The red path said you configured we're fine am or your quilling tool to send the query request to the critic front end, which is the Ingress for the red path in a cortex cluster the query
+00:13:32 [W] The main purpose of the krita front end is to have fur result caching and also employs some optimization techniques, which we will see in details later on which allows
+00:13:48 [W] Query execution across multiple quieren nodes. So the query or is splitted query that can be splitted by the critic front end is actually executed by a pool of queers, which will fetch the most recent
+00:14:05 [W] That can be exploited by the critic front end is actually executed by a pool of queers, which will fetch the most recent samples from the investors and all their data from the long-term storage and then we'll run the prompt to L engine on top of this
+00:14:13 [W] Chester's and all their data from the long-term storage and then we'll run the prompt ql engine on top of this. Now this slide shows you the microservices architecture, but you're not
+00:14:20 [W] To deploy cortex in microservices architecture because cortex actually support a second operational mode, which is the single binary mode and it's the easiest way to deploy a cortex cluster today.
+00:14:36 [W] So when you deploy cortex in single binary mode cortex is running as a single binary with a single configuration. If you deploy inside kubenetes, it will just be a single deployment
+00:14:49 [W] What we actually do is that internally within one single cortex process.
+00:14:59 [W] We run all the microservices all the cortex microservices.
+00:15:04 [W] So the microservices are hidden to you when you deploy cortex in single binary mode, but you can still only fantasy scale cortex running multiple replicas of the single binary and all the cortex
+00:15:14 [W] Like a horizontal scalability and high availability or career performances are preserved in single binary mode as well.
+00:15:23 [W] This architecture over the time proved to work in scale very well. We have seen cortex clusters ranging from few tens 200 million active series and
+00:15:41 [W] Cortex clusters ranging from few tens 200 million active series and in the typical use case we see the 99.5% of queer latency be below
+00:15:48 [W] We see the 99.5% Aquila latency below 2.5 second.
+00:15:50 [W] However, for many users requiring both an object store and an indexed or introduce extra operational complexity and if you run in the cloud like big table or dynamodb also extra costs to run
+00:16:06 [W] So almost a year ago.
+00:16:10 [W] We started brainstorming on the idea to remove the indexed OR at all.
+00:16:15 [W] the idea was well, are we able to remove the indexed or dependency at all and store all the data only in the object store?
+00:16:24 [W] And that's how the cortex blocks storage started and specifically the cortex block storage is in altinity of storage engine currently in the experimental phase.
+00:16:40 [W] So you can deploy cortex with the chunk storage architecture.
+00:16:48 [W] I just showed to you or you can deploy cortex using the new and experimental block storage in this talk.
+00:16:59 [W] We are going to cover how the block storage work hundred foot.
+00:17:00 [W] Hello everyone.
+00:17:01 [W] My name is Marco.
+00:17:03 [W] I'm a software engineer at Griffon mlops.
+00:17:06 [W] I'ma cortex maintainer and I recently joined time no spontaneous as well.
+00:17:10 [W] Hi, I'm dr. Hanson.
+00:17:13 [W] I'm a software engineer at hashicorp.
+00:17:19 [W] I got involved with cortex in my previous role where we serve metrics and alerts for many customers.
+00:17:23 [W] We were a small team and needed the scalability of Cortex as well as the multi-tenancy but didn't want to have to manage a separate index store, which is where this all started for me.
+00:17:30 [W] The main idea behind the block storage solution is to open up a Prometheus TST be pertinent her and gesture and upload these blocks to long-term storage at EST block. Both contains the chunks of compressed data points and importantly also
+00:17:48 [W] And the entire block can easily be stored in an object store basically removing the need to run a dedicated index store.
+00:17:56 [W] But isn't this with Thanos was already doing so instead of trying to reinvent the wheel.
+00:18:08 [W] We can leverage the lessons learned from Thanos and grow on that.
+00:18:10 [W] So I built the initial version of this idea.
+00:18:19 [W] It would open a TSD be for each tenant on every in gesture to store incoming rights.
+00:18:25 [W] These TSD bees would periodically write a block to the in Jesters local disk under a tenant prefix directory in gesture started a Thanos shipper pertinent to scan each of these TSD bees directories and upload.
+00:18:34 [W] Newly written blocks to long-term storage in Jesters would now serve queries straight from the local TSD be ingested. TSU bees had a given retention period or blocks that had been shipped to storage but
+00:18:46 [W] Seated the retention period were deleted from local storage.
+00:18:47 [W] It also modified the queer to use Thanos queer which would download and cash the index and blocks found the long-term storage for each tenant prefix. We're could then server costs by either using the cache blocks or downloading blocks on demand from block storage.
+00:19:01 [W] Introduced two new cortex Services the compactor and store Gateway.
+00:19:25 [W] We added three layers of caching index chunks and metadata.
+00:19:34 [W] We implemented most of the existing cortex features like rate limits and operational tooling and we've made many optimizations and Bug fixes today. The cortex block storage is still marked experimental, but I can funnel Labs.
+00:19:42 [W] They're already running it at scale and a few of their clusters and we expect to mark this feature a stable suit.
+00:19:49 [W] So let me show you the current state the cortex architecture doesn't change much between the original trunk storage which will still continue to support and the new block storage right still are distributed and replicated to adjusters and then upload it to object storage
+00:20:03 [W] Let me show you the current state.
+00:20:04 [W] The parts architecture doesn't change much between the original trunk storage which will still continue to support and the new block storage right still are distributed and replicated to adjusters and then upload it to object storage read still go through the queers which read
+00:20:05 [W] Years, which read from the investors to get recent metrics.
+00:20:11 [W] The bigger changes come with two additions to querying from long-term storage. We added the store Gateway and the compactor.
+00:20:13 [W] Stargate way is responsible for the discovery of newly uploaded blocks.
+00:20:24 [W] It will scan for newly uploaded blacks and download the index h block in cash them locally with these stored indices it acts as a queryable interface from long-term storage and can fetch query blocks on demand.
+00:20:32 [W] The compactor is responsible for reducing the number of blocks and long-term storage by combining and deduplicating blocks.
+00:20:44 [W] It will periodically scan attendance prefix and object storage to locate blocks that are eligible for compaction using the Thanos file name format to determine overlap.
+00:20:52 [W] It will download the compaction candidate blocks and create a new larger block out of the data will then upload that new block and mark the compacted blocks for deletion the compactor and store Gateway Leverage The
+00:21:03 [W] Charting ring code that cortex and gestures used to distribute tenants. So as their scale increases the number of tenants, they need to perform work on decreases.
+00:21:15 [W] However, at this time there's still no way to scale compaction for a single tenant. All of these new courts are new to Cortex, but are actually borrowed from Thanos.
+00:21:25 [W] They've been updated to support multi-tenancy and sharding for horizontal scalability.
+00:21:25 [W] Factor is based on Thanos compactor.
+00:21:39 [W] So here's a closer look at the right path a given metric is replicated to multiple and gestures for each user.
+00:21:52 [W] So you can see here the same metric is written through three separate blocks in three separate in gestures.
+00:21:55 [W] blocks are written to him and gestures local storage every two hours and a long-running cloth process called the shipper will discover newly written blocks and upload them to long-term storage.
+00:22:04 [W] This poses an interesting scaling problem in regards to how many blocks are created.
+00:22:16 [W] The number of blocks grows quickly with the number of tenants a cluster has with a thousand tenants and a small scale of 50 in Jesters will be creating 600,000 blocks a day which equates to 200 million blocks a year.
+00:22:22 [W] Since replicate data and investors typically recommended to be 3x. The issue is restoring a large number of identical metrics in storage when you really only need to be storing a single copy of each data point in storage.
+00:22:35 [W] The solution is the compactor that was mentioned earlier.
+00:22:42 [W] which performs both horizontal compaction which creates fewer larger blocks over a greater time period than just the two hours that was uploaded as well as vertical compaction which D duplicates the overlapping blocks from the in just a replication.
+00:22:54 [W] Recommended to be 3x the issue is restoring a large number of identical metrics in storage when it really only need to be storing a single copy of each data point in storage.
+00:23:07 [W] The solution is the compactor that was mentioned earlier.
+00:23:07 [W] which performs both horizontal compaction which creates fewer larger blocks over a greater time period than just the two hours that was uploaded as well as vertical compaction which D duplicates the overlapping blocks from the adjuster replication.
+00:23:11 [W] This results in one block per day per tenant when we originally had 12 times the number of investors for tenant and importantly the compactor can horizontally scale to support a large number of tenants.
+00:23:14 [W] Now the previous solution reduces the footprint after compaction in the object storage, but we are still shipping one block her and gesture her tenant every two hours as well as opening a TSD be on every in gesture for every tenant, which meant the memory footprint did not scale the number of
+00:23:25 [W] number of tenants
+00:23:26 [W] now the previous solution reduces the footprint after compaction in the object storage, but we are still shipping one block her and gesture her tenant every two hours as well as opening a TS T be on every in gesture for every tenant which meant the memory footprint did not scale the
+00:23:28 [W] Lucien was Shuffle sharding or for any given tenant that users blocks would only end up on a subset of in Jesters.
+00:23:40 [W] So for example tenants maybe sharded to foreign gestures.
+00:23:49 [W] So for every user only four blocks per tenant, her two hours are uploaded to object storage and each tenant uses a static amount of memory overhead for the Tas TBS.
+00:23:55 [W] This also has the benefit that the compactor no longer needs to perform as much water compact Ewoks as we've reduced the number of blocks that are uploaded.
+00:24:02 [W] Here's an example of right performance courtesy of Pravana labs in the environment.
+00:24:04 [W] They're running we can see there's still a very low 90th percentile Layton sees with two and a half million samples per second ingested.
+00:24:11 [W] So we have seen that we can efficiently in just a large amount of samples per second with a pretty low latency.
+00:24:26 [W] But the real question here is how do we create a back this data one in one of our clusters?
+00:24:31 [W] running at graph our Labs. We have a tenant with 30 million active series running on the Block storage, which means that we store about the 200 gigabyte of block.
+00:24:43 [W] Per day after compaction. If you project this to one year retention in it means that we need to be ready to query back this data about across storage of about 70 terabytes.
+00:24:57 [W] Send how the ridpath work for the block storage we have to do a little step back and focusing on the query front end, which is the Ingress on the right path now as previously mentioned the query from 10
+00:25:14 [W] Now as previously mentioned the query from 10 provide two main features query execution parallelization and result caching. The basic form of the query execution parallelization is
+00:25:25 [W] Like is pasted on time splitting when the Critter front-end receive a query spanning over a large time range a Time range, which cover more than one day the creative front-end split this.
+00:25:40 [W] Into multiple queries each one covering one single day aligning the timestamp of the splitted query to midnight UTC.
+00:25:57 [W] So if we have received a query spanning over the last three days this query will be actually executed will be actually split it into three different queries.
+00:26:06 [W] Each query will cover a different day and there's three splitted queries will be executed concurrently by the queries.
+00:26:12 [W] And their results will be then merged by the query from 10 before sending back the response to refine a or your quilling tool.
+00:26:19 [W] Now this means that in most of the cases internally a single query executed by the Creator will cover only one day and that's the primary reason why by default we compact blocks
+00:26:37 [W] Harriet and doing tests in our clusters.
+00:26:47 [W] We have seen that deers allows for a better parallelization when you run queries over a large time range.
+00:26:51 [W] The query ER then execute this one day query now the query ER periodically discover new blocks uploaded to the storage of running a scan over the bucket and
+00:27:09 [W] Map of all the known blocks in the storage for each block.
+00:27:15 [W] We just need a few information which is the tenant ID the block ID and the minimum and maximum time stamp of samples within the specific block. And then when the query ER receive a query it look for all the block
+00:27:29 [W] The block ID and the minimum and maximum time stamp of samples within the specific block and then when the query ER receive a query it look for all the block IDs containing at least one sample within the
+00:27:32 [W] Just one sample within the query start and end time and based on the filtered block ideas it compute the set of store gate with that should be queried in order to query back the data
+00:27:45 [W] Target with that should be queried in order to query back the data from dust blocks.
+00:27:50 [W] The query will fetch the most recent data, which has not been flushed the storageos from the investors and we create will query the blocks stored in the object store through the store gateways.
+00:28:00 [W] Blocks are sharded and optionally replicated across the store gate with this means that we can all eventually short the blocks across the pool of store gateways and for each block
+00:28:17 [W] Of one specific store Gateway the store gate we loads the index enter. The index either is a small subset of the entire Block indexer in in our clusters.
+00:28:34 [W] We see that the index editor is in the order of 2% of the indexer.
+00:28:37 [W] It's a little part of the index and is used to speed up the index look up at query time.
+00:28:45 [W] The Creator created the blocks through the minimum set of store gateways holding the required blocks.
+00:29:01 [W] So when the query receive a query the query compute the list of block ideas, which should be queried and then look up the a string which we use to as the Baseline technology to
+00:29:10 [W] And the replication to find the minimum set of store gateways holding the blocks that needs to be cleared.
+00:29:19 [W] And concurrently created s blocks through the store gateways.
+00:29:25 [W] if we look inside a single store Gateway the store Gateway hallways download fully downloaded to the local disk and then hem up in memory the index seller of each block belonging
+00:29:41 [W] hallways download fully downloaded to the local disk and then hem up in memory the index seller of each block belonging to The Shard of the specific store gave me but the entire index
+00:29:45 [W] The of the specific store gave me but the entire index or the chunks files, which are even bigger have never entirely downloaded to the to the store Gateway the how the system work, which has been he narrated by
+00:29:57 [W] Is that the full index and the chunks are Leslie fetid at query time through multiple get bite range request.
+00:30:09 [W] So we load the minimum data as possible when we add credit. I'm
+00:30:14 [W] if we look at a single query received in the store Gateway the typical query contain for information the set of series label matters for which the samples should be fetched start
+00:30:29 [W] time stamp and the list of block ideas, which has been previously computed by the query and then the store gate we will run a local look up on the symbols and posting of the table which are done through
+00:30:45 [W] You download it in the cellar.
+00:30:48 [W] and the result of this lookup is actually the input for the remote look up and so the store Gateway will fetch the postings in the series and then from there the chunks which are the
+00:31:03 [W] timestamp value pairs of the samples for the matching series
+00:31:08 [W] this robot will cap is done through get bite range request now.
+00:31:19 [W] We actually want to lower as much as possible the calls to the object store both because of performance reasons and also because of costs given most of the
+00:31:29 [W] Pricing is based on a mix of data stored in terms of gigabyte and number of API calls you run and we have introduced three layers of Kashi
+00:31:45 [W] Thanks Cash.
+00:31:49 [W] They made out of the cache is used by the blocks Discovery mechanism, which is running both inside the query and the store Gateway while the index cash and the tanks cash is only used by the store Gateway
+00:32:02 [W] - is a caching layer in front of the posting and serious look up and it's thanks Cash is a cash in front of the fetching of the chunks containing the compressed samples
+00:32:18 [W] Chunks files are up to 512 megabytes each.
+00:32:25 [W] We don't never we never download.
+00:32:26 [W] We never fully download the entire object or the entire file and we never fully cash a single entry with one on 512 megabytes. But what we do is we do a subject caching
+00:32:41 [W] to 16 kilobyte
+00:32:44 [W] Cashing it is not mandatory.
+00:32:53 [W] So it's an optional component, but it's recommended in production last but not the least we have done this worker as a necessity we had in cortex, but we
+00:33:03 [W] But it's recommended in production last but not least. We have done this worker as a necessity we had in cortex, but we backported all these improvements to stun us as well.
+00:33:06 [W] A griffon elapsed. We are currently running few clusters and in one of those clusters, which is a staging cluster. We have done we have done in a typical setup.
+00:33:23 [W] So we are running two identical clusters since few months by identical.
+00:33:32 [W] I mean identical in terms of version of Cortex that we run and scale same number of Cortex notes.
+00:33:39 [W] ingesting the same exact series are roughly 10 million $10 million active series and then we have introduced a proxy which is called query T and we open sourced as well which mirror
+00:33:54 [W] we have introduced a proxy which is called query T and we open sourced as well which mirror every single period we do receive to both clusters and we make the to back and clusters one running the block storage and another one
+00:34:02 [W] The block storage and another one running the chunk storage compute in terms of performances. What we have seen is that the block storage performances are pretty good and comparable with the chunk storage for
+00:34:15 [W] Use cases. We still have some spikes in the P99 in the block storage mainly due to call called caches, but the the progress
+00:34:31 [W] Aid and measured this way over the past few months is pretty good. And I personally believe we are on a good track to run the block storage with comparable performance has compared to the
+00:34:47 [W] Now the question here is what's next.
+00:34:57 [W] So if you if you are running the block storage the experimental block storage today, or you are interested in to giving it a try Please.
+00:35:02 [W] be aware.
+00:35:05 [W] We are very close to Market stable.
+00:35:08 [W] It's something we expect will happen this quarter.
+00:35:11 [W] We are currently working on many things but to mention the most important probably we are continuously working to improve the queer performances.
+00:35:25 [W] This is an endless work and we are doing many hydrogen's over it. We have several ideas.
+00:35:33 [W] We still want you to experiment and that they may lend into Upstream changes, but yet keep in mind. We are spending a lot of
+00:35:42 [W] time on continuously improving performances
+00:35:46 [W] We also want to productionize the shuffle shouting and basically we want to be able to scale a cortex cluster to any size of tenants and the tenants thousand
+00:36:02 [W] Thousand tenants and we believe that shuffle sharding is the way to go in this direction and also in the tunnels community.
+00:36:17 [W] We recently started the work to introduce the support for deletions being able to selectively delete series and time series data from
+00:36:28 [W] we recently started the work to introduce the support for deletions being able to selectively delete serious and time series data from Tano's
+00:36:29 [W] Very interested in delicious as well in the cortex community and we will work closely with the tennis community to make it happen and introduce the support for deletions in the cortex block storage as well.
+00:36:46 [W] Thank you very much for joining this talk here.
+00:36:51 [W] Now.
+00:36:53 [W] There will be a Q&A session.
+00:36:56 [W] But please don't forget to check out the cncf schedule.
+00:36:59 [W] There are a couple of Cortex rooms and Booth hours. So please check out the schedule and join us if you have any question.
+00:37:09 [W] Hello, welcome to the QA.
+00:37:20 [W] So we got few questions.
+00:37:21 [W] We are going to answer first question.
+00:37:26 [W] We are considering adopting cortex in the next few weeks going to production by the end of the year.
+00:37:31 [W] So we had a small team are hand if we would prefer to not run a separate index tour, but we are also concerned by the block storage Mark the experimental.
+00:37:44 [W] So first of all, we do expect it to Mark the block storage production ready by the end of this quarter.
+00:37:52 [W] even sooner we have the next cortex table release planned in five weeks and we may consider to Mark the block.
+00:38:02 [W] Team are hand if we would prefer to not run a separate index door, but we are also concerned by the block storage Mark the experimental.
+00:38:17 [W] So first of all, we do expect it to Mark the block storage production ready by the end of this quarter.
+00:38:18 [W] Hopefully even sooner we have the next cortex table release planned in five weeks and we may consider to Mark the block storage production grade.
+00:38:20 [W] By that really is still to be decided but the the current feeling on the Block storage is pretty high to give you an example at graph an ellipse. We are
+00:38:22 [W] Are currently migrating our production clusters from the chunk storage the block storage.
+00:38:26 [W] We already have migrated one cluster.
+00:38:28 [W] We have another migration plan in a couple of days, but just to just to give you an idea.
+00:38:34 [W] We feel comfortable enough to run production workload on the Block storage.
+00:38:39 [W] Then the question continue.
+00:38:45 [W] How do you think about the trade-off between a chunks and block storage? So the block storage?
+00:38:46 [W] Is easier to operate if you are starting today and you feel comfortable picking up a path which may not be as
+00:39:01 [W] As the chunk storage then I would suggest to start with the block storage maybe because it's easier to operate easy to set up.
+00:39:14 [W] You don't need a separating the store and it's if you're on the cloudevents.
+00:39:20 [W] What factors would make you choose one over the other one?
+00:39:27 [W] Well operational complexity is definitely a factor and this goes towards block storage on the other side. If you're looking for a battle-tested solution, which is running at scale
+00:39:41 [W] Then I would still suggest the chunk storage.
+00:39:45 [W] Second question can the indexed or to be on the storage instead of the DB?
+00:39:58 [W] Well, if you use the chunk storage, we need a key value store for the index.
+00:39:59 [W] So the answer is no if you pick the block storage then yes. Definitely. We don't need a database for for the index.
+00:40:09 [W] Third question.
+00:40:14 [W] What is the memory footprint of the store Gateway?
+00:40:21 [W] Does it load all the indexes on start or is doing it lately?
+00:40:21 [W] good question.
+00:40:26 [W] So the store Gateway does never load the full block index, but just a subset of the index, which is what we call the index set the index are there must be fully?
+00:40:38 [W] the to the local disk before it's available to be cleared by the store Gateway while the rest of the index is Leslie loaded through bite
+00:40:54 [W] Against the bucket store the memory footprint we see in the store Gateway is generally pretty low just to give you an example.
+00:41:09 [W] We see something in the hoarder have 1 Point 5 2 gigabyte for a cortex cluster running ingesting about 10 million active series with six months retention and the nine store gateways where blocks
+00:41:23 [W] It's three ways across the Stone Gate So within up with the replication factor of 3, I think the most important thing to outline.
+00:41:35 [W] is that the store gate we can Horizonte scale and basically if you eat any vertical Vertical Limit just at the number of replicas and we do Richard automatically reshot the blocks across the Stargate is lowering the
+00:41:48 [W] each store Gateway
+00:41:50 [W] Yeah question number five Thor would like to pick it up sure so question number 5 as kind of the penultimate question when should I use cortex and when should I use standoffs there is no
+00:42:08 [W] To determining when you should use one or the other and both projects are increasing and parity.
+00:42:21 [W] So they cortex is borrowed from a lot from Thanos and Thanos this borrowing from cortex, but I'd say cortex still has more features around tenancy.
+00:42:31 [W] So specifically you can set set rate limits for specific tenants as well as billing around certain tenants. So if you have less control of your tenants or just a lot of tenants that
+00:42:40 [W] A completely separate team needs to manage.
+00:42:44 [W] I'd say cortex is probably a better solution for that at this time, but I would watch both projects closely because more and more of that may converge.
+00:42:51 [W] so question six is what are the trade-offs between the block storage the plant model and the split object in index storage model Marco's touched on that a few times block storage has a lot less operational complexity
+00:43:08 [W] In the cloud it has a much lower cost.
+00:43:17 [W] This is why my team started using it it was significantly cheaper to just run against S3, then it was to run a Dynamo DB instance or big table.
+00:43:25 [W] On the other side I please consider that storing the index own dynamodb or bigtable can offer you better performances when it comes to look up the index.
+00:43:41 [W] So it's a trade-off.
+00:43:48 [W] We are continuously working to make the industry look up as fast as possible in the block storage as well.
+00:43:50 [W] They're all work.
+00:43:50 [W] We did on the cash on the caching was part of this worker we have
+00:43:56 [W] Diaz to to speed up the index look up but yeah, let's say fetching chunks.
+00:44:09 [W] There's no big difference in terms of preferences when it comes to fetching chunks are between the chunk storage and the block storage. The primary difference is related to how we query the index.
+00:44:14 [W] So number seven in a multi-tenant scenario Gathering metrics finops in and tenants.
+00:44:23 [W] What is cortex or Thanos a better solution.
+00:44:25 [W] We've kind of got over that.
+00:44:30 [W] They're both good Solutions again. If you need really fine grain control and individual customers.
+00:44:35 [W] Let's say fetching chunks.
+00:44:40 [W] There's no big difference in terms of performance is when it comes to fetching juncture between the trunk storage and the block storage. The primary difference is related to how we query the index
+00:44:40 [W] Cortex may be a better solution that regard if you don't have a lot of customers or if your customers are all internal then also maybe a perfect solution for that as well.
+00:44:54 [W] Go ahead.
+00:44:55 [W] I think we have time to pick up another question.
+00:44:59 [W] Yeah cute is how you decide to bite range of the query for the indexes.
+00:45:04 [W] This is a pretty deep question.
+00:45:07 [W] So I guess the question is how do we decide this like
+00:45:09 [W] Wise to fetch from from the index when we preview the postings.
+00:45:24 [W] Well, basically we have the the posting of set table in the index Adder. So we have it locally and then based upon that we compute the length of the slice of the postings
+00:45:31 [W] Is load the from from the index and this is the part which is cashed.
+00:45:36 [W] I'm not sure we have time to answer any other question.
+00:45:41 [W] Anyway, I will move on are there any plans to make the blocks to the solution of Cortex also available for Lucky indexes?
+00:45:56 [W] Yes, and no, so not the block storage solution.
+00:45:58 [W] We are using cortex but in low key we are working on what we call the voltage VB shipper, which is primarily the same what which works similarly to the cortex block storage, but instead of storing the index
+00:46:12 [W] TS to be block index for matter we use both Libby. But yeah, it's something the local community is working on right now and we are already running it.
+00:46:28 [W] He knew one of our staging environments at profound laps.
+00:46:31 [W] Okay, I think that's last question.
+00:46:36 [W] Thank you for coming to the talk.
+00:46:40 [W] We appreciate your time.
+00:46:42 [W] Hope you learned something.
+00:46:43 [W] Yeah, definitely.
+00:46:48 [W] Thank you very much for everyone who joined us and Please be aware.
+00:46:52 [W] We are going to have the cortex project of this office hour starting in 10 minutes. You can check it out in the cubed on schedule. Thank you very much.

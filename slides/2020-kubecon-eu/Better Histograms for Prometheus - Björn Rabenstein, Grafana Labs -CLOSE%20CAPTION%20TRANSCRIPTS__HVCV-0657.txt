@@ -1,0 +1,352 @@
+﻿Better Histograms for Prometheus: HVCV-0657 - events@cncf.io - Thursday, August 20, 2020 8:22 AM - 375 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:02:27 [W] Hello everyone.
+00:07:40 [W] My name is beyond I work for a company called Cortana laughs and I've done one or two things for the Prometheus project.
+00:07:51 [W] My favorite Topic in the Prometheus world is histograms, or at least one of my favorite topics and it's actually such a favorite topic that I have given more talks about it than than just this
+00:08:00 [W] Company called Griffon elapsed and I've done one or two things for the Prometheus project.
+00:08:01 [W] My favorite Topic in the Prometheus world is histograms, or at least one of my favorite topics and it's actually such a favorite topic that I have given more talks about it than than just this
+00:08:02 [W] I decided to arrange them in a Trilogy and like we know it from popular movie franchises those trilogies don't necessarily appear in the right order.
+00:08:16 [W] So the logically first talk that you should watch first is this one which I gave earlier this year at fosdem in Brussels, and that's about all the ancient
+00:08:27 [W] History of Prometheus histograms very important to know when to understand what why we why were sorry why we are where we are now the second part of the trilogy
+00:08:42 [W] Why we are where we all know the second part of the trilogy happened first was cream first last year in Munich at from Khan.
+00:08:52 [W] And this is kind of the centerpiece. It was supposed to be kind of a Trilogy of its own with past present and future, but of course there wasn't enough time.
+00:09:01 [W] So I decided to cut out the past which gave me a reason to give this first part later.
+00:09:04 [W] So this is a very important talk. You should totally watch it if you haven't this is a
+00:09:09 [W] it was Prometheus histograms can do well right now and what doesn't work that well and what are our options to address that in the future now this third part of the trilogy, which is now this is
+00:09:23 [W] Actual things I tried out and I followed a certain idea and I want to tell you about the results.
+00:09:33 [W] This is all planned to be in a big and fat design dog or our see that I'll send out very soon and then the community can discuss and we can see what of my ideas.
+00:09:47 [W] Implementing Prometheus and have better histograms.
+00:09:51 [W] All right, one thing has already been improved and I wanted to mention that first because that was raised in the second part of the trilogy as a problem. That's isolation.
+00:10:03 [W] Prometheus is kind of almost acid DTS to be part of Prometheus, but I was lacking this isolation aspect and histograms were a favorite victim of that in Prometheus 2 dot 17.0.
+00:10:16 [W] We finally got this
+00:10:17 [W] Ain't it?
+00:10:20 [W] Just one tiny line in the changelog, but huge step support isolation. There is a lot of details to share about this, which I don't have time for here.
+00:10:34 [W] So I have to refer you to this awesome blog post by written by myself Shameless plug on the tech block of my employer. Another Shameless property is the UL just look it up and you see his throne quantile.
+00:10:48 [W] The infamous function that gets hit quite often by the lack of isolation we have isolation. Now, it's all good. You don't even have to think about it.
+00:10:58 [W] It will just magically work.
+00:11:10 [W] So let's come to the remaining problem of histograms or let's first recap. What are actually the things that work. Well, this is a slight kind of flashback to the slide
+00:11:13 [W] Function that gets hit quite often by the lack of isolation we have isolation. Now, it's all good. You don't even have to think about it.
+00:11:14 [W] It will just magically work.
+00:11:15 [W] So let's come to the remaining problem of histograms or let's first recap. What are actually the things that work. Well, this is a slight kind of flashback to the slide
+00:11:15 [W] Talk to one of the slides in the second row.
+00:11:23 [W] These are things that work. Well up Dex score calculation high-frequency sampling is mathematically correct, which is actually you can't take for granted. Unfortunately and questions like those percentage questions more percentage of
+00:11:31 [W] The last hour got a response in a hundred milliseconds or less these work really well, but unfortunately the only work well under circumstances.
+00:11:46 [W] This is why all those almost of these things get a little asterisk and as you know, this is usually where your read down here terms and conditions apply and then you know, the deal is actually not as good as it sounded first
+00:11:57 [W] Prometheus histogram you get this if suitable Pockets defined which is actually hard to Define suitable Pockets.
+00:12:12 [W] There's this other thing history will quantile which is what he's doing is were actually added for to Prometheus to calculate quantiles like a median or 99th percentile in a correct way across Distribution Systems, and this is it all works
+00:12:22 [W] Your issues again.
+00:12:27 [W] This is just recapping from the second talk the accuracy depends on the bucket layout and now we come again to bucket layout buckets are just super expensive with the current Prometheus histogram. So you only can have a few of them and then you have to pick them really wisely.
+00:12:40 [W] You need your interesting results you get here.
+00:12:48 [W] They should be close to a bucket boundaries or in some areas of the observational and you can have higher resolution buckets, but not everywhere or you can't really have high resolution at all.
+00:12:59 [W] Yeah, but then on the other hand the marketing scheme must be compatible across the aggregated metrics and across the range of right calculations, which means you should actually not change the bucket layout but since it's so hard to find the right one you are.
+00:13:12 [W] Actually tempted to change that quite often.
+00:13:16 [W] So it's a kind of dilemma and its really annoying but then in-toto to there was lack of ingesting isolation as a problem stated on this slide.
+00:13:28 [W] I scratch this because as I told you isolation, no just works.
+00:13:32 [W] Okay, but we still have plenty of remaining problems. This illustrates the cost problem again with a different.
+00:13:38 [W] Consequence so here. We have a histogram as you can configure it in go code if you answer might go code with a Prometheus history up.
+00:13:50 [W] So this has kind of 10-ish pockets.
+00:13:52 [W] It's a duration histogram for essentially hdv Layton sees then there is also a counter which you shouldn't need because you already implicitly counting request in this histogram.
+00:14:06 [W] From you just have a counter and you do this because this counter is petitioned by status code or path or method or whatever. You want to get to be partitioned by you don't do this with the histogram because the histogram is essentially as expensive
+00:14:21 [W] Pro pocket so that's an order of magnitude more expensive than the counter up here.
+00:14:29 [W] So you're really yeah really don't want to partition this by too many dimensions.
+00:14:34 [W] So that's a very common topic a counter that is partition at will and the histogram that's not petitioned at all, which is annoying because sometimes you actually want that partitioning and you definitely don't want to think about this in the beginning you want to ask those questions
+00:14:47 [W] Look at your metrics.
+00:14:54 [W] So let's formulate a wish list for the rest of this talk what we want to accomplish.
+00:15:00 [W] First of all we are like it spoiled kids here. We want everything that works.
+00:15:01 [W] well to continue to work.
+00:15:03 [W] Well, of course right second.
+00:15:08 [W] We never want to configure pockets again because that's just annoying but third all histogram should always be aggregate will with each other across time and space.
+00:15:16 [W] I never want to have this problem again, and of course I want accurate coredns.
+00:15:19 [W] Quantile and percentage estimations across the whole range of observations.
+00:15:26 [W] I don't want have this area where no sorry you didn't put Pockets there. So you can't kill card if good good observed values here.
+00:15:31 [W] But of course V.
+00:15:34 [W] I want all of that at a lower cost than current histograms so that I can finally partition his rooms at will so as I said greedy small kid.
+00:15:42 [W] We want everything.
+00:15:45 [W] Let's see how far we can get here in the second talk.
+00:15:51 [W] I have already hinted at the solution that is most likely the solution to go for which is essentially in very old approach. It's just half a conventional
+00:16:02 [W] Graham it just has infinite amount of markets in a regular usually exponential or logarithmic marketing schemer.
+00:16:14 [W] Everything let's see how far we can get here in the second talk. I have already hinted at the solution that is most likely the solution to go for which is essentially
+00:16:19 [W] Code four buckets that actually contain at least one observation and all the empty buckets are ignored there are different approaches.
+00:16:28 [W] There are certainly many more than this.
+00:16:35 [W] This is probably the top three most well-known but perhaps not a chair histogram you have heard about it. So Kudo says an implementation which they have on the client part. There's open source code and they have a written a paper
+00:16:43 [W] Loaded but the approach is fairly old and datadog is probably also doing this for a while, but they have recently also published a paper where they explain their histograms. I should show you the hole link here not covered with my face.
+00:16:59 [W] So here you can see all of that.
+00:17:09 [W] The question is if this is also well established and old why haven't we done this in Prometheus in the first place?
+00:17:13 [W] And yeah, there are a few problems because Prometheus is a bit different.
+00:17:17 [W] Let's first check out how this histogram those spores histogram as they're called it.
+00:17:22 [W] It's usually done you have this running on different instances.
+00:17:27 [W] This is just one instance that is accumulating observations in history.
+00:17:32 [W] Um, let's say for a minute and of course every instance is doing that and then kind of at some point in time.
+00:17:44 [W] They all send the cystogram data to a central data storage words collected and with some magic efficiency will actually be able to save that store that nicely but for the
+00:17:51 [W] It it's quite easy to then reset everything.
+00:17:59 [W] So you have completely empty slate and you start again to collect observations.
+00:18:02 [W] This is to consider all look slightly different.
+00:18:05 [W] I was just too lazy to modify them a bit.
+00:18:11 [W] So this means every minute you kind of start over you start from an empty slate. You have zero entropy all the pockets are empty and then you only have to account for Pockets that receive an observation in that minute and you ship it all over and you're done with it.
+00:18:22 [W] so in Prometheus, that's kind of unfortunately, very different Prometheus is as you have probably heard a pull based monitoring system in many people complain about that, but there are a bunch of advantages and this talk should not be about the advantages
+00:18:35 [W] Base data collection, but we are we I mean Prometheus is doing that right?
+00:18:43 [W] This is not going to change and we have to deal with it and with Smalls histogram. We have the problem that for Prometheus for scrapes or stateless. Essentially. You cannot just reset at will and then decide to send the new histogram
+00:18:57 [W] Essentially have to accumulate data forever and it's also nothing about like minute Li and anytime somebody could come along.
+00:19:07 [W] It's great, which is one of the advantages but also difficult to deal with so in Prometheus, this is accumulating accumulating accumulating as I try to draw here, but you can probably guess what I mean here so you get
+00:19:20 [W] Accumulate a lot of entropy more and more pockets are populated and you histograms on the monitor Target will take more and more storage space which is a problem. Right?
+00:19:37 [W] So this is kind of where we were and where we said this is doesn't even apply to Prometheus.
+00:19:40 [W] We can't we just can't do that.
+00:19:47 [W] But then also studying all the other Alternatives as laid out in the second talk and realizing they also don't work. I started to think perhaps this works out.
+00:19:51 [W] Tall and there is essentially a two-part thinking process here.
+00:20:00 [W] The one is about the accumulating entropy.
+00:20:11 [W] So this is essentially how many buckets you populate if you calculate if you accumulate data for a minute and then your chip it would go back to zero and two more or less the same again, right?
+00:20:16 [W] But if you just do it for two minutes, it's not that you have twice as many buckets populated because more and more often you will hit a bucket that already has seen and observed.
+00:20:24 [W] Nation so at some point, this is the time axis here at some point in time.
+00:20:31 [W] You will reach some saturation level.
+00:20:34 [W] Well, most of the time you will hit a bucket that has already some counts in it.
+00:20:43 [W] Minute and then your chip it would go back to zero and two more or less the same again, right?
+00:20:51 [W] But if you just do it for two minutes, it's not that you have twice as many buckets populated because more and more often.
+00:20:52 [W] You will hit a bucket that only has seen an observation. So at some point this is the time axis here at some point in time.
+00:20:52 [W] You will reach some saturation level for most of the time you will hit a bucket that has already some counts in it.
+00:20:55 [W] It so this is the idea that this like you will the idea is that you will approach this saturation value quite quickly so that it's not that much of a deal if you collect for one minute two minutes three million an hour or a day.
+00:20:59 [W] That's the one idea right? The other idea is that in principle Prometheus has a concept of resetting counters. It just doesn't have to happen too often.
+00:21:06 [W] It will happen if you restart your binary, right? So Prometheus loses some counts if that happens because as I said, it's pull base so a a monitor child cannot just decide before I die.
+00:21:18 [W] I will ship all the metrics. It will just die, right it will just
+00:21:21 [W] Go down and you scrape quite often like let's say every 15 seconds.
+00:21:29 [W] So you might lose a few seconds of code.
+00:21:33 [W] So if you now reset your histograms, let's say every hour that's in relative terms.
+00:21:37 [W] Not a lot of loss.
+00:21:40 [W] So these are the two thoughts right first entropy will not accumulate into Infinity essentially and second. If it does I can seal Rosetta histogram.
+00:21:50 [W] Let's say after an hour or so so portworx.
+00:21:51 [W] weaveworks and we have to study that another thing that Prometheus is doing its existing histogram is this cumulative nature which has a lot of advantages for like an operational quality of life
+00:22:06 [W] Drop buckets from it if you want to reduce the isolation the the other solution stuff like that.
+00:22:22 [W] There are a bunch of things to say about cumulative histogram, but cumulative histogram is really don't play well with the spouse nature of spouses to grams.
+00:22:28 [W] So this is really something we need to change for sparse high-resolution histograms.
+00:22:30 [W] We just have to go to ordinary histograms, but that's that's probably something something you can do. It's not as fundamental to Prometheus as this
+00:22:37 [W] pull based approach.
+00:22:39 [W] Alright, so this is how sparse histogram looks like very much simplified.
+00:22:46 [W] You can represent them in different ways.
+00:22:47 [W] This is the one I chose for experiment. The idea here is that you specify the resolution if the histogram in by saying how many buckets there are for every power of 10 in this little
+00:23:01 [W] I use three because they didn't want to draw a hundreds of pockets in practice.
+00:23:13 [W] This will be somewhere between twenty and a hundred hundred is will be super high resolution and 20 will be in Okay resolution.
+00:23:18 [W] I just had three at the buckets are all logarithmic which you can't see here because the x axis is already logarithmic, right? So I did it that way because otherwise the
+00:23:30 [W] Graphic here.
+00:23:36 [W] So these they look linear but there are logarithmic velocity axis is logarithmic.
+00:23:43 [W] You need a zero bucket because with logarithmic Pockets, you will have an infinite Parker density if you approach zero and you might just have observations that are zero or very very small so you define the zero bucket which usually has
+00:23:51 [W] It is super super small and this case I picked 0.1 just that I'm able to draw and here we have three pockets.
+00:24:01 [W] Then there's an empty bucket.
+00:24:06 [W] It's a small sister Graham and then there are three other markets and you can continue this into Infinity.
+00:24:08 [W] So how does this all work in real life to test that I took observations from a real production cluster.
+00:24:21 [W] He had profound elapsed from our cortex Custer if you know cortex, you know, what ingestion Courier means but we don't have to worry about that. The only important information is that the Korea has a very broad distribution of Layton sees durations.
+00:24:34 [W] This is like a high entropy scenario.
+00:24:41 [W] Well, the in gesture is more like as a more smaller distribution. Most of the requests the in gesture processes it are processed in more or less the same duration.
+00:24:53 [W] So I collected The genome has amount of almost 2 million observations here and how bit more than half a million for the query here and put them all into one histogram. That's kind of a worst case scenario in practice.
+00:25:04 [W] You would probably have a history.
+00:25:05 [W] Graham along certain dimensions and you would have it on every instance.
+00:25:11 [W] This is really like to to to brute force test that put all the observations into one histogram. By the way, the two million here are happening in Just 2 minutes because it's a super busy cluster.
+00:25:24 [W] The query has not as busy. So there was half a million was over an hour.
+00:25:29 [W] real solution for id24 could spur power of 10. In fact, this this genomicist Graham only 78 Pockets were populated with this.
+00:25:38 [W] Less observations but higher entropy distribution.
+00:25:41 [W] I'm not 12 buckets were populated a bit more the span here means how many continuous bands of Converse subsequent histograms?
+00:25:49 [W] There are right.
+00:25:53 [W] So this means there are two groups of pockets.
+00:25:55 [W] Sorry to say students Pockets spans of buckets, right?
+00:26:04 [W] We solution for id24 could spur power of 10. In fact with this genomicist Graham only 78 Pockets were populated with this less observations, but higher entropy distribution a hundred twelve Pockets were populated a bit more.
+00:26:06 [W] Couldn't between you can also go too much higher resolutions.
+00:26:12 [W] So this is the higher end resolution of a hundred.
+00:26:17 [W] We have many more buckets and also more spans like more often you have some empty pockets in the middle, but overall like a couple of hundred buckets.
+00:26:24 [W] I think this is something we can manage. So this gave me some confidence that I'm on the right track, so
+00:26:29 [W] what I did next I thought about how to encode these histograms and represent them first of all in the exposition format and how to then encode them in DTS to be of
+00:26:45 [W] I thought about this. This is just had to come up with something to try it out in the Prometheus context.
+00:26:53 [W] there's a zero market and then I number the bucket I start with is zero at the bucket that has an upper bound of Warren.
+00:27:00 [W] And then I go negative to the left and positive to the right that this pocket doesn't exist, but it still has a number.
+00:27:06 [W] And then those are organized in spans as we have seen spends of of consecutive Pockets.
+00:27:15 [W] This is a span that starts a bucket number minus 2 and has a length of 3 and then we have one a gap of 1 so the next band has an offset of 1 and the length of 3 and so on so these are small numbers then and you need very few very
+00:27:28 [W] To do if Pockets.
+00:27:30 [W] This is a span that starts a bucket number minus 2 and has a length of 3 and then we have one a gap of 1 so the next band has an offset of 1 and the length of 3 and so on so these are small numbers then and you need very few very small
+00:27:30 [W] describe the whole bucket layout which is great because small numbers are nicely they encode quite nicely with a VAR into and coding scheme, which is essentially built into a protobufs which simplifies things a lot
+00:27:44 [W] The thing, of course the counts in the buckets, they tend to be really high like we have seen there are millions of observations in my data set so you don't want to encode the absolute numbers, but since the histogram is usually like Smooth in some way
+00:28:00 [W] That not zigzagging like crazy.
+00:28:05 [W] This is why.
+00:28:06 [W] I encode Elders from one bucket to the next they are usually small can be encoded with vawa into quite nicely and I skip over gaps just take the Delta here and this is how it works.
+00:28:20 [W] If you put this into a protobuf and you have a protocol based Exposition format, which was by the way what Prometheus used in the beginning and only the current Prometheus server uses a text-based format.
+00:28:34 [W] We'll talk about that in a minute.
+00:28:43 [W] So if you put this all into a protobuf with using violin and and specifying those bands and Delta is nicely this is what you get this 78 pocket histogram takes two hundred forty four bytes. The slightly larger takes a bit more and even if you
+00:28:49 [W] And only the current Prometheus server uses a text-based format.
+00:28:51 [W] We'll talk about that in a minute.
+00:28:51 [W] So if you put this all into a protobuf with using violin and and specifying those bands and Delta is nicely this is what you get this 78 bucket histogram takes two hundred forty four bytes. The slightly larger takes a bit more and even if you
+00:28:52 [W] Really high every solution you have more buckets. What what is really nice that this is essentially five times the resolution but the the size on the wire is significantly less than five times, right?
+00:29:05 [W] So you'll get gets more efficient here with more buckets.
+00:29:09 [W] So is this a lot or not a kilobyte we can look at how it looks in the current text format that we use for histograms and it looks fairly repetitive. So
+00:29:20 [W] this is a very simple kind of 10-ish pockets histogram.
+00:29:28 [W] And this one takes one point six kilowatt as you see it here.
+00:29:29 [W] These are 1.6 kilowatts, right?
+00:29:41 [W] There's also this older prodyna format, which is more condensed less repetitive. But even there as you can see 300 something bites for like twelve pockets.
+00:29:45 [W] here we have kind of the same number of bytes for a hundred Pockets. So clearly we're doing something right here, right the exposition format.
+00:29:50 [W] Sketched out here works, okay.
+00:29:59 [W] So Exposition, let's say we can handle that right now storage.
+00:30:00 [W] This is also interesting.
+00:30:01 [W] How do we store this the basic idea that should save as a lot is that we need to just save one time series Peru histogram not per bucket.
+00:30:13 [W] That's what we do right now that was decided back then just out of Simplicity to not change Prometheus completely when you introduce histograms.
+00:30:20 [W] Futurewei heads as you can see also because like cardinality is that the bottleneck currency in metrics based monitoring system.
+00:30:38 [W] So now we kind of say we can have a lot of pockets but it will still be warm series / histogram, but that means assemble value is now a sequence of pockets instead of a float and we can take the bucket Delta's to have
+00:30:47 [W] And those values why not we can encode them in the same way. We already encode time stamps, which is a double Delta encoding so I call it triple Delta because we double Delta and code a bucket Delta right?
+00:31:01 [W] sounds fancy. And then those are encoded with a what we call Val bit schema.
+00:31:08 [W] that's griller style.
+00:31:09 [W] It's a bit different in detail, but mostly what, you know probably know from the gorilla Vapor its again used four times already and we can
+00:31:18 [W] It for those triple deleterious.
+00:31:33 [W] So if we do this we can see how much storage we need for those troubled Altis this completely ignores how to handle like pocket layout and schema changes and everything.
+00:31:38 [W] It's really just get the bulk storage nailed down and to find out how much space a needs I didn't implement the whole tcv. I really just simulated scrapes 80's groups of the ingest the data sets and 244 the chronosphere.
+00:31:48 [W] You earlier and found out what triple Delta we have here and then we see a histogram will take 50 bytes now not on the exposition format button.
+00:32:02 [W] This is storage where we wanted to be like compressed over time and the time series.
+00:32:14 [W] Cook / simple, then you come up with a fraction of a bite here like 0.5 more or less. Now as you might know in vanilla Prometheus for normal floating point value symbols.
+00:32:32 [W] We need like about one point five bytes per sample per floating-point number, which is 3 x now this is this is already kind of the worst case scenario here. So we might be at 5x or
+00:32:46 [W] Or even a bit better, but we also have probably 10 x the amount of pockets compared to Conventional histograms.
+00:32:58 [W] So overall the storage space will probably be a bit more demanding but on the other hand, we will save a lot with the index so that overall should hopefully this is what I hope for we should be
+00:33:09 [W] More comparable like more or less the same efficiency Orbiter clearing.
+00:33:17 [W] That's a big deal because I haven't done concrete research about this because then you really need to implement the TSD be and then you have to teach prompt UL how it can deal with like those complex histograms instead of just individual Pockets,
+00:33:31 [W] Of Good Hope that this will actually work out nicely because others have done this it's like more than just one group of people has done this, but I have to pick one. Right and I really like this talk at monitor Ramallah skier about fellow
+00:33:47 [W] Time gave this slide 23 is my favorite.
+00:33:58 [W] I mean the whole talk is great because it's very nicely explains all the problems with Prometheus histograms and what you can do about it and slide 23 is showing that histogram quantile calculation is hundred times more
+00:34:06 [W] In follow DB were they were they use approach is quite similar to what what I'm planning here.
+00:34:15 [W] So this is what gives me hope that it will just work.
+00:34:18 [W] Okay, let's quickly go through our wish list and see how this will work out everything that works.
+00:34:26 [W] Well now should continue to work. Well, this is mostly true spoiler. Most of the answers here are almost so the one thing that works really well if you have like an SLO which reads like night.
+00:34:38 [W] D 9% of curious to be served in hundred fifty milliseconds or less then you can just put a pocket boundary at 150 milliseconds and you have a precise answer from Prometheus. And now with the logarithmic histograms is just impossible to get
+00:34:51 [W] At 150 milliseconds, but you have like very boundaries very close to that.
+00:34:59 [W] So it's almost there, right?
+00:35:03 [W] This is the only thing that works in principle a bit less.
+00:35:05 [W] Well, I never want to configure markets again.
+00:35:10 [W] I told you they were just two parameters the resolution and the 0 threshold.
+00:35:13 [W] This is real go code from my proof of concept code. Now in practice, you will never configure the zero threshold of with just be at this very small value and you never have to change it and ideally we will find a resolution.
+00:35:24 [W] Solution that is good enough for everyone but not too high to not be too expensive and you never have to touch this either.
+00:35:30 [W] It could be 42 that will be fun.
+00:35:35 [W] It will be somewhere between twenty and a hundred two hundred.
+00:35:36 [W] I'm pretty sure about that and I yeah, we just have to find something right because if you change this resolution you run into the next problem all histogram should always be aggregated with each other across time and space.
+00:35:50 [W] Yeah, if you change the resolution you you will not have this but ideally
+00:35:52 [W] As a resolution that will cover most of the cases and only in very special cases.
+00:35:58 [W] You have to change that.
+00:36:03 [W] I want accurate control and percentage estimation across the whole range of observations.
+00:36:14 [W] It's also almost I mean quantal calculations are fairly accurate with a resolution of a hundred you have like about 1% of worst-case relative error, which is fairly good compared to like the industry what they're all doing
+00:36:18 [W] Mitch has this one problem that you cannot freely pick or bucket boundaries.
+00:36:26 [W] So you have some tiny error there, but overall from my research results.
+00:36:31 [W] I'm very satisfied about this one.
+00:36:43 [W] I'm on all of that at lower cost than current histogram so that I can finally put it in his rooms at will this is orange because I really can't tell if it will really be dramatically lower in cost.
+00:36:46 [W] I'm hopeful that it will all of this awesomeness will be same price essentially although
+00:36:50 [W] Our hopefully lower but we have to see.
+00:36:57 [W] all right this now we are at the end. You can look at all those rough results in this GitHub repo.
+00:37:01 [W] It's very rough really. It's just my experience reboot. The code has horrible quality.
+00:37:07 [W] I just wanted to try things out. I'm writing a proper design of which I will shortly announced on this mailing list.
+00:37:15 [W] So follow this and you can pick it up when it's there to be reviewed by the world.
+00:37:19 [W] These are my talks.
+00:37:24 [W] This is my email, but this leads us to the end.
+00:37:27 [W] So we have five minutes and five seconds left for QA.
+00:37:28 [W] Thanks for your attention and see you in the QA, bye-bye.
+00:37:31 [W] So, it's me again few weeks older.
+00:37:40 [W] Yeah.
+00:37:42 [W] Thanks for attention.
+00:37:44 [W] We already got questions during the talk.
+00:37:45 [W] So follow this and you can pick it up when it's there to be reviewed by the world.
+00:37:49 [W] These are my talks.
+00:37:50 [W] This is my email, but this leads us to the end. So we have five minutes and five seconds left for QA.
+00:37:50 [W] Thanks for your attention and see you in the QA, bye-bye.
+00:37:50 [W] So, it's me again few weeks older.
+00:37:51 [W] Yeah.
+00:37:51 [W] Thanks for attention.
+00:37:51 [W] We already got questions during the talk.
+00:37:51 [W] I try to answer a few of them.
+00:37:55 [W] I don't know if I did everything right and they showed up. The one question was linked to the slide. So I posted them in the Q&A window.
+00:37:56 [W] I hope it showed up.
+00:37:59 [W] If not, it's also on scared.
+00:38:03 [W] There is a link like PDF is uploaded to escape so it should
+00:38:04 [W] Be easily accessible and then there was the question if the 0 bar code was used during my test with real production data.
+00:38:15 [W] The answer is yes, but it was really like one what I showed in the go-kart right won't to the power of minus 128.
+00:38:23 [W] So in fact, we have zero observations that actually fell into the zero bucket, but other data sends have that right you just sometimes have an observation of 0 for some reason or for some reason.
+00:38:36 [W] So our or one or something?
+00:38:37 [W] okay. Now the questions that haven't been answered. What means SLO? Yeah.
+00:38:43 [W] It's my my bad.
+00:38:55 [W] I use an acronym without explaining it but it's kind of the most favorite word of every a sari which is another acronym so I should still be as elotl means service level objective and this is essentially when you when you agree, I mean
+00:38:59 [W] Without explaining it but it's kind of the most favorite word of every SRE which is another acronym so I should stop your SLO means service level objective and this is essentially when you when you agree, I mean, it's not get an agreement.
+00:39:01 [W] This is how you try to set how fast your service should operate and how how many results and how many errors it's allowed to throw and in this case. I was pretending we're free service that has an SLO that
+00:39:17 [W] Seconds latency is enough to serve 99% of the Greece. For example. Okay more questions métiers local are asked what Matias Laurel his last last letter offers.
+00:39:29 [W] First name and the first two letters of his last name is SLO.
+00:39:33 [W] That's the other explanation.
+00:39:34 [W] I just learned this here Q Khan. I will never unsee that.
+00:39:39 [W] So Matias larval, mr.
+00:39:43 [W] mr. SLO, he asked What's blocking us from having this information has yeah. So the
+00:39:47 [W] I mean, there are a lot of quite invasive changes. If we change the exposition format or we have to I mean a lot is just extending things which would still be quite invasive. But if we start to
+00:40:00 [W] Harvest all the possible benefits here.
+00:40:09 [W] We have to do something and prompt URL which means we have to deal with more than just floating Point numbers as values in the time series.
+00:40:16 [W] I mean, we can probably have some baby steps here.
+00:40:20 [W] This will all be discussed in that design doc that will hopefully be out there next week.
+00:40:28 [W] But yeah, I mean some we could get some gains but I think for the true story, we really need some invasive changes. So it's not that easy.
+00:40:32 [W] And it should be yeah thought through quite well, okay, and then we have another question.
+00:40:39 [W] Timo asked Shut Up And Take My Money.
+00:40:41 [W] When can be roughly expect this to become a thing.
+00:40:42 [W] Yeah.
+00:40:43 [W] good question of so, I'm I mean, I'm I did my experiment starting with the exposition. There are very confident.
+00:40:53 [W] This will just work on fine and then we get a bit into encoding land where think yeah, probably and then the query poddisruptionbudgets
+00:41:00 [W] The most speculative and fake one, but we'll see if this actually works out nicely and of course we have to get a right to make it usable. I think it's bit of a problem if you just do an ad hoc winging
+00:41:16 [W] Decision and you push it to all the users all the many many users of Prometheus.
+00:41:24 [W] You might have a problem.
+00:41:33 [W] So part of this might just work out in some experimental branch of Prometheus where we tried out and and courageous users can just do it.
+00:41:38 [W] But like having this in Mainline Prometheus for everyone.
+00:41:40 [W] Yeah, this is not happening tomorrow sometime. Next year is my guess.
+00:41:44 [W] Okay, I'll go too.
+00:41:48 [W] All the questions I've answered.
+00:41:49 [W] more
+00:41:53 [W] so would you recommend any particular blocks or sites for good insights best practices and other thought leadership around from I mean, there is the internet that's a lot Prometheus.
+00:42:09 [W] cri-o is our project web page.
+00:42:18 [W] Just just go there and this kind of the primary source of information and otherwise look around many people block like trying this in important Prometheus person has a block on robots.
+00:42:25 [W] Exception for found a blocks about Prometheus a lot.
+00:42:28 [W] just look around its fortunately a lot to see there.
+00:42:36 [W] No, I clicked misclicked.
+00:42:37 [W] Let's see I get some shoutouts.
+00:42:41 [W] This is a interesting question.
+00:43:02 [W] How do you feel about the histogram panel types and co-founder you use other visualization methods When developing histogram come ciose metrics? So I'm a great fan of super high resolution heat Maps.
+00:43:03 [W] They just look very beautiful and quite obviously we are not there yet with current Prometheus histograms.
+00:43:10 [W] They are just low resolution profounder can render a heat map a little resolution heat map from a Prometheus histogram, but co-founder has
+00:43:19 [W] Also other means like it can just query time series data that is not even a histogram and just put it in Gray sir. Graham essentially sample frequency of some values in the time series in the heat map. So there's there's a bit difficult to
+00:43:32 [W] Which state you convert data into histogram.
+00:43:40 [W] So this probably creates the confusion around those many many different histogram panel types and your father.
+00:43:45 [W] Yeah.
+00:43:49 [W] Yeah. I mean, it's hard to explain just here in this talk. But yeah, most of all I guess is to remember that not everything is definitely a histogram coming from your metric system. Sometimes it's histogram that profounder.
+00:44:00 [W] Creates Based on data it carries from from a Time series data race or some metric system.
+00:44:06 [W] Okay.
+00:44:10 [W] Somebody is has noticed my Bodkin collection.
+00:44:15 [W] Thank you for more praise.
+00:44:20 [W] Okay, it's logarithmic. The only option will this always work.
+00:44:26 [W] Yeah. This is an another very good question.
+00:44:36 [W] The idea is that changes of the pocketing schemer might in most cases. They will lead to incompatible part like you cannot merge or a
+00:44:41 [W] Brigade across those boundaries for your change the schemer.
+00:44:49 [W] So the idea is you pick one schema that ought to be enough for everyone and in most practical cases, that will be a logarithmic one.
+00:44:56 [W] seconds, this is where I like the sucrose approach goes into that direction where they say they have like linear buckets for every power of 10, but then in the next power of 10, they like have a logarithmic step so you could try to combine this or
+00:45:19 [W] It's for you have observations that are by Nature a logarithmic already like you you like do this like sound pressure measurements and decibel or you what I followed a lot last year was this that will juice the
+00:45:35 [W] Suddenly didn't write like you would major star brightness apparent brightness of stars in a logarithmic scale.
+00:45:51 [W] So if you want to put those literal observations into histogram you want kind of linear pockets all over sudden again.
+00:45:58 [W] So yeah, it would be I think we will have an option to allow different schemers, but in 99% of the cases, you should just use the one schema with the like resolution that just works for everyone.
+00:46:06 [W] Okay, let's do more how many 2 minutes or 3 minutes left?
+00:46:12 [W] Any plans on actually Landing this format to Prometheus?
+00:46:19 [W] Victor metrics is something similar for a long time with prompt your extensions. So what I saw at Victor metrics was essentially Spas histogram, but this is also touching can we have this Imports? What materials are asked
+00:46:30 [W] Um how many two minutes or three minutes left?
+00:46:31 [W] Any plans on actually Landing this format to Prometheus?
+00:46:32 [W] Victor metrics is something similar for a long time with from Kill extensions. So what I thought Victor metrics was essentially Spas histogram, but this is also touching.
+00:46:33 [W] can we have this Imports? What materials are asked so they have a very low resolution on this bar systems and I think you just can't turn it up more without changing more in it, right?
+00:46:42 [W] So what I'm showing here is
+00:46:44 [W] Essentially to get consensus and the Prometheus Community.
+00:46:53 [W] What's the way forward so that then many people contributed and we can Unleash the Power of officers and have this in Mainline Prometheus in a very well thought through way eventually but in the meantime as that, there might be an experimental branch of Prometheus
+00:47:00 [W] It so what I'm showing here is essentially to get consensus and the Prometheus Community.
+00:47:02 [W] What's the way forward so that then many people contributed and we can Unleash the Power of Open Source and have this in Mainline Prometheus in a very well thought through way eventually but in the meantime as that, there might be an experimental branch of Prometheus
+00:47:03 [W] Free to play with what others try out maybe 500 GB of Victoria metrics. I mean all those those attempts will just lead to more inside what we what you have to do in the end.
+00:47:15 [W] Okay.
+00:47:18 [W] Now we have 15 seconds.
+00:47:20 [W] How many more are there are two more questions. I think let's let's try them.
+00:47:29 [W] if you have metrics that have no values in the range of let's take zero to twenty twelve will have its value rather on 30. Have you consider long for user to control where it's warm?
+00:47:34 [W] I'll be no, but the bucket in like the numbering of pockets will essentially just work because you you encode like you just have to encode the starting point one which might be a higher number and then you you have those spans.
+00:47:46 [W] You end up starting with the buckets.
+00:47:55 [W] It will always be very efficient to describe the depopulated buckets that statue be a no issue like you can future enjoy the Warmness you would only say a few bits essentially, okay?
+00:48:05 [W] And then we have to go.
+00:48:11 [W] Yeah, how can we summarize the problem is compromised in scrum.
+00:48:20 [W] Is it a yeah. This is definitely in the second talk mostly and the historical reasons why we arrived there is in the first talk. So just watch that and now we have to jump onto slack.
+00:48:21 [W] I'll be there for the time until further notice.
+00:48:26 [W] Essentially you can you can ask me more questions there.
+00:48:31 [W] Thanks again for your attention, and I'll see you on slack. Bye.

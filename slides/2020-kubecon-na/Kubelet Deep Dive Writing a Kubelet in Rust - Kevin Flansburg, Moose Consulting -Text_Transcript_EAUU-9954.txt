@@ -1,0 +1,228 @@
+﻿Kubelet Deep Dive: Writing a Kubelet in Rust: EAUU-9954 - events@cncf.io - Thursday, November 19, 2020 5:42 PM - 33 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, I'm Kevin flensburg and welcome to cubelet Deep dive writing a Cuba in Rust this talk covers kubelet architecture and behavior in detail, which was learned while it's rewriting Cuba in Rust it also covers the benefits of rust for writing distributed.
+00:00:15 [W] Such as kubernative components first a little bit about myself.
+00:00:19 [W] I have been arrested Alper for around 3 years during this time.
+00:00:23 [W] I've been responsible for developing and deploying globally distributed microservices as such I'm pretty familiar with the rust software development life cycle from running git init to ci/cd and finally monitoring my devops journey began
+00:00:38 [W] However around a year ago, I migrated to kubernative.
+00:00:23 [W] He's I have found it to be a very powerful tool even in a single developer shop.
+00:00:26 [W] I most recently joined the crust look project which nicely combines my interest in kubernative and rust and was the inspiration for this. Talk Crest loot is an open source project being run by dais Labs. It stands for kubernative
+00:00:41 [W] And involves a number of interesting components.
+00:00:40 [W] The first is the cubelet crate which seeks to implement common cubelet functionality and expose a flexible API with which developers can build custom cubelets.
+00:00:51 [W] This allows qubits to be developed for new architectures and types of workloads.
+00:00:56 [W] In fact, the second major component of the project are to cubelet implementations for running was mm workloads one using the wasc runtime and the other using Waze mm time.
+00:01:08 [W] These are exciting because you can compile the wasm using rust upload an OC. I complained image to Azure and then deploy these workloads and kubernative using crust litmuschaos.
+00:01:32 [W] I have also begun work on a cubelet implementation which targets traditional Linux containers and makes use of the container runtime interface.
+00:01:41 [W] In the rest of the talk, I will focus primarily on cubelet in the abstract or as it pertains to Linux containers, but I think the use of wasum within kubernative is very exciting and I encourage you to check out these projects.
+00:01:52 [W] These can run directly on the host in control plane nodes or in a self-hosted cluster in pods in the cluster itself or in the case of many Cloud offerings are managed by the vendor. And only the API server
+00:02:04 [W] able to the customer within the control plane you have at CD which is a distributed key-value store that kubernative uses to persist cluster State the kubernative say Pi server then exposes the data and add CD via
+00:02:18 [W] State the kubernative is a pi server then exposes the data and had CD via an HTTP endpoint and additionally performs authentication and authorization on these requests.
+00:02:29 [W] Users and cubelets connect to kubernative Via the API server endpoint cubelets register themselves and monitor for pods to run and users can modify cluster State such as submitting a new deployment to run note that
+00:02:44 [W] Slide isn't exhaustive and leaves out components like cute proxy Cloud controller manager and cluster DNS.
+00:02:51 [W] The scheduler is responsible for assigning pods two nodes and the controller manager runs cluster control loops such as adding in points to Services provisioning service accounts for new name spaces and pruning dead nodes
+00:03:06 [W] His leverage and extremely Central concept to kubernative.
+00:03:09 [W] He's the controller pattern.
+00:03:12 [W] A large number of kubernative components use this pattern it begins with declarative manifest which represent instances of the various API resources that the cluster supports most users will be familiar with these manifest in the form of
+00:03:27 [W] Which are submitted to the cluster to create resources such as deployments and services.
+00:03:28 [W] These manifests are mostly immutable, but you can find some exceptions controllers within the cluster watch for changes to the types of resources.
+00:03:37 [W] They manage these changes are typically the creation of a new instance of the resource modifications or deletion watching a resource for these types of changes is typically referred to as the Informer pattern.
+00:03:51 [W] When changes are detected the controller will then drive cluster state to match the desired State specified in the Manifest in this way different components with different responsibilities ensure that the cluster is eventually consistent with its desired
+00:04:06 [W] As an aside there is also the operator pattern which you will see pretty often when working with kubernative.
+00:04:26 [W] If we take a closer look at cubelet, we can see that it is a controller as well with its resource type being the Pod.
+00:04:34 [W] It is a little special though because pods represent units of work and are the original and most fundamental resource type in kubernative.
+00:04:41 [W] He's primarily the qubit watches for podcasting changes and then configures the container runtime to pull images create namespaces and run containers.
+00:04:51 [W] There is a grpc endpoint for this communication called the container runtime.
+00:04:56 [W] Her face, which was introduced in 2016.
+00:04:59 [W] It is not 100% adopted.
+00:05:01 [W] However, and you can still find some cubelets configured to use Docker with its Damon socket additionally cubed exposes an HTTP endpoint for streaming logs and exec sessions to clients first class support for this via the API
+00:05:16 [W] Cuddle is one of the special things about cubelet.
+00:05:12 [W] For configuring storage such as block volumes.
+00:05:14 [W] There is the container storage interface another grpc protocol in point which Cuba interacts with Legacy Storage Drive errs were originally included in the cubelet source code. So you may find some in the wild that do not make use of CSI interestingly
+00:05:30 [W] Work interface is not grpc and it is the responsibility of the container runtime to configure this.
+00:05:22 [W] This makes sense because the runtime is directly responsible for configuring the network name space that the Pod runs in but it is a little unintuitive.
+00:05:31 [W] The fact is pods are very complex.
+00:05:34 [W] If the Ops Community has learned one thing over the last few decades it is that hosting applications involves a lot of moving Parts cubelet must interact with many other components and does not just a
+00:05:46 [W] act as a shim to The Container runtime for instance at some point. It must Fetch and configure secrets and config Maps respect the image Pol policy and mount service account tokens the Pod spec allows for a lot of customization of
+00:06:01 [W] With many other components and does not just act as a shim to The Container runtime for instance at some point. It must Fetch and configure secrets and config Maps respect the image Pol policy and mount service account tokens
+00:06:28 [W] Which requires a lot of kubernative specific decisions to be made by cubelet before the runtime can start the container.
+00:06:35 [W] I'd like to spend some time discussing why I think rust is a great language for developing distributed applications. Like cubelet first rust can produce very high performance software and frequently matches C++ in performance benchmarks in
+00:06:50 [W] Tribute adapt locations like cubelet first rust can produce very high performance software and frequently matches C++ and performance benchmarks in part.
+00:07:01 [W] This is achieved by a policy of zero cost abstractions where an abstract programming features, like generic types incurs 0 runtime cost. The result of this focus on performance is not only the ability to scale but also efficiency
+00:07:16 [W] We're an abstract programming features like generic types incur 0 runtime cost.
+00:07:22 [W] cost. The result of this focus on performance is not only the ability to scale but also efficiency which can have a big impact in the data center and at the edge
+00:07:34 [W] next rust employees a strong type system as well as a borrow Checker which enforces memory safety at compile time many first-time users of rust quickly grow irritated with the compiler and borrow Checker.
+00:07:46 [W] However, I have found that nearly everything that it catches is an actual bug that would have been a runtime error. If it had not been caught. Once you are familiar with certain error types that are specific to rust the compiler can feel a lot like pair programming and can be a
+00:08:01 [W] Arming and can be a helpful guide when conducting large re factors or prototyping new features.
+00:08:07 [W] As a result, I can't help but be nervous and code very defensively when I returned to a language like python.
+00:08:14 [W] Russ strong concept of memory safety contributes to easier concurrent and parallel programming as well.
+00:08:20 [W] It includes strong Primitives for coordinating and communicating between threads this leads to significantly reduce cognitive overhead When developing concurrent software and frequently catches memory safety or race condition bugs additionally
+00:08:35 [W] Stabilized about a year ago, and although there is some friction points surrounding the many run times that there are to choose from. It is something that I basically default to now unless I am seeking to minimize latency.
+00:08:47 [W] Another great feature of rust is are handling.
+00:08:49 [W] This can be a Hot Topic as many find it somewhat cumbersome.
+00:08:53 [W] I find it to be easy to understand albiet verbosity times R Us error handling gives me the confidence that I'm actually handling all of the error types that my code can produce this example shows obtaining a result from a function that can fail
+00:09:08 [W] Is an enum of either OK or error rust allows you to exhaustively match on this enum ensuring it compile time that you handle all possible variants.
+00:09:11 [W] The second case shows a more terse format this question mark will either return the value if the result is okay, or it will exit the current method early with the error allowing errors to Bubble Up.
+00:09:23 [W] The rust Community is constantly working to make error handling even better and there are many great crates out there that deal with ergonomics and behavior related to error handling.
+00:09:32 [W] Saying the developers of rust have also done a lot of work and continue to improve the error message is produced by the compiler while not all error messages are the most informative.
+00:09:42 [W] There is a great framework in place for extremely descriptive messages, which underline the exact code the error is referring to and suggest exactly what needs to be changed.
+00:09:54 [W] Rust also has an excellent ecosystem.
+00:09:57 [W] I'd like to mention some crates which are extremely high quality.
+00:10:00 [W] The first is Saturday which implements serialization and deserialization.
+00:10:03 [W] I genuinely Mists are day in every other language. I use many offers similar options, but they're simply not as useful or feature complete sir day automatically derives the ability to convert rust types to serialize Strings such as
+00:10:18 [W] Mo or Avro and vice versa the amount of control it offers over dealing with little serialization quirks is really phenomenal
+00:10:22 [W] next is tracing tracing is being developed by the Tokyo project, which is one of the leading a sink runtimes.
+00:10:28 [W] However tracing itself does not require a sink.
+00:10:31 [W] I think rust has a great story around logging in general but tracing really steps it up. It makes it very easy to introduce structured logging to your application, which I consider to be necessary for application monitoring.
+00:10:44 [W] It also has the ability to instrument your functions automatically and you can configure it to Output opentracing data, which makes it very
+00:10:52 [W] Example 2 slot your rust application into your distributed tracing architecture.
+00:10:58 [W] Last is Prost which can generate rust types from Proto definitions and tonic which can generate RPC clients to use with these prototypes.
+00:11:06 [W] This makes it incredibly easy to develop rusco to interact with grpc in points. Like cri-o and CSI rust has also made great documentation a major focus.
+00:11:18 [W] focus. It has first class language support for docstrings and rust dock which ships with rust can be used to generate great documentation Pages including runnable examples.
+00:11:27 [W] Binaries in a single project cargo makes it a breeze to manage all of this and is a very well-thought-out tool.
+00:11:22 [W] Finally the rest Community is very welcoming and helpful.
+00:11:25 [W] I found that their approach and attitude is what makes the language and crates so high quality and what makes programming and rust a real pleasure.
+00:11:34 [W] I would also like to mention some useful crate specifically for kubernative development in Rust Kate's open API contains automatically generated types for the kubernative open API spec.
+00:11:45 [W] It is very useful for manipulating kubernative manifests, and it's documents are actually the main docks I use for referencing kubernative API resources. Second is Cube, which is the primary kubernative client for rust it is
+00:12:01 [W] Uses to parse Cube configs connect to the API server patch resources and watch for podcast. Ainge has finally k8s cri-o and Kate csir crates that I have published which provide automatically generated grpc clients for cri-o
+00:12:14 [W] respectively
+00:12:08 [W] Let's take a closer. Look at the control Loop used by cubelet to run a pod.
+00:12:13 [W] This is the loop that was developed for the crust like Project based on observed behavior in kubernative.
+00:12:18 [W] He's when a pot is added some validation happens and then the image Pol policy is evaluated to determine if images need to be pulled if an issue arises when pulling an image an exponential back-off is used to retry
+00:12:33 [W] Polled we provision storage volumes which could also include collecting config maps and secrets for the Pod next containers are started and we begin monitoring for exits if an error occurs, the restart policy is
+00:12:45 [W] And the party they're retries with back off or enters a failed status.
+00:12:47 [W] If no errors occurred the pot is considered to have succeeded.
+00:12:51 [W] This is useful for jobs. Finally. If the pot is marked for deletion by the API cubelet sends signals to stop the running containers cleans up and exits.
+00:13:01 [W] This is a brief overview and there are a lot of details surrounding the behavior of cubelet, but I think this provides a good working outline for debugging pods note that inherent to this is our control Loop whilst a pot exist the graph tries to
+00:13:16 [W] Overview and there are a lot of details surrounding the behavior of cubelet, but I think this provides a good working outline for debugging pods note that inherent to this is our control Loop whilst a pot exist the graph tries to get us into the running state.
+00:13:38 [W] State the only way to get two states that actually exit the loop are under specific conditions such as poddisruptionbudgets restart policy of never.
+00:13:48 [W] For crosslet we spent quite a bit of time exploring how we could best implement this control Loop while still allowing Downstream developers to write highly specialized cubits.
+00:13:57 [W] What we developed is Thoroughly documented in a blog post.
+00:14:01 [W] I wrote earlier this year to summarize.
+00:14:04 [W] We released a rest API for building a state machine which captures the logic of the control Loop and leverages rests type system to ensure correctness.
+00:14:12 [W] This state machine is fully customizable by the developer.
+00:14:17 [W] The state machine has a number of constraints which we believe improve the reliability of the application and these are enforced at compile time.
+00:14:25 [W] We ensure that only valid states are used and only valid transitions between states are taken.
+00:14:31 [W] We also believe that the result of this pattern is code that is much easier to interpret and reason about the cubic crate is responsible for driving the state machine and automatically handles updating the Pod status with the control plane on state changes.
+00:14:47 [W] Pattern also encourages that error handling is done in the context of the control Loop in other words rather than an exception that prevents the Pod from continuing we explicitly transition to crash loop back off and try again matching the expected behavior
+00:15:05 [W] To finish I would like to share an overview of how the crust little application is architected green boxes represent individual asynctasks.
+00:15:13 [W] So this gives some idea of the concurrency going on here the yellow box represents the scope of the cubelet crate while the blue box is what is implemented by Downstream developers when building a new cubelet
+00:15:27 [W] Cuba it handles all communication with the kubernative control plane including updating the node lease serving logs monitoring for podcasting changes and updating pods statuses Downstream developers Implement a provider trait,
+00:15:42 [W] Methods that are needed by Cuba including those for reading pods as well as initializing state for a pod to run.
+00:15:37 [W] When a new pot is created the pot of event dispatcher will spawn a new driver for that pod in Step 1. This driver will call the provider to initialize the Pod State and then create the initial State machine state, which is also
+00:15:52 [W] Will spawn a new driver for that pod in Step 1. This driver will call the provider to initialize the Pod State and then create the initial State machine state, which is also specified by the provider
+00:16:10 [W] by the provider in step two the Pod driver will run the Handler associated with this initial state which will return the next state the Pod driver will iteratively execute these State handlers until either a state
+00:16:25 [W] Will iteratively execute these State handlers until either a state returns saying that it is an end State such as failed or succeeded or the Pod is deleted.
+00:16:37 [W] When a pot is deleted or modified the pot of event dispatcher will notify the appropriate Padre Iver in step three after a pod is deleted the Pod driver will interrupt the execution of the state machine and jump to the
+00:16:52 [W] Did state which is specified by the provider and handle shut down and clean up?
+00:16:58 [W] I think the takeaway from this slide is that crust?
+00:17:01 [W] Let is a fairly complex and highly concurrent application rust gives our small team the confidence and ability to iterate on apis and rapidly add features while avoiding entire classes of errors and maintaining High code quality
+00:17:16 [W] ecosystem provides many high-quality creates a helpful Community straightforward dependency management and automatic high quality documentation many languages offer similar capabilities, but in my opinion rust offers the
+00:17:31 [W] His offer similar capabilities, but in my opinion rust offers the least compromise.
+00:17:28 [W] I feel that complex and highly concurrent distributed applications. Like this are especially suited for rust and I hope you will check it out. If you haven't already I'd like to wrap up with some key takeaways from this talk first.
+00:17:42 [W] We covered cubelet architecture and communication patterns including the components that it interacts with and how it fits into a kubernative cluster. I hope this information will be useful to you in the future for debugging
+00:17:53 [W] An Administration tasks related to kubelet next we covered Padma havior and Padma life cycle.
+00:18:00 [W] I have found a working understanding of this to extremely useful for debugging pods that are failing to run and understanding how deployment stateful sets and jobs leverage this Behavior, finally.
+00:18:11 [W] Finally, we looked at rust and how it can be an extremely strong language for developing distributed applications and in particular how you can develop for kubernative using rust.
+00:18:21 [W] I'd also like to shout out the core maintainers of the crust that project Taylor Matt and Ivan who have been great to work with as we try to roll out some very ambitious features if you'd like to contribute to crust litmuschaos.
+00:18:39 [W] Thanks for coming to my talk, and we now have a few minutes for questions.
+00:18:50 [W] So I'm not seeing a whole lot of questions here.
+00:18:53 [W] There's one so get Hub link to crosslet in particular you can share that.
+00:19:07 [W] Leave its embedded in the slides as well.
+00:19:27 [W] And then someone asks what what are the new changes in the controller for crosslet? So I think you know we tried to match the behavior of kubelet as closely as possible.
+00:19:39 [W] So, you know, it's not perfectly documented how the sort of spec expects to kubelet to behave so we had to do some sort of trial and error with the actual cubed application.
+00:19:54 [W] You know, we're trying not to introduce too many changes. But what we want to do is sort of support arbitrary Cuba applications. So that means trying to be like maybe a little more flexible than a
+00:20:06 [W] 1X containers
+00:20:00 [W] Is crusted Min is meant as a replacement for kubelet or is it meant only as a wasn't for why Islam workloads? If it is the latter?
+00:20:08 [W] Why should I consider using wasm over containers? So I guess
+00:20:16 [W] The first part of that question, is it a replacement for kubelet, you know, I think it's certainly not, you know, we're not even at 100. So, you know, it's not ready for production use and I'm sure
+00:20:31 [W] cheap feature parity with like the go cubelet it'll you know be a number of years, but I think it's good to have sort of a second project going along in another language that sort of
+00:20:44 [W] Of maybe can experiment with features that don't get accepted into the core kubelet as far as using wasm loads over containers.
+00:20:52 [W] I mean, there's huge performance benefits.
+00:20:55 [W] I'm not actually really the person to ask about wesam a number of the other press litmuschaos painters are huge proponents of wisdom. Oh, I'm not personally familiar with like actually compiling webassembly.
+00:21:09 [W] As and code but the idea is that you know, if you're just serving like very simple HTTP requests and stuff like that.
+00:21:17 [W] You can have a wasm payload.
+00:21:20 [W] that's only a few megabytes and it loads very quickly and it's sort of a much like more performant execution model.
+00:21:31 [W] I would say there are different security models there. So, you know, you've probably spent a lot of
+00:21:40 [W] I'm working on Linux container isolation wasm is sort of using these wasm virtual machines to enforce isolation. And that's definitely like something that is in its infancy. So
+00:21:55 [W] It's kind of call on what type of workload you're serving.
+00:22:00 [W] I like I certainly wouldn't serve a major web application with with wasm but you know, I mean things like Cloud flare workers.
+00:22:07 [W] know Envoy proxy supports like embedded wisdom like components like
+00:22:17 [W] Pipelines for inspecting traffic I've seen other situations where you would sort of use wesam for like simple computation.
+00:22:26 [W] So I think I think there's a place for both. Another is that, you know, press loodse done a lot of work to sort of deploy wasm two components like Raspberry Pi's and
+00:22:41 [W] Things were you probably wouldn't necessarily be able to run full Linux containers.
+00:22:35 [W] I don't you know, I don't know if Raspberry Pi is a good example, but that's kind of the idea is that was mm is connects acute on other more architectures.
+00:22:46 [W] Kubelet is responsible for configuring DNS on pods and it be improved.
+00:22:51 [W] I'm actually not a hundred percent.
+00:22:56 [W] sure on if that's true.
+00:22:59 [W] You know, my understanding is that you know, I'm not I'm not actually sure how like cluster DNS like or DNS is configured if if that comes from the control plane and services or if that's actually done.
+00:23:15 [W] But we're actually looking to expand our support for like multi-node networking in a coming release.
+00:23:10 [W] So we haven't done a lot of Investigation into like how DNS resolution pertains to Cuba how far away are you from running Presley and container D. So I actually have a
+00:23:26 [W] Imitation using crosslet that interacts with containerd E versus via the container runtime interface.
+00:23:24 [W] It's super super Alpha it basically will schedule pods and then delete pods, but you know the nice thing about
+00:23:38 [W] well, so I think you know from my perspective implementing a cubit that just supports an arbitrary container runtime interface and then you know letting people plug and play with the provide are the actual runtime that they use is super interesting
+00:23:53 [W] actual runtime that they use is super interesting and you know, I kind of want to use the qubit state or trust let State Machine model 2
+00:24:04 [W] sort of run traditional Linux containers as well as as well as of workloads.
+00:24:09 [W] So that's kind of a central focus of my work on the project is supporting a like a containerd e or a more traditional runtime.
+00:24:20 [W] What is the benefit of wasm over from scratch container with a rust and / go binary?
+00:24:31 [W] You know, I think you're I think you're still going to be able to get wasm like payloads to be smaller than even like a very slim rust or go container.
+00:24:44 [W] And I think there's also potentially just some like
+00:24:51 [W] sort of like in terms of the number of containers that you can actually run on a node.
+00:24:59 [W] I think you might have some advantages there because a wise impale owed actually runs within the crust loodse burn of process and so in theory, you know, you could deploy
+00:25:15 [W] and I think there's also potentially just some like
+00:25:21 [W] sort of like in terms of the number of containers that you could actually run on a node.
+00:25:29 [W] I think you might have some advantages there because a wise impale owed actually runs within the crust. Let's sort of process and so in theory, you know, you could deploy
+00:26:01 [W] Of wasn't workloads into a single crust list.
+00:26:04 [W] Whereas I think you know, there's kind of an upper limit on how many like genuine containers. I would consider running on a single node or like per core.
+00:26:17 [W] Is one of the goals of crust let to be a drop-in replacement for kubelet. I think. Yeah, I think
+00:26:24 [W] One of our goals is certainly like feature. Parity.
+00:26:27 [W] I think in terms of like recommending that you replace all your kubeedge with Presley. I think, you know where years out from that that if that ever happens so I you know, I think it's more of I mean most of our users
+00:26:43 [W] Think in terms of like recommending that you replace all your kubelet Smith Presley. I think you know where years out from that that if if that ever happens so I you know, I think it's more of I mean most of our users.
+00:27:10 [W] Who are you know coming to the project and wanting to either Implement their own cubelet using Presley or deploy crosslet? They're looking for sort of ways to I mean the
+00:27:25 [W] like kind of
+00:27:27 [W] central thesis of the project is to support like more esoteric compute, right?
+00:27:34 [W] So, you know, I've seen people that just want to run new types of workloads or run on new types of architectures that aren't supported by cubelet and maybe they have some additional like domain specific logic that they want to work into the state
+00:27:49 [W] And so it makes sense to kind of write their own cubelet from scratch and we kind of want to provide the API that sort of does all of the like redundant work for you. And then also lets you write a highly scalable application, so
+00:28:02 [W] It'll be a while before I drop directly and to a standard kubelet, but you know, it's it's I think it's sort of for more experimental work right now.
+00:28:13 [W] I think that answered most of the questions in here. Let me go back to Rio.
+00:28:35 [W] How can we integrate?
+00:28:39 [W] Sorry, is that how can we integrate Presley to override kubelet config indicates cluster?
+00:28:45 [W] I'm not sure what you mean by that. So the way our deployment model for press load is that you know, if you're wanting to add across Latino to an existing case cluster and and we have documentation on the GitHub that I linked
+00:29:01 [W] On a number of targets like eks AKs, you know minikube stuff like that.
+00:29:05 [W] Basically, you'll start your traditional control plane.
+00:29:09 [W] You can still have your traditional nodes and then you would sort of launched a new node and manually install trusted and have it join the control plan.
+00:29:20 [W] There's a TLS bootstrapping process that goes on I guess one of our goals for later this year is to work on, you know, perhaps like an
+00:29:29 [W] Am I or you know an egg KS image that could be launched and sort of automatically join any chaos or AKs cluster without having to manually configure things. So that's kind of on the road map.
+00:29:49 [W] And I guess just just a heads up like one of the other maintainers of crosslet Taylor Thomas who's probably a better person to ask about was I'm things is going to be in the sort of
+00:30:04 [W] Yes cluster without having to manually configure things.
+00:29:58 [W] So that's kind of on the road map.
+00:30:08 [W] And I guess just just a heads up like one of the other maintainers of crust let Taylor Thomas who's probably a better person to ask about was I'm things is going to be in the sort of runtime.
+00:30:44 [W] Slack after this. So if you have any like very wasm specific questions direct them direct them to him.
+00:30:53 [W] Let's see.
+00:30:54 [W] see. Will it be a demon set?
+00:30:59 [W] Guess we haven't really explored that option.
+00:31:02 [W] I think that there's advantages to deploying it in that way because in particular when we start looking at things like storage integrating with like a cloud storage.
+00:31:18 [W] Biter.
+00:31:18 [W] Yes, I driver or the cloud cnib wider.
+00:31:22 [W] It kind of makes sense to sort of run inside a traditional container and then, you know be able to maybe interface with the cni-genie the CSI that's running on the the actual node.
+00:31:37 [W] and then, you know be able to deploy a wise and workloads with them with in there because you know, if you're just running a know that only supports wasm then you can't necessarily, you know deploy, you know AWS
+00:31:44 [W] Yes, I driver because it's not targeted to that architecture.
+00:31:46 [W] that's definitely something we're looking into.
+00:31:57 [W] I'm not sure if I'm supposed to like answer via text to any of these. Hopefully the recording will be sufficient.
+00:32:07 [W] So it looks like we have one minute left.
+00:32:09 [W] So any other questions or we can move into slack.
+00:32:14 [W] Let's see.
+00:32:14 [W] Can you share get URL? So I did the first question asked for a GitHub link.
+00:32:21 [W] I don't know if the answer showed up there, but that's for the crust look project and then I'll go ahead and linkerd.
+00:32:28 [W] My repository for the Linux container cri-o Coast is light which you know.
+00:32:39 [W] Is in super super, you know Alpha but it provides an interesting view into how to implement a provider.
+00:32:56 [W] Let's see.
+00:33:05 [W] Here we go. So that's for the Linux container one.
+00:33:10 [W] and
+00:33:15 [W] Well, sure.
+00:33:19 [W] again
+00:33:21 [W] Okay, I think we've probably just have a few seconds left.
+00:33:24 [W] thanks everyone for coming to my talk and I hope you check out rust.

@@ -1,0 +1,278 @@
+﻿Introduction to CNI, the Container Network Interface Project: UMSL-2598 - events@cncf.io - Tuesday, August 18, 2020 7:41 AM - 85 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:03:32 [W] Hello and welcome to the cni-genie procession given by to maintainers of this uni project.
+00:03:41 [W] If you're new to see and I'll give an overview in just a moment. If you have questions, we are live online.
+00:03:49 [W] So as this goes out so please start asking as an introductory session.
+00:03:54 [W] This is a high-level and pretty much starts at the beginning from cni-genie.
+00:04:00 [W] So first some introductions Brian.
+00:04:05 [W] Thanks Casey. Hi.
+00:04:10 [W] I'm my name is Brian boram.
+00:04:12 [W] I work for weaveworks and known at least in the beginning with for a we've met but perhaps better known for gitops these days.
+00:04:26 [W] Anyway, I've been the lead maintainer on we've met for over five years now and I'm a maintainer on the cni-genie tonight. I work on a few other cncf projects like cortex.
+00:04:33 [W] Casey why don't you introduce yourself first?
+00:04:45 [W] So I'm Caitlin calendar alone. I am an engineer at Red Hat previously kouros or work on kubernative networking openshift networking and the ovhcloud reject also maintain some utilities that people tend to use like go IP tables for which I'm somewhat. Sorry.
+00:04:52 [W] I like IPv6 and jumbo frames and the kubernative Informer system and I dislike Nats.
+00:04:58 [W] What exactly is cni-genie?
+00:05:05 [W] Thanks Casey. So we put a big picture here the just us three things on it you your container and the network and and cni-genie s in the middle.
+00:05:22 [W] So this represents the big picture of the point we're trying to make here is that cni-genie tended to sit in a world where people use all different.
+00:05:36 [W] He's of networks.
+00:05:40 [W] They use all different kinds of ways of getting there containers working and we'll go into more detail about that as this talk progresses, but fundamentally, it's the bit in the middle.
+00:05:54 [W] It's it exists as a common ground interface so that all different companies and people can contribute to this world and have them work together.
+00:06:04 [W] So here's a more detailed picture.
+00:06:13 [W] the
+00:06:15 [W] What we've got on on the right representing the container runtime.
+00:06:28 [W] and others measles Cloud Foundry whole bunch of different orchestrators for containers and those go through some kind of container runtime like Padma and cryo containerd e
+00:06:50 [W] So that's kind of putting more detail on the on the whole ecosystem on the right and the cni-genie everything in this box here.
+00:07:06 [W] It's things that their libraries that the runtime coals it's plugins which implement the actual network connection and what come back to more detail on this in a bit.
+00:07:19 [W] Casey why don't you tell us a bit more about the project sure.
+00:07:32 [W] So we're both here is maintainers of the cni-genie which is an organization under the cncf.
+00:07:33 [W] Umbrella as a project. We have two major outputs.
+00:07:45 [W] The first is the cnic specification document which defines the cri-o Tikal and a rep for reference implementation in go of that protocol this reference implementation as it happens is used by both containerd runtimes and ci/cd.
+00:07:51 [W] my plugins and it's generally widely used although not the only implementation of cni-genie within the industry this this section of the project or this output has a pretty slow relatively stable release cycle as befitting a specification the second
+00:08:05 [W] The event which defines the cri-o Tikal and a rep for reference implementation in go of that protocol this reference implementation as it happens is used by both containerd runtimes and cni-genie guns, and it's generally widely used although not the only
+00:08:07 [W] Cni-genie tour consumable is a suite of commonly used cri-o plugins these include some basic connectivity plugins such as bridge and some chained utility plugins like bandwidth limiting host Port mapping and some other tweaks.
+00:08:21 [W] Most of the plugins are Linux only but we do have a selection of Windows plugins maintained by Microsoft and other contributors and you can find ball, of course all of these on GitHub.
+00:08:30 [W] To dive in a little bit more into the specification.
+00:08:38 [W] The specification really is the heart of cni-genie defines the protocol between the runtime in the plug-in is as Brian showed earlier because the ci/cd occation is a simple vendor-neutral stable specification.
+00:08:48 [W] It's an industry standard that's widely used.
+00:08:51 [W] It's not just used by Cooper Ted.
+00:08:57 [W] He's my nails Cloud Foundry, etc. Etc. See we've seen the list before the key part of the specification is how plugins are discovered by the runtime the
+00:09:01 [W] Kubeflow the data types for both configuration and the data types for responses as well.
+00:09:09 [W] The specification is not complicated.
+00:09:10 [W] Generally.
+00:09:12 [W] It's backwards compatible for the average end user. The specification is probably not going to concern you too much other than perhaps the version, but it's good to know that the document exists and you could probably read it if you need to.
+00:09:24 [W] Containers on the scene I project, you know, almost any problem you're having with your system can look like a network problem.
+00:09:53 [W] So so we do get a lot of different questions. And unfortunately, we don't we don't do every part of the the network picture so cni-genie.
+00:10:08 [W] And if you're using a system, like kubernative is it will provide in different ways things like load balancing service Discovery Network policy.
+00:10:23 [W] There's there's all these different things that go together and and cni-genie kind of the cni-genie itself is as little bit of glue and very little
+00:10:34 [W] A lot of problems come from elsewhere.
+00:10:41 [W] It's also as I mentioned already cni-genie not kubernative specific. So even if we could perhaps make a change in cni-genie,
+00:11:04 [W] That we can talk about in our repo. A lot of people are using third-party ones that you know, I work on one as I said, we've met calicos very popular
+00:11:19 [W] There's a whole bunch of them and that's great.
+00:11:25 [W] You know, that is the whole point to allow different people to to implement things.
+00:11:33 [W] So, yeah, so the CI a that we're representing as maintainers of the project is the is the bit in the middle and there's all this other world.
+00:11:43 [W] That is not the cni-genie.
+00:11:46 [W] Although we we talk to those folks and generally
+00:11:50 [W] Together pretty well, but it's not the whole world.
+00:11:53 [W] So let's take a deeper look into how does it all work Casey?
+00:12:04 [W] Our contact we can go and dive a bit more deeply into this diagram as we had said before cni-genie.
+00:12:34 [W] containers namespace we can see here lib C and I which is our reference implementation usually mediates both sides of the protocol how the cni-genie actually works is not defined in the specification likewise the
+00:12:49 [W] So let's take a deeper look into how does it all work Casey?
+00:12:50 [W] Our contact we can go and dive a bit more deeply into this diagram as we had said before cni-genie L4 container runtimes, which we see here on the right, which is Padma and cetera et cetera to request that a network plugins such as we've or flannel which
+00:12:52 [W] Need to know anything about the container runtime. So it is abstract it over that.
+00:12:54 [W] Note, by the way on this picture.
+00:12:59 [W] This is just an aside that but it's an important understanding to have the cubelet is not present on this slide.
+00:13:10 [W] Remember the kubelet doesn't actually create containers itself. It talks to its container runtime dungeons by something known as the cri-o or container runtime interface the cri-o.
+00:13:24 [W] Next up Brian is going to tell us a bit about the execution flow.
+00:13:29 [W] Yeah, so so if you keep that picture in mind the the runtime calling the plug-in it can call it with one of four different commands.
+00:13:43 [W] We only have four at the moment.
+00:13:44 [W] So it's pretty simple add adds an interface.
+00:13:48 [W] delete takes it away and then there's some check and version check to check that things are still the way you thought they were and version just administrative Lee finding out what version?
+00:14:02 [W] Then you're talking to is and plugins are executable. So that's the way you call a cni-genie as you run a program and the program is the plug-in.
+00:14:14 [W] In a Json format and standard out comes the answer the response from the plug-in.
+00:14:34 [W] So the whole thing is just extremely simple and that is the whole mechanism of calling a cni-genie ginn/fayette.
+00:14:46 [W] So Casey took us through what that looks like when you actually make
+00:14:46 [W] Sure. So this is the configuration format.
+00:14:53 [W] It's that cni-genie word.
+00:14:55 [W] It's a Json based configuration and it usually lives on disk.
+00:15:00 [W] It is consumed somewhat.
+00:15:07 [W] It's consumed by both the runtime and the plug-in and unfortunately, it looks like the highlighting hasn't carried through.
+00:15:16 [W] I'd like to point out the so the first three configurations Fields here version name and type are consumed by both the runtime and the plug-in they are used for version negotiation and plug.
+00:15:19 [W] Covering the remaining sections of this sample configuration file our plug-in specific. So they are not consumed by the runtime. They're not even really part of the cni-genie esse fication.
+00:15:34 [W] So as such they are open for you as a plug and maintainer or a system administrator to you.
+00:15:42 [W] so it's a really simple format and it's a little bit of a hybrid of both the runtime and the plug inside configuration in a single file.
+00:15:43 [W] There we go.
+00:16:02 [W] Okay. So the suspect version 0.3 has we've defined something called Dynamic configuration or in this case.
+00:16:12 [W] We're calling runtime configuration.
+00:16:15 [W] This is a way for a cni-genie figuration file to signify to the runtime where it might want some container specific configuration to be inserted.
+00:16:25 [W] And this means that configuration files can mostly live on disk and mostly be static.
+00:16:30 [W] However, the actual interaction between the runtime and the plug-in can be dynamic. So on the
+00:16:31 [W] We would see a Json configuration file on disk.
+00:16:40 [W] It's very simple it is but we see here. It has the section capabilities and it says that I support the port mapping capability well for each container invocation if the runtime so desires it may substitute a port mapping capability with some Port mapping runtime configuration
+00:16:49 [W] See that this particular container happens to have a host Port configured a container Port this is to say we would like a very specific chunk of container specific information substituted into the configuration.
+00:17:05 [W] And then the other exciting thing inspector zero point three is plug-in chaining and Brian's going to talk to you about that.
+00:17:09 [W] Yeah, chaining calling a chain or a sequence of plugins in a row allows us to compose functionality to add things in so not every
+00:17:25 [W] kind of paste in all of the features that people want so this example on the slide has has two plugins listed the bridge plug-in, which is, you know, just just
+00:17:42 [W] Has has two plugins listed the bridge plug-in, which is, you know, just just bridging all the traffic from several containers and Then followed by port forward plug-in. So it's kind of the same example
+00:17:51 [W] Containers and Then followed by a port forward plug-in. So it's kind of the same example or same area that Casey was just talking about if I want to bring out some ports from my container to the host
+00:17:59 [W] if I want to bring out some ports from my container to the host of Court, that's what the port forward plug-in does and the bridge and we've now that and calloc own whatever do not have to re-implement that functionality
+00:18:09 [W] They can put it in a chain or more specifically the person configuring the network configuring your own cluster can construct that chain in exactly the way you want to do it.
+00:18:25 [W] So that's powerful feature.
+00:18:30 [W] Each plug-in is chain operates on on one interface.
+00:18:33 [W] So this is this is not about running like the same plug in multiple times to give you multiple interfaces you just you know, if you if you
+00:18:40 [W] to do that you just do it with with separate conflicts when we'll talk a little bit more about that.
+00:18:46 [W] later.
+00:18:49 [W] But yeah that's plug-in chaining. So next Brian is going to talk to us about how the cni-genie actually works as a open source project.
+00:18:58 [W] So we have the parts that we've talked about already the SPAC.
+00:19:13 [W] This is actively maintained.
+00:19:14 [W] We have a maintainers meeting every week.
+00:19:21 [W] And we look at questions that have come in or issues raised against the spec people submit PR as against the spec but it tends to happen quite slowly because the this
+00:19:30 [W] Change in the spec might require a lot of plug-in authors to do rework.
+00:19:41 [W] So tends to evolve very slowly over time.
+00:19:44 [W] We are really close to announcing 1.0 which a lot of people are looking forward to because that'll be a declaration that we were really going to try even harder not to change anything fundamental in
+00:19:55 [W] So that's that's close months month or so is what we're thinking right now the plugins however, go much faster, you know their their individual bits of software
+00:20:12 [W] Go much faster. Another their individual bits of software features are added bugs are fixed.
+00:20:19 [W] just you know as as they come up and we have even more contributors.
+00:20:27 [W] There are a lot of people from around the world using ci/cd where and they come across something they like or they come across bug and they can if they know good code they can submit a PR
+00:20:36 [W] And like I said, we do a maintainers meeting once a week that tends to be where we sweep through things that's come in and make sure we catch up on all of them and at the bottom of the slide
+00:20:52 [W] submit a PR and like I said, we do a maintainers music once a week that tends to be where we sweep through things that's come in and make sure we catch up on all of them and
+00:20:53 [W] See anything like that is is the kubernative project is not the cni-genie.
+00:21:16 [W] So we have seven maintainers right now.
+00:21:29 [W] And as you can see they come from a bunch of different companies typically software companies that I mean, you know, we're not really Network people.
+00:21:39 [W] We're not we're not Network Engineers by trade.
+00:21:45 [W] So we're mostly kind of application developer type people who happen to
+00:21:47 [W] No bit about networks and wish to contribute.
+00:21:53 [W] it's really a volunteer effort, you know, and we're there's no kind of billion-dollar business on the back of cni-genie.
+00:22:12 [W] Seven maintainers right now. And as you can see they come from a bunch of different companies typically software company. So I mean, you know, we're not really Network people.
+00:22:25 [W] Out of of debate and thinking about how to do it. We added static IP support changing spot for changing the Mac Layer Two Bridges and
+00:22:40 [W] Yeah little thing that was needed to play better with the kubernative device plugins, so I won't read the whole list, but you know, you can you can go over to the GitHub / containerd Network / cni-genie
+00:22:55 [W] Everything that's been going on CDs.
+00:23:03 [W] That's a kind of colloquial term for security vulnerabilities do come out and those generally caused us to to jump although we tend to have to do that in secret because we trying to get the fix out before the problem is widely
+00:23:15 [W] Anyway that the Deep dive session which if you're watching live is tomorrow, I go into quite a bit of detail about some vulnerabilities we dealt with recently.
+00:23:32 [W] So if you're interested to come along to the Deep dive seen I'd dive session.
+00:23:39 [W] All right. I'm going to hand over to Casey to talk about what's coming up next.
+00:23:40 [W] So trouble advancing the slides if someone can help me out.
+00:23:50 [W] in any case oops
+00:23:56 [W] All right. There we go.
+00:24:06 [W] So what's next right as we said 1.0 we essentially considered to be featured complete. The spec is essentially stable.
+00:24:09 [W] We bait we essentially need to crystallize that in order to cut 1.0.
+00:24:10 [W] You need a bit more precise specification language that just needs to be tightened up a bit and we'd like a more secure or signed release binaries a bit more secure release mechanism.
+00:24:21 [W] What's next after that?
+00:24:25 [W] We're starting to dream about the spec version 2.0 and what that might look like. Are we going to do something like grpc about which will chatbots?
+00:24:28 [W] A little bit more and a bit do we want a richer life cycle create and delete are of course important, but they're certainly not the only thing in a container life cycle as we all know, but other the quite the other question for the community is what do you
+00:24:43 [W] And I do to help Advance the state of containerd networking.
+00:24:48 [W] It's an open source project.
+00:24:49 [W] It's a public specification and we would absolutely love your input a bit later. We'll talk about how you can get involved in the project.
+00:24:56 [W] Okay, so now we're going to quickly go through some frequently asked questions that often have come up and we've done these sorts of sessions before or in slack and maintainers meeting and other emails.
+00:25:11 [W] The first is why do some cni-genie M plugins especially those in kubernative come with the host site demon and the answer has to do with life cycle.
+00:25:22 [W] cri-o only concerned with the life cycle of an individual container that spotlights creation and deletion. You need some sort of long run.
+00:25:26 [W] Process to maintain routing tables if you have a higher level system such as kubernative.
+00:25:35 [W] He's right you need to react to events that happen across the cluster that are not containerd level events the demon might for example set of routes or react to node changes or something like that a question for you Brian, then is Brian can I have multiple interfaces
+00:25:46 [W] Yes, you can Casey so cni-genie.
+00:26:18 [W] in your container the reason why this question gets asked so much I think generally stems from the fact that kubernative only supports one interface in an in a pod the
+00:26:34 [W] Limiting the number of Concepts and kubernative that there are based around the idea that there's only one interface is large and a huge amount of work to shift from that position.
+00:26:49 [W] Tend to do to work around that problem is is they run a cni-genie ginn/fayette itself.
+00:27:01 [W] Cole's multiple cni-genie lian's so malta's is a good example of that.
+00:27:04 [W] There are a couple other their cni-genie daenam coming from predominantly a telecoms background. So so if that's you if you're
+00:27:16 [W] All differently suggest taking a look at some of those also, you know, if you have ideas, you know back to what Casey was saying, what would you like next particularly if you want to
+00:27:32 [W] What Casey was saying?
+00:27:33 [W] What would you like next particularly? If you want to contribute code to help make those things happen, please. Do you know show up in in the
+00:27:43 [W] Make those things happen, please. Do you know show up in in the GitHub issues or in our slack Channel or some other way that we publish to contact us?
+00:27:50 [W] We'd love to hear from you.
+00:27:57 [W] But yeah, so back to the back to the simple question cni-genie elf supports multiple interfaces kubernative really only deals with one interface for a pod.
+00:28:05 [W] But you can generally get round that bye-bye faking it with something like malta's.
+00:28:11 [W] Well gee that took a long time.
+00:28:15 [W] So Casey you can take the next one.
+00:28:17 [W] What about deployment?
+00:28:22 [W] Sure, right. So if you have a cni-genie looking how about you deploy it? Right?
+00:28:26 [W] Well, the good news is that all you need to do is write a couple files to disk.
+00:28:28 [W] You don't need to set up a demon almost you do you don't need to do any complicated host level configuration. The best practice in the kubernative is world is to use a demon set that leaks these files on to host. But any mechanism by which you like to configure your nodes,
+00:28:41 [W] This will work.
+00:28:44 [W] But this will often be provided to you by your vendor.
+00:28:47 [W] We would like to come up with a better story for how this is done.
+00:28:54 [W] Perhaps the cluster add on some project is part of the Sig cluster life cycle will be the answer.
+00:28:55 [W] So we have an answer.
+00:28:56 [W] It's not great, but it works reasonably.
+00:28:58 [W] Well for now so Bryan we support IPv6.
+00:29:08 [W] Yeah, we do Casey. Well again cni-genie.
+00:29:11 [W] Mechanism by which you like to configure your nodes.
+00:29:13 [W] This will work.
+00:29:13 [W] This will often be provided to you by your vendor.
+00:29:14 [W] We would like to come up with a better story for how this is done.
+00:29:14 [W] Perhaps the cluster add on some project is part of the Sig cluster life cycle will be the answer.
+00:29:15 [W] So we have an answer.
+00:29:15 [W] It's not great, but it works reasonably. Well for now, so Brian
+00:29:15 [W] We support IPv6.
+00:29:16 [W] Yeah, we do Casey. Well again cni-genie.
+00:29:30 [W] Kubernative and so they made the first step which is if you want to Cluster, that's only IPv6.
+00:29:41 [W] So that works pretty well.
+00:29:46 [W] Most people probably want to dual-stack ipv4 and IPv6 that is still marked as Alpha in other words.
+00:29:56 [W] Not not really completely ready in kubernative uses think it came in in version.
+00:30:00 [W] 16 of kubenetes and is is still still got a few rough edges, but check it out. And again, they need help from people checking it out and people making it better.
+00:30:15 [W] So Casey, what about this? You know, why are we executing binaries?
+00:30:22 [W] So the CIA protocol does kind of seem a bit old-fashioned right wide not grpc like every other kubernative and containerd related API like cri-o CSI and so on and so forth.
+00:30:38 [W] Oracle But ultimately it's because cni-genie out of Rocket the container on time engine from Carla's which has which is always demon Lucerne executing binaries is a really simple API don't need a demon and it just fit in with the entire ecosystem the Simplicity
+00:30:50 [W] Really to cni-genie option, right?
+00:30:58 [W] However, the world has moved on things have changed and we would like to think about opening up the possibility for grpc in cni-genie .0 running quickly out of time. But Brian, would you like to highlight some cool chain plugins?
+00:31:08 [W] Yeah.
+00:31:14 [W] So we talked about chaining earlier calling one thing then another then another on the on the same interface. And so people have really run with that idea. You can do your poor mappings you can
+00:31:20 [W] To tune things like Chuck tweaking the MAC address and Linux system settings.
+00:31:31 [W] Actually that reminds me one thing we wanted to stress cni-genie exist for a Linux and windows.
+00:31:43 [W] I in my job. I tend to work on Linux, but we shouldn't lose sight of that the ecosystem works on Windows to so sorry back to back to the question.
+00:31:50 [W] I was supposed to be talking about another
+00:31:51 [W] Kind of tuning is bandwidth, but it's actually separat plug-in doesn't matter. You can call as many as you like.
+00:32:02 [W] We have a plug-in to try and interact better with firewalls on on Linux and Source based routing choosing where exactly
+00:32:12 [W] Based on the where it's coming from.
+00:32:23 [W] Which again is is a cool feature that some little niche book some people like that.
+00:32:26 [W] Okay. I think we are done on our list of frequently asked questions.
+00:32:34 [W] So let's put up some links the Deep dive session.
+00:32:37 [W] I've mentioned already if you're watching this live.
+00:32:39 [W] tomorrow and
+00:32:43 [W] and the GitHub links where the code lives the scene is the spec and Library.
+00:32:52 [W] That's the bit that moves a bit slower and the plugins.
+00:32:55 [W] That's the plugins moves quite a lot faster.
+00:32:56 [W] We have our own slack channel in the cncf slack, but do remember if your question is really about kubernative.
+00:33:05 [W] They have their own area.
+00:33:08 [W] In fact, they're on slack.
+00:33:10 [W] So I put a link up for that too.
+00:33:11 [W] Pacey you want to wrap up?
+00:33:15 [W] Sure.
+00:33:18 [W] I thanks everybody for coming.
+00:33:22 [W] coming. We're here to answer questions. And please join us, of course in this lock and a GitHub and I will end the presentation with this slide just to leave it up so we can reference it if there's any final questions, but thank you very much for watching.
+00:33:31 [W] Yeah, thanks, Bonnie.
+00:33:34 [W] Oh, hello Clive.
+00:33:41 [W] Pacey you want to wrap up?
+00:33:42 [W] Sure. I thanks everybody for coming.
+00:33:43 [W] We're here to answer questions. And please join us, of course in this lock and GitHub and I will end the presentation with this slide just to leave it up so we can reference it if there's any final questions, but thank you very much for watching.
+00:33:44 [W] Yeah. Thanks, Mommy.
+00:33:44 [W] Oh, hello Clive.
+00:33:44 [W] Looks like we're live online.
+00:33:49 [W] And so thanks for all the questions great questions coming in. We answered a lot of them by typing. I wanted to pick up one that came in earlier, which is basically how what are some things
+00:33:58 [W] And so thanks for all the questions great questions coming in. We answered a lot of them by typing. I wanted to pick up one that came in earlier, which is basically how what are some things to think about
+00:33:59 [W] I plug in and that which is obviously a great question.
+00:34:10 [W] So I think I would I would highlight one key difference.
+00:34:16 [W] There are some of them that work as what's called an overlay. So they kind of make a whole virtual Network inside your real Network and there are some that run on your real Network.
+00:34:28 [W] And so basically you might have
+00:34:29 [W] Streets on your real Network, you might have not enough address space or limitations or something like that that might really drive you in the direction of an overlay.
+00:34:44 [W] So that's going to narrow the the the choice down overlay has a little bit of extra work.
+00:34:48 [W] So there's a performance hit two two-run an overlay. So you don't really need an overlay. Maybe you're going to choose one of the ones that doesn't do that that that's that's a really pretty fundamental divide.
+00:34:59 [W] Between the ones that are that work by being an overlay in the ones that don't then beyond that there's some features you might look at like do they do encryption.
+00:35:13 [W] do they do Network policy can they handle for instance multicast traffic the that if you had a specific need that's going to narrow down your choices and after that,
+00:35:27 [W] It was sort of personal preference or you know brand recognition or something like that.
+00:35:42 [W] The that's one of the great things that we really try to create with. This whole world is a lot of competition and I'm sorry that makes life harder when it because you have to choose but we do
+00:35:48 [W] Drives the bar up in general for everyone.
+00:35:53 [W] So there you go. Right and if you're using something say like Maltese you're doing something where you are not using kubernative and you care very specifically about the networking technology so full disclosure.
+00:36:07 [W] I work on open chest and openshift makes it relatively easy to use multiples to install extra networking plugins.
+00:36:14 [W] And for those that if you're doing something in Van slyke that you probably care a lot more about the specific technology that's being used right. Sometimes you just want to bridge you want to use a bridge or you're going
+00:36:19 [W] to bridge your East one or east to into something else or if you're very performance sensitive.
+00:36:26 [W] You might want you might want to be using something like s our iove where you use a device plug in and so a little bit more duct tape to pull it together such that you have a dedicated PCI Lane for whatever it is that you're Advanced networking configuration might be right.
+00:36:39 [W] So in that case you do need to care about the specific plugins networking implementation as opposed to just thinking of that as a as a unimportant detail.
+00:36:48 [W] Ask a couple more questions we could look at as this is when do we owe that to dream?
+00:36:58 [W] Yeah, let's do that one, right?
+00:37:05 [W] So yeah. So Dynamic configuration is like I had mentioned in the presentation is for anything that's plug-in spits. I'm sorry that it's container specific.
+00:37:14 [W] So the two most widely used instances for this would be bandwidth and host ports, but there are others as well. Right kubernative is itself has some glue that puts together.
+00:37:17 [W] Of the pods back and bandwidth which is a magic annotation in addition.
+00:37:28 [W] So for example in the multis world that we have built the multi Sandcastle that we've built an open shift. We also use Dynamic configuration. So you can give pods static IP addresses on their secondary interfaces. So one of the dynamic configuration
+00:37:40 [W] Our standards is to request that a specific poddisruptionbudgets rest.
+00:37:48 [W] I'm sorry that a specific interface have a specific IP address, right?
+00:37:55 [W] That's like a classic example of that in the configurations and you don't want every container to have the same IP address unless you're totally crazy.
+00:37:55 [W] Which some of you may be so there's a question does overlay reduce the IP address management.
+00:38:07 [W] I don't entirely follow what that means. But it may be refers to something I said about if you were short on address space. So the point being that an overlay network is isolated. It runs effectively in its own
+00:38:21 [W] So for instance, you could run ten overlay networks all reusing the same set of addresses.
+00:38:31 [W] This is more of a problem in ipv4.
+00:38:35 [W] But then that's what a lot of people are using.
+00:38:40 [W] So yeah, an overlay gives you some flexibility because as long as you don't want to talk to an IP address outside of your cluster, you can use whatever
+00:38:50 [W] your little bubble
+00:38:54 [W] I think we are out of time.
+00:39:02 [W] Oh.
+00:39:08 [W] And hand over to Casey.
+00:39:19 [W] Sorry, my laptop decided to drop out your audio. But in any case I thank you.
+00:39:25 [W] Everybody might. Thank you everybody for coming.
+00:39:27 [W] I think we have to end the presentation here.
+00:39:31 [W] I hope your ass you have a Greek Yukon and I will see you in slack.
+00:39:32 [W] I will see you all virtually in all the places in which we gather.
+00:39:35 [W] Thank you. Thank you.

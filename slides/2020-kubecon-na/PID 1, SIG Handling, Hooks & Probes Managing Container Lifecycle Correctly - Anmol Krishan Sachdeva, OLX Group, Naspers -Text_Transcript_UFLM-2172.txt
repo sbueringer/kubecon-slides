@@ -1,0 +1,288 @@
+﻿PID 1, SIG Handling, Hooks & Probes: Managing Container Lifecycle Correctly: UFLM-2172 - events@cncf.io - Tuesday, November 17, 2020 5:41 PM - 34 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Welcome everyone.
+00:00:01 [W] My name is an electrician. So styra. Hope you all are enjoying Q Khan today. I'll be talking about managing containerd lifecycle correctly before moving forward.
+00:00:09 [W] Let me introduce myself.
+00:00:11 [W] Entered India tooted International hack-a-thon.
+00:00:13 [W] I love doing research in the field of deep learning and computational Neuroscience and have 8 + Publications to my account.
+00:00:19 [W] I describe myself as an all-stock developer that is a person who is capable of Designing and developing solutions for platforms, like web mobile desktop and embedded systems apart from that.
+00:00:29 [W] I also like mentoring people now, let's have a look at the oil extra OLX group is a global product in Tech group consisting of 20 plus cramps.
+00:00:36 [W] are an online buying selling and exchange platform serving approximately 350.
+00:00:40 [W] Ian people per month and also we are present in around 45 countries across the five continents.
+00:00:45 [W] We have more than 10 million online listings every single month and we have billions of visits per day.
+00:00:50 [W] Also, we have hundreds of thousands of cash rates per second and all of this is factored hundreds of microservices that we run in over kubernative clusters.
+00:00:58 [W] That's fantastic.
+00:00:59 [W] Let's have a look at the infrastructure landscape mostly the tools and platforms that we use at Google X belong to the cncf landscape and not for drilling down into details of this. Let's have a look at the agenda of today's storageos.
+00:01:11 [W] Today's topic is divided into six segments. The first segment is about eunuchs processes and in its systems will be talking about zombies and orphans. Also in this section. The next section is about manage life cycle here.
+00:01:24 [W] We will be talking about parent container life cycle along with Linux signal handling the third section talks about resiliency and high availability through health checks and Probst specifically, we'll be talking about liveness. Prodyna stroke and startup Row. The fourth segment is about
+00:01:39 [W] Combination of part they going down into deep detail of how graceful termination happens.
+00:01:29 [W] The fifth section is all about in it containers and it's still working. The sixth segment is about in a container the comparison between in a container startup robe and the postdoctoral so let's get started in this section. We'll be discussing about processes
+00:01:44 [W] We'll also be talking about zombies and offers and how to deal with them inside the containers.
+00:01:33 [W] So just to give you an overview of what Unix process is.
+00:01:37 [W] Our Unix process is basically an instance of a running application and the processes are ordered in form of a tree. Each process can spawn several child processes.
+00:01:46 [W] We can see on the left hand side.
+00:01:48 [W] There is a process the topmost process which is called as the init process or the PRD one process.
+00:01:53 [W] It is a process which is started by the kernel at the time of boot and it takes care of spending the rest of the system processes. We can see that Pi d 1, although init process is a main process.
+00:02:04 [W] It has two children one is pi D to running sshd and one is pi D 3 running nginx.
+00:02:10 [W] iot to further has created another process which is pi D 4 and is running Bash.
+00:02:16 [W] Let's have a look at zombies.
+00:02:18 [W] So what does zombies suppose a process? Is there consider PID for in our case and this process has terminated once the process has terminated.
+00:02:29 [W] It is referred to as defunct or zombie process. What does zombie process basically means?
+00:02:34 [W] It's a process which has terminated but has not been waited for by its parent.
+00:02:40 [W] The what means by waited for waited for basically means that the parent actually waits for the child to return its exit code or the exit status so that the parent can actually release the resources that it is holding.
+00:02:53 [W] Basically parent triggers wait PID system call here.
+00:02:55 [W] The flow is that there is a sick child signal which the child process when terminating generates the sick child signal is sent to the parent process ID and then the parent actually calls this way PID system call once this week we
+00:03:11 [W] The Ripping starts
+00:02:59 [W] So in a nutshell zombies are the processes that have terminated but have not yet been rated for why their parent processes?
+00:03:06 [W] Now what happens if a process loses its parent consider in our case Pi D 4 which is a child process of PRD to but PID to has somehow got terminated from now onwards part4 will be called as often process because it doesn't have any
+00:03:22 [W] And Unix systems.
+00:03:21 [W] We are D1 is responsible for representing the child towards self.
+00:03:24 [W] So PRD for will now become side of PRD one because part-1 will reparent your default with this we wrap up our overview of zombies and orphans. Now, let's see how zombies are harmful for each zombie process.
+00:03:38 [W] is an entry in the process table and zombie processes keep on acquiring the colonel resources though in a minimal fashion with the number of zombie processes is high then the creation of new clothes.
+00:03:49 [W] Since may not be possible because resource starvation may be there.
+00:03:53 [W] Having zombies inside the containers also poses some challenges generally one main application process runs per container and it is treated as PR d 1. So whatever we specify in the entry point of the container is treated as We R D1 now say we have coded an application to solve a specific purpose.
+00:04:08 [W] This is not meant to suffice an internet systems functionalities. What if they are many zombies getting created our process will not be able to read them.
+00:04:14 [W] Also, if we are using some third-party manage Docker containers, we are not sure whether they are actually having the process in created as an inert process or not, whether they have the functionality of an init system or not.
+00:04:25 [W] So this also poses some challenges there comes a need of having a proper in its system in our containers. Now, sometimes people use bash, but the thing is that bash is able to perform some of the reaping functions but is not able to handle the signals properly.
+00:04:40 [W] Bill to pass the signals which it receives from the operating system to the child processes.
+00:04:36 [W] Now, let's talk about some sophisticated than in systems upstart and systemd are two options, but these are Heavy Weight Systems.
+00:04:43 [W] We have tiny and dump in it. These are light its systems.
+00:04:47 [W] So we'll be taking into account China in this stock.
+00:04:50 [W] Tiny is an init system which is an open source system and it's suitable for Docker containers and also it's suitable for production and violence. It's simple and lightweight
+00:05:01 [W] it also reap zombies and does the signal forwarding properly adding or removing. Tiny doesn't have any negative effect.
+00:05:08 [W] Let's not wait and get started with setting up tiny setting or tiny is pretty straight forward and the left hand side.
+00:05:14 [W] You see a code snippet.
+00:05:15 [W] This is the dockerfile.
+00:05:17 [W] The first four lines actually are the contents of a Docker file which contains the command to run a Python program inside the container.
+00:05:26 [W] Line seven to thirteen are relevant for us.
+00:05:28 [W] So we'll be focusing on them.
+00:05:30 [W] We just need to specify a version of tiny and the remote URL from where we can fix the release then we just set the permission of this binary and then we provide the entry point and click on it can be provided as Tiny followed by two hyphens.
+00:05:43 [W] Then we just need to supply a regular command like we did before.
+00:05:48 [W] Now this defunct dot Pi which is a program that I want to run inside the container.
+00:05:52 [W] It's contained are on the right hand side.
+00:05:54 [W] Let's look at the configuration of the board resources for both of them one is for the version which doesn't contain tiny the first one which is Tiny disabled yellow.
+00:06:00 [W] The second one is for the one which contains DNA in it.
+00:06:04 [W] a simple python script that I showed which will be running in both of them. The first one should show defunct processes and the second one should not show different processes because the parent should be able to read them.
+00:06:18 [W] Let me run both of them.
+00:06:27 [W] So we see at the top that the two containers are running and since these are short-lived containers.
+00:06:31 [W] They will be just going into crash loop back and then restarting themselves, let me print the locks for both of them.
+00:06:37 [W] So you will see the difference.
+00:06:38 [W] The first one actually shows the process as defunct process and it's also labeling the PID 8 as zombie process.
+00:06:46 [W] The second one also shows that we are d8 will be zombie process, but it actually reach the zombie process. So we are not having any defunct label like we had in the first
+00:06:58 [W] So using tiny actually reads the zombie processes.
+00:07:01 [W] This is a simple example, which shows the same.
+00:07:03 [W] So let's discuss more details on Tiny before moving forward. This is a script which I used for creating the zombies can have a look here.
+00:07:14 [W] Okay.
+00:07:15 [W] Beeps on these and if it is not able to run as PID one. It also has a provision to be run as a sub linkerd.
+00:07:15 [W] So who is a subgroup or sub Reaper is any process which is not running as PRD one, but can actually perform the function of briefing so tiny can do it pretty simply just need to pass another argument.
+00:07:27 [W] So it is - is so it looks like tiny - is followed by double hyphens.
+00:07:33 [W] And the special thing about tiny is that it exists with the child's exit code and remapping is also possible.
+00:07:39 [W] So if you want to remap some say exit code to something else we can do that with tiny this wraps up the section of zombies orphans and Tiny system.
+00:07:50 [W] Let's move on with the manage life cycle.
+00:07:53 [W] Kevin are we have understood how processes work in containers and how to manage them to Ellipsis comes now, we will be discussing about the life cycle of containerd and box. There are five distinct phases of a false life cycle. These are pending running unknown succeeded and failed.
+00:08:08 [W] Brendan statement so the pot has been created through the area and is waiting for some new to get your duel on the running state mean with the pot is operational and is running fine unknown state is a rare occurrence and it means that the kubernative sister has some internal problem due to which it is unable to communicate with the
+00:08:12 [W] The last two steps and these are often found when we use cron jobs one succeeded which means for the port has finished. Normally the other one is pain, which means the pot has crashed kubernative is also watches the state of all the containers and containers have three
+00:08:17 [W] The first one is reading the second one is running. The third one is terminated waiting State means that the container is performing some operations which are required before the start up. It may be pulling images or of mine Secrets running means that it is running without any issues
+00:08:31 [W] Means it may have suffered some failure or it may have succeeded to know about the exact reason for termination of the container one may use the Q control described for command.
+00:08:38 [W] Now, let's talk about something really important the graceful termination process when talking about an application performance and behavior. One thing to consider is that whether the application handles the termination process graceful, you are not handling the termination process gracefully.
+00:08:52 [W] It means whether any cleanups are required or not before terminating. There may be some need of cleaning up files. There may be some knative.
+00:08:58 [W] Out of preening of the resources may be releasing some connections making transactional commits.
+00:09:04 [W] And if not done this may impact the performance of the application and this may impact the users also.
+00:09:10 [W] First terminations are big threat first terminations could often lead to degraded performance or even some dark times. The outage may be there because the application may have ended up in an improper State because of the forceful termination.
+00:09:23 [W] Now let's talk about the two important Linux signals that form the part of the Court termination process system and security system can be considered as a gentle folk to The Container to cause termination of the processes.
+00:09:34 [W] It doesn't cause any immediate termination and the signal can be handled or even ignored on the other hand sickle is like a hard kill.
+00:09:43 [W] It's analogous to the kill - 9 command that we use to kill the processes this cannot be handled and it's like cutting the power of the machine.
+00:09:51 [W] Linux signals that form the part of the for termination process septum and secure system can be considered as a gentle folk to The Container to cause termination of the processes.
+00:09:57 [W] It doesn't cause any immediate termination and the signal can be handled or even ignored on the other hand cycle is like the hard kill.
+00:10:06 [W] It's analogous to the kill - line command that we use to kill the processes this cannot be handled and it's like cutting the power of the machine.
+00:10:14 [W] Now let's talk about the termination life cycle first the grace period is set and the default is 30 seconds here the pot enters the terminating State and stops getting any sort of traffic.
+00:10:24 [W] Next is the execution of pre stop hook if it exists and we will cover the details of this in a bit.
+00:10:30 [W] Then comes the septum signal which is sent to PRD one of each container there in that is there in the pot here comes the role of the unit system and signal handling that we talked about earlier today. If one is using an init system and then
+00:10:44 [W] And be ensured that proper systems Overton is happening.
+00:10:47 [W] However, it still depends on the application whether it can handle the signal or not. We will discuss about this and how to deal with such situations shortly.
+00:10:56 [W] Then comes the fourth stage it is when the grace period ends and the sickle is actually issued. Then the API server deletes the ports API object and finally the porter minutes.
+00:11:08 [W] Let's analyze determination life cycle through a Time series graph suppose the pot enters the terminating State here and stops receiving any sort of graphic grace period is set and the priests top hook starts executing say the hook caught executed for this point, then select turn signal
+00:11:23 [W] Pocket grace period is set and the priests top hook starts executing say the hook caught executed by this point, then select turn signal has issued to all the containers in the port.
+00:11:33 [W] Once the grace period ends sickle is issued and the pot forcibly shuts down.
+00:11:38 [W] This is the complete termination life cycle.
+00:11:42 [W] right. So now is the time to learn about achieving resiliency and high availability through the use of health checks and probes. Let us understand the help of pattern first and it's need kubernative should know the state of the
+00:11:53 [W] Fork so that it can decide whether to send the request to the phone or not, all of this becomes easy, if the container exposes some apis for different kinds of health checks kubernative containers a self-healing entities, there is a component called the cube lid
+00:12:08 [W] And is responsible for bringing up the containers and keeping them running the kubelet even restarts the containers in case if there is any crash this is done by doing genetic health checks against the containers and it is called the process Health check-up containers mean process
+00:12:23 [W] Just reasons like said faults can happen or some unknown, but maybe they're in such situations. The health checks helped a lot.
+00:12:21 [W] Let us look at some more problems in detail.
+00:12:23 [W] What if an application stops working without its main process crashing?
+00:12:27 [W] It's not year and it's common Deadlocks memory leaks infinite Loops crashing and many other reasons maybe player application should be able to handle some of the mentioned Problems by using some complex logic.
+00:12:39 [W] However, there needs to be some sophisticated reliable and an easier way to tackle such power.
+00:12:44 [W] These other services should not be sending requests to crash applications.
+00:12:49 [W] So let's see and discover some of the effective ways to tackle such problem probes offer solutions to such problems approach is basically a diagnostic performed by the Cupid from the containers in a periodic fashion.
+00:13:01 [W] It helps in achieving resiliency and also helps in better load balancing and routing of traffic since the parts which are not ready to receive the traffic because maybe their containers are in healthy will have either their canonical
+00:13:14 [W] In has restarted or the traffic will not be sent to them.
+00:13:17 [W] This will also ensure timely response to the requests.
+00:13:20 [W] Now, let's look at some technicalities of probes probing is basically possible via calling handlers implemented by the containers and there are three types of handlers exec TCP. And HTTP exact is the one which execute some code and expects exit Code
+00:13:36 [W] CP socket check is performed by a TCP check against the specified for HTTP get request is also possible on a specified IP port combination along with the paths.
+00:13:44 [W] It expects a response code in the range of 200 to 399. The resultant States can be success failure or unknown now coming to the probes.
+00:13:54 [W] They are three types of crops that we will be covering one is lightness one is Readiness for another one is startup Rook talking about the liveness for it helps him identifying whether the container is alive.
+00:14:03 [W] Rotate in case of failure is observed in the lab - Pro that you get kills the container and then restarts it whether the container will restart actually or not depends on the restart policy of the container which can be always never on failure.
+00:14:18 [W] Cementation of lightness probe shortly before moving forward.
+00:13:57 [W] Let me give you some tips.
+00:13:58 [W] First one is that always Define a liveness pro for both snarling production?
+00:14:03 [W] It is really important.
+00:14:04 [W] Second is have the application expose a health check appear in the format of say slash health or something like that.
+00:14:11 [W] health check API should not require any kind of a continuation as the pope will always feel this is a point. That should be noted.
+00:14:19 [W] Then keep it light on computational resources.
+00:14:21 [W] Don't put much complex logic in the lightness poop section probe CPU time is part of the container CPU time quota, so you should not be putting any kind of complex logic in the lab the stroke before moving forward with the demo.
+00:14:34 [W] I would first like to cover the concept of reading this book Readiness probe signals whether a container is ready to accept new connections or not.
+00:14:41 [W] Say during the start up some warm up procedure is to be followed and this may take some time. So the container can actually delay sending requests to the
+00:14:49 [W] Are using the Readiness for another use case can be to stop sending requests to the pot when the container is actually overloaded.
+00:14:56 [W] It must be noted that until all the containers are ready for a pot. The pot isn't treated to be ready unlike liveness proton failure in Readiness probe. A container isn't killed. It should also be noted that after a saving effect on Signal say even though if the Region's check
+00:15:11 [W] New tries not to send new request to The Container now, let us understand how to use liveness and Readiness probes in kubernative.
+00:15:33 [W] Station which shows some apis and drafting notes it so let's look at the board manifest first.
+00:15:38 [W] So here inside the container. You have the regular image image policy and name then you see two new section starting at 10 and 17.
+00:15:47 [W] So liveness Pope and Readiness room liveness probe and Readiness prove both in this example are using the HTTP get proving mechanism and they have the path set to health life and health ready respectively and the
+00:16:02 [W] Was 5,000 is a photon which mask application is running.
+00:15:55 [W] There are three new terms which you can see initial delay seconds failure threshold and period period seconds so initial delay seconds is basically the time by which we have to delay the probe.
+00:16:07 [W] So the probe will start after 2 seconds of the start of container in this case and likewise the Readiness probe will start after 2 seconds of the container.
+00:16:16 [W] So basically there will be a delay of 2 seconds and then the process will start working. You can have different values lightness and prodyna spok respectively. Then we have failure threshold failure threshold specifies how many times the
+00:16:31 [W] We'll start working you can have different values lightness and prodyna spok respectively. Then we have failure threshold value threshold specifies how many times the probe is allowed to fail? And in my case, I have specified as 2 and 2 in both then
+00:16:45 [W] And in my case, I have specified as 2 and 2 in both then period seconds basically sets the periodicity or the frequency after which the probe should hit again the application so it's two seconds in our case a coming to the application
+00:17:00 [W] This is just a snippet and the application code is a bit huge.
+00:17:03 [W] It actually has different routes.
+00:17:06 [W] So Health charity is one Health readies to stop ready is their health start ready is their health ready basically tells whether the poddisruptionbudgets strimzi something and then gives 200 as the code if the poddisruptionbudgets let's
+00:17:21 [W] Altinity basically tells whether the poddisruptionbudgets strimzi something and then gives 200 as the code if the power is directly it prints.
+00:17:28 [W] The body is not ready and gives 5024 if the code is actually not ready.
+00:17:33 [W] So I am just implementing a knave logic here in which when I hit Health stop ready, then it actually turns the Pod ready variable to 1 and when it finds in health ready State when it
+00:17:47 [W] and zip code ready is not equal to 0 then it actually creates the court has not ready likewise.
+00:17:55 [W] I set board ready to be equal to 0 here in health start ready and we can play around this in the demo.
+00:18:02 [W] So let's have a look at the demo.
+00:18:04 [W] So just for quick demo.
+00:18:06 [W] Here's the file here is the pot manifest file which contains the liveness proven Readiness group sections X as explained in the slides.
+00:18:12 [W] So let's apply this Yammer and see how the courts to act
+00:18:17 [W] So you'll see the parts are coming. So basically there is only one pot. So python health is a name of the pot. So I'll just start tailing the locks.
+00:18:27 [W] So you see live and ready these two are the apis which are getting hit and these are basically the it's coming from the probes.
+00:18:35 [W] So you see live ready like 30, this will keep on continuing now.
+00:18:40 [W] me go to the browser and show you how the app looks like.
+00:18:46 [W] So I haven't started the port forwarding. So let me start the port forwarding for this.
+00:18:54 [W] Abstract, so you'll see the pots are coming.
+00:18:57 [W] So basically there is only one fault. So python health is a name of the pot. So I'll just start tailing the locks.
+00:19:05 [W] So you see live and ready these two are the apis which are getting hit and these are basically the hits coming from the probes.
+00:19:13 [W] So you see live ready like 30, this will keep on continuing now.
+00:19:18 [W] Let me go to the browser and show you how the app looks like.
+00:19:24 [W] So I haven't started the port forwarding. So let me start the port forwarding for this.
+00:19:35 [W] He forwarded to a Chinese man.
+00:19:39 [W] Let me hit it and I should see some response.
+00:19:44 [W] Hello from python now, let me try and hit here.
+00:19:50 [W] I will lie, and it should hopefully give me the poddisruptionbudgets.
+00:20:04 [W] So it's giving me 200 again 200.
+00:20:07 [W] Okay. Now let's try with ready.
+00:20:10 [W] Okay, so we see that here. We are always getting 200 as a response now.
+00:20:17 [W] Let me do one thing.
+00:20:18 [W] Let me stop the readiness.
+00:20:21 [W] Before hitting enter the see that here. We are having 1 1 as the ready state. So one one running here as a ready State and here we are having 200 as a response for ready Health ready.
+00:20:34 [W] Now, let me hit on stop.
+00:20:37 [W] And I got four ready has been stopped now. Let me hit on radiation.
+00:20:43 [W] And it's killing me 502 is expected their see these these purple colored lines.
+00:20:50 [W] These are basically lines when the Readiness Pope started feeling and the pot has gone into 0 1 State now. Let me resume the Readiness state for this by hitting the API again.
+00:21:02 [W] See that here.
+00:21:03 [W] We are always getting 200 as a response now.
+00:21:06 [W] Let me do one thing.
+00:21:08 [W] Let me stop the readiness.
+00:21:11 [W] Before hitting enter just see that here.
+00:21:14 [W] We are having 1 1 as the ready state. So one one running here as a ready State and here we are having 200 as a response for ready Health ready.
+00:21:23 [W] Now, let me hit on stop.
+00:21:27 [W] And I got four ready has been stopped now. Let me hit on radiation.
+00:21:33 [W] And it's giving me 502 is expected.
+00:21:35 [W] as see these these purple colored lines.
+00:21:40 [W] These are basically lines when the Readiness probe started feeling and the pot has gone into 0 1 State now. Let me resume the Readiness state for this by hitting the API again.
+00:21:53 [W] So start ready should actually do and then if I hit ready again, I'm able to see the pot in running state.
+00:22:02 [W] So see the purple lines are gone.
+00:22:04 [W] The port has again become ready. So basically what I did was I failed the Readiness prototype that the traffic doesn't get routed to Method now.
+00:22:13 [W] We'll see what happens when I stop the liveness pope as in I feel the lightness book.
+00:22:19 [W] So I have done this and it should actually kill the pain.
+00:22:25 [W] The containerless it will not perform.
+00:22:27 [W] They see you were getting purple line healthy Health life, and now the board must be the container must be serving its graceful period and shortly we should see a restart Happening Here.
+00:22:45 [W] and what we can do is simultaneously we can see the describe output of
+00:22:50 [W] supports here
+00:22:53 [W] So you see liveness probe failed.
+00:22:56 [W] 502 and then you can see the restart count also count.
+00:23:01 [W] So that's all for the demo for The liveness Proven Readiness for let's get back to the slides and start with the next section.
+00:23:10 [W] So before moving forward with the next section, we need to discuss about startup probe. Also, so startup rope is basically a probe which indicates whether the application within the container has started and not all the other probes are disabled until the startup groups of succeeds.
+00:23:23 [W] Simultaneously we can see the describe output of the pots here.
+00:23:30 [W] So you see liveness probe failed.
+00:23:33 [W] The 502 and then you can see the restart count also burnt.
+00:23:39 [W] So that's all for the demo for The liveness Proven Readiness for let's get back to the slides and start with the next section.
+00:23:47 [W] So before moving forward with the next section, we need to discuss about startup probe also, so startup process basically a probe which indicates whether the application within the container has started and not all the other probes are disabled until the startup process exceeds and also it is mainly used with
+00:24:02 [W] Of pain and it is meant to be executed at a start-up only unlike others which run periodically it may share the same probing mechanism as that of lightness probe and Readiness for and in case of HTTP get method.
+00:24:16 [W] They all all the three of them can use the same path also for the behavior of the three promises to print.
+00:24:22 [W] Let's quickly have a look at the lifecycle hooks lifecycle hooks are actually required for managing the containerless flm. A better manner since only signal handling is not the thing which we need to worry about. So there are two lie.
+00:24:32 [W] A cycle looks available one is posted and one is priest or post heart Hook is actually executed just after the container starts and it runs parallel with the main container.
+00:24:40 [W] It can be used to implement some form of logic or maybe signal to an external listener about the application getting started.
+00:24:48 [W] Also, it can be used to do some pre conditional checks. It must be noted that there are no guarantees of the post our truck running and also it makes the container stay in the waiting State till it has executed for me and keeps the problem finding state. It may also happen that the hook gets executed.
+00:25:02 [W] Even before the main process has started fully and in case of any failure, no returns happened the container restarts depending on the restart policy of the container now talking about the peace table for it's a call that is sent to the container before it is terminated and it triggers the graceful termination
+00:25:18 [W] Basically, it is used to execute some graceful termination logic either outside the application or by hitting some application and point which can be triggered to it can trigger actually the graceful termination of the app in case of third party manage containers.
+00:25:29 [W] Also, this comes handy.
+00:25:31 [W] We at OLX are using pre stop book heavily and to quote an example.
+00:25:35 [W] We have a chat server powered by a chopper and it uses the priesthood to clean up the redis connections and entries on termination of the ledger board for let's revisit.
+00:25:45 [W] Visit the termination life cycle graph and see where the peace table book fits in so as you can see here, the priests Toc book is actually immediately called as the grace period starts and it ends before the septum signal actually starts so it can be used to
+00:26:00 [W] Let's revisit the termination life cycle graph and see where the peace table book fits in.
+00:26:04 [W] So as you can see here, the priests top Hook is actually immediately called as the grace period starts and it ends before the septum signal actually starts so it can be used to handle graceful termination effectively and even for the thesis
+00:26:24 [W] In addition effectively. And even for the thesis where the application don't implicitly support peaceful termination. This can be used to have the crystal termination done for those applications.
+00:26:35 [W] Now let us quickly see how these books can be implemented in kubernative.
+00:26:38 [W] So here is the snippet of the code.
+00:26:40 [W] I'm actually adding a line in both the hooks to index dot HTML of engineer. So I'm using nginx image line 9 actually States the life cycle section and inside that we have posted and restore the
+00:26:54 [W] We have command here specified for post-op and please doc respectively in place talk.
+00:27:01 [W] I am doing additionally the freedom of nginx after those hook actually executes. So let me apply the configuration now.
+00:27:08 [W] This will take 20 seconds has a has specified this in the postcard hooks.
+00:27:13 [W] Come on.
+00:27:15 [W] Okay, so it has started running.
+00:27:17 [W] Let me put forward it and then it will try and open here.
+00:27:20 [W] So you see poster now. Let me delete this.
+00:27:28 [W] And we'll see please stop has a start at coming here and the pot is now serving with stressful termination Peter. And also it must have cleaned the nginx process.
+00:27:41 [W] All right now is the time to discuss about the in eight containers.
+00:27:45 [W] Let me put forward it and then if you try and open here, so you see poster now. Let me delete this.
+00:27:57 [W] And we'll see please stop has here started coming here. And the pot is now serving with stressful termination Peter. And also it must have cleaned the nginx process. All right now is
+00:28:53 [W] Lynette containers can run inside a pot and almost run successfully and sequentially in the specified order in the Manifest.
+00:29:00 [W] Also, they need containers don't support any sort of books for process that we have seen so far in case if there is any failure which in it containers encounters, it depends on the policy start policy whether to restart the inner container or not, if it is set to always then it will
+00:29:15 [W] Also in it containers can share the same volumes and that of the application containers and altering any kind of code in the unit containerless to restarting of the phone.
+00:29:24 [W] Let us now see how to implement in it containers in kubernative here. I am using an nginx container, which is an application container and a basic box container, which is the inner container.
+00:29:34 [W] Both are using the same empty directory volume unit containerd just modifies the index file of the nginx container and let's see how it happens. So let me apply them invest
+00:29:44 [W] The port has started initializing you can see in its you know of one that means one container in a frontier history out of with zero has been initialized now, the court is coming to the start State. It's initializing the city.
+00:29:57 [W] Astronomy, let's go to nginx and see what what is this way, there's displaying hello world from in a container.
+00:30:06 [W] So this shows that in a container was able to modify in the nginx index dot HTML file now since we have seen how the inner container Works, let's see at the usage of connect containerless are containerless can be used for delaying the application container starter for can be used to perform deconditioned sex.
+00:30:20 [W] They can also be used to run utilities report that is not part of the application container. They can be used to see data in database before the application starts.
+00:30:27 [W] You will need can be run to can be run to consider things at the runtime and wait for something to become available.
+00:30:34 [W] Nginx index dot HTML file now since we have seen how the inner container Works.
+00:30:36 [W] Let's hear the usage of connect containerless are containers can be used for delaying the application container starter for can be used to perform precondition sex. They can also be used to run utilities reports that is not part of the application consumer.
+00:30:47 [W] They can be used to see data in database before the application start even it can be run to it can be done to configure things at the runtime and wait for something to become available.
+00:30:57 [W] Maybe a DB maybe a service that that needs to be available before.
+00:31:01 [W] Our application starts. It can also perform database schema and stations and filtration and also prepare the schema and it can also be used to create user accounts.
+00:31:10 [W] So several use cases are there we are in we can use the intercom payments.
+00:31:14 [W] Let's get started with the scheduling and resources of connect containerless when it went a nurse and application containers coexist inside of pain and the effective request or limit for the resource of pork depends on what we specify for both in it containers and the application containers.
+00:31:29 [W] Scheduling and resources are connect containers. So any containers and application containers coexist inside a pot and the effective request or limit for the resource of pork depends on what we specify for both in it containers and the application containers.
+00:31:42 [W] So the effective request limit for reports resource is the higher of the sum of requests limit for a resource of all the application containers that are present and the effective request limit for a resource of the enactment Eunice. We're in the effective request limit for a resource of the unit
+00:31:57 [W] Use of any particular resource this limit that is defined on all the inert containers.
+00:32:03 [W] But this we wrap up our section and we move on with the face of so this is the comparison between inner container startup rope and post on hook.
+00:32:10 [W] So first, let's set the parameters based on the container.
+00:32:15 [W] So yeah post dot hook can be used inside the same container as well as startup probe can be used inside the same container, but in a container requires a separate container, so application container is different and enter container is different then the scope so scope of
+00:32:30 [W] All-Star Pocus limited to a container likewise scope of the startup rope is committed to a container while the inner container scope is not restricted to a container but to the whole pork so in it containers are bound to the poor and not some particular application of data
+00:32:42 [W] Now running the container image. So in each container has the freedom to run the same or separate image, but the postcard hook and start up probe don't have this privilege. So they run on the same image as that of the application because they are running inside the same keptn then the Run
+00:32:57 [W] Didn't he's supposed at hook has no guarantee at all. And rest of the two must run successfully in order to proceed forward.
+00:33:05 [W] Then talking about the failure thresholds and restarts. So startup rope can have the threshold specified and those should be decent in number should be a bit higher than what we specify for like, mr.
+00:33:16 [W] And Readiness for proposed that hooks.
+00:33:18 [W] We don't have any threshold but we starts happen depending on the course restart policy and for the inert containerless restart actually happens again, depending on the quad stretch that policy and in case the postcard hook actually fails, then the
+00:33:34 [W] And the container actually restarts and request.
+00:33:37 [W] Usage so usage is almost similar, but the distinct things I'll mention here.
+00:33:42 [W] So post art is generally used to Signal the external resistance that my application is going to start now, or maybe it can be used for pre conditional checks and maybe introducing some disease specifically in it containers.
+00:33:56 [W] I have covered separately.
+00:33:58 [W] So this can be used for various initialization purposes.
+00:34:01 [W] and for start-up probes. It is appropriate for slow starting containers, and we must be specifying some
+00:34:07 [W] he was number in the failure threshold last is the count so in it containers can be multiple in number so we can have ten unit containers depending on say own needs, but for start hook can be one and we can choose between the
+00:34:23 [W] Magan isms that are present for the Post article likewise.
+00:34:26 [W] There can be only one startup row and we can choose quit between the different mechanisms for probing.
+00:34:33 [W] Thanks a lot for joining this talk now, it's the time for QA.
+00:34:37 [W] It's bit late only.
+00:34:39 [W] We are left with almost two minutes or so so we can join in slack at this channel to puke on 101.
+00:34:45 [W] Hope you enjoyed the conference and hope you enjoyed my talk. Also, see you in the slack Channel now.

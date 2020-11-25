@@ -1,0 +1,528 @@
+﻿Operating Enterprise Grade Kubernetes Clusters at Salesforce on Bare Metal: XYOM-5740 - events@cncf.io - Tuesday, August 18, 2020 11:41 AM - 52 minutes
+
+Participant: wordly [W] English (US)
+Participant: wordly [W0] English (US)
+
+Transcription for wordly [W]
+
+00:03:08 [W] All right, welcome to the talk on operating enterprise-grade kubernative clusters at Salesforce on bare metal.
+00:03:23 [W] I am on about growth senior director of engineering I manage a team that provides the kubernative raised platform for Salesforce teams and joined in this talk with my uncle Marv. Who's the architect on the same team?
+00:03:33 [W] So who's this top for this talk is for everyone who wants to operate their own kubernative clusters, especially if you're doing it on bed medal.
+00:03:44 [W] You'll explain our own experience of doing it at Salesforce.
+00:03:51 [W] This is really doing kubernative is the hard way as compare to the manage kubernative engines out there.
+00:03:59 [W] We do a deep dive into an architecture and how we operate our stack over the last four and a half years.
+00:04:05 [W] We have developed a bunch of War Stories of issues and pitfalls that we Face you'd like to share with you. Hopefully you can learn from them as well.
+00:04:10 [W] At the end, we'll talk about our current and future Investments.
+00:04:15 [W] We hope at the end of the stock. You will appreciate what does it take to run your own kubernative clusters.
+00:04:22 [W] So, let's Dive In.
+00:04:24 [W] Bed metal. So we deploy kubernative Dava RIT City all through puppet on top of Master and worker nodes.
+00:04:43 [W] Puppet internally, we configure it to rely on systemd systemd is a component on the box that is responsible for making sure the services keep running.
+00:04:52 [W] Our customers are other Salesforce teams who want to just focus on their business logic and not worry about infrastructure.
+00:05:06 [W] So what we provide to our customers is the gitops style deployment pipeline.
+00:05:07 [W] b****, I kindergarten to get along with that.
+00:05:13 [W] They also check in a simplified manifest that describes their application.
+00:05:16 [W] The CIP line runs it validates their application manifest packages atop and deploys it on all clusters as a goal state.
+00:05:26 [W] The way we describe the goal state is in the form of a CRT for each application as you're all probably familiar ci/cd, S as a way to extend the kubernative API.
+00:05:38 [W] We had extended the cobras API to add infrastructure Integrations such as pki Sir configuration or custom load balancing.
+00:05:47 [W] So when the goal State lands up in every cluster, we have an operator that keeps listening for this goal State as soon as it gets a new goal state. It will go convert that ci/cd into deployments.
+00:06:02 [W] To play across the world across all of our data centers within minutes.
+00:06:10 [W] Over the last four and a half years our get mono repo where the check-in have already reached a hundred thousand comments last year alone. We had 20,000 commands.
+00:06:24 [W] So it's highly used inside our infrastructure.
+00:06:24 [W] So, how is the puppet module that is Builds on implemented?
+00:06:29 [W] So we have built a puppet module that lets you deploy kubernative says in a very simple way the Declaration as I've shown we just this two lines you can say install kubernative on my machine.
+00:06:43 [W] It takes in a flag that says we want the master or the worker node Behavior.
+00:06:48 [W] Let's see. What's inside this.
+00:06:52 [W] It's implemented is three layers from right to left the right post player uses RPM to install the binaries.
+00:07:05 [W] And as you said before it uses systemd configuration to manage the demons so systemd is the component will restart your service if it fails
+00:07:12 [W] that layer is then used by the note puppet class.
+00:07:16 [W] The node puppet class runs on every machine it installs darker.
+00:07:24 [W] kubelet Q proxy flannel or our custom sdn and haproxy.
+00:07:30 [W] Why do we use haproxy? I will cover that in the next slide.
+00:07:33 [W] Or it uses systemd configuration to manage the demons. So systemd is the component will restart your service if it fails.
+00:07:36 [W] That layer is then used by the note puppet class.
+00:07:36 [W] The node puppet class runs on every machine it installs darker kubelet Q proxy flannel or our customers DN and haproxy.
+00:07:37 [W] Ywz haproxy. I will cover that in the next slide.
+00:07:38 [W] The master Prophet class takes in the node puppet class. So it installs all of those services in addition it also installs the hcd as well as the kubernative control plane.
+00:07:49 [W] That means API server controller manager and scheduler all assistant eServices.
+00:07:52 [W] So what are the features that we implemented inside a puppet module?
+00:07:58 [W] First and foremost with completely automated the deployment of HC Docker and kubernative.
+00:08:05 [W] And we also added a bunch of configuration flags for our services important things like cubelet arguments and API server flax. They're all configurable.
+00:08:16 [W] Also, we had to implement features just for epsagon kubernative Z.
+00:08:22 [W] For example, the hcd service it waits before for Forum to be formed before it proceeds.
+00:08:29 [W] the service account supporting kubernative supports key rotation
+00:08:33 [W] And there is one more detail that I did not show on the previous line.
+00:08:37 [W] So we were forced to run flannel on docker.
+00:08:41 [W] But Doc and reach flannel running to start.
+00:08:46 [W] So how do we solve this?
+00:08:50 [W] So we ended up running to instance of Docker and every machine.
+00:08:53 [W] The first Docker instance is called Docker bootstrap, it runs flannel and sdn.
+00:08:57 [W] Yes, that would Flex it all configurable.
+00:09:06 [W] Also, we had to implement features just for epsagon kubernative.
+00:09:06 [W] For example, the HCG service it waits before for Forum to be formed before it proceeds.
+00:09:07 [W] the service Account Support in kubernative support ski rotation
+00:09:07 [W] and there is one more detail that I did not show on the previous line.
+00:09:08 [W] So we were forced to run flannel on docker.
+00:09:08 [W] But Doc and reads flannel running to start.
+00:09:08 [W] So how do we solve this?
+00:09:09 [W] So we ended up running to instance of Darker and every machine.
+00:09:09 [W] The first Docker instance is called Docker bootstrap, it runs flannel and sdn.
+00:09:10 [W] Depending on the case and since flannel needs at City it also installs that City on that machine now since flannel is already running now the main doctor can start and that's where we run kubernative Z, so that's a neat way. We solve this problem.
+00:09:15 [W] So to conclude how do we think about running kubernative Von puppet?
+00:09:21 [W] Well, the good things are it's completely automated. So it's a declarative the same thing that we like about Pub kubernative Z.
+00:09:27 [W] By using random start intervals on the petition on every machine we can get some amount of Staggering across machines.
+00:09:37 [W] But what are the drawbacks this is not proper orchestration or any health mediation?
+00:09:43 [W] Also, the iteration Ike Cycles are very expensive on puppet like any small change. It takes in a lot of effort to try it out.
+00:09:51 [W] And lastly the way modules are composed in puppet any base module that you may not own may be as common OS Library change can easily break your module and you will hear about this more in the subsequent slide.
+00:10:07 [W] So that concludes a deep dive into our perfect infrastructure.
+00:10:12 [W] Now what did we have to do to operationalize this stack?
+00:10:17 [W] We knew from the beginning we have to run our control plane in Highway liability mode. So we run multiple servers so our xcd runs in kermode.
+00:10:27 [W] machines
+00:10:35 [W] But what are the drawbacks this is not proper orchestration or any health mediation?
+00:10:36 [W] Also the iteration I Cycles are very expensive on puppet like any small change. It takes in a lot of effort to try it out.
+00:10:37 [W] And lastly the way modules are composed in puppet any base module that you may not own may be as common OS Library change can easily break your module and you will hear about this more in the subsequent slide.
+00:10:40 [W] So that concludes a deep dive into our puppet infrastructure.
+00:10:42 [W] Now what did we have to do to operationalize this stack?
+00:10:43 [W] We knew from the beginning. We have to run our control plane in Highway lability mode.
+00:10:43 [W] So we run multiple servers so our xcd runs in kermode.
+00:10:44 [W] But kubernative for example the cube like cannot talk to multiple API servers.
+00:10:45 [W] So that's how we saw that was using installing haproxy on every machine.
+00:10:46 [W] so we can figure kubelet stalk to the haproxy as if it's talking to the API server and then the haproxy elotl islands across the API servers.
+00:10:47 [W] For security. We hardened all our communication from service to service across machines using mpls based on our custom pki configuration.
+00:10:58 [W] Also, we isolated to workloads.
+00:11:02 [W] That should not be on the same machine by using node labels.
+00:11:10 [W] So we apply labels on the nodes to group them into what we call as minion pools and when we create a deployment we use a label selector to Target one of those minions boots.
+00:11:15 [W] That lets us isolate which machines are deployment can run on.
+00:11:20 [W] And conversely on the other way for each machine.
+00:11:24 [W] We apply our back that limits what namespaces they can access.
+00:11:28 [W] Also, we have to monitor every piece of our stack.
+00:11:35 [W] So we implemented what we call as Watchdogs. These are agents that monitor infrastructure and alert us.
+00:11:39 [W] We also implemented a SQL based monitoring pipeline that provides snapshot visibility and custom alerting and I'll go deeper in the next slide.
+00:11:50 [W] We also open source Loop last year.
+00:11:55 [W] This is a project that provides historical visibility on kubenetes. We believe there is no other tool available in the ecosystem that solves this unique problem.
+00:12:03 [W] Ended a SQL based monitoring pipeline that provides snapshot visibility and custom alerting and I will go deeper in the next slide.
+00:12:06 [W] We also open source Loop last year.
+00:12:06 [W] This is a project that provides historical visibility on kubenetes. We believe there is no other tool available in the ecosystem that solves this unique problem.
+00:12:07 [W] We also automated as many of the operations as possible. For example, we reboot machines when things go bad on them.
+00:12:10 [W] So now let's look into the monitoring stackrox infrastructure.
+00:12:19 [W] As I said, we Implement what is called Watch Dogs Watch Dogs are basically agents that want a one piece of the infrastructure and emit an alert.
+00:12:27 [W] We have run Watchdog itself on top of kubernative and we implemented a framework that makes it very easy for us to add another watchdog.
+00:12:37 [W] This says features such as warmup period so it waits for a failures to happen for a little bit of time before it alerts us.
+00:12:46 [W] So it takes care of momentary blips.
+00:12:56 [W] The also has cool down period so once it alerts us it waits for another certain configurable period of time before alerting as again, we also added snooze.
+00:12:57 [W] This is very helpful when you want the alerts to stop for a certain amount of time because you know you about to fix something and if you forget to fix that or it takes longer, we'll come back and alert you again to
+00:13:10 [W] I do this needs to link to be fixed.
+00:13:12 [W] So watch dogs can alert us directly through pagerduty as shown on the top.
+00:13:15 [W] But they also emit ci/cd s these cri-o s are coming from each of those data centers and we aggregate them using a Kafka bus that lands those data in Thai SQL and with the central SQL we can write SQL
+00:13:30 [W] Send metrics as well as provide dashboards for visibility to our customers.
+00:13:36 [W] So that concludes a deep dive in architecture next. I'm going to hand it off to my own who will cover some interesting War Stories.
+00:13:45 [W] Thanks, Anna. So one stories are super fun.
+00:13:53 [W] So let's look at some of these War Stories We have the first one is about Perils of mounting host path.
+00:14:03 [W] This wall story dates back to the days of kubernative 1.3 our first encounter with kubenetes itself.
+00:14:11 [W] itself. We had made the decision to use it and we were still learning about the various knobs it offered one of those knobs was for start.
+00:14:14 [W] One Fine Day we found that every ruling update of a deployment would result in pods getting stuck in containerd creating more debugging into Q blood logs showed tear down failures and volume set up failures for secrets and emptied our
+00:14:30 [W] Along following a series of bread crumbs in kubelet logs and running LS off searching through pop Mount and using other vinick tools.
+00:14:46 [W] We found that a partner team had wanted the root file system using host power inside their Department Yes.
+00:14:48 [W] You heard that right the same root file system also has rarely kublr which is the default path in which kublr mounts a secret and empty lives.
+00:14:57 [W] that meant
+00:14:59 [W] that anybody that landed on the same host as the partner Padma thing the room file system would not be able to terminate Christmas.
+00:15:08 [W] So this is because that pots empty der and secrets volume are also mounted inside the partner pot and any attempt to tear down those volumes will reserves will result in resource busy areas.
+00:15:21 [W] Peewee gently ask the partner team to mount very specific paths, they needed and went ahead and added additional validation the validation to allow only a limited set of paths using host files.
+00:15:36 [W] We also went ahead and made read-only as the default way to mount horsepower while using those passes an anti-pattern. We all realize now back in the days.
+00:15:48 [W] This was a lesson learned that it can be dangerous to expose all knobs of a new tool that we all didn't understand properly.
+00:15:53 [W] Using cool spots can also lead to services that may work on one distribution of Linux, but not another.
+00:15:58 [W] And went ahead and added additional validation the validation to allow only a limited set of paths using host files.
+00:16:01 [W] We also went ahead and made read-only as the default way to mount horsepower while using those passes an anti-pattern. We all realize now back in the days.
+00:16:03 [W] This was a lesson learned that it can be dangerous to expose all knobs of a new tool that we all didn't understand properly.
+00:16:04 [W] Using host pass can also lead to services that may work on one distribution of Linux, but not another.
+00:16:06 [W] So let's move on to the next floor story.
+00:16:07 [W] So this is about bricks networking failures.
+00:16:08 [W] This story is also about our early days of kubernative.
+00:16:11 [W] We saw a customer was complaining with intermittent connectivity failures. We little more debugging we found that the failure only occurred when the client and server parts were deciding on the same course.
+00:16:21 [W] After a lot of debugging reading through comments upon comments and kubenetes issues.
+00:16:30 [W] We learnt about the New Concept called help anymore. Pretty sure you have heard of it help in mode is setting on the bridge interfaces that enables a packet received from an interface to be routed back on the same interface The Hairpin
+00:16:42 [W] Comments and kubernative issues. We learned about A New Concept called help anymore.
+00:16:43 [W] Pretty sure you have heard of it help in more is setting on the bridge interfaces that enables a packet received from an interface to be routed back on the same interface The Hairpin more did not apply in this specific case because the
+00:16:45 [W] reports were different
+00:16:47 [W] So after some more debugging we found out about the sysdig TL Colonel Flagg called net Bridge of call iptables.
+00:16:58 [W] You can see it on the screen on the slides this controls whether or not the packets traversing the bridge are sent to iptables for processing.
+00:17:05 [W] Someone had set this to 0 as an optimization in the common puppet module and hence preventing the packet from reaching 90 days since the client and server Parts on the same host were talking to each other using cluster IP. The packets needed to
+00:17:21 [W] begins where the actual cluster IP magic happens
+00:17:26 [W] Setting this to one fixed the issue but it was a long painful debugging we learn from this and added monitoring for this scenario in the form of a watchdog, which would not only check this sissy TL Colonel Flagg, but also The Hairpin mode for
+00:17:41 [W] In the process we obviously gained lot of Ip table expertise.
+00:17:48 [W] So let's move on to our nurse the third war story. This is about Quorum members pretty sure you heard of that word.
+00:17:58 [W] The story is about a net CD outage.
+00:18:05 [W] We saw in one of our pastors at CD state was wiped out on two of the three at CD members and they restarted as a brand new twist.
+00:18:09 [W] Since the to at CD members were still in Quorum.
+00:18:20 [W] They convinced the third at CD member to join this new cluster and replicate their empty state to their third member.
+00:18:25 [W] Now. The reason for why it's Edie got wiped out of its data is not clear.
+00:18:32 [W] But the reason for why third member joined the new cluster and lose all its state was that flag initial cluster State?
+00:18:35 [W] You can see it on the screen. It was still set to new on all members.
+00:18:39 [W] If this flag was set to existing the last exedy member would not have joined the new cluster since it was already part of an existing cluster and we could have some chance in recovering that data the at CD
+00:18:54 [W] Choirs all members to be new state initially but must be switched to existing later to avoid this scenario.
+00:19:09 [W] We use the puppet hire a mechanism to switch from new to existing in a month time frame when the new data center is ready to go lie.
+00:19:12 [W] So people in the public cloud with managed Cloud providers, we will they will probably never get to experience this but on bare metal we need to expect this some similar to how this can Network failures are part of any distributed
+00:19:29 [W] Excellent. This incident showed how the flags are confusing and we started doing regular backups of our all rsed data and also doing regular game day exercises to try such scenarios and make sure that our run books are ready for
+00:19:45 [W] And also doing regular Gameday exercises to try such scenarios and make sure that our run books are ready for dealing with this.
+00:19:46 [W] So let's move on to our next War Story and this war story is about memories.
+00:19:55 [W] It's about the kubernative cluster, which was rapidly leaking Parts. You may ask, how can you really eat ports?
+00:20:04 [W] Well, Darrin one day our on-call reported that the API server machines were going unresponsive.
+00:20:10 [W] on looking at our graphs we found their memory usage steadily increasing until they would become unresponsive while debugging this we were manually restarting them to prevent the a chick cluster from tipping over and lose: we decided
+00:20:25 [W] Doing two we should put a system the memory limit for our API servers while we continue to develop this further this at least stabilize the cluster since the systemd would restart the API server before it became unresponsive.
+00:20:39 [W] For further de bugging led to a mutating weapon that was incorrectly adding adjacent patch this Jason patch in trying to add a label dropped all other labels since the labels were all gone
+00:20:54 [W] Being created what was not accepted by the deployment controller and hence the deployment can turn controller keptn creating new pods to satisfy its desired code state.
+00:21:10 [W] this continued until New pots filled up the entire API server host memory and crashed it.
+00:21:13 [W] So this bug in our Jason patch it was his'n it was hidden you to another kubernative bulb that was re-emerging the labels back.
+00:21:25 [W] And so we never saw this bad until it got exposed after we upgraded it to a new version of communities.
+00:21:33 [W] We finally fixed the bug but there were a ton of learnings from this and lot of debugging for sure so mutating.
+00:21:41 [W] My books are a deadly weapon that must be constantly validated.
+00:21:43 [W] And can read in a cluster also adding limits is better than rendering the cluster unusable and this holds true for both host and parts.
+00:21:56 [W] So now we will move on to our last war story and and we have some more but I think this is all we have time for so this story is about our adventure in rolling out service accounts feature in kubernative on bare metal.
+00:22:09 [W] We had just enabled service accounts and puppet had begun rolling out this feature across a data centers.
+00:22:17 [W] Puppet uses a candle in mechanism for our bare metal host based on their PAW Patrols for Masters which includes a pi server controller manager and schedulers. We can only the changes in one master before rolling it out to all pastors.
+00:22:34 [W] Has one of our on calls noticed that the kubernative pods were being deleted, but for not coming up the error on those ports was no API to confound for service account default.
+00:22:46 [W] Immediately recognize this as related to the service account feature further feature for the debugging revealed that there was ongoing patching which was bringing down nodes one by one and hence.
+00:23:02 [W] The pods were getting evicted and recreated at the same time. The service account feature was being rolled up.
+00:23:09 [W] The puppet calorie mechanism had resulted in a situation where a master node carrying the latest puppet core got all the service account flags for a pi server and controller manager, but the controller manager that was leader was running on an
+00:23:25 [W] So the older controller manager did not ensure and you can see it on the screen.
+00:23:38 [W] So the older controller manager did not ensure that tokens for the reference service account in the Pod being created exist. And hence the power being created actually failed the admission check on the API server, which you see on the left
+00:23:47 [W] Happen because the EPA server handling that request was a new API server in puppet camera mode and was validating the existence of the token.
+00:23:58 [W] We fast-forwarded that feature so that the puppet camera mode is applied to all the hosts and that solved the issue.
+00:24:12 [W] We all learned that our candle in mechanism is not the best way to roll out new kubernative features, especially the ones which span across Epi servers and controller managers and more thought is needed.
+00:24:19 [W] So this is all the our stories we just talked about now.
+00:24:28 [W] We are going to summarize.
+00:24:29 [W] To summarize rolling your own kubenetes on a bare metal non VM infrastructure is hard and requires a lot of expertise and Investments.
+00:24:45 [W] Hopefully, we have shared some recipes today that you can take home and apply to your own infrastructure.
+00:24:49 [W] We have invested in a fully-automated highly available and secure deployment pipeline for darker it CD and kubernative infrastructure across all our data centers, which has evolved over the last four point five years the whole
+00:25:05 [W] And Investments. Hopefully we have shared some recipes today that you can take home and apply to your own infrastructure.
+00:25:06 [W] We have invested in a fully-automated highly available and secure deployment pipeline for darker it CD and kubernative infrastructure across all our data centers, which has evolved over the last four point five years the
+00:25:08 [W] tight Integrations with networking security and monitoring
+00:25:11 [W] we have invested in Watchdog monitoring alerting invisibility path pipeline.
+00:25:21 [W] You saw some of that in a new slide when he was diving deep into the monitoring Watchdogs.
+00:25:27 [W] We have also invested in cost to serve visibility at container namespace and Team level lastly.
+00:25:31 [W] There is a robust on-call rotation and run box for all are on call which makes it easy for Encore Engineers to debug and resolve problems even at 3 a.m. In the night.
+00:25:43 [W] We'd also like to mention some ongoing and future Investments.
+00:25:54 [W] So we are also building a pass for containers to accelerate the adoption of public cloud and Abstract enough of the infrastructure away for developers who don't need to fully understand.
+00:26:00 [W] We are also building a path layer for accessing cloudevents or cieszyn a cloud neutral way and will continue to talk about them and open sources them when they are available.
+00:26:11 [W] You all earlier open source to of our projects one is generic sidecar injector, which enables you to declaratively inject side curls meeting the need of a wide variety of our infrastructure teams.
+00:26:26 [W] Incheon some ongoing and future Investments, so we are also building a pass for containers to accelerate the adoption of public cloud and Abstract enough of the infrastructure a way for developers who don't need to fully
+00:26:40 [W] so we also open source Loop last year, which is our history visualization tool for kubernative resources and it helps in debugging and monitoring on you touched upon these in his previous slides as well if you want to help solve
+00:26:55 [W] Thinking problems.
+00:26:57 [W] Come join us.
+00:27:02 [W] I know and myself will be here for 10 more minutes and happy to take any questions you might have. Thank you.
+00:29:57 [W0] All right, welcome to the talk on operating enterprise-grade kubernative clusters at Salesforce on bare metal.
+00:30:12 [W0] I am on about growth senior director of engineering I manage a team that provides the kubernative based platform for Salesforce teams and joined in this talk with my uncle Marv.
+00:30:21 [W0] Who's the architect on the same.
+00:30:22 [W0] Hi.
+00:30:36 [W0] You can hear us. So let me try to answer all your questions.
+00:30:44 [W0] So do we how do we wrote do rolling update of our coolest clusters?
+00:30:52 [W0] So as we said in the talk, we do Canary we basically means we pick one server out of our five control playing machines to run the new version if everything looks good after certain
+00:31:04 [W0] Interval then we start rolling the update to the other API servers.
+00:31:13 [W0] That's why we run five API servers that gives us a way to test on one and the remaining four are still part of the Quorum. And if something happens to one, it would not affect the others similarly for the minions.
+00:31:24 [W0] We group them into bunch of Fools and then we upgrade them.
+00:31:25 [W0] anything
+00:31:31 [W0] You want to go ahead?
+00:31:38 [W0] Yeah, so, let's see this so I'll answer this one.
+00:31:44 [W0] How do you use persistent volumes on bare metal?
+00:31:54 [W0] The answer is we don't there was I think persisting Collins our hearts or most of our persistent infrastructure is not on kubernative yet.
+00:31:57 [W0] Yeah, I think the next one is this how do you do note every and bare metal?
+00:32:02 [W0] It's hard.
+00:32:07 [W0] I mean that's the biggest problem with bare metal is you have no way to quickly new commission if something goes wrong, so we really have to treat our API servers as almost like pets like if something happens to one of our API servers out of the five then we want to get it
+00:32:17 [W0] Very quickly similarly for a minions this week had lose a bunch of Minions that are affecting a customer we have to be required as that's some of the challenges running on them that way.
+00:32:28 [W0] And I think to add to that we have a node rebooter, right which is basically in order to recover on bare metal.
+00:32:39 [W0] We have an automated notary router which based on some health signals can actually go and determine that the node is unhealthy and needs to be boating.
+00:32:51 [W0] So that helps alleviate a lot of the challenges for where mature
+00:32:55 [W0] Somebody else asked to use terraformer ansible.
+00:33:01 [W0] There are other teams have tried ansible.
+00:33:04 [W0] Nobody is Veno as used it for kubernative.
+00:33:09 [W0] As you said in that talk like using puppet for kubernative little challenging because of lack of orchestration.
+00:33:14 [W0] So if you had to start over again, we probably in might not have picked puppet and might have looked at something else that give us orchestration across API servers. If something bad happens we can stop the rolling update automatically.
+00:33:24 [W0] Let's see. What do you hear the same hardness type for both master and was says the answer is yes get it exactly the same.
+00:33:35 [W0] How do you use load balancer services? So we ran our custom software load balancing stackrox?
+00:34:08 [W0] Malcolm or infrastructure
+00:34:10 [W0] What is your solution for managing endpoints and servicemeshcon?
+00:34:43 [W0] Be more specific on that question before.
+00:34:47 [W0] And any more questions you can always cut the slack after the stock ends with the other slides Channel hanging out this answer the question.
+00:34:59 [W0] How do you request for the question limit?
+00:35:08 [W0] Yeah, it's basically we don't have a smaller than the moment, but we do plan to implement something in the future that automatic automation.
+00:35:13 [W0] merging storage and bare metal as we said it's hard to do storage and then my room Pete Eames apart atoms are build their own custom orchestration using CRTs and controllers manage that
+00:35:35 [W0] we do not use any dedicated storage for at master.
+00:35:45 [W0] It's all on local this on the dimensional. So that's why use a change.
+00:35:50 [W0] And then another question.
+00:35:57 [W0] the most of the news
+00:36:04 [W0] so how long have you been running kubernative on their mettle in production at the years about to complete like probably five years now just started exactly around kubernative 1.3 when he won against deployment was still an
+00:36:24 [W0] And you are thinking about whether to bet on it bet on it or not.
+00:36:32 [W0] But yeah now it's been around four and a half which in five years.
+00:36:34 [W0] Yeah, we were part of the first Yukon is nice to see how the community has grown over the last five years just exploded in front of our eyes.
+00:36:44 [W0] And what else?
+00:36:49 [W0] Here so you want to take why do you use bare metal at all? Why didn't you just use stronger vm's?
+00:36:59 [W0] Yeah, we use a bad man for various reasons in our first party infrastructure.
+00:37:08 [W0] I think using a VMS might be much easier, but we didn't have that option when we started and that's what we used.
+00:37:16 [W0] I don't fully understand curvature hyper-converged bare metal.
+00:37:30 [W0] So we basically use pop it on top of their metal and its views as same skew for the entire data center that keeps it simple for us to build a local Predator infrastructure.
+00:37:42 [W0] You don't have any special hardware and we don't use anything public Cloud for our first body in position.
+00:37:49 [W0] I think we're almost out of time. So yeah reminder again folks, please send your questions. If you're not able to get to it here. We'll get to it on slab.
+00:38:05 [W0] Thanks so much for attending this talk.
+00:38:07 [W0] different experience for us doing it.
+00:38:09 [W0] live on the camera
+
+Transcription for wordly [W0]
+
+00:03:08 [W] All right, welcome to the talk on operating enterprise-grade kubernative clusters at Salesforce on bare metal.
+00:03:23 [W] I am on about growth senior director of engineering I manage a team that provides the kubernative raised platform for Salesforce teams and joined in this talk with my uncle Marv. Who's the architect on the same team?
+00:03:33 [W] So who's this top for this talk is for everyone who wants to operate their own kubernative clusters, especially if you're doing it on bed medal.
+00:03:44 [W] You'll explain our own experience of doing it at Salesforce.
+00:03:51 [W] This is really doing kubernative is the hard way as compare to the manage kubernative engines out there.
+00:03:59 [W] We do a deep dive into an architecture and how we operate our stack over the last four and a half years.
+00:04:05 [W] We have developed a bunch of War Stories of issues and pitfalls that we Face you'd like to share with you. Hopefully you can learn from them as well.
+00:04:10 [W] At the end, we'll talk about our current and future Investments.
+00:04:15 [W] We hope at the end of the stock. You will appreciate what does it take to run your own kubernative clusters.
+00:04:22 [W] So, let's Dive In.
+00:04:24 [W] Bed metal. So we deploy kubernative Dava RIT City all through puppet on top of Master and worker nodes.
+00:04:43 [W] Puppet internally, we configure it to rely on systemd systemd is a component on the box that is responsible for making sure the services keep running.
+00:04:52 [W] Our customers are other Salesforce teams who want to just focus on their business logic and not worry about infrastructure.
+00:05:06 [W] So what we provide to our customers is the gitops style deployment pipeline.
+00:05:07 [W] b****, I kindergarten to get along with that.
+00:05:13 [W] They also check in a simplified manifest that describes their application.
+00:05:16 [W] The CIP line runs it validates their application manifest packages atop and deploys it on all clusters as a goal state.
+00:05:26 [W] The way we describe the goal state is in the form of a CRT for each application as you're all probably familiar ci/cd, S as a way to extend the kubernative API.
+00:05:38 [W] We had extended the cobras API to add infrastructure Integrations such as pki Sir configuration or custom load balancing.
+00:05:47 [W] So when the goal State lands up in every cluster, we have an operator that keeps listening for this goal State as soon as it gets a new goal state. It will go convert that ci/cd into deployments.
+00:06:02 [W] To play across the world across all of our data centers within minutes.
+00:06:10 [W] Over the last four and a half years our get mono repo where the check-in have already reached a hundred thousand comments last year alone. We had 20,000 commands.
+00:06:24 [W] So it's highly used inside our infrastructure.
+00:06:24 [W] So, how is the puppet module that is Builds on implemented?
+00:06:29 [W] So we have built a puppet module that lets you deploy kubernative says in a very simple way the Declaration as I've shown we just this two lines you can say install kubernative on my machine.
+00:06:43 [W] It takes in a flag that says we want the master or the worker node Behavior.
+00:06:48 [W] Let's see. What's inside this.
+00:06:52 [W] It's implemented is three layers from right to left the right post player uses RPM to install the binaries.
+00:07:05 [W] And as you said before it uses systemd configuration to manage the demons so systemd is the component will restart your service if it fails
+00:07:12 [W] that layer is then used by the note puppet class.
+00:07:16 [W] The node puppet class runs on every machine it installs darker.
+00:07:24 [W] kubelet Q proxy flannel or our custom sdn and haproxy.
+00:07:30 [W] Why do we use haproxy? I will cover that in the next slide.
+00:07:33 [W] Or it uses systemd configuration to manage the demons. So systemd is the component will restart your service if it fails.
+00:07:36 [W] That layer is then used by the note puppet class.
+00:07:36 [W] The node puppet class runs on every machine it installs darker kubelet Q proxy flannel or our customers DN and haproxy.
+00:07:37 [W] Ywz haproxy. I will cover that in the next slide.
+00:07:38 [W] The master Prophet class takes in the node puppet class. So it installs all of those services in addition it also installs the hcd as well as the kubernative control plane.
+00:07:49 [W] That means API server controller manager and scheduler all assistant eServices.
+00:07:52 [W] So what are the features that we implemented inside a puppet module?
+00:07:58 [W] First and foremost with completely automated the deployment of HC Docker and kubernative.
+00:08:05 [W] And we also added a bunch of configuration flags for our services important things like cubelet arguments and API server flax. They're all configurable.
+00:08:16 [W] Also, we had to implement features just for epsagon kubernative Z.
+00:08:22 [W] For example, the hcd service it waits before for Forum to be formed before it proceeds.
+00:08:29 [W] the service account supporting kubernative supports key rotation
+00:08:33 [W] And there is one more detail that I did not show on the previous line.
+00:08:37 [W] So we were forced to run flannel on docker.
+00:08:41 [W] But Doc and reach flannel running to start.
+00:08:46 [W] So how do we solve this?
+00:08:50 [W] So we ended up running to instance of Docker and every machine.
+00:08:53 [W] The first Docker instance is called Docker bootstrap, it runs flannel and sdn.
+00:08:57 [W] Yes, that would Flex it all configurable.
+00:09:06 [W] Also, we had to implement features just for epsagon kubernative.
+00:09:06 [W] For example, the HCG service it waits before for Forum to be formed before it proceeds.
+00:09:07 [W] the service Account Support in kubernative support ski rotation
+00:09:07 [W] and there is one more detail that I did not show on the previous line.
+00:09:08 [W] So we were forced to run flannel on docker.
+00:09:08 [W] But Doc and reads flannel running to start.
+00:09:08 [W] So how do we solve this?
+00:09:09 [W] So we ended up running to instance of Darker and every machine.
+00:09:09 [W] The first Docker instance is called Docker bootstrap, it runs flannel and sdn.
+00:09:10 [W] Depending on the case and since flannel needs at City it also installs that City on that machine now since flannel is already running now the main doctor can start and that's where we run kubernative Z, so that's a neat way. We solve this problem.
+00:09:15 [W] So to conclude how do we think about running kubernative Von puppet?
+00:09:21 [W] Well, the good things are it's completely automated. So it's a declarative the same thing that we like about Pub kubernative Z.
+00:09:27 [W] By using random start intervals on the petition on every machine we can get some amount of Staggering across machines.
+00:09:37 [W] But what are the drawbacks this is not proper orchestration or any health mediation?
+00:09:43 [W] Also, the iteration Ike Cycles are very expensive on puppet like any small change. It takes in a lot of effort to try it out.
+00:09:51 [W] And lastly the way modules are composed in puppet any base module that you may not own may be as common OS Library change can easily break your module and you will hear about this more in the subsequent slide.
+00:10:07 [W] So that concludes a deep dive into our perfect infrastructure.
+00:10:12 [W] Now what did we have to do to operationalize this stack?
+00:10:17 [W] We knew from the beginning we have to run our control plane in Highway liability mode. So we run multiple servers so our xcd runs in kermode.
+00:10:27 [W] machines
+00:10:35 [W] But what are the drawbacks this is not proper orchestration or any health mediation?
+00:10:36 [W] Also the iteration I Cycles are very expensive on puppet like any small change. It takes in a lot of effort to try it out.
+00:10:37 [W] And lastly the way modules are composed in puppet any base module that you may not own may be as common OS Library change can easily break your module and you will hear about this more in the subsequent slide.
+00:10:40 [W] So that concludes a deep dive into our puppet infrastructure.
+00:10:42 [W] Now what did we have to do to operationalize this stack?
+00:10:43 [W] We knew from the beginning. We have to run our control plane in Highway lability mode.
+00:10:43 [W] So we run multiple servers so our xcd runs in kermode.
+00:10:44 [W] But kubernative for example the cube like cannot talk to multiple API servers.
+00:10:45 [W] So that's how we saw that was using installing haproxy on every machine.
+00:10:46 [W] so we can figure kubelet stalk to the haproxy as if it's talking to the API server and then the haproxy elotl islands across the API servers.
+00:10:47 [W] For security. We hardened all our communication from service to service across machines using mpls based on our custom pki configuration.
+00:10:58 [W] Also, we isolated to workloads.
+00:11:02 [W] That should not be on the same machine by using node labels.
+00:11:10 [W] So we apply labels on the nodes to group them into what we call as minion pools and when we create a deployment we use a label selector to Target one of those minions boots.
+00:11:15 [W] That lets us isolate which machines are deployment can run on.
+00:11:20 [W] And conversely on the other way for each machine.
+00:11:24 [W] We apply our back that limits what namespaces they can access.
+00:11:28 [W] Also, we have to monitor every piece of our stack.
+00:11:35 [W] So we implemented what we call as Watchdogs. These are agents that monitor infrastructure and alert us.
+00:11:39 [W] We also implemented a SQL based monitoring pipeline that provides snapshot visibility and custom alerting and I'll go deeper in the next slide.
+00:11:50 [W] We also open source Loop last year.
+00:11:55 [W] This is a project that provides historical visibility on kubenetes. We believe there is no other tool available in the ecosystem that solves this unique problem.
+00:12:03 [W] Ended a SQL based monitoring pipeline that provides snapshot visibility and custom alerting and I will go deeper in the next slide.
+00:12:06 [W] We also open source Loop last year.
+00:12:06 [W] This is a project that provides historical visibility on kubenetes. We believe there is no other tool available in the ecosystem that solves this unique problem.
+00:12:07 [W] We also automated as many of the operations as possible. For example, we reboot machines when things go bad on them.
+00:12:10 [W] So now let's look into the monitoring stackrox infrastructure.
+00:12:19 [W] As I said, we Implement what is called Watch Dogs Watch Dogs are basically agents that want a one piece of the infrastructure and emit an alert.
+00:12:27 [W] We have run Watchdog itself on top of kubernative and we implemented a framework that makes it very easy for us to add another watchdog.
+00:12:37 [W] This says features such as warmup period so it waits for a failures to happen for a little bit of time before it alerts us.
+00:12:46 [W] So it takes care of momentary blips.
+00:12:56 [W] The also has cool down period so once it alerts us it waits for another certain configurable period of time before alerting as again, we also added snooze.
+00:12:57 [W] This is very helpful when you want the alerts to stop for a certain amount of time because you know you about to fix something and if you forget to fix that or it takes longer, we'll come back and alert you again to
+00:13:10 [W] I do this needs to link to be fixed.
+00:13:12 [W] So watch dogs can alert us directly through pagerduty as shown on the top.
+00:13:15 [W] But they also emit ci/cd s these cri-o s are coming from each of those data centers and we aggregate them using a Kafka bus that lands those data in Thai SQL and with the central SQL we can write SQL
+00:13:30 [W] Send metrics as well as provide dashboards for visibility to our customers.
+00:13:36 [W] So that concludes a deep dive in architecture next. I'm going to hand it off to my own who will cover some interesting War Stories.
+00:13:45 [W] Thanks, Anna. So one stories are super fun.
+00:13:53 [W] So let's look at some of these War Stories We have the first one is about Perils of mounting host path.
+00:14:03 [W] This wall story dates back to the days of kubernative 1.3 our first encounter with kubenetes itself.
+00:14:11 [W] itself. We had made the decision to use it and we were still learning about the various knobs it offered one of those knobs was for start.
+00:14:14 [W] One Fine Day we found that every ruling update of a deployment would result in pods getting stuck in containerd creating more debugging into Q blood logs showed tear down failures and volume set up failures for secrets and emptied our
+00:14:30 [W] Along following a series of bread crumbs in kubelet logs and running LS off searching through pop Mount and using other vinick tools.
+00:14:46 [W] We found that a partner team had wanted the root file system using host power inside their Department Yes.
+00:14:48 [W] You heard that right the same root file system also has rarely kublr which is the default path in which kublr mounts a secret and empty lives.
+00:14:57 [W] that meant
+00:14:59 [W] that anybody that landed on the same host as the partner Padma thing the room file system would not be able to terminate Christmas.
+00:15:08 [W] So this is because that pots empty der and secrets volume are also mounted inside the partner pot and any attempt to tear down those volumes will reserves will result in resource busy areas.
+00:15:21 [W] Peewee gently ask the partner team to mount very specific paths, they needed and went ahead and added additional validation the validation to allow only a limited set of paths using host files.
+00:15:36 [W] We also went ahead and made read-only as the default way to mount horsepower while using those passes an anti-pattern. We all realize now back in the days.
+00:15:48 [W] This was a lesson learned that it can be dangerous to expose all knobs of a new tool that we all didn't understand properly.
+00:15:53 [W] Using cool spots can also lead to services that may work on one distribution of Linux, but not another.
+00:15:58 [W] And went ahead and added additional validation the validation to allow only a limited set of paths using host files.
+00:16:01 [W] We also went ahead and made read-only as the default way to mount horsepower while using those passes an anti-pattern. We all realize now back in the days.
+00:16:03 [W] This was a lesson learned that it can be dangerous to expose all knobs of a new tool that we all didn't understand properly.
+00:16:04 [W] Using host pass can also lead to services that may work on one distribution of Linux, but not another.
+00:16:06 [W] So let's move on to the next floor story.
+00:16:07 [W] So this is about bricks networking failures.
+00:16:08 [W] This story is also about our early days of kubernative.
+00:16:11 [W] We saw a customer was complaining with intermittent connectivity failures. We little more debugging we found that the failure only occurred when the client and server parts were deciding on the same course.
+00:16:21 [W] After a lot of debugging reading through comments upon comments and kubenetes issues.
+00:16:30 [W] We learnt about the New Concept called help anymore. Pretty sure you have heard of it help in mode is setting on the bridge interfaces that enables a packet received from an interface to be routed back on the same interface The Hairpin
+00:16:42 [W] Comments and kubernative issues. We learned about A New Concept called help anymore.
+00:16:43 [W] Pretty sure you have heard of it help in more is setting on the bridge interfaces that enables a packet received from an interface to be routed back on the same interface The Hairpin more did not apply in this specific case because the
+00:16:45 [W] reports were different
+00:16:47 [W] So after some more debugging we found out about the sysdig TL Colonel Flagg called net Bridge of call iptables.
+00:16:58 [W] You can see it on the screen on the slides this controls whether or not the packets traversing the bridge are sent to iptables for processing.
+00:17:05 [W] Someone had set this to 0 as an optimization in the common puppet module and hence preventing the packet from reaching 90 days since the client and server Parts on the same host were talking to each other using cluster IP. The packets needed to
+00:17:21 [W] begins where the actual cluster IP magic happens
+00:17:26 [W] Setting this to one fixed the issue but it was a long painful debugging we learn from this and added monitoring for this scenario in the form of a watchdog, which would not only check this sissy TL Colonel Flagg, but also The Hairpin mode for
+00:17:41 [W] In the process we obviously gained lot of Ip table expertise.
+00:17:48 [W] So let's move on to our nurse the third war story. This is about Quorum members pretty sure you heard of that word.
+00:17:58 [W] The story is about a net CD outage.
+00:18:05 [W] We saw in one of our pastors at CD state was wiped out on two of the three at CD members and they restarted as a brand new twist.
+00:18:09 [W] Since the to at CD members were still in Quorum.
+00:18:20 [W] They convinced the third at CD member to join this new cluster and replicate their empty state to their third member.
+00:18:25 [W] Now. The reason for why it's Edie got wiped out of its data is not clear.
+00:18:32 [W] But the reason for why third member joined the new cluster and lose all its state was that flag initial cluster State?
+00:18:35 [W] You can see it on the screen. It was still set to new on all members.
+00:18:39 [W] If this flag was set to existing the last exedy member would not have joined the new cluster since it was already part of an existing cluster and we could have some chance in recovering that data the at CD
+00:18:54 [W] Choirs all members to be new state initially but must be switched to existing later to avoid this scenario.
+00:19:09 [W] We use the puppet hire a mechanism to switch from new to existing in a month time frame when the new data center is ready to go lie.
+00:19:12 [W] So people in the public cloud with managed Cloud providers, we will they will probably never get to experience this but on bare metal we need to expect this some similar to how this can Network failures are part of any distributed
+00:19:29 [W] Excellent. This incident showed how the flags are confusing and we started doing regular backups of our all rsed data and also doing regular game day exercises to try such scenarios and make sure that our run books are ready for
+00:19:45 [W] And also doing regular Gameday exercises to try such scenarios and make sure that our run books are ready for dealing with this.
+00:19:46 [W] So let's move on to our next War Story and this war story is about memories.
+00:19:55 [W] It's about the kubernative cluster, which was rapidly leaking Parts. You may ask, how can you really eat ports?
+00:20:04 [W] Well, Darrin one day our on-call reported that the API server machines were going unresponsive.
+00:20:10 [W] on looking at our graphs we found their memory usage steadily increasing until they would become unresponsive while debugging this we were manually restarting them to prevent the a chick cluster from tipping over and lose: we decided
+00:20:25 [W] Doing two we should put a system the memory limit for our API servers while we continue to develop this further this at least stabilize the cluster since the systemd would restart the API server before it became unresponsive.
+00:20:39 [W] For further de bugging led to a mutating weapon that was incorrectly adding adjacent patch this Jason patch in trying to add a label dropped all other labels since the labels were all gone
+00:20:54 [W] Being created what was not accepted by the deployment controller and hence the deployment can turn controller keptn creating new pods to satisfy its desired code state.
+00:21:10 [W] this continued until New pots filled up the entire API server host memory and crashed it.
+00:21:13 [W] So this bug in our Jason patch it was his'n it was hidden you to another kubernative bulb that was re-emerging the labels back.
+00:21:25 [W] And so we never saw this bad until it got exposed after we upgraded it to a new version of communities.
+00:21:33 [W] We finally fixed the bug but there were a ton of learnings from this and lot of debugging for sure so mutating.
+00:21:41 [W] My books are a deadly weapon that must be constantly validated.
+00:21:43 [W] And can read in a cluster also adding limits is better than rendering the cluster unusable and this holds true for both host and parts.
+00:21:56 [W] So now we will move on to our last war story and and we have some more but I think this is all we have time for so this story is about our adventure in rolling out service accounts feature in kubernative on bare metal.
+00:22:09 [W] We had just enabled service accounts and puppet had begun rolling out this feature across a data centers.
+00:22:17 [W] Puppet uses a candle in mechanism for our bare metal host based on their PAW Patrols for Masters which includes a pi server controller manager and schedulers. We can only the changes in one master before rolling it out to all pastors.
+00:22:34 [W] Has one of our on calls noticed that the kubernative pods were being deleted, but for not coming up the error on those ports was no API to confound for service account default.
+00:22:46 [W] Immediately recognize this as related to the service account feature further feature for the debugging revealed that there was ongoing patching which was bringing down nodes one by one and hence.
+00:23:02 [W] The pods were getting evicted and recreated at the same time. The service account feature was being rolled up.
+00:23:09 [W] The puppet calorie mechanism had resulted in a situation where a master node carrying the latest puppet core got all the service account flags for a pi server and controller manager, but the controller manager that was leader was running on an
+00:23:25 [W] So the older controller manager did not ensure and you can see it on the screen.
+00:23:38 [W] So the older controller manager did not ensure that tokens for the reference service account in the Pod being created exist. And hence the power being created actually failed the admission check on the API server, which you see on the left
+00:23:47 [W] Happen because the EPA server handling that request was a new API server in puppet camera mode and was validating the existence of the token.
+00:23:58 [W] We fast-forwarded that feature so that the puppet camera mode is applied to all the hosts and that solved the issue.
+00:24:12 [W] We all learned that our candle in mechanism is not the best way to roll out new kubernative features, especially the ones which span across Epi servers and controller managers and more thought is needed.
+00:24:19 [W] So this is all the our stories we just talked about now.
+00:24:28 [W] We are going to summarize.
+00:24:29 [W] To summarize rolling your own kubenetes on a bare metal non VM infrastructure is hard and requires a lot of expertise and Investments.
+00:24:45 [W] Hopefully, we have shared some recipes today that you can take home and apply to your own infrastructure.
+00:24:49 [W] We have invested in a fully-automated highly available and secure deployment pipeline for darker it CD and kubernative infrastructure across all our data centers, which has evolved over the last four point five years the whole
+00:25:05 [W] And Investments. Hopefully we have shared some recipes today that you can take home and apply to your own infrastructure.
+00:25:06 [W] We have invested in a fully-automated highly available and secure deployment pipeline for darker it CD and kubernative infrastructure across all our data centers, which has evolved over the last four point five years the
+00:25:08 [W] tight Integrations with networking security and monitoring
+00:25:11 [W] we have invested in Watchdog monitoring alerting invisibility path pipeline.
+00:25:21 [W] You saw some of that in a new slide when he was diving deep into the monitoring Watchdogs.
+00:25:27 [W] We have also invested in cost to serve visibility at container namespace and Team level lastly.
+00:25:31 [W] There is a robust on-call rotation and run box for all are on call which makes it easy for Encore Engineers to debug and resolve problems even at 3 a.m. In the night.
+00:25:43 [W] We'd also like to mention some ongoing and future Investments.
+00:25:54 [W] So we are also building a pass for containers to accelerate the adoption of public cloud and Abstract enough of the infrastructure away for developers who don't need to fully understand.
+00:26:00 [W] We are also building a path layer for accessing cloudevents or cieszyn a cloud neutral way and will continue to talk about them and open sources them when they are available.
+00:26:11 [W] You all earlier open source to of our projects one is generic sidecar injector, which enables you to declaratively inject side curls meeting the need of a wide variety of our infrastructure teams.
+00:26:26 [W] Incheon some ongoing and future Investments, so we are also building a pass for containers to accelerate the adoption of public cloud and Abstract enough of the infrastructure a way for developers who don't need to fully
+00:26:40 [W] so we also open source Loop last year, which is our history visualization tool for kubernative resources and it helps in debugging and monitoring on you touched upon these in his previous slides as well if you want to help solve
+00:26:55 [W] Thinking problems.
+00:26:57 [W] Come join us.
+00:27:02 [W] I know and myself will be here for 10 more minutes and happy to take any questions you might have. Thank you.
+00:29:57 [W0] All right, welcome to the talk on operating enterprise-grade kubernative clusters at Salesforce on bare metal.
+00:30:12 [W0] I am on about growth senior director of engineering I manage a team that provides the kubernative based platform for Salesforce teams and joined in this talk with my uncle Marv.
+00:30:21 [W0] Who's the architect on the same.
+00:30:22 [W0] Hi.
+00:30:36 [W0] You can hear us. So let me try to answer all your questions.
+00:30:44 [W0] So do we how do we wrote do rolling update of our coolest clusters?
+00:30:52 [W0] So as we said in the talk, we do Canary we basically means we pick one server out of our five control playing machines to run the new version if everything looks good after certain
+00:31:04 [W0] Interval then we start rolling the update to the other API servers.
+00:31:13 [W0] That's why we run five API servers that gives us a way to test on one and the remaining four are still part of the Quorum. And if something happens to one, it would not affect the others similarly for the minions.
+00:31:24 [W0] We group them into bunch of Fools and then we upgrade them.
+00:31:25 [W0] anything
+00:31:31 [W0] You want to go ahead?
+00:31:38 [W0] Yeah, so, let's see this so I'll answer this one.
+00:31:44 [W0] How do you use persistent volumes on bare metal?
+00:31:54 [W0] The answer is we don't there was I think persisting Collins our hearts or most of our persistent infrastructure is not on kubernative yet.
+00:31:57 [W0] Yeah, I think the next one is this how do you do note every and bare metal?
+00:32:02 [W0] It's hard.
+00:32:07 [W0] I mean that's the biggest problem with bare metal is you have no way to quickly new commission if something goes wrong, so we really have to treat our API servers as almost like pets like if something happens to one of our API servers out of the five then we want to get it
+00:32:17 [W0] Very quickly similarly for a minions this week had lose a bunch of Minions that are affecting a customer we have to be required as that's some of the challenges running on them that way.
+00:32:28 [W0] And I think to add to that we have a node rebooter, right which is basically in order to recover on bare metal.
+00:32:39 [W0] We have an automated notary router which based on some health signals can actually go and determine that the node is unhealthy and needs to be boating.
+00:32:51 [W0] So that helps alleviate a lot of the challenges for where mature
+00:32:55 [W0] Somebody else asked to use terraformer ansible.
+00:33:01 [W0] There are other teams have tried ansible.
+00:33:04 [W0] Nobody is Veno as used it for kubernative.
+00:33:09 [W0] As you said in that talk like using puppet for kubernative little challenging because of lack of orchestration.
+00:33:14 [W0] So if you had to start over again, we probably in might not have picked puppet and might have looked at something else that give us orchestration across API servers. If something bad happens we can stop the rolling update automatically.
+00:33:24 [W0] Let's see. What do you hear the same hardness type for both master and was says the answer is yes get it exactly the same.
+00:33:35 [W0] How do you use load balancer services? So we ran our custom software load balancing stackrox?
+00:34:08 [W0] Malcolm or infrastructure
+00:34:10 [W0] What is your solution for managing endpoints and servicemeshcon?
+00:34:43 [W0] Be more specific on that question before.
+00:34:47 [W0] And any more questions you can always cut the slack after the stock ends with the other slides Channel hanging out this answer the question.
+00:34:59 [W0] How do you request for the question limit?
+00:35:08 [W0] Yeah, it's basically we don't have a smaller than the moment, but we do plan to implement something in the future that automatic automation.
+00:35:13 [W0] merging storage and bare metal as we said it's hard to do storage and then my room Pete Eames apart atoms are build their own custom orchestration using CRTs and controllers manage that
+00:35:35 [W0] we do not use any dedicated storage for at master.
+00:35:45 [W0] It's all on local this on the dimensional. So that's why use a change.
+00:35:50 [W0] And then another question.
+00:35:57 [W0] the most of the news
+00:36:04 [W0] so how long have you been running kubernative on their mettle in production at the years about to complete like probably five years now just started exactly around kubernative 1.3 when he won against deployment was still an
+00:36:24 [W0] And you are thinking about whether to bet on it bet on it or not.
+00:36:32 [W0] But yeah now it's been around four and a half which in five years.
+00:36:34 [W0] Yeah, we were part of the first Yukon is nice to see how the community has grown over the last five years just exploded in front of our eyes.
+00:36:44 [W0] And what else?
+00:36:49 [W0] Here so you want to take why do you use bare metal at all? Why didn't you just use stronger vm's?
+00:36:59 [W0] Yeah, we use a bad man for various reasons in our first party infrastructure.
+00:37:08 [W0] I think using a VMS might be much easier, but we didn't have that option when we started and that's what we used.
+00:37:16 [W0] I don't fully understand curvature hyper-converged bare metal.
+00:37:30 [W0] So we basically use pop it on top of their metal and its views as same skew for the entire data center that keeps it simple for us to build a local Predator infrastructure.
+00:37:42 [W0] You don't have any special hardware and we don't use anything public Cloud for our first body in position.
+00:37:49 [W0] I think we're almost out of time. So yeah reminder again folks, please send your questions. If you're not able to get to it here. We'll get to it on slab.
+00:38:05 [W0] Thanks so much for attending this talk.
+00:38:07 [W0] different experience for us doing it.
+00:38:09 [W0] live on the camera

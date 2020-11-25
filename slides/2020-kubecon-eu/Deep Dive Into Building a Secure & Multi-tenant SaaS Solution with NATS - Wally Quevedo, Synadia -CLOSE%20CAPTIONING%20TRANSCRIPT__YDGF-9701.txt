@@ -1,0 +1,230 @@
+﻿Deep Dive Into Building a Secure & Multi-tenant SaaS Solution with NATS: YDGF-9701 - events@cncf.io - Wednesday, August 19, 2020 10:50 AM - 1185 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:04:19 [W] Hello, this is the Nats Deep dive 2020.
+00:04:26 [W] This is about building. The centralized applications are using Nats.
+00:04:36 [W] My name is valdemar Keda. One of the core maintainers from next I have been using Nats based platforms for a number of years.
+00:04:37 [W] I also wrote a book two years ago about it's called practical Nats covers. A lot of the features have an API from Nats av1 especially.
+00:04:48 [W] We're currently a Nats version 2 and also working at sign Adia building a Nats a global Service.
+00:04:59 [W] You can find me on Twitter at wall eqs.
+00:05:06 [W] So in this talk, I wanted to give an kind of deep Dives and internals form a chat application that is just in some of the security features from Nats to build decentralized
+00:05:13 [W] I'd say nydia building and that's a global Service.
+00:05:15 [W] You can find me on Twitter at our wall eqs.
+00:05:15 [W] So in this talk, I wanted to give an kind of deep Dives and internals form a chat application that is just in some of the security features from Nats to build decentralized
+00:05:16 [W] Nation that new users can can join in and then have their pregnancy check your credentials be provisioned on the fly all this repo all this code. You can find it at the reaper and yq S Cube con 2020 so you
+00:05:29 [W] Try years examples on your own as well.
+00:05:34 [W] And this is how the chat will look like with the basic kind of like a slack light.
+00:05:45 [W] You can see that there are number of channels.
+00:05:48 [W] You can send direct messages and there's a small notification Circle that gets filled in whenever you have a the that direct message to you.
+00:06:01 [W] One quick recap.
+00:06:04 [W] How about Nats strings and services? So Nats is publish/subscribe your problems drive system.
+00:06:13 [W] So everything is a pops up and the protocol itself has not changed pretty much has not changed in a decade since when the project started but probably subscribe for more like terms of the API level.
+00:06:27 [W] So when we're talking about building applications, we really want to
+00:06:32 [W] talk about that how we're using a stream of events or are we using a service and throughout this talk?
+00:06:47 [W] We're gonna be being very explicit in what is a stream in terms of this application.
+00:06:50 [W] And what is a service a stream you could say.
+00:06:52 [W] say. It's like a flow chart a sequence sequence of events that can be fun out to a multiple of consumers as service is on the other hand something that can.
+00:07:03 [W] They can message and also respond to that message using the Q subscribes API from Nats.
+00:07:10 [W] They become load balance for free, you know have that's why you need extra load balancers when you see next or the idea is that would sell. Mrs. They take requests and able to have responses.
+00:07:22 [W] Well, I'll just Nats he said how do you want to Define? Your subjects? Such subjects are the strings that will be useful for creating the subscriptions. You can have
+00:07:49 [W] Subscriptions and in this case the asterisk will match everything that is on that the bar level of the bass level and you can't this can be in between from a full subject and also you can have a the greater than
+00:08:05 [W] That is going to match everything on the subject.
+00:08:10 [W] I all of these subjects and Watercress are used as internally and Nats clients to create in boxes and unique in boxes as well.
+00:08:19 [W] is how the requests work.
+00:08:21 [W] So streams and services, they both use subjects in this in this example on the left.
+00:08:32 [W] We're using the accounts isolation.
+00:08:33 [W] So we have a couple of accounts that it one is exporting as Dream from the Acme account to the cncf account.
+00:08:47 [W] You can see here that is is importing from the admin account this subject matching anything on this wild card when we're talking about the streams the apis that we are going to be using
+00:08:52 [W] Our publish And subscribe mainly so here the exporter of the survey or this other stream is going to be producing events publishing on the acma dot hello, and then the from the other account we're going to be importing
+00:09:07 [W] 14 from the admin account this subject matching anything on this wild card when we're talking about the streams the apis that we are going to be using our publish And subscribe mainly so here the exporter of
+00:09:09 [W] A prefix Imports of prefix any event that has been published by this other account?
+00:09:23 [W] So that's an example of isolated streams between different accounts would not be too. It's very useful that you can just have this subject namespaces.
+00:09:29 [W] For for the streams and data sharing and besides streams. We also have the services and the services at the Nats API level. We're talking about both using that
+00:09:45 [W] Or for the streams and data sharing and besides streams. We also have the services and the services at the Nats API level. We're talking about both using that subscribe.
+00:09:47 [W] Handle a message recommended to use a cue subscription so that they become load balanced out of the box.
+00:09:54 [W] And it's gonna respond or publish into the subs inbox for this particular message. In this case. The Acme account is exposing servicemeshcon low to this cncf
+00:10:10 [W] To be available within this subject name space on their cncf dot.
+00:10:18 [W] Then this client can make a request to cncf oo and spectral response.
+00:10:20 [W] So just basics of course subjects of using next.
+00:10:28 [W] so when talking about the streams and building this chat application basically anything that it's part of the UI of the slag the Nats chat client
+00:10:45 [W] BS dream. So in this case all the channels that are part of the the chat application are part of a wild-card subscription called in this case chatbots Cube composts.
+00:11:00 [W] So in this case, the answer is going to match to the room in this case for equal to Q Khan.
+00:11:05 [W] That's a general will also have support for direct messages.
+00:11:11 [W] The direct messages is also a wild card from any angle from the subject and also that
+00:11:15 [W] The three of list of users that are available they're going to be represented as heart beats that are critically sent to these chatbots Q canonical Ein string.
+00:11:30 [W] So all of these are strings when we're actually using the application when Services come into the picture is when you need to make a new user you need to make a new user requests
+00:11:42 [W] To another service that is available from within Nats that you can you can send in a request to get a new pair of credentials.
+00:11:52 [W] To be able to get into the be part of the this Nats chat system.
+00:12:01 [W] So you have three streams and one service for this and there is no single Central chat server on anything.
+00:12:16 [W] Everything is on the part of the client logic.
+00:12:19 [W] So you have a three different types of users that will need to create because we want to have the proper permissioning and and data sharing between the users the you can only read
+00:12:32 [W] Send to anyone on any channel within the the chat application and you also need to be able to request for users. Right? So requesting for a user is going to be a simple Nats request on
+00:12:47 [W] So requesting for a user is going to be a simple Nats request on a subject named that chatbots Rec access with or the payload is going to be the user name that you want.
+00:12:56 [W] We'll have another service and that's client that is going to be receiving those requests. So this is the the responder.
+00:13:04 [W] That will have its own user to be able to reply back and we also have a dynamically generated users.
+00:13:13 [W] to create all the accounts and users will be using an NSC NSC is the tool that you can use to manage users when on the jwt's
+00:13:33 [W] System on whether it's using when it's running entrusted operator mode. So in this script if you can adjust any and C being initialized to create a new operator
+00:13:49 [W] For adding new accounts and users. In this case, we'll start and we'll create a special account name Cube Khan. So it's going to be any see add account with the cube con with name Cube come and everything that
+00:14:05 [W] Chattering question is going to be under disa account.
+00:14:09 [W] So we generate the accounts for Kube Khan and because we want to create a new users by this other service within next we will create a signing key
+00:14:27 [W] You want to create a new users by this other service within Nats?
+00:14:28 [W] We will create a signing key something called. It's called the signing key signing keys and special type of Wellness another extra key that can be used within this account for
+00:14:39 [W] creating wealth for signing users.
+00:14:51 [W] Okay, these are so and c and we edit the account JWT to we also have a new signing key.
+00:14:52 [W] And now if we inspect the JWT from the cube con account will see that now we have this public key as part of the JWT from the account.
+00:15:08 [W] We'll use this NSC again to generate the configuration for the Nats server.
+00:15:19 [W] So this is going to create a memory resolver set up that it's going to contain the all the accounts that are part of the current cluster.
+00:15:32 [W] You can also this is a static version of the accounts, but you can also just have them turn knative of making this.
+00:15:38 [W] URL result burn so that you can have a Nats account server being enabled the one that hosts all these account generalities and serving through HTTP when this case it's simple enough to just use the
+00:15:53 [W] Right there configuration for the Nats server.
+00:15:54 [W] So this is going to create a memory resolver set up that it's going to contain the all the accounts that are part of the current cluster you you can also this is a static version of
+00:15:55 [W] So just that generated Nats configuration and start the server using that setup.
+00:16:03 [W] and will create the user for the
+00:16:13 [W] credentials provisioner in this case called the chat access using the signing key then that we created previously.
+00:16:27 [W] So in this case, it's going to be adding in C&C at user all of this happening within the Yukon account.
+00:16:35 [W] Then when I run the probationer that is going to be using the cube con account JWT and the signing key throughout the great users and then its own credentials to be able
+00:16:50 [W] Yes.
+00:16:51 [W] In terms of the code, you can see that it is using the JWT signing his keeper that it gets to create on the Fly and another.
+00:17:13 [W] credentials for each one of the users and we have see that it is constraining the permissions for each one of the users on which subjects they can publish and they can subscribe all of these using the Nats IO
+00:17:29 [W] Leti library, that is Sunday organization and it is going to create an end Keys user.
+00:17:38 [W] With and then at the public key to as part of the that generality and that is going to be worth the response from the probationer.
+00:17:49 [W] So in terms of the next client code it this is going to be represented by a queue subscription so you can have multiple of these and all of them will be load balanced and also in case you have a super cluster that is with Gatorade connections, then the one that is
+00:18:07 [W] So in terms of the Nats client goes with it. This is going to be represented by a queue subscription so you can have multiple of these and all of them will be load balanced and also in case you have a super cluster that is with Gatorade connections, then the one that is
+00:18:09 [W] is the one that is going to be receiving the request and only when that all the
+00:18:14 [W] Q subscription that are local to you fail then an externally with another cluster subscriber and well served to Subscription Service. You going to be reply and give you the credentials instead?
+00:18:29 [W] So this is the credentials probationer.
+00:18:37 [W] Now for to request access this is going to be as simple and Nats request, but we do need permissions to make that request in this case when I create another user.
+00:18:53 [W] credentials probationer
+00:18:54 [W] now for to request access this is going to be as simple and Nats request, but we do need permissions to make that request in this case when I create another user.
+00:18:55 [W] This case we'll call in to the chat credentials request user.
+00:19:01 [W] And this can this a credential that can be shared.
+00:19:12 [W] For example, we could put the we could put this inside of a Docker container. And because the their recourses there is the permissions are so scoped to barely doing anything.
+00:19:16 [W] Sharing this as a credential so you could be like a public credential for anyone that wants to Join This Server this service.
+00:19:26 [W] So this is only you can do this every is the model you can do with these Services request access. So we create this new credential this new user for chronic conditions making sure that you
+00:19:41 [W] make subscriptions on inbox in boxes special subject used for receiving requests within the same cluster in case we have a cluster of clusters there is going to be unchanging between accounts
+00:19:57 [W] inbox prefix changes its should be underscore underscore greater than
+00:20:05 [W] So with that we now we have a user for making requests.
+00:20:11 [W] And for example, we we already have the credentials provisional running we make a request to
+00:20:19 [W] Get access and then the appropriate credentials provision is going to be replying back with these JWT back another along with private key that we can use.
+00:20:33 [W] Within These generality we can see that as I previously mentioned you the permissions are scoped are very limited in scope that you can do it. Once for each one of these users have public
+00:20:52 [W] that we can use
+00:20:53 [W] Within These generality we can see that as I previously mentioned you the permissions are scoped are very limited in scope that you can do.
+00:20:54 [W] It was for each one of these users have public keeper was generated.
+00:20:58 [W] So the private key was sure to us and the public and public and key is part of the gelatine. So and is represented here and if it is the user is named.
+00:21:07 [W] Fool in this case, but it's a better represented by the public and key that belongs to this JWT and this public and key. We also use it to be able to create this subscription permission or the
+00:21:22 [W] Isabella represented by the public and key that belongs to this J TT and this public and key. We also use it to be able to create this subscription permission for the direct messages.
+00:21:24 [W] So we have a chat dot Yukon and direct messages under the public and key and this makes sure that this ensures that no other user is able to read your own messages because it is isolated.
+00:21:41 [W] have the permissions
+00:21:41 [W] And this is your account is of course, they keep calm and gentle tikv, Lon.
+00:21:48 [W] That generated this.
+00:21:50 [W] So now we can connect to the chat using that those credentials that were provisioned by.
+00:22:04 [W] Where the practitioner?
+00:22:07 [W] And we can use those same credentials to be able to inspect messages.
+00:22:18 [W] For example, you can see subscribe with a regular Nats up and using those connections to get.
+00:22:22 [W] To see who is online.
+00:22:25 [W] In this case were receiving the JWT with the payload from the heart beat fellow that wrote that this other user is is online and available.
+00:22:36 [W] And we can use those same credentials to you want to inspect messages.
+00:22:53 [W] For example, you can see subscribe with a regular Nats up and using those connections to get.
+00:22:54 [W] To see who is online.
+00:22:54 [W] In this case, we're receiving the JWT with the payload from the heartbeat fellow that wrote that this other user is is online and available.
+00:22:55 [W] But again because of the scope permission in this you're only able to subscribe to all messages and if you try to subscribe to for example of Walker subscription, then you're not able to receive the the messages.
+00:22:57 [W] So this is the chat client itself is fairly simple. You only have me to subscribe to the
+00:23:05 [W] receiving from the general channels in this case subscribing to the the posts post to your own the and EMS and the subscription for the Harvest to see who liked who is online.
+00:23:21 [W] So it's very simple and it's only old client lodging in the client.
+00:23:24 [W] And then when you want to make a request, it is a published on depending on whether it is going to be a direct message and you need to get the public the proper public and key from that user.
+00:23:39 [W] Do you want to send a message to that other user?
+00:23:46 [W] And otherwise when I be tending to some particular Channel.
+00:23:55 [W] And that I think that's pretty much it and you can see the code the cube con 2020.
+00:24:08 [W] can share my screen to share a little bit of how it works.
+00:24:09 [W] So in this case we have
+00:24:18 [W] And that I think that's pretty much it and you can see the code the cube con 2020.
+00:24:23 [W] I can share my screen to share a little bit of how it works.
+00:24:24 [W] So in this case we have
+00:24:24 [W] The Nats configuration.
+00:24:24 [W] This is the memory resolver.
+00:24:25 [W] We have a few accounts.
+00:24:32 [W] This is the cube gonna count that represents everything that was all the users but it doesn't have any notion about the which users have been created in. This only has knows that there is an account
+00:24:40 [W] public and key sign
+00:24:44 [W] Okay, so we're starting server.
+00:24:48 [W] Then we can't make a request for credentials. Let's say case user.
+00:24:58 [W] Now we just Discretions to join the chat.
+00:25:09 [W] What seconds?
+00:25:14 [W] I need to start the probationer.
+00:25:18 [W] So this is started.
+00:25:24 [W] I make a request.
+00:25:28 [W] We can jump.
+00:25:36 [W] We have join the chat.
+00:25:41 [W] Let's join from another account.
+00:25:43 [W] say
+00:25:56 [W] for example post
+00:26:06 [W] We can jump.
+00:26:11 [W] We have joined the chat.
+00:26:11 [W] Let's join from another account.
+00:26:11 [W] Let's say
+00:26:12 [W] for example host
+00:26:12 [W] He said be Chris so have two users.
+00:26:21 [W] Hello to keep con 2020.
+00:26:26 [W] We also have support for the
+00:26:36 [W] private messages, so
+00:26:43 [W] We see that these got highlighted because in the text that the private message we can read our own message.
+00:26:55 [W] That's it.
+00:27:09 [W] So first our forward but that is thanks to all the security pieces that we have in as part of the Nats key to release so that's it for my talk
+00:27:22 [W] So Furniture forward, but that is thanks to all the security pieces that we have in this part of the Nats be to release so that's it for my talk, and thank
+00:27:24 [W] I think all right.
+00:27:31 [W] Oh, thank you for attending the talk.
+00:27:53 [W] I'll try to go one by one over the questions.
+00:27:59 [W] I see them coming.
+00:28:02 [W] So one from Sebastian if you have a test and production environment with a currents cluster in each of them would you recommend to separate Nats clusters in each environment or one Nats closer in both? So you have a test and production environments?
+00:28:16 [W] Okay.
+00:28:21 [W] Sorry, my video was off.
+00:28:23 [W] Okay, so so yeah, we're we have a
+00:28:27 [W] D2 different currencies clusters
+00:28:31 [W] Oui.
+00:28:35 [W] I mean depends on whether we want to I mean it is definitely possible to create like a large super cluster with multiple kubernative and connect the production one to test. But in this case, I would
+00:28:51 [W] because they're test and production but they start is totally fine to have a
+00:28:59 [W] used the same cluster for
+00:29:07 [W] in terms of the application Level.
+00:29:12 [W] Yeah, I mean it is fine to have the same Nats cluster and then use account for example to separate the applications that are running with the test version and applications so you can have an account or namespace
+00:29:25 [W] applications and then another one for the production applications and then you can even use some of the permissioning from the queue groups so you can have an example like you subscription that is registered to
+00:29:41 [W] Option group and it is using the same the same name. So application is the same but you can have these applications that subscribes to Foo using the Q group production.
+00:29:57 [W] And then the other one is using the Q group test, then you can that way you can more finally scope with what applications can do which topics applications
+00:30:10 [W] So, okay, so I'm for the application one single Nats server.
+00:30:17 [W] I think it's fun.
+00:30:18 [W] Yes, it's fine.
+00:30:20 [W] The other question is we have three coordinates clusters in three different regions.
+00:30:29 [W] We're planning to use Nats for good communication between these clusters.
+00:30:35 [W] It is a good use case for gateways.
+00:30:36 [W] Yes.
+00:30:36 [W] Yes.
+00:30:37 [W] Yes.
+00:30:37 [W] Yes.
+00:30:37 [W] Yes.
+00:30:37 [W] Yes.
+00:30:44 [W] Yes multi reagent is precisely the one of the use cases for the gateways gateways.
+00:30:51 [W] They need to be you're basically export exposed a portworx.
+00:30:52 [W] For the whole Nats cluster we often make these 75 22 that doesn't have any Clash with other parts and that we know what so you expose the 7520 to port
+00:31:07 [W] One of the notes in kubernative terms, you could use this means that you'll have to use something like a host port for because each one of the nodes needs to be be able to talk
+00:31:23 [W] Eight ways. So the way this is going to happen is that all of the let's say you have a cluster of three notes.
+00:31:35 [W] So each one of them will have its own host port for the gate with connections and then they know from at least another endpoint get wait endpoint.
+00:31:41 [W] So then they will try to connect to at least one have at least one connection to a member from the other cluster.
+00:31:53 [W] And they will figure out that the routing is properly there's some gossipy as well so that it is important to always use them public eye piece that you want then advertise.
+00:32:08 [W] otherwise accidental you could have internal IP s be advertised to the notes that were meant for external access.
+00:32:19 [W] access. But yes, so that's one option to use Nats gateways depending on the requirements you could also
+00:32:23 [W] Use our Leaf nodes lymph node connections are interesting because you could use another supercluster.
+00:32:38 [W] For example, you could say you could use a you already have a 1 not super cluster and has connectivity.
+00:32:40 [W] these supercluster
+00:32:51 [W] get a multi-region without having the applications themselves connect to using the Gateway connections to all the other nodes so you can start just start with Gateway connections or
+00:33:08 [W] Have a super cluster use Leaf node connections for the multi-region connectivity.
+00:33:16 [W] Yeah, wait for a couple of and so yeah, there's some also gave another tutorial session where you can see some of these Concepts life and you can definitely check out the
+00:33:33 [W] with on Deck you've gone and 2020 repo that I shared so you can't
+00:33:41 [W] Play with it - Chad application and maybe inspect the traffic and use the system account. So you will to monitor how the events are flying by so if there are no
+00:33:58 [W] Accounts to be able to monitor how the events are flying by so if there are no further questions, I think they're not
+00:34:03 [W] Questions.
+00:34:04 [W] think they're not in the chat either.
+00:34:04 [W] We can.
+00:34:08 [W] One second.
+00:34:17 [W] Yeah, we can I think we can wrap it up in this case.
+00:34:19 [W] So thank you again for letting me talk and enjoy cucumber.

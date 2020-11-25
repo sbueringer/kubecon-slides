@@ -1,0 +1,602 @@
+﻿20,000 Upgrades Later: Lessons From a Year of Managed Kubernetes Upgrades: QTAU-1133 - events@cncf.io - Wednesday, August 19, 2020 10:53 AM - 1184 minutes
+
+Participant: wordly [W] English (US)
+Participant: wordly [W0] English (US)
+
+Transcription for wordly [W]
+
+00:01:44 [W0] All right everyone. I'm Adam of Gordon.
+00:01:54 [W0] I'm in chair digitalocean.
+00:01:57 [W0] I currently work as the tech lead for our communities and containerd registered products. And I'm going to talk today about Granny's upgrades in our experience with them. I'm going to talk about how we do upgrades at digitalocean things that we got right things that we got wrong in that process
+00:02:10 [W0] What I want to talk about today is what we've learned about doing upgrades and some lessons that you can apply as either a cluster operator someone who's could be upgrading clusters or as a developer who's deploying your applications into a graze cluster and it's going to be upgraded.
+00:02:25 [W0] These are things that hopefully will help your upgrades be easier and keep your workloads running as expected as you do upgrades on your clusters.
+00:02:33 [W0] I want to start with a little bit of a story about how this talk came to be.
+00:02:39 [W0] So this talk really starts about a year ago in Barcelona keep Connie you 2019 and Barcelona.
+00:02:46 [W0] We announced the general availability of our manager degrees prodyna.
+00:02:48 [W0] I need to stop by our lovely booth and Barcelona.
+00:02:55 [W0] One of the you would have one of the things we would have told you is that our product is now G A and you might have asked us what that meant.
+00:02:59 [W0] We would have told you a bunch of things that we had in our g a blog post here.
+00:03:09 [W0] We would have told you that its production ready ready for your workloads to be trusted.
+00:03:12 [W0] We would have told you that it has an integrated monitoring service and right at the end of the second paragraph We would have told you that it has automated patch version upgrades and what we didn't
+00:03:24 [W0] And you might have asked us what that meant.
+00:03:25 [W0] We would have told you a bunch of things that we had in our G8 blog post here.
+00:03:26 [W0] We would have told you that its production ready ready for your workloads to be trusted.
+00:03:26 [W0] We would have told you that it has an integrated monitoring service and right at the end of the second paragraph We would have told you that it has automated patch version upgrades and what we didn't
+00:03:28 [W0] It you couldn't actually upgrade your cluster yet.
+00:03:32 [W0] We haven't enabled any upgrade paths for our customers. We had tested our upgrade process quite a bit.
+00:03:36 [W0] We run lots of grades and tests clusters, but we had an exposure upgrade process to the full richness of possible configurations and workloads that our customers might have and we didn't want to do that while we were all in Barcelona.
+00:03:51 [W0] We wanted to wait until we were back at normal work. So we if you went to your control panel
+00:03:55 [W0] panel module ocean at time. What do your posture it would have told you your cluster was up-to-date regardless of what version it was actually running.
+00:04:02 [W0] So as you can probably guess when we did enable upgrades the next week or so.
+00:04:11 [W0] We started learning things and that's when I had the idea that maybe I can give a talk about this one day and that's why this talk is lessons from a year banished grannies upgrades.
+00:04:20 [W0] And when I wrote the the cfpb for this talk the end of 2019. I ran some numbers and I figured that by coupon Amsterdam, we're supposed to give this talk.
+00:04:34 [W0] We would have done about 20,000 upgrades and that's a nice big round number. So I put in the title the TOC and in preparation for today. I ran the numbers again and we've now done about 35,000 upgrade. So we've accelerated a little bit over
+00:04:47 [W0] Didn't talk about this one day and that's why this talk is lessons from a year ago and your granny's operates.
+00:04:48 [W0] And when I wrote the the cfpb for this talk band of 2019. I ran some numbers and I figured that by coupon Amsterdam, we're supposed to give this talk.
+00:04:49 [W0] We would have done about 20,000 upgrades and that's a nice big round number. So I put in the title of the talk and in preparation for today. I ran the numbers again, and we've now done about 35,000 upgrade. So we've accelerated a little bit over when I thought we would
+00:04:52 [W0] And that's we've had upgrades enabled for about a year.
+00:04:56 [W0] So that's about a hundred upgrades a day across thousands of clusters.
+00:05:01 [W0] and I'm not saying this just to sort of brag about how many upgrades you've done.
+00:05:02 [W0] Although I think it's an interesting number I'm saying this mostly just to let you know that we have a pretty good set of data to draw some lessons from and I feel like we've done enough upgrades that we can really talk about what we've learned at this point.
+00:05:14 [W0] So that I leads me to my favorite slide which is disclaimers and I have to disclaimers for this talk.
+00:05:23 [W0] one is that these are lessons from our upgrade process.
+00:05:28 [W0] There are lots of different ways to upgrade kubernative and I'm going to talk about how we do it.
+00:05:41 [W0] depending on how you choose to do it some of these lessons will be applicable to you and some of them won't and if what you take away from this talk is that you don't want to do it the way we do it because you don't want to hit those problems then that's a completely Fair take away.
+00:05:44 [W0] The other disclaimer is that this is things we've learned from upgrading our customers clusters and their workloads are probably different than your workloads.
+00:05:52 [W0] They're definitely different than our workloads depending on your environment how you run things you might also hit different things. So let's talk about how you upgrade kubernative and what you actually do when you upgraded there are basically two parts of a kubeedge
+00:06:06 [W0] Of the workloads. So when you upgrade kubernative spruced you're going to upgrade the control plane.
+00:06:12 [W0] Then you're going to upgrade the worker nodes.
+00:06:14 [W0] And that's it.
+00:06:17 [W0] You're done. You've upgraded grannies.
+00:06:20 [W0] of course. It's not actually quite that simple.
+00:06:23 [W0] So here's an expanded set of steps of things that you have to do to every case when you're recruiting the control plane.
+00:06:30 [W0] You're really upgrading a lot of things.
+00:06:35 [W0] So the first thing you're going to do is update any resources that aren't supported in your target version.
+00:06:42 [W0] Then you're going to upgrade its CD. If you need to then the optimal control plane components first be a pi server than the controller manager then the scheduler then you can update your cni-genie if you're using
+00:06:45 [W0] And I for networking finally you can upgrade any provider can specific components of the cloud controller manager CSI driver and then the cube lid and keep CTL on the control plane knows assuming that you're running things using those I once you've done that then
+00:07:00 [W0] Upgrade a worker node, you're going to coordinate and drain it so that there aren't any workloads running on it.
+00:07:07 [W0] Then you're going to update the cubic configuration. If you need to upgrade the cubelet.
+00:07:11 [W0] I'm courting the node.
+00:07:15 [W0] Let workloads come back onto it and you're going to repeat for each node in your cluster if you're running career, and he's on Virtual machines and not bare metal.
+00:07:23 [W0] There's a bit of a shortcut you can take and that's rather than upgrading each individual software component in the cluster. You're going to just replace all of the nodes with new ones that
+00:07:31 [W0] have the new software installed on them.
+00:07:40 [W0] So that first step is to look a little you're still going to read the release notes find out if that everything is supported in your new version updated. If you need to then to replace your control plane, you're going to destroy the old control plane virtual machine and provision a brand new one with all these software and you configuration.
+00:07:49 [W0] Software installed on them. So that first step is still applicable. You're still going to read the release notes find out if that everything is supported in your new version updated. If you need to then to replace your control plane, you're going to destroy the old control plane virtual machine and provision a brand new one
+00:07:51 [W0] Assume that you're at CD data is persistent somewhere outside of that control play node or nodes.
+00:07:57 [W0] So either you're replicating it across multiple nodes or I you've got it stored are persistent volume or you've got it stored somewhere entirely outside your cluster, but assuming that's the case you can do it this one step just provisioning same with the worker
+00:08:10 [W0] Drain each one then. You can destroy a node provision of brand new one in its place.
+00:08:16 [W0] If you've worked with kubernative clusters quite a bit, you can probably see some potential issues with this scheme of doing upgrades and there definitely are some issues but there are also some advantages and this is the upgrade process that we use a digital ocean for our amount of product.
+00:08:32 [W0] We replace all of the nodes in a cluster when we want to do an upgrade.
+00:08:35 [W0] There's a few advantages to this and this is why we chose to do it this way first off.
+00:08:44 [W0] It means that every node in the upgraded cluster is a clean slate. There's no chance that there's been customized configuration on that note or some customizations made to the know this going to persist across an upgrade and cause problems in the new version.
+00:08:56 [W0] It's also a nice process to automate there's not that many steps and if you've built any automation for managing your cluster, you've probably already automated the steps that you need draining anode.
+00:09:10 [W0] Oregano of creating a new one waiting for a note to join a cluster.
+00:09:17 [W0] So automating this upgrade process is just a matter of combining those things that you've already automated into the right order adding some sanity checks and things and that was the case for us.
+00:09:24 [W0] We already have The Primitives that we needed to make this happen and automating.
+00:09:27 [W0] It was pretty easy.
+00:09:32 [W0] The other nice thing is that this works the same across all kinds of upgrades regardless of whether you're doing a patch version of create a minor version upgrade.
+00:09:38 [W0] Which components need to be upgraded? It should all work.
+00:09:40 [W0] All these types and all different kinds of upgrades because there are definitely some cases we've had where we had to do really specific things.
+00:09:56 [W0] But for the most part this process is work for us regardless of what upgrade we're doing which version and I say all of these things that we decided to do our specific a little bit to our environment of
+00:10:02 [W0] These things that we decided to do our specific a little bit to our environment of running many many clusters and doing completely automated upgrades.
+00:10:09 [W0] It's your trade-offs are gonna be a little bit different depending on how many clusters in your operator.
+00:10:12 [W0] So I said we were going to talk about things we got right and things would go wrong in building our upgrades and this is the first thing that I think we really got right is we did our upgrades B&O replacement so it if you're going to upgrade if you're going to manage a lot of clusters and build automation, I'd recommend
+00:10:30 [W0] Considering this as a way to do your updates.
+00:10:32 [W0] The downside of doing a node by node replacement upgrade is that once you've upgraded anode you're left with a brand new completely different node.
+00:10:47 [W0] So any custom configuration on the Node is going to be lost.
+00:10:51 [W0] It's going to have a new name and grazed can have a new IP address if you had said any labels or any taints on it through kubernative zpi.
+00:10:58 [W0] those are going to be lost as well. So this bits all of our customers people who are scheduling their workloads to us.
+00:11:04 [W0] Fick node based on its name or who were accessing nodes directly by their IP because they were rolling traffic to their cluster that way they had some issues when they first did upgrades this process,
+00:11:19 [W0] For operators here other people who are operating companies clusters is if you can it's great to reuse the note names and the IPS of your nodes.
+00:11:32 [W0] I even if you're replacing the node stop grade them.
+00:11:40 [W0] This isn't really something that people should expect from their kubernative cluster, but it is a tool that's available in Gray.
+00:11:40 [W0] someone's going to use it and you'll make their life easier. If you keep your new dance in your IP stable regardless of whether you're keeping those node identities.
+00:11:50 [W0] Stable you definitely want to provide some way to set persistent labels and teens on nodes.
+00:11:59 [W0] Those are a great tool to use for scheduling including A's and people expect them to work.
+00:12:07 [W0] So providing some kind of abstraction to let people set no labels and paints on their noses important.
+00:12:08 [W0] That's something that we've done in the time since we initially introduced upgrades the other pieces provide some simple way to get traffic into a cluster getting traffic into a creative cluster is worth its own.
+00:12:23 [W0] Talking I'm not going to talk about all the details here. But the easier you make it the less people less likely people are to build their own Solution on top of their cluster and it's really people building their own solution that are going to run into trouble if they're Noti peas change for example during an ovary.
+00:12:36 [W0] There's also some lessons for developers here in terms of what you can put your workload can tolerate for change.
+00:12:45 [W0] Great ways to do this one is to deploy our privilege demon set to your cluster and that's going to run on all the nodes, but I know comes up its going to make the necessary customization and then you're noticing the state you expect.
+00:13:05 [W0] The other way is infinite container on one of your workloads. If you have a workload that requires specific node configuration, you can do a configuration from it and it container and when it's done you're workloads ready to run.
+00:13:16 [W0] Secondly, please don't use node names for scheduling.
+00:13:21 [W0] It is a tool you can use in kubenetes. But at some point I know it is going to go away.
+00:13:25 [W0] That's kind of how kubernative clusters are.
+00:13:29 [W0] You don't want your workloads you left unschedulable because I know but the particular needs.
+00:13:33 [W0] Whenever possible use your provider supported or operator supported label and team settings.
+00:13:43 [W0] So on some providers that's going to be just sitting labels and taints through the grannies API on other providers that might mean creating an old pool or some other abstraction to set labels intense fear nodes and same with load balancing if you use your provider or
+00:13:55 [W0] Balancing then you're much less likely to run into problems during an upgrade because those are willing to create with your posture.
+00:14:03 [W0] There are definitely some things we got wrong in our upgrade process, which we'll talk about next.
+00:14:16 [W0] The first big one is doing we implemented our node replacement in a break before make fashion.
+00:14:19 [W0] So we destroy worker node, and then we provision a replacement for it.
+00:14:26 [W0] We did this for some reason that are specific to our product works. But this is definitely caused a lot of trouble for users and something that we're working on changing right now where we will create new nodes before we destroy buildings.
+00:14:33 [W0] The basic problem that this causes for our customers is that I when they when we go to drain a node there might not be any way to drain that note to either because there's not enough capacity in the cluster or because they're running
+00:14:50 [W0] For whatever reason and it's so draining the node can get stuck and that causes a problem for the upgrade.
+00:15:05 [W0] It's also just causes extra turn for workloads. When you drain the first node, you're guaranteed that those workloads are going to end up on another node that's running that old version and those nodes are going to need to be drained right away as well.
+00:15:13 [W0] So this your workloads are all going to end up being evicted from a node more than once instead of just one strimzi upgrade process and that's unfortunate for workloads.
+00:15:21 [W0] So some lessons for operators here if it's all possible figure out a way to create new nodes before you delete old ones.
+00:15:38 [W0] This might be a bit more complicated for you to automate it is in our case because we want to keep the number of nodes sort of stable in the cluster, but it is a better experience for users.
+00:15:46 [W0] You're less likely to have workloads evicted more than once during the upgrade and if you really can't do that because you're on Harbor your gradient place or whatever consider reserving some gas.
+00:15:52 [W0] Be in the cluster to make sure that you are always able to drain it.
+00:15:55 [W0] Likewise for developers if you're deploying things to create a cluster of try not to run it right to the Limit leave some room so that you always can drain a whole note worth of workloads because at some point a note is going to go away even if it doesn't happen during upgrade.
+00:16:13 [W0] Because of her failure maintenance or whatever and you just want to make sure that that's not going to cause a problem for your application.
+00:16:22 [W0] Another thing we got wrong is that we replace nodes exactly one by one.
+00:16:33 [W0] So we destroy one node and then create one node and Destroy one node in the create one node. And this is where works just fine in a three node cluster.
+00:16:40 [W0] It's a lot less good in a 300 node cluster and it's really bad. If we run into timeout straining nodes.
+00:16:48 [W0] We initially had set our Dream time o to an hour and we dialed it back to 15 minutes.
+00:16:52 [W0] But even if 15 minutes if you have a 20 node cluster in each node takes 15 minutes to drain.
+00:16:53 [W0] that's a five-hour upgrade.
+00:16:59 [W0] Be straight.
+00:17:00 [W0] That's just the time to drain the notes. That's not a good experience for Frasier.
+00:17:01 [W0] So to restate that problem a little more succinctly replacing those one by one is slow and it can be made even slower. If you get stuck evicting a upgrades are going to take some time naturally because we do have to shuffle workloads around we for things to come up.
+00:17:19 [W0] But dr.
+00:17:20 [W0] Dre in the notes, that's not a good experience for brazier.
+00:17:21 [W0] So to restate that problem a little more succinctly replacing those one by one is slow and it can be made even slower. If you get stuck evicting a workloads upgrades are going to take some time naturally because we do have to shuffle workloads around we for things to come up.
+00:17:24 [W0] You want them to be as fast as you can users are going to want to watch their upgrades happen and they are the only one to watch for so long.
+00:17:32 [W0] You don't want to have someone watching their upgrade happen for five hours.
+00:17:33 [W0] So lesson for cluster operators here try and replace multiple nodes at once if you can miss this will really help make an upgrade on a big poster faster this kind of requires that you do make before break like I was talking about a minute ago.
+00:17:49 [W0] Your users might have set aside some capacity for a note to be drained, but they're probably not expecting like ten nodes at a time to be trained. So you kind of have to add capacity to the cluster before you reduce it.
+00:18:05 [W0] Also, make sure that you save reasonable Dreamtime oats.
+00:18:09 [W0] Were it does take some time to drain a node but it shouldn't take an hour and then you kind of have to figure out what the right balance is for your workloads in your environment. But setting those timeouts to a reasonable value is going to help with that grades be able to tell stories.
+00:18:20 [W0] For developers.
+00:18:27 [W0] There's not much you can do about how your provider or operator replaces your the nodes in your cluster, but there are a couple things you can do to make sure that your workloads can be evicted.
+00:18:39 [W0] You want to make sure of two things one that your workloads can be evicted safely.
+00:18:41 [W0] Soyuz poddisruptionbudgets. Make sure you understand how your workloads can be affected during an eviction and make sure that your workload can be evicted quickly. So have your application respond to the signals that kubernative stackrox?
+00:18:51 [W0] So if it's in that way to fix a pod so that you shut down as quickly as you can and let the with a training process move one and my big tip is just test this at some point.
+00:19:06 [W0] problems
+00:19:20 [W0] back to the positive side of things.
+00:19:28 [W0] This is another thing that we got wrong, but we were actually pretty happy.
+00:19:28 [W0] We got wrong.
+00:19:34 [W0] I mentioned earlier that when we did our GA we offer automated patch version upgrades.
+00:19:39 [W0] So that means like 114 121 14 to not 114 to 115 0 we started out that way because Patrick separates a little bit simpler resources aren't supposed to change between that versions.
+00:19:49 [W0] So everything that you have running in your customers should continue working after the upgrade.
+00:19:54 [W0] And it was good idea for us to start out that way, but when we did get to doing minor version upgrades we discovered that everything pretty much worked as expected.
+00:20:03 [W0] It was much less fraught than we expected. So that's that's the lesson here really is just don't worry too much about Minor version upgrades.
+00:20:16 [W0] They aren't as scary as you might think they are at least they weren't for us and assuming that you've designed a good process for doing upgrades. I won't be that different.
+00:20:21 [W0] from the next version of reading
+00:20:22 [W0] One thing we did do right that helped. These minor version upgrades go.
+00:20:29 [W0] Well is that we leave Alpha features disabled as much as we can also features are disabled by default and kubernative and we try not to enable them unless I have a really good reason to Alpha features are the most likely things to change between releases and leaving them
+00:20:44 [W0] Possible source of problems as you do upgrades, especially later version of greens.
+00:20:53 [W0] So for operators, the lesson here is really simple.
+00:20:54 [W0] just wait until it features Data before you enable it and if you do really want to enable an alpha feature exam a good business use case for it consider the the upgrade trade-off. You are probably gonna have to put some work into upgrading clusters that have a table feature.
+00:21:08 [W0] You have a good business use case for it consider the the upgrade trade-off. You are probably going to have to put some work into upgrading clusters that have that Alpha feature.
+00:21:12 [W0] That's the the trade-off that you're going to make labeling it.
+00:21:13 [W0] For developers. The blessing is similar to beware of using Alpha features. If you are using Alpha features really upgrade the release notes really carefully before you upgrade.
+00:21:29 [W0] Make sure you understand what's happening to the feature as it becomes beta and any changes that you might need to make any changes that your operator might need to make as long as you you understand what's happening should be okay.
+00:21:36 [W0] So less than the rest of our time here on to Common classes of problems that we've seen with upgrades and the first is problems around container storage interface or CSI.
+00:21:52 [W0] So for those of you who aren't familiar CSI is a pluggable way to allow workloads in in kubenetes or another container worker straighter to consume storage from an arbitrary storage system
+00:22:02 [W0] Who's turned into lotion, whether they're part of our manage product or managed outside of it by a user can use our open source CSI plug-in to attach our block storage to the workloads.
+00:22:15 [W0] And this is a how we recommend our users get persistence in any persistence right application and I see a size and problem for us in a few different ways as it relates to upgrades.
+00:22:23 [W0] The biggest one is just the general immaturity of CSI on the versions that we started with in our product.
+00:22:36 [W0] So the first version of grenades that we supported at digitalocean was Gray's 1.10 and that was the same release in which CSI became beta feature.
+00:22:45 [W0] I moved out of alpha. So in that 1.10 time frame the kubernative components for CSI were relatively new the CSI drivers including ours were relatively new and there were some bugs there.
+00:22:55 [W0] Basically the problem we run into an upgrades that we had bugs.
+00:23:07 [W0] There's a lot of CSI action going on during an upgrade because you are draining nodes and that means detaching volumes from workloads are being evicted reattaching them elsewhere as schedule the workloads on other nodes
+00:23:13 [W0] Hitting bugs where they state of communities in the state of the real world were out of sync and we couldn't drain a workload off of a node or we couldn't start over chronosphere node, because the volumes are in the wrong place.
+00:23:29 [W0] That's that's the basic problem that we hit luckily.
+00:23:34 [W0] Everything has matured a lot since those days.
+00:23:36 [W0] I would say in kubernative 114 plus we really see very few CSI problems even during upgrades.
+00:23:42 [W0] So if you're on a newer version, you should be okay. This is a good reason to up.
+00:23:44 [W0] Grade in itself, even though you might experience some pain on older releases.
+00:23:54 [W0] But yeah, it really has sort of taken care of itself in more recent releases one other problem we hit and this is one place where we had to introduce version specific code for
+00:24:02 [W0] It's is the CSI driver name change in earlier versions of the CSI spec drivers are identified by a reverse fdn notations of khambhat example, but CSI in later versions of the spec.
+00:24:18 [W0] They change that to be forward of qdn.
+00:24:28 [W0] So CSI Dot example.com and this driver named gets used in various places and communities including being attached to each volume that the driver creates.
+00:24:32 [W0] That's how kubernative Maps between volumes in the drivers are supposed to manage them.
+00:24:33 [W0] The this name for good reason is immutable and kubernative.
+00:24:40 [W0] So once you've installed it gracias I driver into your cluster.
+00:24:41 [W0] You can't change its name.
+00:24:46 [W0] The problem we ran into is we change the name in our driver to match the new spec and we then were able to manage the old volumes that have been created by the previous driver our solution was to just detect whether our
+00:24:56 [W0] For good reason is immutable and kubernative.
+00:24:57 [W0] So once you've installed it gracias I driver into your cluster.
+00:24:57 [W0] You can't change its name.
+00:24:57 [W0] The problem we ran into is we change the name in our driver to match the new spec and we then were able to manage the old volumes that have been created by the previous driver our solution was to just detect whether our
+00:24:58 [W0] An existing crazed cluster with using the old name for the new name and make our software configurable for the name so we can keep using the old name in a newer version of the driver when we need to that's
+00:25:12 [W0] It'll probably be with us forever and is little version specific thing.
+00:25:16 [W0] So that's one place where the process didn't sort of just work.
+00:25:21 [W0] The lesson here for both operators and developers is just being a little bit careful around CSI.
+00:25:32 [W0] You're persistent data is probably important to you. So you don't want to have CSI problems and persistence problems during an upgrade. If you are using CSI be careful with your upgrades. Make sure you test them watch for workloads getting stuck and
+00:25:43 [W0] Gray's if at all possible, like I said one 14 plus we've really had basically no CSI problems.
+00:25:53 [W0] I'd highly recommend if you have a choice using one of those newer versions.
+00:25:56 [W0] The last problem I want to talk about is probably the most common problem.
+00:26:08 [W0] We've seen with upgrades our platform and that's problems with admission control. My books.
+00:26:15 [W0] These problems are possible in any environment and with any upgrade process.
+00:26:16 [W0] They're really not specific to us.
+00:26:20 [W0] So I'm gonna spend a little bit of time going through what the problem is some ways to avoid it for anyone who hasn't seen to be control my books.
+00:26:25 [W0] I've got a really quick overview.
+00:26:28 [W0] They're basically a configuration you can make to have the kubernative API server call out to a service and decide whether a particular resource should be created or not.
+00:26:40 [W0] So the sequence diagram here shows what happens I you go to create a resource and communities.
+00:26:49 [W0] It's going to ask the web hook service whether or not it should be created. If it is then everything goes ahead as planned.
+00:26:51 [W0] If not, it gets rejected and it's very common to host these Services inside your cluster. Although you can host them externally.
+00:26:56 [W0] The problems happen if the web hook service isn't running and it can't respond to be a pi server.
+00:27:09 [W0] So what happens in this case where the service is not running?
+00:27:11 [W0] It's not able to respond.
+00:27:12 [W0] And it depends on the failure policy configure for the web hook the failure policies fail.
+00:27:24 [W0] Then when the web hook service isn't available. The API server will just disallow the creation if it's ignore and then the API server is going to act as if the web hook wasn't there at all and allow the operation to go forward.
+00:27:34 [W0] I'm going to come back to this in just a sec. But I want to talk about how it affects upgrades.
+00:27:38 [W0] The problem with webhooks during upgrades is that during an upgrade?
+00:27:46 [W0] We update various system components that run as workloads.
+00:27:53 [W0] So things like accordion s or Q proxy or are cni-genie ever which is psyllium. These are usually things that run in the cube system namespace, but they could run another new spaces to and the problem is that webhooks can prevent updates to the services from happening
+00:28:01 [W0] Causes a problem for the upgrade because now we're not able to update some of the banners components posture.
+00:28:09 [W0] So just to illustrate what can happen if we go back to this configuration.
+00:28:20 [W0] We have this web hook that applies to podcast Asians in any namespace and let's say we have a cluster here that's running the web hook service on a node and also on that note our normal keep system things Q proxy and psyllium in this case when we
+00:28:30 [W0] And let's see.
+00:28:30 [W0] We have a cluster here that's running the web hook service on a node and also on that note our normal keep system things Q proxy and psyllium in this case when we go to do an upgrade.
+00:28:33 [W0] We're going to drain that node.
+00:28:36 [W0] And so it's going to evict the web service and the kubernative schedulers not going to be able to create a new pot for that service particularly specifically the deployment controller isn't could be able to create a new
+00:28:48 [W0] Particularly specifically that deployment controller isn't could be able to create a new pot for that service because the web hooks not running.
+00:28:55 [W0] So the tries to create a new pod the API server API server fails to reach the service because it just affected the service and now we're not able to create new pod for it.
+00:29:02 [W0] Now we create a new node and we go to schedule the system components on this notes and things like you proxy and sodium and we also can't schedule those the demon sect controller can't create pods because the with book service is already. So now we have a node that's essentially useless.
+00:29:17 [W0] It's not running this stuff. It needs to run to be a full part of the cluster and if this happens your clusters can be in pretty bad shape because now you have no nodes that are usable for your police. Your two nodes are he's your upgrades either going to be stuck where your clusters can be.
+00:29:38 [W0] So The Simple Solution here is to change the failure policy to ignore that actually can cause another problem that is not very obvious.
+00:29:48 [W0] that problem is the timeout it turns out that pretty much all the default timeouts and kubernative Zar 30 seconds that includes the timeout for web hooks. I'd also includes the API server timeout. So if you have a web hook with the failure of policy of ignore, but it's time. I was thirty seconds because you haven't specified one
+00:30:00 [W0] That time I was not going to pattering. It's the API servers going to wait 30 seconds for your web hook service to return an answer.
+00:30:13 [W0] But by the time it hits that time out, the request itself is timed out and it can't go ahead. So the recommendation here is to keep your timeouts much lower than 30 seconds regardless of what your failure policy is, and this is
+00:30:22 [W0] That the recommendation here is to keep your timeouts much lower than 30 seconds regardless of what your failure policy is and this is actually the recommendations in the official kubernative stocks too. So, it's not just me saying this this this is really the
+00:30:29 [W0] He talks too. So it's not just me saying this this this is really the guidance from communities Upstream Community as well and the configuration shown on the slide now with the smaller time out and fill your policy of ignore it that's never going to cause any problems during
+00:30:39 [W0] I'll see you ignore it that's never going to cause any problems turned out great.
+00:30:40 [W0] If you actually do want your failure policy to be fail, you can configure your web hook to ignore the cube system namespace and any other critical namespaces you want to also make sure that you're ignoring the namespace that your web hook server itself runs in
+00:30:58 [W0] Doing that that the web hook won't apply to those things and you'll be able to schedule your important services on the cluster during an upgrade.
+00:31:06 [W0] So the lesson for operators here with books can be trouble. You want to just make sure you check the configurations before you start an upgrade.
+00:31:18 [W0] We use a tool we built called cluster link for this is open source tool.
+00:31:24 [W0] It will throw a warning if we are likely to encounter problems with books during an upgrade.
+00:31:29 [W0] other solution to consider is having a mutating webhook that will mutate the web configurations as they come in and basically make sure that they ignore keep system. Make sure they ignore anything else happen prodyna.
+00:31:36 [W0] Time out all that stuff. So that's a good way to avoid the problem in the first place.
+00:31:42 [W0] What's in for developers is basically the manifesto is on the slide just be really careful with webhooks.
+00:31:50 [W0] check your configuration exclude Cube system and the namespace that the web hooks service itself runs in exclude any other critical namespaces and you might want to again consider the mutating with book solution
+00:32:04 [W0] Hi, you don't configure our web hook that's going to cause problems later and you might want to also consider running your weaveworks outside of your cluster. If you can that's less likely to cause problems.
+00:32:14 [W0] So just to wrap up here's all this kind of advice that I gave today on one slide.
+00:32:29 [W0] The first is to consider upgrading vnode replacement and the kind of tips that I made gave to make that go smoothly secondly as a developer make sure that your workloads can be evicted when you're doing an upgrade try an upgrade more than one
+00:32:36 [W0] Greeting vnode replacement and the kind of tips that I need gave to make that go smoothly secondly as a developer make sure that your workloads can be evicted when you're doing an upgrade try an upgrade more than one note at a time if you can
+00:32:39 [W0] If you can minor versions are probably upgrade or probably easier than you think they are especially if you've avoided Alpha features, so don't be so scared of my version upgrades.
+00:32:52 [W0] CSI is would say just now becoming mature.
+00:32:57 [W0] It's really mature in the last few versions of grew days. But you want to take extra special care when you're upgrading a cluster that uses CSI and finally a mission was rule books are lots of trouble you want to run some checks on those and make sure that you don't have any
+00:33:09 [W0] figurations that are going to cause they're going to prevent you from deploying your system components into the cluster as a junior upgrade. It's a big problem that we've seen with our customers closers.
+00:33:18 [W0] And I that's all I have for today.
+00:33:23 [W0] All right. I think it's time for live questions.
+00:33:37 [W0] So we there's a bunch of questions that came in during the talk and I'll do with those those first.
+00:33:46 [W0] So the first one is how often should be upgraded and with do I recommend in terms of which version to stay on and that's going to depend a lot on your environment and your comfort level with taking up new versions and how disruptive your upgrades are for your
+00:33:54 [W0] As a service provider and someone who's running a managed product for kubernative.
+00:34:02 [W0] He's we always try and provide the latest minor version. So I currently Nats 118 soon.
+00:34:10 [W0] They'll be 119 and then we support the two trailing versions just like the Upstream communities Community does for bug fixes and security fixes.
+00:34:21 [W0] So I would say you definitely want to stay within that supported range if you can so the current release or the two previous one.
+00:34:25 [W0] In terms of like how quickly you want to upgrade your new release comes out.
+00:34:34 [W0] Like I said that's going to depend a lot on how confident you are in your in your workloads tolerating the upgrade and whether you can test it in your environment, so I think that's that's a it's gonna depend a lot on your own
+00:34:43 [W0] T feels about your committees clusters
+00:34:47 [W0] Another question is how did we solve the tank problem? So that a touch of a persisting node pool labels and paints or note that was intense. We've done this in our manage product by allowing users to set persistent labels on a pool of nodes.
+00:35:03 [W0] And so when we create a new node in the pool, it'll get those labels.
+00:35:09 [W0] We have an extra roll up the Tank part of that yet, but we are working on that right now. So the idea is rather than setting them directly in the communities API and set them through a managed product and then any new
+00:35:21 [W0] We created for an upgrade or when you scale up a pool or any other reason we'll get the same labels and Teensy.
+00:35:24 [W0] What did we do to after I drain timeouts if you have a poddisruptionbudgets at one, for example, what we do way that we drain and a related question was around how we dream notes
+00:35:41 [W0] When we drain a node we have two modes, so initially we're in our eviction mode.
+00:35:52 [W0] So we will just try it will just Mark each pot for eviction and that's where we set a timeout.
+00:35:57 [W0] So we said we weren't each pod for eviction.
+00:35:58 [W0] We wait 30 minutes or 15 minutes, whatever our time out is and when we get to the end of that we're just going to delete the pot off the know. It's a little hard.
+00:36:05 [W0] delete and then we're just going to delete the node.
+00:36:10 [W0] So the plants can go away. So
+00:36:15 [W0] that's what we do. If you have a pot that just will not be evicted for whatever reason it's going to go away eventually. We're not going to keep the note around forever.
+00:36:22 [W0] Another good question is whether our upgrade to lives inside the cluster outside the cluster in our case, it lives outside of the cluster we since it is a manage product.
+00:36:35 [W0] We don't run we do have a component that runs in the cluster to make kubernative changes to the API, but the upgrade automation itself is outside of the cluster. So it's operating on the poster from the outside.
+00:36:50 [W0] There's another one around balancing the availability of applications as we upgrade nodes replace notes.
+00:37:05 [W0] That's something that we as a managed provider.
+00:37:09 [W0] have multiple replicas of their applications if they if they need availability and we respect all of that like it when we evict a pod it is going to respect any
+00:37:27 [W0] It's going to respect the poddisruptionbudgets.
+00:37:57 [W0] Be drained and applications to restart on new nodes before you can proceed with your upgrade, basically.
+00:38:07 [W0] There are a couple around checks or tests that we might do to make sure that an upgrade is going well or that it's working.
+00:38:23 [W0] We kind of have a couple of phases in our upgrade. So we upgrade that control plane node, and we won't start upgrading the worker nodes until we know that that's up and healthy and then likewise if worker nodes as we do
+00:38:33 [W0] Her each set of worker nodes if we're doing search upgrade, we won't continue with doing more nodes until we tell our new nodes are up and healthy. So if something did go wrong with the control plane upgrade your workloads would still be running on the record notes and
+00:38:49 [W0] You wouldn't have application availability.
+00:38:57 [W0] It would basically pause and we would have to do something to resolve the issue.
+00:39:06 [W0] We do take a snapshot of that CD Data before we start the upgrade so that if something really went wrong in that City volume was destroyed
+00:39:12 [W0] Do take a snapshot of that CD Data before we start the upgrade so that if something really went wrong and it's deep volume was destroyed by a bad about
+00:39:15 [W0] Bad about a great in some way.
+00:39:18 [W0] I've never had this actually happen, but it's possible.
+00:39:21 [W0] We do take that snapshot so we could roll back to it if we needed to.
+00:39:24 [W0] And we've only got a couple of minutes left.
+00:39:39 [W0] So maybe answer one more question, but also feel free to hop on slack in the to cube common operations Channel and hang out there for a while to answer some more questions, but let's see
+00:39:45 [W0] Conquest around VM images we build new VM images for each of our each version that we release and that image is essentially like a golden image like we don't
+00:40:01 [W0] Like we don't make any any changes to it. Once it's deployed its deployed as a worker node, or as a control plane node, and we do the set up once and then it lives for as long as the cluster lives.
+00:40:15 [W0] So that's yeah, that's that's the that's how we deal with those images and we were always working on those images and updating them.
+00:40:26 [W0] release updates at least sort of once a month with any new kubernative patch versions and also a general Improvement.
+00:40:30 [W0] a suit made
+00:40:31 [W0] So I think we'll wrap it up there.
+00:40:44 [W0] Like I said, feel free to come and ask some questions on flak and also feel free to find me on Twitter or email or elsewhere and happy to chat more about upgrades.
+
+Transcription for wordly [W0]
+
+00:01:44 [W0] All right everyone. I'm Adam of Gordon.
+00:01:54 [W0] I'm in chair digitalocean.
+00:01:57 [W0] I currently work as the tech lead for our communities and containerd registered products. And I'm going to talk today about Granny's upgrades in our experience with them. I'm going to talk about how we do upgrades at digitalocean things that we got right things that we got wrong in that process
+00:02:10 [W0] What I want to talk about today is what we've learned about doing upgrades and some lessons that you can apply as either a cluster operator someone who's could be upgrading clusters or as a developer who's deploying your applications into a graze cluster and it's going to be upgraded.
+00:02:25 [W0] These are things that hopefully will help your upgrades be easier and keep your workloads running as expected as you do upgrades on your clusters.
+00:02:33 [W0] I want to start with a little bit of a story about how this talk came to be.
+00:02:39 [W0] So this talk really starts about a year ago in Barcelona keep Connie you 2019 and Barcelona.
+00:02:46 [W0] We announced the general availability of our manager degrees prodyna.
+00:02:48 [W0] I need to stop by our lovely booth and Barcelona.
+00:02:55 [W0] One of the you would have one of the things we would have told you is that our product is now G A and you might have asked us what that meant.
+00:02:59 [W0] We would have told you a bunch of things that we had in our g a blog post here.
+00:03:09 [W0] We would have told you that its production ready ready for your workloads to be trusted.
+00:03:12 [W0] We would have told you that it has an integrated monitoring service and right at the end of the second paragraph We would have told you that it has automated patch version upgrades and what we didn't
+00:03:24 [W0] And you might have asked us what that meant.
+00:03:25 [W0] We would have told you a bunch of things that we had in our G8 blog post here.
+00:03:26 [W0] We would have told you that its production ready ready for your workloads to be trusted.
+00:03:26 [W0] We would have told you that it has an integrated monitoring service and right at the end of the second paragraph We would have told you that it has automated patch version upgrades and what we didn't
+00:03:28 [W0] It you couldn't actually upgrade your cluster yet.
+00:03:32 [W0] We haven't enabled any upgrade paths for our customers. We had tested our upgrade process quite a bit.
+00:03:36 [W0] We run lots of grades and tests clusters, but we had an exposure upgrade process to the full richness of possible configurations and workloads that our customers might have and we didn't want to do that while we were all in Barcelona.
+00:03:51 [W0] We wanted to wait until we were back at normal work. So we if you went to your control panel
+00:03:55 [W0] panel module ocean at time. What do your posture it would have told you your cluster was up-to-date regardless of what version it was actually running.
+00:04:02 [W0] So as you can probably guess when we did enable upgrades the next week or so.
+00:04:11 [W0] We started learning things and that's when I had the idea that maybe I can give a talk about this one day and that's why this talk is lessons from a year banished grannies upgrades.
+00:04:20 [W0] And when I wrote the the cfpb for this talk the end of 2019. I ran some numbers and I figured that by coupon Amsterdam, we're supposed to give this talk.
+00:04:34 [W0] We would have done about 20,000 upgrades and that's a nice big round number. So I put in the title the TOC and in preparation for today. I ran the numbers again and we've now done about 35,000 upgrade. So we've accelerated a little bit over
+00:04:47 [W0] Didn't talk about this one day and that's why this talk is lessons from a year ago and your granny's operates.
+00:04:48 [W0] And when I wrote the the cfpb for this talk band of 2019. I ran some numbers and I figured that by coupon Amsterdam, we're supposed to give this talk.
+00:04:49 [W0] We would have done about 20,000 upgrades and that's a nice big round number. So I put in the title of the talk and in preparation for today. I ran the numbers again, and we've now done about 35,000 upgrade. So we've accelerated a little bit over when I thought we would
+00:04:52 [W0] And that's we've had upgrades enabled for about a year.
+00:04:56 [W0] So that's about a hundred upgrades a day across thousands of clusters.
+00:05:01 [W0] and I'm not saying this just to sort of brag about how many upgrades you've done.
+00:05:02 [W0] Although I think it's an interesting number I'm saying this mostly just to let you know that we have a pretty good set of data to draw some lessons from and I feel like we've done enough upgrades that we can really talk about what we've learned at this point.
+00:05:14 [W0] So that I leads me to my favorite slide which is disclaimers and I have to disclaimers for this talk.
+00:05:23 [W0] one is that these are lessons from our upgrade process.
+00:05:28 [W0] There are lots of different ways to upgrade kubernative and I'm going to talk about how we do it.
+00:05:41 [W0] depending on how you choose to do it some of these lessons will be applicable to you and some of them won't and if what you take away from this talk is that you don't want to do it the way we do it because you don't want to hit those problems then that's a completely Fair take away.
+00:05:44 [W0] The other disclaimer is that this is things we've learned from upgrading our customers clusters and their workloads are probably different than your workloads.
+00:05:52 [W0] They're definitely different than our workloads depending on your environment how you run things you might also hit different things. So let's talk about how you upgrade kubernative and what you actually do when you upgraded there are basically two parts of a kubeedge
+00:06:06 [W0] Of the workloads. So when you upgrade kubernative spruced you're going to upgrade the control plane.
+00:06:12 [W0] Then you're going to upgrade the worker nodes.
+00:06:14 [W0] And that's it.
+00:06:17 [W0] You're done. You've upgraded grannies.
+00:06:20 [W0] of course. It's not actually quite that simple.
+00:06:23 [W0] So here's an expanded set of steps of things that you have to do to every case when you're recruiting the control plane.
+00:06:30 [W0] You're really upgrading a lot of things.
+00:06:35 [W0] So the first thing you're going to do is update any resources that aren't supported in your target version.
+00:06:42 [W0] Then you're going to upgrade its CD. If you need to then the optimal control plane components first be a pi server than the controller manager then the scheduler then you can update your cni-genie if you're using
+00:06:45 [W0] And I for networking finally you can upgrade any provider can specific components of the cloud controller manager CSI driver and then the cube lid and keep CTL on the control plane knows assuming that you're running things using those I once you've done that then
+00:07:00 [W0] Upgrade a worker node, you're going to coordinate and drain it so that there aren't any workloads running on it.
+00:07:07 [W0] Then you're going to update the cubic configuration. If you need to upgrade the cubelet.
+00:07:11 [W0] I'm courting the node.
+00:07:15 [W0] Let workloads come back onto it and you're going to repeat for each node in your cluster if you're running career, and he's on Virtual machines and not bare metal.
+00:07:23 [W0] There's a bit of a shortcut you can take and that's rather than upgrading each individual software component in the cluster. You're going to just replace all of the nodes with new ones that
+00:07:31 [W0] have the new software installed on them.
+00:07:40 [W0] So that first step is to look a little you're still going to read the release notes find out if that everything is supported in your new version updated. If you need to then to replace your control plane, you're going to destroy the old control plane virtual machine and provision a brand new one with all these software and you configuration.
+00:07:49 [W0] Software installed on them. So that first step is still applicable. You're still going to read the release notes find out if that everything is supported in your new version updated. If you need to then to replace your control plane, you're going to destroy the old control plane virtual machine and provision a brand new one
+00:07:51 [W0] Assume that you're at CD data is persistent somewhere outside of that control play node or nodes.
+00:07:57 [W0] So either you're replicating it across multiple nodes or I you've got it stored are persistent volume or you've got it stored somewhere entirely outside your cluster, but assuming that's the case you can do it this one step just provisioning same with the worker
+00:08:10 [W0] Drain each one then. You can destroy a node provision of brand new one in its place.
+00:08:16 [W0] If you've worked with kubernative clusters quite a bit, you can probably see some potential issues with this scheme of doing upgrades and there definitely are some issues but there are also some advantages and this is the upgrade process that we use a digital ocean for our amount of product.
+00:08:32 [W0] We replace all of the nodes in a cluster when we want to do an upgrade.
+00:08:35 [W0] There's a few advantages to this and this is why we chose to do it this way first off.
+00:08:44 [W0] It means that every node in the upgraded cluster is a clean slate. There's no chance that there's been customized configuration on that note or some customizations made to the know this going to persist across an upgrade and cause problems in the new version.
+00:08:56 [W0] It's also a nice process to automate there's not that many steps and if you've built any automation for managing your cluster, you've probably already automated the steps that you need draining anode.
+00:09:10 [W0] Oregano of creating a new one waiting for a note to join a cluster.
+00:09:17 [W0] So automating this upgrade process is just a matter of combining those things that you've already automated into the right order adding some sanity checks and things and that was the case for us.
+00:09:24 [W0] We already have The Primitives that we needed to make this happen and automating.
+00:09:27 [W0] It was pretty easy.
+00:09:32 [W0] The other nice thing is that this works the same across all kinds of upgrades regardless of whether you're doing a patch version of create a minor version upgrade.
+00:09:38 [W0] Which components need to be upgraded? It should all work.
+00:09:40 [W0] All these types and all different kinds of upgrades because there are definitely some cases we've had where we had to do really specific things.
+00:09:56 [W0] But for the most part this process is work for us regardless of what upgrade we're doing which version and I say all of these things that we decided to do our specific a little bit to our environment of
+00:10:02 [W0] These things that we decided to do our specific a little bit to our environment of running many many clusters and doing completely automated upgrades.
+00:10:09 [W0] It's your trade-offs are gonna be a little bit different depending on how many clusters in your operator.
+00:10:12 [W0] So I said we were going to talk about things we got right and things would go wrong in building our upgrades and this is the first thing that I think we really got right is we did our upgrades B&O replacement so it if you're going to upgrade if you're going to manage a lot of clusters and build automation, I'd recommend
+00:10:30 [W0] Considering this as a way to do your updates.
+00:10:32 [W0] The downside of doing a node by node replacement upgrade is that once you've upgraded anode you're left with a brand new completely different node.
+00:10:47 [W0] So any custom configuration on the Node is going to be lost.
+00:10:51 [W0] It's going to have a new name and grazed can have a new IP address if you had said any labels or any taints on it through kubernative zpi.
+00:10:58 [W0] those are going to be lost as well. So this bits all of our customers people who are scheduling their workloads to us.
+00:11:04 [W0] Fick node based on its name or who were accessing nodes directly by their IP because they were rolling traffic to their cluster that way they had some issues when they first did upgrades this process,
+00:11:19 [W0] For operators here other people who are operating companies clusters is if you can it's great to reuse the note names and the IPS of your nodes.
+00:11:32 [W0] I even if you're replacing the node stop grade them.
+00:11:40 [W0] This isn't really something that people should expect from their kubernative cluster, but it is a tool that's available in Gray.
+00:11:40 [W0] someone's going to use it and you'll make their life easier. If you keep your new dance in your IP stable regardless of whether you're keeping those node identities.
+00:11:50 [W0] Stable you definitely want to provide some way to set persistent labels and teens on nodes.
+00:11:59 [W0] Those are a great tool to use for scheduling including A's and people expect them to work.
+00:12:07 [W0] So providing some kind of abstraction to let people set no labels and paints on their noses important.
+00:12:08 [W0] That's something that we've done in the time since we initially introduced upgrades the other pieces provide some simple way to get traffic into a cluster getting traffic into a creative cluster is worth its own.
+00:12:23 [W0] Talking I'm not going to talk about all the details here. But the easier you make it the less people less likely people are to build their own Solution on top of their cluster and it's really people building their own solution that are going to run into trouble if they're Noti peas change for example during an ovary.
+00:12:36 [W0] There's also some lessons for developers here in terms of what you can put your workload can tolerate for change.
+00:12:45 [W0] Great ways to do this one is to deploy our privilege demon set to your cluster and that's going to run on all the nodes, but I know comes up its going to make the necessary customization and then you're noticing the state you expect.
+00:13:05 [W0] The other way is infinite container on one of your workloads. If you have a workload that requires specific node configuration, you can do a configuration from it and it container and when it's done you're workloads ready to run.
+00:13:16 [W0] Secondly, please don't use node names for scheduling.
+00:13:21 [W0] It is a tool you can use in kubenetes. But at some point I know it is going to go away.
+00:13:25 [W0] That's kind of how kubernative clusters are.
+00:13:29 [W0] You don't want your workloads you left unschedulable because I know but the particular needs.
+00:13:33 [W0] Whenever possible use your provider supported or operator supported label and team settings.
+00:13:43 [W0] So on some providers that's going to be just sitting labels and taints through the grannies API on other providers that might mean creating an old pool or some other abstraction to set labels intense fear nodes and same with load balancing if you use your provider or
+00:13:55 [W0] Balancing then you're much less likely to run into problems during an upgrade because those are willing to create with your posture.
+00:14:03 [W0] There are definitely some things we got wrong in our upgrade process, which we'll talk about next.
+00:14:16 [W0] The first big one is doing we implemented our node replacement in a break before make fashion.
+00:14:19 [W0] So we destroy worker node, and then we provision a replacement for it.
+00:14:26 [W0] We did this for some reason that are specific to our product works. But this is definitely caused a lot of trouble for users and something that we're working on changing right now where we will create new nodes before we destroy buildings.
+00:14:33 [W0] The basic problem that this causes for our customers is that I when they when we go to drain a node there might not be any way to drain that note to either because there's not enough capacity in the cluster or because they're running
+00:14:50 [W0] For whatever reason and it's so draining the node can get stuck and that causes a problem for the upgrade.
+00:15:05 [W0] It's also just causes extra turn for workloads. When you drain the first node, you're guaranteed that those workloads are going to end up on another node that's running that old version and those nodes are going to need to be drained right away as well.
+00:15:13 [W0] So this your workloads are all going to end up being evicted from a node more than once instead of just one strimzi upgrade process and that's unfortunate for workloads.
+00:15:21 [W0] So some lessons for operators here if it's all possible figure out a way to create new nodes before you delete old ones.
+00:15:38 [W0] This might be a bit more complicated for you to automate it is in our case because we want to keep the number of nodes sort of stable in the cluster, but it is a better experience for users.
+00:15:46 [W0] You're less likely to have workloads evicted more than once during the upgrade and if you really can't do that because you're on Harbor your gradient place or whatever consider reserving some gas.
+00:15:52 [W0] Be in the cluster to make sure that you are always able to drain it.
+00:15:55 [W0] Likewise for developers if you're deploying things to create a cluster of try not to run it right to the Limit leave some room so that you always can drain a whole note worth of workloads because at some point a note is going to go away even if it doesn't happen during upgrade.
+00:16:13 [W0] Because of her failure maintenance or whatever and you just want to make sure that that's not going to cause a problem for your application.
+00:16:22 [W0] Another thing we got wrong is that we replace nodes exactly one by one.
+00:16:33 [W0] So we destroy one node and then create one node and Destroy one node in the create one node. And this is where works just fine in a three node cluster.
+00:16:40 [W0] It's a lot less good in a 300 node cluster and it's really bad. If we run into timeout straining nodes.
+00:16:48 [W0] We initially had set our Dream time o to an hour and we dialed it back to 15 minutes.
+00:16:52 [W0] But even if 15 minutes if you have a 20 node cluster in each node takes 15 minutes to drain.
+00:16:53 [W0] that's a five-hour upgrade.
+00:16:59 [W0] Be straight.
+00:17:00 [W0] That's just the time to drain the notes. That's not a good experience for Frasier.
+00:17:01 [W0] So to restate that problem a little more succinctly replacing those one by one is slow and it can be made even slower. If you get stuck evicting a upgrades are going to take some time naturally because we do have to shuffle workloads around we for things to come up.
+00:17:19 [W0] But dr.
+00:17:20 [W0] Dre in the notes, that's not a good experience for brazier.
+00:17:21 [W0] So to restate that problem a little more succinctly replacing those one by one is slow and it can be made even slower. If you get stuck evicting a workloads upgrades are going to take some time naturally because we do have to shuffle workloads around we for things to come up.
+00:17:24 [W0] You want them to be as fast as you can users are going to want to watch their upgrades happen and they are the only one to watch for so long.
+00:17:32 [W0] You don't want to have someone watching their upgrade happen for five hours.
+00:17:33 [W0] So lesson for cluster operators here try and replace multiple nodes at once if you can miss this will really help make an upgrade on a big poster faster this kind of requires that you do make before break like I was talking about a minute ago.
+00:17:49 [W0] Your users might have set aside some capacity for a note to be drained, but they're probably not expecting like ten nodes at a time to be trained. So you kind of have to add capacity to the cluster before you reduce it.
+00:18:05 [W0] Also, make sure that you save reasonable Dreamtime oats.
+00:18:09 [W0] Were it does take some time to drain a node but it shouldn't take an hour and then you kind of have to figure out what the right balance is for your workloads in your environment. But setting those timeouts to a reasonable value is going to help with that grades be able to tell stories.
+00:18:20 [W0] For developers.
+00:18:27 [W0] There's not much you can do about how your provider or operator replaces your the nodes in your cluster, but there are a couple things you can do to make sure that your workloads can be evicted.
+00:18:39 [W0] You want to make sure of two things one that your workloads can be evicted safely.
+00:18:41 [W0] Soyuz poddisruptionbudgets. Make sure you understand how your workloads can be affected during an eviction and make sure that your workload can be evicted quickly. So have your application respond to the signals that kubernative stackrox?
+00:18:51 [W0] So if it's in that way to fix a pod so that you shut down as quickly as you can and let the with a training process move one and my big tip is just test this at some point.
+00:19:06 [W0] problems
+00:19:20 [W0] back to the positive side of things.
+00:19:28 [W0] This is another thing that we got wrong, but we were actually pretty happy.
+00:19:28 [W0] We got wrong.
+00:19:34 [W0] I mentioned earlier that when we did our GA we offer automated patch version upgrades.
+00:19:39 [W0] So that means like 114 121 14 to not 114 to 115 0 we started out that way because Patrick separates a little bit simpler resources aren't supposed to change between that versions.
+00:19:49 [W0] So everything that you have running in your customers should continue working after the upgrade.
+00:19:54 [W0] And it was good idea for us to start out that way, but when we did get to doing minor version upgrades we discovered that everything pretty much worked as expected.
+00:20:03 [W0] It was much less fraught than we expected. So that's that's the lesson here really is just don't worry too much about Minor version upgrades.
+00:20:16 [W0] They aren't as scary as you might think they are at least they weren't for us and assuming that you've designed a good process for doing upgrades. I won't be that different.
+00:20:21 [W0] from the next version of reading
+00:20:22 [W0] One thing we did do right that helped. These minor version upgrades go.
+00:20:29 [W0] Well is that we leave Alpha features disabled as much as we can also features are disabled by default and kubernative and we try not to enable them unless I have a really good reason to Alpha features are the most likely things to change between releases and leaving them
+00:20:44 [W0] Possible source of problems as you do upgrades, especially later version of greens.
+00:20:53 [W0] So for operators, the lesson here is really simple.
+00:20:54 [W0] just wait until it features Data before you enable it and if you do really want to enable an alpha feature exam a good business use case for it consider the the upgrade trade-off. You are probably gonna have to put some work into upgrading clusters that have a table feature.
+00:21:08 [W0] You have a good business use case for it consider the the upgrade trade-off. You are probably going to have to put some work into upgrading clusters that have that Alpha feature.
+00:21:12 [W0] That's the the trade-off that you're going to make labeling it.
+00:21:13 [W0] For developers. The blessing is similar to beware of using Alpha features. If you are using Alpha features really upgrade the release notes really carefully before you upgrade.
+00:21:29 [W0] Make sure you understand what's happening to the feature as it becomes beta and any changes that you might need to make any changes that your operator might need to make as long as you you understand what's happening should be okay.
+00:21:36 [W0] So less than the rest of our time here on to Common classes of problems that we've seen with upgrades and the first is problems around container storage interface or CSI.
+00:21:52 [W0] So for those of you who aren't familiar CSI is a pluggable way to allow workloads in in kubenetes or another container worker straighter to consume storage from an arbitrary storage system
+00:22:02 [W0] Who's turned into lotion, whether they're part of our manage product or managed outside of it by a user can use our open source CSI plug-in to attach our block storage to the workloads.
+00:22:15 [W0] And this is a how we recommend our users get persistence in any persistence right application and I see a size and problem for us in a few different ways as it relates to upgrades.
+00:22:23 [W0] The biggest one is just the general immaturity of CSI on the versions that we started with in our product.
+00:22:36 [W0] So the first version of grenades that we supported at digitalocean was Gray's 1.10 and that was the same release in which CSI became beta feature.
+00:22:45 [W0] I moved out of alpha. So in that 1.10 time frame the kubernative components for CSI were relatively new the CSI drivers including ours were relatively new and there were some bugs there.
+00:22:55 [W0] Basically the problem we run into an upgrades that we had bugs.
+00:23:07 [W0] There's a lot of CSI action going on during an upgrade because you are draining nodes and that means detaching volumes from workloads are being evicted reattaching them elsewhere as schedule the workloads on other nodes
+00:23:13 [W0] Hitting bugs where they state of communities in the state of the real world were out of sync and we couldn't drain a workload off of a node or we couldn't start over chronosphere node, because the volumes are in the wrong place.
+00:23:29 [W0] That's that's the basic problem that we hit luckily.
+00:23:34 [W0] Everything has matured a lot since those days.
+00:23:36 [W0] I would say in kubernative 114 plus we really see very few CSI problems even during upgrades.
+00:23:42 [W0] So if you're on a newer version, you should be okay. This is a good reason to up.
+00:23:44 [W0] Grade in itself, even though you might experience some pain on older releases.
+00:23:54 [W0] But yeah, it really has sort of taken care of itself in more recent releases one other problem we hit and this is one place where we had to introduce version specific code for
+00:24:02 [W0] It's is the CSI driver name change in earlier versions of the CSI spec drivers are identified by a reverse fdn notations of khambhat example, but CSI in later versions of the spec.
+00:24:18 [W0] They change that to be forward of qdn.
+00:24:28 [W0] So CSI Dot example.com and this driver named gets used in various places and communities including being attached to each volume that the driver creates.
+00:24:32 [W0] That's how kubernative Maps between volumes in the drivers are supposed to manage them.
+00:24:33 [W0] The this name for good reason is immutable and kubernative.
+00:24:40 [W0] So once you've installed it gracias I driver into your cluster.
+00:24:41 [W0] You can't change its name.
+00:24:46 [W0] The problem we ran into is we change the name in our driver to match the new spec and we then were able to manage the old volumes that have been created by the previous driver our solution was to just detect whether our
+00:24:56 [W0] For good reason is immutable and kubernative.
+00:24:57 [W0] So once you've installed it gracias I driver into your cluster.
+00:24:57 [W0] You can't change its name.
+00:24:57 [W0] The problem we ran into is we change the name in our driver to match the new spec and we then were able to manage the old volumes that have been created by the previous driver our solution was to just detect whether our
+00:24:58 [W0] An existing crazed cluster with using the old name for the new name and make our software configurable for the name so we can keep using the old name in a newer version of the driver when we need to that's
+00:25:12 [W0] It'll probably be with us forever and is little version specific thing.
+00:25:16 [W0] So that's one place where the process didn't sort of just work.
+00:25:21 [W0] The lesson here for both operators and developers is just being a little bit careful around CSI.
+00:25:32 [W0] You're persistent data is probably important to you. So you don't want to have CSI problems and persistence problems during an upgrade. If you are using CSI be careful with your upgrades. Make sure you test them watch for workloads getting stuck and
+00:25:43 [W0] Gray's if at all possible, like I said one 14 plus we've really had basically no CSI problems.
+00:25:53 [W0] I'd highly recommend if you have a choice using one of those newer versions.
+00:25:56 [W0] The last problem I want to talk about is probably the most common problem.
+00:26:08 [W0] We've seen with upgrades our platform and that's problems with admission control. My books.
+00:26:15 [W0] These problems are possible in any environment and with any upgrade process.
+00:26:16 [W0] They're really not specific to us.
+00:26:20 [W0] So I'm gonna spend a little bit of time going through what the problem is some ways to avoid it for anyone who hasn't seen to be control my books.
+00:26:25 [W0] I've got a really quick overview.
+00:26:28 [W0] They're basically a configuration you can make to have the kubernative API server call out to a service and decide whether a particular resource should be created or not.
+00:26:40 [W0] So the sequence diagram here shows what happens I you go to create a resource and communities.
+00:26:49 [W0] It's going to ask the web hook service whether or not it should be created. If it is then everything goes ahead as planned.
+00:26:51 [W0] If not, it gets rejected and it's very common to host these Services inside your cluster. Although you can host them externally.
+00:26:56 [W0] The problems happen if the web hook service isn't running and it can't respond to be a pi server.
+00:27:09 [W0] So what happens in this case where the service is not running?
+00:27:11 [W0] It's not able to respond.
+00:27:12 [W0] And it depends on the failure policy configure for the web hook the failure policies fail.
+00:27:24 [W0] Then when the web hook service isn't available. The API server will just disallow the creation if it's ignore and then the API server is going to act as if the web hook wasn't there at all and allow the operation to go forward.
+00:27:34 [W0] I'm going to come back to this in just a sec. But I want to talk about how it affects upgrades.
+00:27:38 [W0] The problem with webhooks during upgrades is that during an upgrade?
+00:27:46 [W0] We update various system components that run as workloads.
+00:27:53 [W0] So things like accordion s or Q proxy or are cni-genie ever which is psyllium. These are usually things that run in the cube system namespace, but they could run another new spaces to and the problem is that webhooks can prevent updates to the services from happening
+00:28:01 [W0] Causes a problem for the upgrade because now we're not able to update some of the banners components posture.
+00:28:09 [W0] So just to illustrate what can happen if we go back to this configuration.
+00:28:20 [W0] We have this web hook that applies to podcast Asians in any namespace and let's say we have a cluster here that's running the web hook service on a node and also on that note our normal keep system things Q proxy and psyllium in this case when we
+00:28:30 [W0] And let's see.
+00:28:30 [W0] We have a cluster here that's running the web hook service on a node and also on that note our normal keep system things Q proxy and psyllium in this case when we go to do an upgrade.
+00:28:33 [W0] We're going to drain that node.
+00:28:36 [W0] And so it's going to evict the web service and the kubernative schedulers not going to be able to create a new pot for that service particularly specifically the deployment controller isn't could be able to create a new
+00:28:48 [W0] Particularly specifically that deployment controller isn't could be able to create a new pot for that service because the web hooks not running.
+00:28:55 [W0] So the tries to create a new pod the API server API server fails to reach the service because it just affected the service and now we're not able to create new pod for it.
+00:29:02 [W0] Now we create a new node and we go to schedule the system components on this notes and things like you proxy and sodium and we also can't schedule those the demon sect controller can't create pods because the with book service is already. So now we have a node that's essentially useless.
+00:29:17 [W0] It's not running this stuff. It needs to run to be a full part of the cluster and if this happens your clusters can be in pretty bad shape because now you have no nodes that are usable for your police. Your two nodes are he's your upgrades either going to be stuck where your clusters can be.
+00:29:38 [W0] So The Simple Solution here is to change the failure policy to ignore that actually can cause another problem that is not very obvious.
+00:29:48 [W0] that problem is the timeout it turns out that pretty much all the default timeouts and kubernative Zar 30 seconds that includes the timeout for web hooks. I'd also includes the API server timeout. So if you have a web hook with the failure of policy of ignore, but it's time. I was thirty seconds because you haven't specified one
+00:30:00 [W0] That time I was not going to pattering. It's the API servers going to wait 30 seconds for your web hook service to return an answer.
+00:30:13 [W0] But by the time it hits that time out, the request itself is timed out and it can't go ahead. So the recommendation here is to keep your timeouts much lower than 30 seconds regardless of what your failure policy is, and this is
+00:30:22 [W0] That the recommendation here is to keep your timeouts much lower than 30 seconds regardless of what your failure policy is and this is actually the recommendations in the official kubernative stocks too. So, it's not just me saying this this this is really the
+00:30:29 [W0] He talks too. So it's not just me saying this this this is really the guidance from communities Upstream Community as well and the configuration shown on the slide now with the smaller time out and fill your policy of ignore it that's never going to cause any problems during
+00:30:39 [W0] I'll see you ignore it that's never going to cause any problems turned out great.
+00:30:40 [W0] If you actually do want your failure policy to be fail, you can configure your web hook to ignore the cube system namespace and any other critical namespaces you want to also make sure that you're ignoring the namespace that your web hook server itself runs in
+00:30:58 [W0] Doing that that the web hook won't apply to those things and you'll be able to schedule your important services on the cluster during an upgrade.
+00:31:06 [W0] So the lesson for operators here with books can be trouble. You want to just make sure you check the configurations before you start an upgrade.
+00:31:18 [W0] We use a tool we built called cluster link for this is open source tool.
+00:31:24 [W0] It will throw a warning if we are likely to encounter problems with books during an upgrade.
+00:31:29 [W0] other solution to consider is having a mutating webhook that will mutate the web configurations as they come in and basically make sure that they ignore keep system. Make sure they ignore anything else happen prodyna.
+00:31:36 [W0] Time out all that stuff. So that's a good way to avoid the problem in the first place.
+00:31:42 [W0] What's in for developers is basically the manifesto is on the slide just be really careful with webhooks.
+00:31:50 [W0] check your configuration exclude Cube system and the namespace that the web hooks service itself runs in exclude any other critical namespaces and you might want to again consider the mutating with book solution
+00:32:04 [W0] Hi, you don't configure our web hook that's going to cause problems later and you might want to also consider running your weaveworks outside of your cluster. If you can that's less likely to cause problems.
+00:32:14 [W0] So just to wrap up here's all this kind of advice that I gave today on one slide.
+00:32:29 [W0] The first is to consider upgrading vnode replacement and the kind of tips that I made gave to make that go smoothly secondly as a developer make sure that your workloads can be evicted when you're doing an upgrade try an upgrade more than one
+00:32:36 [W0] Greeting vnode replacement and the kind of tips that I need gave to make that go smoothly secondly as a developer make sure that your workloads can be evicted when you're doing an upgrade try an upgrade more than one note at a time if you can
+00:32:39 [W0] If you can minor versions are probably upgrade or probably easier than you think they are especially if you've avoided Alpha features, so don't be so scared of my version upgrades.
+00:32:52 [W0] CSI is would say just now becoming mature.
+00:32:57 [W0] It's really mature in the last few versions of grew days. But you want to take extra special care when you're upgrading a cluster that uses CSI and finally a mission was rule books are lots of trouble you want to run some checks on those and make sure that you don't have any
+00:33:09 [W0] figurations that are going to cause they're going to prevent you from deploying your system components into the cluster as a junior upgrade. It's a big problem that we've seen with our customers closers.
+00:33:18 [W0] And I that's all I have for today.
+00:33:23 [W0] All right. I think it's time for live questions.
+00:33:37 [W0] So we there's a bunch of questions that came in during the talk and I'll do with those those first.
+00:33:46 [W0] So the first one is how often should be upgraded and with do I recommend in terms of which version to stay on and that's going to depend a lot on your environment and your comfort level with taking up new versions and how disruptive your upgrades are for your
+00:33:54 [W0] As a service provider and someone who's running a managed product for kubernative.
+00:34:02 [W0] He's we always try and provide the latest minor version. So I currently Nats 118 soon.
+00:34:10 [W0] They'll be 119 and then we support the two trailing versions just like the Upstream communities Community does for bug fixes and security fixes.
+00:34:21 [W0] So I would say you definitely want to stay within that supported range if you can so the current release or the two previous one.
+00:34:25 [W0] In terms of like how quickly you want to upgrade your new release comes out.
+00:34:34 [W0] Like I said that's going to depend a lot on how confident you are in your in your workloads tolerating the upgrade and whether you can test it in your environment, so I think that's that's a it's gonna depend a lot on your own
+00:34:43 [W0] T feels about your committees clusters
+00:34:47 [W0] Another question is how did we solve the tank problem? So that a touch of a persisting node pool labels and paints or note that was intense. We've done this in our manage product by allowing users to set persistent labels on a pool of nodes.
+00:35:03 [W0] And so when we create a new node in the pool, it'll get those labels.
+00:35:09 [W0] We have an extra roll up the Tank part of that yet, but we are working on that right now. So the idea is rather than setting them directly in the communities API and set them through a managed product and then any new
+00:35:21 [W0] We created for an upgrade or when you scale up a pool or any other reason we'll get the same labels and Teensy.
+00:35:24 [W0] What did we do to after I drain timeouts if you have a poddisruptionbudgets at one, for example, what we do way that we drain and a related question was around how we dream notes
+00:35:41 [W0] When we drain a node we have two modes, so initially we're in our eviction mode.
+00:35:52 [W0] So we will just try it will just Mark each pot for eviction and that's where we set a timeout.
+00:35:57 [W0] So we said we weren't each pod for eviction.
+00:35:58 [W0] We wait 30 minutes or 15 minutes, whatever our time out is and when we get to the end of that we're just going to delete the pot off the know. It's a little hard.
+00:36:05 [W0] delete and then we're just going to delete the node.
+00:36:10 [W0] So the plants can go away. So
+00:36:15 [W0] that's what we do. If you have a pot that just will not be evicted for whatever reason it's going to go away eventually. We're not going to keep the note around forever.
+00:36:22 [W0] Another good question is whether our upgrade to lives inside the cluster outside the cluster in our case, it lives outside of the cluster we since it is a manage product.
+00:36:35 [W0] We don't run we do have a component that runs in the cluster to make kubernative changes to the API, but the upgrade automation itself is outside of the cluster. So it's operating on the poster from the outside.
+00:36:50 [W0] There's another one around balancing the availability of applications as we upgrade nodes replace notes.
+00:37:05 [W0] That's something that we as a managed provider.
+00:37:09 [W0] have multiple replicas of their applications if they if they need availability and we respect all of that like it when we evict a pod it is going to respect any
+00:37:27 [W0] It's going to respect the poddisruptionbudgets.
+00:37:57 [W0] Be drained and applications to restart on new nodes before you can proceed with your upgrade, basically.
+00:38:07 [W0] There are a couple around checks or tests that we might do to make sure that an upgrade is going well or that it's working.
+00:38:23 [W0] We kind of have a couple of phases in our upgrade. So we upgrade that control plane node, and we won't start upgrading the worker nodes until we know that that's up and healthy and then likewise if worker nodes as we do
+00:38:33 [W0] Her each set of worker nodes if we're doing search upgrade, we won't continue with doing more nodes until we tell our new nodes are up and healthy. So if something did go wrong with the control plane upgrade your workloads would still be running on the record notes and
+00:38:49 [W0] You wouldn't have application availability.
+00:38:57 [W0] It would basically pause and we would have to do something to resolve the issue.
+00:39:06 [W0] We do take a snapshot of that CD Data before we start the upgrade so that if something really went wrong in that City volume was destroyed
+00:39:12 [W0] Do take a snapshot of that CD Data before we start the upgrade so that if something really went wrong and it's deep volume was destroyed by a bad about
+00:39:15 [W0] Bad about a great in some way.
+00:39:18 [W0] I've never had this actually happen, but it's possible.
+00:39:21 [W0] We do take that snapshot so we could roll back to it if we needed to.
+00:39:24 [W0] And we've only got a couple of minutes left.
+00:39:39 [W0] So maybe answer one more question, but also feel free to hop on slack in the to cube common operations Channel and hang out there for a while to answer some more questions, but let's see
+00:39:45 [W0] Conquest around VM images we build new VM images for each of our each version that we release and that image is essentially like a golden image like we don't
+00:40:01 [W0] Like we don't make any any changes to it. Once it's deployed its deployed as a worker node, or as a control plane node, and we do the set up once and then it lives for as long as the cluster lives.
+00:40:15 [W0] So that's yeah, that's that's the that's how we deal with those images and we were always working on those images and updating them.
+00:40:26 [W0] release updates at least sort of once a month with any new kubernative patch versions and also a general Improvement.
+00:40:30 [W0] a suit made
+00:40:31 [W0] So I think we'll wrap it up there.
+00:40:44 [W0] Like I said, feel free to come and ask some questions on flak and also feel free to find me on Twitter or email or elsewhere and happy to chat more about upgrades.

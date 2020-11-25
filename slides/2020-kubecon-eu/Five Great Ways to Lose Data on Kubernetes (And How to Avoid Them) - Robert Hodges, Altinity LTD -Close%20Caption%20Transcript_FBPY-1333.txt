@@ -1,0 +1,302 @@
+﻿Five Great Ways to Lose Data on Kubernetes (And How to Avoid Them): FBPY-1333 - events@cncf.io - Tuesday, August 18, 2020 12:24 PM - 53 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:29 [W] Hello everyone.
+00:05:22 [W] This is Robert Hodge has and I'm happy to welcome you to my talk on five great ways to lose data on kubenetes and how to avoid them.
+00:05:23 [W] It's an honor to be presenting at Cube Con Europe 2020 where this is a great conference a lot of really wonderful talks. So we're just totally happy that to be selected the topics that I'll be talking about are things that
+00:05:37 [W] And and my colleagues have dealt with from day to day over the last couple years. So we hope that you will enjoy the information about to share with you speaking my company.
+00:05:48 [W] Let's do some introductions.
+00:05:53 [W] So my name again is Robert Hodge has I am the altinity CEO and but more relevantly for this talk.
+00:06:01 [W] I have a background long background in data.
+00:06:04 [W] I started with my first database management system in 1983.
+00:06:06 [W] 1983. I've been working on them databases one kind of
+00:06:07 [W] other almost continuously since then with some short jogs into things like virtualization and security.
+00:06:15 [W] I've been using kubernative since 2018.
+00:06:20 [W] My company altinity is an Enterprise provider for click house.
+00:06:22 [W] So we provide services and software for the click house data warehouse.
+00:06:27 [W] It's a very popular very fast open source SQL data warehouse again, most relevantly for this talk.
+00:06:35 [W] We are the implementers of the click house kubernative operator and have made a major commitment to
+00:06:38 [W] In data warehouses in a cloud native Fashion on kubernative and that work is the source of a lot of the information.
+00:06:46 [W] We're going to provide in this talk today.
+00:06:47 [W] Before I get started, I'd like to just Define a couple of things so that we're we have the right frame of reference for thinking about the problems of data loss.
+00:07:04 [W] So the first thing is just to Define.
+00:07:05 [W] Data, is any information for the purposes of this talk is any information that is used to either operate or guide a business in the example.
+00:07:19 [W] I'm showing you right now we see a typical table from a from a data warehouse containing sales data.
+00:07:26 [W] So data warehouses are used to answer questions that often go to a company's strategy and tactics such as which products have the best gross margins over time. If you can figure that out, you know, which products make the most money in the ones that you
+00:07:38 [W] Focus on selling similarly if you can answer the question which kinds of companies are most likely to Buy sku 556 that's a product then you can direct your salespeople to the places where they're most likely to make sales and bring home the bacon.
+00:07:53 [W] Similarly, we want to Define what we mean by the word lose. Well in the context of data lose is actually a spectrum.
+00:08:02 [W] It's not a single thing.
+00:08:10 [W] So when we lose data we can talk about losing it temporarily so it can be just gone for a while but combat completely all the way to a state where it is completely gone forever.
+00:08:16 [W] You will never see it again.
+00:08:17 [W] You will feel awful and it's there's it's just vaporized.
+00:08:23 [W] So I call this the data loss Arrow of evil.
+00:08:24 [W] And what's kind of interesting in when dealing with data is the value depending on what kind of data you have?
+00:08:34 [W] You get to operate a e-commerce site if my SQL is even available on available and the data is not not accessible means you can't sell anything.
+00:08:49 [W] So you're basically at a standstill for data warehouses.
+00:08:52 [W] That's not such a big deal.
+00:08:53 [W] They often offer many of them particularly if they're batch oriented or doing answering strategic questions may run sort of on a nine-to-five basis.
+00:09:02 [W] So having it down for a while.
+00:09:03 [W] It's not such a big deal on the other hand losing some big chunk of data means that you lose.
+00:09:07 [W] Asian on what's the state of the business so that can be a very serious problem in both cases and and for other databases as well.
+00:09:22 [W] There is a point where it's all gone. And the result may be in many cases that the business simply stops functioning.
+00:09:24 [W] So this is a very serious problem.
+00:09:27 [W] So with these two definitions in mind we can now step in and look at some of the different ways that we can lose data on kubernative and how we avoid them.
+00:09:34 [W] So the first problem that I want to get discuss is what I call the single copy catastrophe.
+00:09:45 [W] This is pretty obvious from the name. But first, let's start by praising kubernative.
+00:09:52 [W] One of the things that is wonderful about kubernative is how easy it is to set up complex applications in this particular example.
+00:09:57 [W] I'm going to use Helm so Helm is a popular tool to create deployments in kubernative. Bring them up you can
+00:10:04 [W] Going to create a namespace my SQL using Cube cuddle.
+00:10:12 [W] I'm then going to run a single line Helm install command to install the my MySQL server, which will then pop up and run and a few minutes after or even a few seconds after I run this command.
+00:10:26 [W] After I run this command, I will see a database running in a pod on kubenetes with an attached persistent volume.
+00:10:36 [W] Unfortunately, this database is kind of a delicate flower and particularly when we're thinking about data loss.
+00:10:42 [W] So there's a number of bad things that could possibly happen.
+00:10:45 [W] You could delete the pot. That's usually not a big deal when you install from Helm but it's possible that if you delete the node, you might lose the storage because in fact the storage could
+00:10:53 [W] you don't know for sure unless you check with the storage could be act allocated locally. And for sure if you delete the persistent volume, for example, if you allocate block storage your data's gone, there's there's no replacement. And this
+00:11:09 [W] Situation that you have if you have a laptop and you drop it lose it or something just something the storage dies, so it's gone.
+00:11:25 [W] So databases have dealt with this problem for really long time and the solution in just about every single case is to have replicas. So you have different kinds of copies of data, which means that if you lose your main copy, there's another copy
+00:11:35 [W] And my SQL is kind of instructive because it illustrates very well the two main styles of replicas that we get with databases.
+00:11:50 [W] So my SQL as you know, if you've used have experienced directly with my SQL yourself has very good built in replication.
+00:11:56 [W] And so replication enables you to have live copies.
+00:12:00 [W] You have a primary MySQL server that would for your eCommerce site.
+00:12:04 [W] That would be where your transactions run. It has storage attached to it. And then you have my SQL
+00:12:05 [W] Allocation enabled and it goes it as soon as a transaction commits in the primary it immediately transfers it to the replicates very fast often a second or less to move transactions across.
+00:12:20 [W] So what that means with this live copy is it if you lose the primary you can just promote one of the replicas in you're right back in business again, the other kind of replicas of static copy, which is represented by a backup so you can take those
+00:12:32 [W] That would be where your transactions run it has storage attached to it.
+00:12:33 [W] And then you have my SQL replication enabled and it goes it as soon as a transaction commits in the primary it immediately transfers it to the replicates very fast often a second or less to move transactions across.
+00:12:35 [W] So what that means with this live copy is it if you lose the primary you can just promote one of the replicas in your right back in business again.
+00:12:38 [W] The other kind of replicas of static copy, which is represented by a backup so you can take those replicas and this is again a very common way that this is handled in my SQL from time to time.
+00:12:43 [W] You'll run a backup of the of the my of the MySQL replica and then you'll store that back up in another location in case you need to make more replicas at a later time.
+00:12:49 [W] So static copies and live and live replicas these solve the problem of what to do when you lose your data in your in your primary database.
+00:12:55 [W] So the issue though when you come to kubernative is is how do you actually implement this in kubernative is because we're talking at the very least a complex deployment with a couple of different types of servers running in separate pods.
+00:13:10 [W] We have backups and and in fact as we get to other types of databases, these may be far more complex modern databases are typically very complex distributed applications.
+00:13:24 [W] So the question is, how do we set it set this up?
+00:13:25 [W] in kubenetes, especially in cases where we might have to create dozens of resources to implement the database in kubernative use
+00:13:37 [W] The answer that's evolved over. The last few years is something called kubenetes operators.
+00:13:50 [W] So the way that a kubernative what a kubernative is operator does is it allows you to create what are called custom resource definitions?
+00:13:55 [W] Is how do you actually implement this in kubernative is because we're talking at the very least a complex deployment with a couple of different types of servers running in separate pods.
+00:14:03 [W] We have backups and and in fact as we get to other types of databases, these may be far more complex modern databases are typically very complex distributed applications.
+00:14:05 [W] So the question is, how do we set it set this up in kubenetes, especially in cases.
+00:14:06 [W] as where we might have to create dozens of resources to implement the database in kubernative use
+00:14:07 [W] The answer that's evolved over. The last few years is something called kubenetes operators.
+00:14:13 [W] So the way that a kubernative what a kubernative is operator does is it allows you to create what are called custom resource definitions?
+00:14:13 [W] So instead of thinking of the database is a collection of deployment and stateful sets Services pods. You instead have a single a new resource which represents the entire structure of the database. And and so what
+00:14:14 [W] Is and and so what happens is you load this custom resource definition into kubernative.
+00:14:15 [W] It is kubernative API recognize that it's handled by a particular operator type.
+00:14:22 [W] It is bashes it to the operator which then looks at it and decides what changes it needs to make in kubernative to implement the database.
+00:14:25 [W] So what it then does is from there. It will set up things like stateful sets or services or pods or persistent storage to find them in at CD and then the knative controllers will take over.
+00:14:33 [W] / actually implementing the the the database out in the kubernetes cluster itself and the result is a best practice deployment which contains all the pieces including things like replication
+00:14:48 [W] Ups that you need to ensure that you have adequate replicas to protect your data.
+00:14:54 [W] So and just to illustrate the what we show on the right here is a data warehouse set up.
+00:15:02 [W] These are relatively complicated compared especially compared to my SQL.
+00:15:06 [W] Let's just have a look at the CRT.
+00:15:16 [W] You can see from this that in fact what this does is it is much simpler than for example having to do the deployments directly and do all the low level resources.
+00:15:21 [W] We have a single very simple resource file. This is actually a real resource file that you could load and it says
+00:15:25 [W] Let's have a cluster named CH 0 1 actually with a configuration called replicated to shards to replicas and then point the Zookeeper which is used to keep to keep track of State between the replicas.
+00:15:38 [W] That's it.
+00:15:47 [W] it. So this illustrates how how much the operator simplify this and then also handle the issues of ensuring proper replicas as well as many other things that are necessary for databases to function. So this is a huge step forward and
+00:15:56 [W] is really one of the ways that we can Implement replication and backups in databases on kubernative in a relatively straightforward manner.
+00:16:04 [W] So that was the first so replicas are one of the first solutions to losing data.
+00:16:14 [W] Let's look at some of the other ways that we can we can lose data.
+00:16:16 [W] Let's talk about this term.
+00:16:23 [W] It's one of my favorite terms from from the high availability world. The notion is a blast radius is how far away do you have to be before you're not affected by a failure and there are various you can think of this as a bunch of concentric circles
+00:16:36 [W] And there are various you can think of this as a bunch of concentric circles, for example, if a host fails or something on the host ceases to work anything running on that host and potentially any data attached to the host may become available
+00:16:46 [W] Host and potentially any data attached to the host may become available may just disappear.
+00:16:53 [W] So that's a that's a relatively constrained failure, but they can of course extend out in to be to cover much more ground.
+00:17:00 [W] So for example hosted racks racks are in data centers, there.
+00:17:05 [W] It is possible to have failures which make data completely inaccessible across the data center.
+00:17:07 [W] So for example, the failure of network attached storage or a failure of the network itself, which can either cause
+00:17:12 [W] Cause data loss or a unavailability beyond that you can think of a failure at the level of a kubernative cluster. So that things within that cluster become unavailable or unusable and then of course a failure within an entire region, so for
+00:17:26 [W] You can have failures in they have been historically failures in things like Amazon that caused entire regions to lose access to critical services and even data across a across a number of data centers.
+00:17:42 [W] So the really key thing with with to avoid blast radius problems is to get distance between your replicas and for that there's an incredibly helpful Concept in in kubernative
+00:17:55 [W] Which basically gives us the ability to move pods around as well as Associated resources, like storage in two different locations so that they are far enough away that if one thing fails it doesn't take all your data down with it.
+00:18:11 [W] Your data down with it.
+00:18:13 [W] So here's here's a simple example a very simple example that illustrates a finiti as well as its its its opposite which is anti Affinity.
+00:18:26 [W] So in this particular picture, we have a couple of Zookeeper pods zookeeper is a very popular distributed directory service that maintains consensus across a number of nodes.
+00:18:38 [W] It's used for things like leader election as well as holding distributed logs.
+00:18:42 [W] Thing where a series of processes need to agree on what the state of things is.
+00:18:52 [W] It's really important with zookeeper to move the to have the node separated so that a failure will not take all of them down in this particular case.
+00:18:59 [W] What we can do is we can use anti Affinity to keep to zookeepers from showing up on the same node in this case host 116 on the left. Similarly. We can use a finiti to drive the
+00:19:09 [W] That zookeeper one instance to a host that has a particular that has particular characteristics that interest us one common. Use of affinity is to drive the pods basically to separate the pods across availability
+00:19:25 [W] What I like to do is show you the code that implements this because it's a very powerful feature inside kubernative.
+00:19:41 [W] So let's first look at Auntie Affinity. So this is the this is pot an T Affinity which drives the basically it's going to drive the pods apart and keep them from landing on the being scheduled on the same host.
+00:19:47 [W] So what you see here is a part of a pod definition and under the spec. We have Affinity rules and we have a rule for pot and Auntie affinity and
+00:19:56 [W] we say that this is a rule that is going to be used during scheduling.
+00:20:04 [W] So when we're starting the Pod, but then we don't care later on while the Pod is actually running and what this syntax says is that there's a key hostname and we don't want to have to people basically
+00:20:15 [W] From a from one of our data warehouses.
+00:20:25 [W] We don't want to have two pods from the same Data Warehouse on the same host as you can see from looking at this syntax and even hearing me read it.
+00:20:29 [W] It's a little bit non-intuitive and we'll get to that because that actually turns out to be an issue.
+00:20:40 [W] But if you get this, right what this will do is is Drive the pods off that you will never get to pods schedule on the same host.
+00:20:41 [W] Now what we can also do is is is move pods to make them schedule in particular locations. And for this note Affinity is very helpful. What we see here is no definity which is going to assign a
+00:20:57 [W] Particular availability Zone here uswest.
+00:21:07 [W] Ooh, so the and in this case what we see is the key is the failure domain blah blah blah Zone.
+00:21:11 [W] that is a property that's automatically set in most communities clusters. And we see that the value that we're looking for is you SOS to a so what this is going to do is any part that contains this is going to want to land in in
+00:21:25 [W] Job, one of the things that's kind of interesting.
+00:21:31 [W] I should note here about about a finiti is particularly availability zones is we have found in our work that it's best if you're really concerned about distribution across a Zs.
+00:21:42 [W] It's best to be very explicit about it as we show here.
+00:21:47 [W] There are sort of tricks you can use that for example will will get no to finiti perhaps across a stateful set, but we find them difficult to configure and and it's just better to be totally explicit about where you want things to lenses.
+00:21:55 [W] Land which means that different pods within a database cluster will actually have different different Affinity rules.
+00:22:03 [W] The result when you get it, right is that you get distance between your replicas.
+00:22:12 [W] So in this illustration right here, we're showing a couple of shards on the data warehouse.
+00:22:16 [W] That's click house and then we have three zookeeper pods.
+00:22:19 [W] So that's a zookeeper Ensemble.
+00:22:26 [W] We have the replicas. Neatly spread across the availability zones u.s. West to a b and c and and and so that that spreads the data.
+00:22:34 [W] The other thing that I want to draw your attention to is the backups, so if you take backups a really smart thing to do is stick them in object storage.
+00:22:45 [W] Paul you can set up replication automatically across regions and what will happen is that means you have a backup that's even outside the region that you're currently currently working in.
+00:23:10 [W] So the topology that we're showing right here with the distance between replicas is actually quite common in kubernative and and is very easy to implement with things like cops with Ozzy KS
+00:23:20 [W] I have managed kubernative. So so definitely something that you should use to protect data.
+00:23:26 [W] When we're talking about blast protection across regions or kubernative in other words sort of wider out in these concentric circles dealing with things like the loss of a kubernative cluster the loss of a region.
+00:23:42 [W] This is also this is no longer a data problem. But more of a question of losing it resources entirely.
+00:23:50 [W] So it's much more of an exercise for the reader that doesn't just include data but includes things like a how do we handle networking?
+00:23:57 [W] How do we handle DNS?
+00:23:57 [W] Things like that. So that's really beyond the scope of this talk.
+00:24:04 [W] Although it's something that people commonly do.
+00:24:06 [W] So, what we'll do is we'll leave that here and let you work on that yourself.
+00:24:12 [W] Meanwhile, what I'm going to do is proceed to another kind of data loss which is directly related to kubernative itself.
+00:24:17 [W] And that's what I call a finiti of flexions.
+00:24:22 [W] So Affinity rules are great.
+00:24:27 [W] And but one thing you should do is you should definitely check that.
+00:24:29 [W] They're really doing what you think. They're doing.
+00:24:30 [W] Here's an example.
+00:24:32 [W] So we have a zookeeper Ensemble, which I set up as an experiment.
+00:24:45 [W] That's a little bit spooky.
+00:24:57 [W] The other thing that I notice is if I want to go check where those hosts are in in which a Zs.
+00:25:02 [W] I can see that they're spread out across to a Zs.
+00:25:05 [W] So that's good.
+00:25:19 [W] What we can do is take these two things together and draw a picture of how the how the zookeepers are actually distributed and what we see is we've got two on one host one on another and the fact is that the
+00:25:22 [W] the the distribution here is essentially random.
+00:25:31 [W] It's sort of luck of the draw that we got two on one machine and and one another the fact that they were dismissed if they had come up as they could have come up all on different machines or we could have even have had all pods on on a single machine
+00:25:39 [W] A happening here in this particular case is that just weren't any Affinity rules and this is so one of the things that you do want to check for is that is it if you think you have a finiti rules you want to make sure they really are there and in this particular example.
+00:25:55 [W] What I did was run a variation of the cube cuddle get pods command and the shortened version with JQ allows me to pull out the Affinity rules so that I can look at them quickly and what I can see here is that they are that they're not all
+00:26:11 [W] So obviously a finiti doesn't work if you don't use it, but the other thing that that you need to do when you're checking these rules is to make sure they're really doing what you expect as I mentioned before the Syntax for finiti rules is not intuitive.
+00:26:27 [W] I think that's a kind of a Kind word.
+00:26:32 [W] So it's pretty easy to set things up that look correct, but then actually behave surprisingly when they're deployed. So again double checking the Affinity rules and as well as the if the actual implementation where
+00:26:44 [W] Thing where the pods actually land is super important for using them correctly and protecting your data.
+00:26:48 [W] Let's move off affinities rules to another more one of my favorites and this is a problem that I call the persistent volume. That wasn't and this is surprisingly common.
+00:27:02 [W] I've probably hit this at least a dozen times in different forms.
+00:27:08 [W] Let me talk about a couple of common ways that this can occur before we go anywhere.
+00:27:14 [W] It's important to recognize that that in kubernative ephemeral storage is not a bad thing. It is a feature not a bug.
+00:27:20 [W] Look, that's in fact, one of the things that makes kubernative.
+00:27:27 [W] So powerful as you can have different kinds of storage and we're going to take advantage of that and in in just a couple of minutes, but this is a picture of two kubernative nodes and what I call the bad pod.
+00:27:38 [W] The ephemeral file system in the Pod as self like overlay FS.
+00:27:50 [W] The other one is a good pot. And that's actually got nicely allocated block storage.
+00:27:50 [W] Now.
+00:27:52 [W] What's interesting is as far as the applications are concerned.
+00:27:54 [W] They can't tell the difference.
+00:28:02 [W] What kind of you know, what kind of storage you have the pods work in both cases the answer API calls so on and so forth.
+00:28:03 [W] Everything looks good.
+00:28:06 [W] What's even more interested as the pods themselves cannot necessarily tell whether they have purse truly persistent storage because they just cri-o
+00:28:11 [W] see it as a mounted in the file system.
+00:28:16 [W] So in kubernative A's to say something is bad and to say something is good.
+00:28:20 [W] Well, this is in the eye of the beholder if it's a web server, of course, it's it's it's fine.
+00:28:28 [W] We don't really care whether the storage is ephemeral or not.
+00:28:31 [W] If it's a database, of course, that could be quite a that could be quite a serious problem.
+00:28:41 [W] So one of the things that you want to do is particularly when you're dependent on assuming that persistent Williams have been allocated is to make sure
+00:28:42 [W] They're really there.
+00:28:44 [W] So here's an example.
+00:28:50 [W] We can we run a cube cuddle get PvZ command, and I've changed the output a little bit, too.
+00:28:53 [W] So that I can make sure that make sure that we really see what we expect and when we when we look at the PVC we see that it has a storage class of cops SSD 117.
+00:29:09 [W] Kubernative 1.17 that looks pretty good moreover under volume.
+00:29:20 [W] We see there's a real Peavy out there.
+00:29:21 [W] So persistent volume has been allocated.
+00:29:24 [W] We could actually check that using a get PV command and and look at that.
+00:29:29 [W] Another thing that's important is to look at the storage class itself and make sure that it's using a provision or we expect so the provisioner is the thing that actually goes out and allocates the storage and again are our class here.
+00:29:42 [W] Is is cops SSD 117 its provision or is the AWS EBS storage provision which goes out and allocate this block storage?
+00:29:54 [W] So so far so good. This actually sounds really good.
+00:29:58 [W] This is allocating block storage. It should stick around when pods get restarted.
+00:30:01 [W] everything looks copacetic. However, that's not necessarily that's not to say that we're fully protected. So because persistent volumes are only good if you actually use them here's an
+00:30:14 [W] Upload a bug we hit with zookeeper. It fortunately did not lead to a down the system because we detected it in time and were able to correct it.
+00:30:25 [W] But what happened was due to an amiss configuration problem in our zookeepers.
+00:30:30 [W] Tell that this is happening until you actually restart the Zookeeper node now was zookeeper.
+00:30:49 [W] There's another interesting variation that it's not even enough to restart zookeeper to see this because zookeeper replicates automatically. So in this particular case, we had an ensemble three zookeepers when individual pods restarted they
+00:31:03 [W] So in this particular case, we had an ensemble of three zookeepers when individual pods restarted.
+00:31:07 [W] They would then connect back to the other two pods get the data back. And so it would be transparent that we had lost data The Zookeeper replication Behavior was hiding this it was only at a certain point that we that we
+00:31:18 [W] Hey, if it was hiding this it was only at a certain point that we that we accidentally noticed that the storage was not there and realized we had a real problem.
+00:31:27 [W] So so you really want to be very careful about this and this is an example of an area where the answer that, you know to solving this kind of problem is testing and a lot of testing. So for example, just
+00:31:38 [W] Super paranoid check that kubernative is resource definitions are out there as I as I showed before look at file system mounts, make sure that the mounted file system matches where you expect is that the you know that the peavey's are
+00:31:53 [W] Expect them to in your writing to them kill pots.
+00:32:00 [W] That's the best way of if they're just single databases.
+00:32:08 [W] They if they lose their data then then you'll detect that you can kill nodes you can kill and restart all pods in a replicated data base deleting volumes is good thing.
+00:32:15 [W] So take the volume away if the database is truly dependent on it and it's pointing to it and writing to it the database should stop working and finally test with huge amounts of data many database problems are revealed only when you have
+00:32:27 [W] Have a large amount of data in this particular case. If you add a lot of data, it will fill the local file system and then you'll quickly see that you've got a problem because you're not even writing to the to the to the block storage.
+00:32:36 [W] So with that where we've shown for ways you can lose data.
+00:32:46 [W] Here's the last one which I call fat fingers of fate and this is probably the saddest one because really if you think about it, the best way to lose data is to do it yourself and the virtue of kubernative ace
+00:32:58 [W] That we can create things has this mirror image that we can or sort of equal and opposite effect that we can take them away just as quickly as we can create them.
+00:33:14 [W] So this single line command will wipe out that mySQL database that I created as an example at the beginning.
+00:33:18 [W] So that's it data is gone.
+00:33:24 [W] So one of the things that given how easy it is to destroy things accidentally one of the things that's worth thinking about is how to prevent its how to protect your purse.
+00:33:32 [W] Assistant volumes so that they don't just evaporate and it turns out that we can do this through what are called reclaim policies.
+00:33:44 [W] So we list the peavey's here and I show this example you can see the policy is delete. That means that when the persistent volume claim that caused the storage to be created goes away the storage just
+00:33:55 [W] So that's bad what we can do if we have existing PVS is we can fix this by changing the reclaim policy to be retained and dispatch command shows how to do that another possibility. If we want to do this in a general way is to
+00:34:11 [W] Class so the kubernetes is really flexible.
+00:34:20 [W] And this is a great example of where that flexibility really works for you.
+00:34:24 [W] I've created in this definition a storage class, which is exactly the same as the normal cops storage class except that it by default uses retain as the as the reclaim policy.
+00:34:35 [W] So any any plus system volumes allocated with this will have retainers their policy.
+00:34:36 [W] At that point if I destroy my SQL by accident, I can reclaim the storage disk by making a persistent volume claim that matches the the volume that we're trying to attach to in every respect and this is
+00:34:52 [W] Be quite careful about it.
+00:34:56 [W] So for example, you must have the volume name stuck in your persistent volume.
+00:34:59 [W] Otherwise, it won't match.
+00:35:01 [W] It'll just stay in a pending state. But if you do this, right, you can recover storage quota nicely.
+00:35:09 [W] And in fact, here's the process that you go through to reclaim is you've blown it away by accident.
+00:35:15 [W] just go in remove the claim RAF from the PV that says, hey it's now free to be reallocated. Go ahead and run that definition again to create a new persistent volume and then or persistent volume claim and then
+00:35:22 [W] with Helm it actually has a feature which allows it to reattach to existing storage and you get your database back and that solves the problem.
+00:35:31 [W] So with this we've covered five ways to lose data talked about Solutions.
+00:35:39 [W] I just like to summarize by thinking not so much about the ways to lose data, but about the things you want to do to solve those problems.
+00:35:53 [W] So the core of solving problems with data loss and kubernative is is just to be exceedingly paranoid.
+00:35:57 [W] This is something that's true of data in general and then beyond that there are five specific things that you want to do.
+00:36:01 [W] first of all have replicas of data always extra copies are always good separate them by distance use a finiti rules so that you can lean on the kubernetes capabilities that allow you to spread
+00:36:17 [W] You know sort of a process across availability zones. This is a great feature and keep them from clustering on single notes use reclaimed policies to protect your storage and then finally just test the Daylights out of everything if you're in data, this is something you just becomes part of
+00:36:33 [W] Anytime you have data just do all kinds of tests on it because this is the best way to find problems before they actually occur. And then finally if you have operators available check them out and use them their wonderful feature of kubernative is and very
+00:36:50 [W] Useful, so that's it.
+00:36:57 [W] I hope you've enjoyed the talk.
+00:37:03 [W] It's been really fun putting this together and and and presenting it I just want to say as a final note.
+00:37:05 [W] We are hiring like any self-respecting start up. If you like this talk or think you can do it better. Please give us a call.
+00:37:10 [W] We'd love to talk to you. Our own operator is is shown here in the GitHub reference.
+00:37:18 [W] So check it out.
+00:37:20 [W] There's many other great operators. Percona has a great one.
+00:37:21 [W] That's good operators for zookeeper.
+00:37:28 [W] It's an increasingly powerful Paradigm and definitely something worth learning about.
+00:37:30 [W] Thanks, and I look forward to answering questions.
+00:37:31 [W] Hi everybody.
+00:37:37 [W] I think I'm live.
+00:37:39 [W] So I've got some really awesome questions here, which I'd like to dive into have one here.
+00:37:44 [W] What do you think about local persistent volumes versus Network block storage? I love this question.
+00:37:50 [W] It's actually one of the worries ways that managing data on kubernative has these these interesting quirks that you really have to deal with for us in the data warehouse business as well as for high transaction.
+00:38:02 [W] Processing systems and things like postgres in MySQL.
+00:38:06 [W] It's really important actually to have access to local storage.
+00:38:10 [W] Options for moving things around and then reattaching the storage services using a local SSD.
+00:38:30 [W] So there are absolutely performance issues.
+00:38:32 [W] They're often cost issues as well.
+00:38:45 [W] So you have to balance those. I think that in general if you're you know as you dig into this and looking at operators, you definitely want something that will at some point allow you to support SSD so that you can get high performance
+00:38:47 [W] Definitely something to think about here's one have you looked at vendor provided kubernative software-defined storage options to address storage backup say chandi are if so, could you comment on your favorites? We have not and one
+00:39:04 [W] Is that that these are difficult to use for databases is that you're dealing with a distributed application that has State relationships between the copies?
+00:39:20 [W] So you typically can't just do blanket copies of you know of of storage without having some context that allows you to reassemble the pieces back together when you when you recover a backup, here's an example
+00:39:31 [W] In the system that we operate we're using zookeeper. So and the replicas have to be consistent with the Zookeeper copy.
+00:39:46 [W] So what that means is any backup means that we use typically has to be something that is, you know is supported, you know supported by the database itself.
+00:39:54 [W] So so that's kind of the current state of things over time, you know, since some of those some of the storage support here is fairly new. I'm sure that will
+00:40:02 [W] We'll dive in and use this stuff right now. But for now, we're not using it. We're depending on replication and we're depending on knative mechanisms that actually move things to to backups or two backups and object storage.
+00:40:15 [W] There was actually a related question here, which I'd like to address and that was what is the you know, you know, what's the role of object storage here? And actually when you're running in the cloud it's super important
+00:40:31 [W] Because one of the things that object storage does with with databases is it allows you to actually decouple yourself from the Block storage and from you know, even local storage which will go away.
+00:40:46 [W] So in fact, what's common particularly in data warehouses and and is that we actually use object storage as the backing store and then everything is brought out of that and and effectively cached
+00:40:58 [W] On local file systems.
+00:41:07 [W] So that's also a really important way to lose to avoid losing data because it's implicitly backed up on on something that's stable and replicated many times question here.
+00:41:11 [W] What role do you see in the reclaim policy setting of peavey's I think that was covered in the talk.
+00:41:16 [W] Definitely, you know, you want to try and reclaim keep the storage from being deleted.
+00:41:24 [W] Let me see if I might be missing missing this so
+00:41:27 [W] check with me later on in the in the storage the cube con storage Channel.
+00:41:39 [W] I can I can answer that question in more detail.
+00:41:40 [W] Here's one which I think is a useful question how to how to manage if the master node is down and I'd like to do address this more generally, which is that by running on kubernative.
+00:41:54 [W] You've created a new a new point of failure for your for your database.
+00:41:58 [W] This and that is that if kubernative is itself is not working.
+00:42:02 [W] So for example, if it's unable to schedule things you have a problem and you're not able to control the system.
+00:42:09 [W] So one of the things that's really important in in protecting your data is also to protect kubernative.
+00:42:17 [W] He's so a standard way to do this is to spread is to have multiple Masters spread them across a zis is these are by definition data centers that are very close together. So to hopefully one to two milliseconds latency and
+00:42:28 [W] Allows them allows them to work together.
+00:42:32 [W] Okay, and and / and be protected against failures. It also simplifies back up.
+00:42:41 [W] So unfortunately, we're out of time for questions.
+00:42:47 [W] Please come over to the to the to cube con storage Channel.
+00:42:48 [W] I'll be around.
+00:42:50 [W] I'm also going to post slides there. I would love to answer your questions and thank you so much for this talk.
+00:42:55 [W] I hope it was useful. Talk to you soon.

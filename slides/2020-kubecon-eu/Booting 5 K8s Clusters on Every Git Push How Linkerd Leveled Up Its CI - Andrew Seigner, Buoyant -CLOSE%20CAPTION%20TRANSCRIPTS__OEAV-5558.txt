@@ -1,0 +1,192 @@
+﻿Booting 5 K8s Clusters on Every Git Push: How Linkerd Leveled Up Its CI: OEAV-5558 - events@cncf.io - Thursday, August 20, 2020 12:05 PM - 145 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:12 [W] Hi folks.
+00:00:16 [W] Thanks for tuning in. Welcome to booting a kubernative clusters on every get push how linkerd e leveled up it see I some of you may have noticed that we just change the title of this talk from booting five clusters. Hooting eight in the time that I submitted this talk
+00:00:19 [W] Clusters, so we're going to get a little more out of this talk than we originally expected.
+00:00:25 [W] My name is Andrew singer.
+00:00:26 [W] You can find me online and on GitHub and Twitter.
+00:00:30 [W] It's icky.
+00:00:31 [W] I'm a linkerd e maintainer.
+00:00:33 [W] I'm also a software engineer at buoyant.
+00:00:34 [W] So just a quick agenda what we're going to cover.
+00:00:43 [W] I'm going to touch initially just on linkerd E.
+00:00:47 [W] It's kind of an implementation detail of this talk.
+00:00:48 [W] This talk is really about evolving a build CI system, but it helps to contextualize it by speaking to like what were are specific requirements being like an open source project project with a relatively small team it helps like give
+00:01:02 [W] On why we made the technology decisions that we did then we get to kind of the core of the TOC take 1 Take 2 and take three where we go through like three iterations of our build CI system.
+00:01:16 [W] We're going to start with kind of where we were a year year and a half ago wasn't a great place and then we'll go through like requirements Gathering to rebuild the system what tech we evaluated and then we'll look at kind of are second and third generation of
+00:01:27 [W] As I alluded to earlier the third generation is something we just got out and it happened after this talk was submitted.
+00:01:36 [W] that's all bonus. And then at the end we'll cover a Lessons Learned.
+00:01:41 [W] So here we go.
+00:01:46 [W] So just a little bit of background about linkerd e linkerd e is an open-source servicemeshcon of the cncf.
+00:01:52 [W] I'm not going to get really into like what is servicemeshcon why you need one for the sake of this talk?
+00:01:57 [W] It's just important to know that it's written in Russian.
+00:01:58 [W] Rustin go and in JavaScript, and it runs on a kubernative cluster and it manages all traffic and it runs the several different deployments and it injects proxies into all of your all of your pods.
+00:02:13 [W] So it's really important that we test this thing in a live environment because it's taking over all of your traffic.
+00:02:19 [W] It's really important that it works. And so testing it very thoroughly on live kubernative cluster is super important and that motivated a lot of the work that you're going to see
+00:02:27 [W] So just to give an overview of what exactly are we testing for a typical like PR of linkerd e we have static test like linting we have unit tests and we have a Docker build and integration tests on kubenetes that again, that's a cross like testing.
+00:02:43 [W] The script go and and rust all at once.
+00:02:51 [W] We're going to mostly focus on that box in the lower left-hand corner where we're doing a Docker build and then we're running integration tests on a live kubernative cluster.
+00:02:57 [W] So to kind of go back like a year year and a half ago where that Docker building integration test was we were running our whole ci/cd Amman en Travis.
+00:03:14 [W] We were doing our doctor bills on the Travis machine. Then we were Docker pushing up 2G C RI dot GC r dot IO Google container registry and then we were running our integration tests on gke cluster was like a three node cluster and on that
+00:03:24 [W] So linkerd e we would run a bunch of integration test and then we would uninstall linkerd e pretty quickly.
+00:03:32 [W] We realized we needed additional tests and we started running Helm test as well.
+00:03:42 [W] So we install it with Helm Runner integration tests uninstall it with Helm and then we found we also needed to test our upgrade path. So we install an old version of linkerd e then we upgrade it and we run our integration test then we can uninstall you can see how quickly
+00:03:53 [W] A backup.
+00:04:01 [W] So now imagine like we want to run five or eight of these kind of integration tests and we're doing it all on one kubernative cluster because we're a small open source project.
+00:04:06 [W] We can't just spin up a whole bunch of kubenetes clusters like that and then couple that with like we have lots of contributors coming into the project and so it wasn't uncommon for your PR to take an hour or two for you to get through
+00:04:19 [W] Really bad place was everybody was sharing this one Singleton cluster.
+00:04:25 [W] So at this point we kind of took the nuclear option and we pulled our integration test out of the main like PR flow.
+00:04:34 [W] We were still running them when we are merging into the main branch.
+00:04:40 [W] But of course as soon as you do that, you're going to have PRS that are passing unit tests and like static tests. And as soon as they're merge, they're going to run the integration test and fail. So now the main branch is failing often because
+00:04:52 [W] we're not running our integration tests enough.
+00:04:53 [W] As soon as we hit this point.
+00:05:00 [W] We thought wow, we really need to like take a step back and rethink how we're doing this whole setup. And that's what motivated all of this work in this whole talk and I should call out on that slide. You'll notice like git commit links on the bottom.
+00:05:08 [W] You'll see that throughout the top and so note that everything we're talking about was all done in the open. So you're totally welcome to like click through and if you want to see like all of the interesting details that I'm totally glossing over.
+00:05:19 [W] This talk, they're all available to check out.
+00:05:26 [W] So we really took a step back and we thought like what are our requirements and we didn't start with like we need a new ci/cd some we started with like, what do we need?
+00:05:33 [W] What do we care about?
+00:05:35 [W] And what kind of pain points are we thinking about and so we kind of came up with this prioritized list.
+00:05:46 [W] Fireman locally where I can quickly iterate and make code changes and keep running those tests.
+00:06:04 [W] We wanted a UI to like browse all of the tests that are running that seems kind of a given from OC Isis teams, but we were considering like anything like could we have like offline jobs that like kick off his scripts or could we have things that like comment back on PRS with just like a thumbs-up or a thumbs-down?
+00:06:09 [W] But we knew that that was important to be able to like send a link to somebody and say hey, I need you to look at this, you know and see what's going on with an integration test failure.
+00:06:22 [W] We wanted to integrate it with our PR workloads.
+00:06:23 [W] That means integration with GitHub.
+00:06:32 [W] We wanted hermetically seal build and test that means that you know, we're taking PR's in from possibly like people that we've never worked with before maybe Forks of the repo and we didn't want totally untrusted code running on like
+00:06:38 [W] Are paying for and we didn't want to have to deal with like Bots where we like approve or disapprove like a we have to like spot-check a PR before integration test kit run.
+00:06:52 [W] So we really wanted a way to like spin up a totally as safe as possible environment and then delete the whole thing when it's all done.
+00:07:00 [W] We also wanted it to be fast again, like things were taking hours. So that meant, you know, not pushing Docker images across the internet for every PR it meant doing incremental rebuilds the difference between a canonical
+00:07:09 [W] - Docker build that takes five minutes and a doctor build from scratch that takes an hour.
+00:07:13 [W] It's a lot and we were interested in a remote build. So that meant, you know, can I run a command on my laptop and have all the heavy lifting be done on a remote VM?
+00:07:28 [W] So the last two bullet points were not hard requirements, but they were things we cared about so we being an open source project.
+00:07:35 [W] We knew we wanted the solution to be at least she preferably free and we did want to use open source tech for all of this.
+00:07:39 [W] But if there was a close Source solution that satisfied our requirements we wouldn't like discount it out. Right and you'll kind of see some of that thinking in a minute.
+00:07:50 [W] So based on all of those requirements, we just kind of survey the landscape or like what are all the tools in this space that we can use to help and we weren't looking for one thing and we weren't looking for like five we really didn't know like what combination of
+00:08:06 [W] This so. We just kind of looked at each one and built to varying degrees proof of concepts with all of them just to see like what would be involved and I want to give a disclaimer, you know, if you work on any of these tools and we didn't select it. Please
+00:08:22 [W] Not like we're not discounting anybody's work.
+00:08:29 [W] This talk is really about what worked really well for our specific requirements and everybody's requirements are different and you know that includes like what we were familiar with and how much time we had and how much like money we had an engineering resources and all of that and so all those factors kind
+00:08:41 [W] And with that in mind, I want to talk about one particular piece of tech that we very nearly selected but didn't so we spent a lot of time working with prowl. For those of you not familiar prowess like the build CI system that the kubernetes community
+00:08:57 [W] Drew us and in the first place.
+00:09:01 [W] We really thought if it's good enough for kubernative.
+00:09:03 [W] He's it's got to be good enough for us and we had a fully working end-to-end system, you know, it was open source.
+00:09:09 [W] huge plus right? We were building our Docker images on a proud cluster running on kubernative running all of our integration tests through proud and it was all working.
+00:09:21 [W] What we what we started to find though.
+00:09:23 [W] was it, you know, we were looking for a solution that would require basically like zero attention like like at mlops.
+00:09:28 [W] Most like 1/10 of one engineer and it felt like proud was something that probably required a little more paying attention to day-to-day kind of like running a kubernative cluster itself like in production. So we kind of took a
+00:09:42 [W] Like zero attention like like at most like 1/10 of one engineer and it felt like proud was something that probably required a little more paying attention to day-to-day kind of like running a kubernative cluster itself like
+00:09:44 [W] No, I really wanted this to work just from like like a human like effort area.
+00:09:53 [W] We thought maybe we could find something a little bit less labor-intensive.
+00:09:56 [W] So with that in mind spoiler, here's the three pieces of tech. We settled on we selected kind get have actions and pack it and I'm going to go through each one of those and kind of talk about why we selected them.
+00:10:09 [W] So first off is kind this was the first one we zeroed in on and kind of decided we wanted to use
+00:10:15 [W] For those not familiar it stands for kubernative Xin Docker.
+00:10:19 [W] It allows you to spin up a kubernative cluster anywhere. You're running Docker. It runs the whole cluster and single Docker container similar to prowl. It's used by the kubernative community to test kubernative.
+00:10:29 [W] So the fact that it's used by kubernative Xin.
+00:10:32 [W] See I made a very compelling case right away.
+00:10:37 [W] It's very fast and like spin up a cluster and and delete it later and its really good for local development. You can run it on your laptop and that was key because that meant that whatever.
+00:10:43 [W] We're going to script and run like up in whatever system.
+00:10:47 [W] We were going to build.
+00:10:52 [W] It means that I could run exactly the same thing on my laptop and kind of reproduce the entire environment.
+00:11:02 [W] It also meant that wherever we were doing. Our Docker builds was where we could run or kubenetes Custer the so that meant no more pushing Docker images across the internet and bonus. It was open source. So so that was kind of the first piece of tech Wheezy rode in on and then
+00:11:07 [W] Like what things can we build around this one piece of technology?
+00:11:13 [W] The next one is a bit of a curveball.
+00:11:16 [W] We you know, we ended up using packet for bare metal servers to do like very like fast build and like Docker caching and running all of our kind clusters. And the reason we selected the most because they have a
+00:11:30 [W] CF that provides free compute to open source cncf projects that's huge.
+00:11:42 [W] So like shout out to them like to be able to get like a large bare metal machine like that and to make our you know, we had our whole buildpacks line down to like a couple of minutes.
+00:11:48 [W] Thanks to these clusters.
+00:11:52 [W] So we're talking like 45 minutes to an hour down to a minute or two.
+00:11:53 [W] That was pretty awesome. And then the last piece as we are evaluating proud get Hub actions was just coming like through beta and we found
+00:12:01 [W] that we started experimenting it with a little bit and it had some properties that were really compelling to us first.
+00:12:09 [W] It was integrated.
+00:12:10 [W] It's already in GitHub and that means one less integration point that we had to be concerned with it had a feature called Matrix builds, which allows you to run a bunch of similar builds based on a parameter.
+00:12:24 [W] So for example, if you're booting a kubernative clusters in a slightly different way, you can do that with a matrix build.
+00:12:29 [W] It has really nice control over how you define the
+00:12:31 [W] He's 14 your tasks.
+00:12:34 [W] Maybe I want to boot up a kubernative cluster and do a Docker build and then when both of those are done, I want to run an integration test and then do a release and they're kind of config makes it straightforward to do that and then it wasn't open source,
+00:12:47 [W] Three four open source projects so, you know shout out for that that kind of sealed it for us.
+00:12:54 [W] So then we kind of move forward with with a full set of with those three Tech choices and you can see the lower left has been replaced with using kind packet and GitHub action.
+00:13:08 [W] The whole thing is GitHub actions. Now note that even though we're doing Docker builds and Our Kind cluster work on packet.
+00:13:20 [W] We're calling it out only for non Fork. So because we were still running Hardware that we were responsible for we didn't want untrusted code running there. So that meant
+00:13:25 [W] For the maintainers internally. We had this really nice environment.
+00:13:35 [W] But if you are an extern developer just coming into the project and you submitted a PR through a fork of yours.
+00:13:39 [W] You would be running all of this work on the GitHub actions boxes.
+00:13:41 [W] You wouldn't get the advantage of Docker caching.
+00:13:55 [W] It would be much slower and that was kind of a bummer that kind of made like external developers like almost second-class citizens when you're coming in and it's your first experience. We wanted to be really positive and when the CI turn around, is that slow
+00:13:58 [W] Whoa, that's that's kind of a bummer.
+00:13:59 [W] So more on that later.
+00:13:59 [W] And just to give kind of illustrate what this this Matrix configuration is these this is a list of the a kubenetes clusters that we boot up.
+00:14:10 [W] I'm not going to go through all eight.
+00:14:12 [W] of your services by default there named like something dot cluster dot local and that's kind of the default cluster domain inside kubenetes and you can configure that and change it and it's really important that linkerd e behaves well if you've changed
+00:14:33 [W] Strudel main we've definitely committed changes that broke this Behavior.
+00:14:41 [W] So it's really important that we spin up a kubernative cluster with a modified cluster domain to confirm that we're continuing to support that configuration and then you can imagine we've got eight more seven more configs after that that we're testing all of these these different ways
+00:14:53 [W] Is spinning up a kind cluster in parallel all on that packet host. So next we're going to jump into a demo where you may have noticed in in this previous slide where everything's running
+00:15:09 [W] This but the heavy lifting is being done in packet, and we figured out a way to do that.
+00:15:15 [W] by using a Docker SSH environment variable and some fancy work with can how we were using kind and so we're going to demonstrate building Docker images creating a kubernative cluster and
+00:15:30 [W] Brunette is Custer. But everything is on a remote machine and this is something that our GitHub action spok says we're doing but it's also something that you could do on your laptop. If you don't want to run a kind cluster on your laptop or even run Docker your laptop. So here we go.
+00:15:44 [W] Okay, so we just saw like we were able to spin up a kubernative cluster somewhere else and run it this felt a little weird.
+00:17:07 [W] Maybe a little hacky.
+00:17:09 [W] It's just some kind of you know, bash fuan on modifying a kubernative configs on the fly. So before we went live with this I checked in in the kind of channel in kubernative slack just to kind of see
+00:17:23 [W] Doing was weird or expected or if people had experience doing this and so I asked a question and then the author of kind responded immediately.
+00:17:33 [W] So shout out to that community and particularly the author of kind for being super helpful and and responsive makes for a great experience working in open source, and he basically said, you know what we've didn't really expect anybody to use kind in a remote way
+00:17:47 [W] It seems relatively sane so go for it. And that was nice to hear that definitely gave us a little bit of confidence that like this wasn't too crazy and we could we could proceed and that's what we did and we went live with the system now fast forward a few
+00:18:03 [W] I had mentioned that using these packet clusters means that we still had to run our forked PRS on the GitHub actions boxes and they were slower. We got a little bit of experience with a new Docker tool called Docker build X, which allows
+00:18:19 [W] Dr. Cash and kind of save it and restore it in a file which makes it really nice for using it in a ci/cd stem like it of actions.
+00:18:35 [W] So as soon as we got darker build X in it meant that we got all of the benefits of a Docker build cash on GitHub actions, and we no longer needed the packet host and that meant that Fort PRS and on for PRS all got to run it like,
+00:18:43 [W] So next I'm going to take you through one more demo where it kind of shows everything working together.
+00:18:54 [W] We're actually going to go from get push to a kubernative clusters. So here we go.
+00:18:57 [W] Alright, so there you go.
+00:21:18 [W] That was a get push followed by eight kubernative clusters getting spun up all at once and that's kind of the culmination of all the work we did. So to think about the Lessons Learned one use kind.
+00:21:29 [W] It's a great piece of tech.
+00:21:31 [W] There's some other good ones to I know minikube k3s.
+00:21:32 [W] There's a number of flavors.
+00:21:34 [W] Huge bill makes a huge difference.
+00:21:50 [W] We try to emulate that working on the linkerd E project to we found it.
+00:21:53 [W] It really encourages a healthy sense of community cast your bills, especially your Docker builds. The docker host. SSH pattern is really nice.
+00:22:02 [W] I haven't run Docker on my laptop in many months.
+00:22:03 [W] It's great.
+00:22:06 [W] So I definitely encourage you to check that out.
+00:22:10 [W] Dr. Bill Dex is really nice for caching and now we're starting to use it to do multi Arc build. So we're I
+00:22:14 [W] believe either today or this week linkerd e will have armed builds as it goes out through our normal release workflow and a big shout-out to pack and get have actions for supporting open source, and and allowing us to use their
+00:22:28 [W] And one more thing something I really liked about prowl is that it provided this really nice heat map of all of your build statuses and just in just recently one of our linkerd e maintainers Alejandro built this dashboard in a
+00:22:45 [W] Kind of gives us like a timeline view of like, how are we doing over time with our build help?
+00:22:53 [W] So check this one out as well.
+00:22:54 [W] The links are all in the slides.
+00:22:57 [W] So Shameless plug for linkerd E.
+00:22:58 [W] Please come check it out.
+00:23:00 [W] We use it a lot other people use it a lot.
+00:23:04 [W] We're always available in in slack or say hi at GitHub or wherever we tried to make it really welcoming and you can always check out like how our GitHub actions are set up because this is all live and all open source. So with that, thanks a lot.
+00:23:16 [W] Hi folks.
+00:23:23 [W] Thanks for coming to the talk.
+00:23:26 [W] I've been answering a few of your questions in the Q&A.
+00:23:29 [W] I think there's a couple more so I'm happy to answer stuff live as well.
+00:23:31 [W] So, let's see.
+00:23:38 [W] I see one from Joseph that asks about how the cache with Docker build ex works.
+00:23:46 [W] I didn't actually Implement that we some other members of our team just did in the last month or two, but if you go to the linkerd E to repo and I think there's some links to it even in these slides, but you just Google for
+00:23:51 [W] Ready to get hub.
+00:23:57 [W] All of our GitHub actions configs are you know, they're all in the repo.
+00:23:58 [W] They're all open source.
+00:24:00 [W] You can watch them running like right now, so I definitely encourage you to just like poke through and see how those jobs are happening.
+00:24:08 [W] It should be all right there on you ask. Did you ever notice issues that slip through kind only showed up in a real clusters?
+00:24:15 [W] Thing, you know, you can only test so much until you get to like real production.
+00:24:28 [W] So there's I think there's definitely a class of like timing and scaling issues that can happen on a kubernative cluster.
+00:24:36 [W] That's maybe more fully loaded or you know is running in in a different environment So to that end in addition to running all the kind jobs for every like merge or every PR
+00:24:46 [W] Are at at time of merge into the main branch, I believe we still run our integration tests on a live gke server.
+00:24:57 [W] Sometimes that can catch other classes of issues.
+00:25:02 [W] It's on a road map where we would like to be able to run like our integration tests on gke on AKs on eks, you know all kind of all of the different Cloud providers digitalocean all of them.
+00:25:17 [W] And I we've definitely had issues that have cropped up that only occur on like one cloud provider and then obviously things and that catches one class dishes then obviously things come up in production that
+00:25:31 [W] for we would like to be able to run like our integration tests on gke on AKs on E KS, you know all kind of all of the different Cloud providers digitalocean all of them
+00:25:33 [W] Anticipate and when we see that we try to update our integration tests to you know, catch those types of scenarios.
+00:25:43 [W] So yeah, it's always there's never like one layer that light catches everything right? It's all about having like many layers that that hopefully they each do their job on catching things.
+00:25:50 [W] Jack Kelly says, how are you cross compiling your rust proxy.
+00:26:04 [W] I'm actually not sure if you look in the linkerd E2 proxy repo and all this stuff is linked from linkerd E.
+00:26:10 [W] So if you can just Google for it the rust code lives in a separate code repo called linkerd YouTube proxy.
+00:26:19 [W] You should be able to see how we're building stuff there. Also. I bet if you look in the main linkerd e to repo that's where we're I think that's where we're generating the docker image for the proxy.
+00:26:23 [W] And so you should be able to see in there how we're doing the bill.
+00:26:27 [W] Under Andre.
+00:26:32 [W] Thanks for coming to the talk.
+00:26:33 [W] See ya. So happy to answer anything else and I'll be around here and in the cncf slack.
+00:26:47 [W] I'm also available online all the time.
+00:26:49 [W] I'm in linkerd E slack all the time too.
+00:26:54 [W] So definitely come say hi. If you have questions about this setup or linkerd e in general happy to go through things.

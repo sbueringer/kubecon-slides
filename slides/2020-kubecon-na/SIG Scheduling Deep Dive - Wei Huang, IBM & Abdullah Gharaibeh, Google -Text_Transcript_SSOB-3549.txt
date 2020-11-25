@@ -1,0 +1,217 @@
+﻿SIG Scheduling Deep Dive: SSOB-3549 - events@cncf.io - Friday, November 20, 2020 5:56 PM - 35 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi everyone.
+00:00:01 [W] Welcome to the North America virtual.
+00:00:03 [W] Keep Calm today.
+00:00:04 [W] I'm going to give you a dip. Dye on the sick scheduling and little bit on myself.
+00:00:11 [W] My name is Wade long.
+00:00:14 [W] I'm also the co-chair of the six scheduling.
+00:00:17 [W] So today's content is separated into three parts and each part.
+00:00:23 [W] We want the content is delivered to the exact audience.
+00:00:28 [W] So we separate them into different personas from the kubenetes beginner to some scheduling expert. So we wanted their the deal content to be delivered so that the
+00:00:43 [W] Specific audience can absorb easily.
+00:00:47 [W] Okay, the first kind of audience we are targeting those regular users who just right and deploy their applications onto the kubenetes platform.
+00:00:59 [W] So for them, they just want to know some scheduler Basics so that they can use the scheduler feature features efficiently and correctly and also they want maybe want to do some basic
+00:01:14 [W] Troubleshooting to identify whether the issue is belongs to scheduler or other components and the for sure did what don't want to go too deep into their scheduled intervals. So for the photo thing is to answer their work cubed stackrox
+00:01:29 [W] Does so in one sentence skip schedule just find all the pending pass and has on the part of the to the most.
+00:01:39 [W] Best fit node, so that's it.
+00:01:43 [W] And in terms of API perspective, so the pending means the know that doesn't have a spec down their name field set is amputee so you can see from the picture and then scheduler will
+00:01:59 [W] goes through with some internal logic and we're fine if the best node for the incoming part and I assign the power to the note in this case then Specter no name was sent to canned what could you so
+00:02:14 [W] The basically schedule it does.
+00:02:17 [W] And with that being said there's some things I need to mention that which Cuba scheduled doesn't do which often me stand stood by the youth has like Kata enforcement.
+00:02:30 [W] This is a thing that admission plugins does added the part of the creation time instead of scheduling time and also spinning up in the scaling down. The replicas of deployment is the job of catching
+00:02:45 [W] Manager because the you're supposed to bow for managed number of replicas meets the desire number and also it's the cube late responsible for evict.
+00:03:01 [W] The running past maybe because the what can the world has running out of memory running out of their schedule and such a bit. So I list a few of the common myths and standing that people would
+00:03:16 [W] I think the biggest thing belongs to schedule but it doesn't so understanding.
+00:03:21 [W] This will help you better identify the issues whether it's belongs to the scheduler or not.
+00:03:26 [W] And the next we will give a very high-level introduction about scattering flow the most the basics.
+00:03:34 [W] once the schedule gets the part it goes to internal scheduling cycle. The scripts can cycle. We are scheduled the part one by one and once kind of
+00:03:46 [W] L can be divided into several phases.
+00:03:48 [W] The first one is called filtering Sophia Towing tries to answer the paths hard constraints.
+00:03:57 [W] It's like answer your question like as a user.
+00:04:00 [W] I need my path to be schedule to a node which has to get Kuma 2 gigabyte memory or I need my part to be scheduled to another which so they are to coexist with some kind of path.
+00:04:14 [W] So this kind of coredns.
+00:04:16 [W] And I call them hardcore me. They must be satisfied and all the hard constraints and they did not call.
+00:04:25 [W] And in terms of the hot constraints they usually having in 99% of the cases are from the past back which are specified directly by the user for example the
+00:04:40 [W] Pop request and the path Affinity so notice they're here the Primitive starts with require. So if you read out some term start with
+00:04:55 [W] Require is usually the hard work on because it's required and some other Primitives will use other terms like the pop projects prayer feature
+00:05:09 [W] Constant string to and if identify this is a hard constraint that if the constraint cannot be satisfied then do not schedule this part so you can use your tail from the
+00:05:24 [W] Litterers meanings to tell whether it's hard consonant.
+00:05:29 [W] Yeah or a soft constraint a belated mention.
+00:05:32 [W] This is important because only hard constraint only on tekton satisfying hard constraint will make your path into a pending status.
+00:05:45 [W] And next phase so suppose you have 100 nose and only ten Nails has passed the filter replace face. Then we go to the next phase called scoring. So scoring in contracts of filtering our best efforts
+00:06:00 [W] They're charging answer some question. Like I prefer my power to be schedule a to know which has SSD, but if that node doesn't have it doesn't matter.
+00:06:12 [W] I just want schedule to try it's best to do this kind of thing.
+00:06:16 [W] So based on this solve the constraint each filter the note filter means then it has passed the filter filtering constraint.
+00:06:26 [W] Those filter Nails we are gifts core and we aggregate those score and finally pick up the higher the score and assign the power to the node, which has the highest score.
+00:06:40 [W] So I want to highlight that in terms of solve the constraint.
+00:06:43 [W] doesn't block scheduling your pal. It's just
+00:06:49 [W] Describe the relation of preference. I prefer the path to be scheduling on to some some notes and maybe there are some soft constraint conflict which each other so it happens so that
+00:07:05 [W] Out and the soft the constituents has have two sauces. The first one is from the perspective. You can identify some stuff the constraint in the prospect like part of the mill definity and
+00:07:19 [W] The Primitive starts with proof blah blah blah blah.
+00:07:24 [W] So this is the soft constraint and usually it takes comes with additional parameter like wait so that can give the user a customized wave so that I favor this
+00:07:39 [W] Strength more than other constraints off the culture and also some features that using other priority which usually self-descriptive like when the power cannot be satisfied.
+00:07:52 [W] I was still scheduling anyway, so this is a soft constraint and the ice is not the kind of solve the constraint which are not specified by the user instead you sure is specified by the custom element.
+00:08:09 [W] A pound the scheduled start up. So they are call I call them impressive scheduled config.
+00:08:15 [W] So there are sort of scheduling policies like the default policy tries to use the node which has the list are located Resource as possible so that
+00:08:31 [W] He will try to make the cluster that utilization balanced rather than being pack or the past 2 once internet. So this is for softer counseling.
+00:08:44 [W] And you may think about think of a question that what if no node can status for all the calls hard constraint in the filtering face.
+00:08:53 [W] What should we do it?
+00:08:54 [W] So we have a special face called preemption.
+00:08:59 [W] So preemption is only triggered one.
+00:09:02 [W] There is no node can satisfy the hard constraint and E12 see whether there are low priority candidates, which can be sacrificed.
+00:09:13 [W] Can't be preempted to make room for the high priority path. If this is possible schedule will go print.
+00:09:23 [W] Hello Perl deposit to make room.
+00:09:24 [W] So they're the hard principal is schedulable. So in terms of the API, you have to define the priority class and the specify their value the higher the value the more important the priority
+00:09:39 [W] Is and the incomes of the parts back you'll Define the Specter of the priority customer name and correspond to that prayer priority cast where each schedule area owner in the wrong time.
+00:09:53 [W] All right.
+00:09:54 [W] This is a pretty much I think they won a record of scheduling user needs to know about the basics of the schedule and you just need to learn that scheduling has
+00:10:09 [W] Basically, three phases filter scoring and the preemption and if you see a parties in pending status first ensure that the path Specter no name is
+00:10:24 [W] So that is in the scope of scattering into which are trying to schedule the pattern to the node and also use skip control this grab that pot check which constraint hard constraint is not satisfied.
+00:10:37 [W] Okay?
+00:10:38 [W] in the power in pending status to check those kind of go through those simple I captioning steps, but if Apple can be scheduled, but it's not the desired note that it is schedule.
+00:10:53 [W] Into there is usually something wrong in the scoring plug in scoring face, maybe some default scoring policies that given by the crust and mean doesn't
+00:11:08 [W] Plus you need to check with them on you do some debug to see why one score policy is weight higher than the other. So this is basically for record users.
+00:11:23 [W] All right for Day to you.
+00:11:27 [W] We are targeting the audience as custome or Devils.
+00:11:31 [W] So the goal here is a little different. So you are not only satisfied of trading schedule as the Black Box instead. You want to know more about schedule internals and
+00:11:46 [W] Get to know some configuration back best practices and also n Stan how the scheduling Behavior car related to internal.
+00:11:56 [W] We call the scheduling plugins so that you can make the most of schedule and expose them to the end users.
+00:12:03 [W] And of course you don't want to write additional code.
+00:12:06 [W] No matter is a scheduler extender or plugging you just to make custom.
+00:12:12 [W] Mais the schedule waste the official schedule a image.
+00:12:18 [W] So the first thing you can look into is configuration.
+00:12:22 [W] So configuration eyes turn girls changes a lot in the reason kubenetes to release this.
+00:12:28 [W] And the first thing I want to mention is that don't use command line arguments anymore because we have a better design and organized object called Cube schedule configurations so
+00:12:44 [W] You can pass on all the individual command line arguments to that config object through the - - config parameter, but if you are still at
+00:12:59 [W] Dark kubenetes 1 7 you have to steal adapt to the 2000 the still kind of cube schedule configuration. And the second thing is even inside the cube schedule configuration.
+00:13:12 [W] There are different versions vary from V. 1 Alpha 1 to Viva beta 1 and the difference is is that before we 1 Alpha 2 we are still using
+00:13:26 [W] In the old execution paths old terms, like prodyna case corresponding to filtering and priority corresponding to scoring and they are little bit different in terms of their naming and
+00:13:42 [W] Execution path. So if they are still using the old config, you may be using some thing called the policy Phi so the polished fi is something like this, you know, defying
+00:13:57 [W] Cuba schedule conflict we as we have for one version and specify one policy as the policy fi.
+00:14:07 [W] And inside of the policy file if you want to customize some Behavior, you have to list all the predicates or the priorities even if you just want to change one, so that is
+00:14:22 [W] Not going your size USA experience, right?
+00:14:24 [W] And also here you can see that you have to provide to all files. Why is the cube schedule conflict? Why is the policy file itself? It's also not user friendly.
+00:14:36 [W] So as X goes we want to dedicate this kind of policy based the config instead. We are transitioning to the plugging base that can fit so
+00:14:52 [W] f****** simply functional unit that is written to satisfy one specific constraints either from the users input of on some
+00:15:07 [W] In case there's a general policy.
+00:15:09 [W] So right now if you are using V 1 Alpha 2 V 1 beta 1 you can use the latest the cube schedule configurations and the profiles subfield.
+00:15:23 [W] There is a plug-in field. So there you can spite of our you can disable or enable or disable all the plugging the by Rocky.
+00:15:34 [W] The minimum is almost never had as possible.
+00:15:37 [W] So it's very user-friendly and the more importantly, so right now you can see that we have a new profiles field then means so right now starting with
+00:15:52 [W] 118 your schedule is not a single flavor schedule.
+00:15:57 [W] You can build a multiplex multi flavor of the schedule will give you an example.
+00:16:04 [W] So using the Weaver beta 1 configurations here, I defined for profiles and default schedule image of us that buildpacks keep score and they can map to different
+00:16:19 [W] Habeas you runtime that different scheduling profiles like the skip score is something that I totally just disable the scoring phase because I don't care about which node is
+00:16:34 [W] Highest the highest score.
+00:16:35 [W] I just want the part of the schedule as fast as possible and impact on the other hand try to favor the node which has the most dedicated Resource as possible. So it's quite fit that the requirements of
+00:16:51 [W] Autoscaler because auto-scaling wants to save the cost of running machines.
+00:16:56 [W] They want to pack or the workloads and minimum machines as possible and cetera and in runtime, you know workloads you just specify the Specter schedule name and correspond to the profile.
+00:17:10 [W] So in the example that we have four
+00:17:16 [W] workloads. Yeah Mo's and with different schedule name and in runtime schedule knows which specific flavor you want. You workloads B schedule.
+00:17:28 [W] So that's it.
+00:17:30 [W] it. I think the where I key changing wisdom Kuma knative releases.
+00:17:37 [W] So back to this picture so as a custard and I mean you should know exactly what each plug-in is doing.
+00:17:48 [W] Not only by an astounding the logic and also knows the internal stuff like the arguments and how to configure them and how that arguments reflect in terms of behavior.
+00:18:04 [W] And here we have a page to list all the default plugins and the which extension point they belong to for example 10 the Toleration a implements
+00:18:19 [W] Fitz several extension point in fear to face press coffees and score face. So as a custom enemy if you want enable or disable do some customization do recommend to check out this
+00:18:35 [W] the official website and also there are some plugins was compiled into their schedule image but not enabled by default so you can choose to enable them
+00:18:50 [W] But again, it should to understand the real semantics of them and some of them are have conflict with default ones you if you run enable some of them maybe you want to disable some this default plugins.
+00:19:03 [W] is the basic the
+00:19:08 [W] cluster mean need to understand in addition to that.
+00:19:12 [W] There are some other global settings in the cube schedule config like percentage of nose to score which are very useful. If you are running on 1,000 or 5,000 now proper way you don't need to
+00:19:28 [W] Score all the filter nails.
+00:19:29 [W] They're just need to score maybe 10% or 20% of the nails because scoring is more to favor one led to the other. So some of workloads just care about whether it's hot
+00:19:45 [W] Constraint for these types of being satisfied and don't quite care about the soft constraints.
+00:19:49 [W] So that's a very useful features and it's a crust and mean you may want to catch up with the latest programs in the upstreams listed a few of them here and the
+00:20:04 [W] Eventual goal is that you that stuff? I was just it's like you are running a burger shop like right in the before you just provide one flavor Burger,
+00:20:19 [W] Which you has made an onion and tomatoes, that's it.
+00:20:26 [W] You use it just can take it or leave it.
+00:20:30 [W] All right. Now you can have you have multiple ignorance like you can compose them and in two different flavors like it's a veggie one.
+00:20:43 [W] with spiffe is with chicken and the with spiffe you can also divide into
+00:20:49 [W] to with growing a great idea or with wrong Enya or with tomatoes without amino acid residues so you can the image is still the same image, but you can provide more flavors
+00:21:04 [W] So that adapt to your users were correct? So this is basically the I think there are trusted. I mean wants to learn.
+00:21:13 [W] Okay.
+00:21:14 [W] let's go to the three-day story. We are talking to the audience which userís keptn expert or innovate errs. It's like you're still running a burger shop, but you are not satisfied with
+00:21:29 [W] Speak of this the ingredients you want to make some Innovative ingredients from all side. For example, then provide more flavors than the default schedule a image provides so
+00:21:44 [W] In this case the don't care about running some sort of cult and the our ultimate goal is to fit diverse workloads such as batching workloads, which that the
+00:21:59 [W] The schedule is not stop running well, but I doubt they're not they don't want to start from scratch to write a secondary schedule because Ronnie multiple schedule will Invicta.
+00:22:13 [W] belie cause some conflicts on the path scheduling.
+00:22:19 [W] So for this kind of users still go back to this picture.
+00:22:22 [W] You should not be satisfied with only knowing that the filtering has some plug in x y z and scoring has plugging x y z you need to understand for example why we need
+00:22:38 [W] Pre-filter and how to use pre filter pre-filter for example is the face that especially for the requirement that you need to consider cross node Council.
+00:22:53 [W] Cross notice that status so that you need to do some pre calculations and the put that result into sort of a cash and that result can be used on later in filter face.
+00:23:07 [W] That's poor pre-filter.
+00:23:09 [W] And also you need to understand what pre permit is and what reserve it right Reserve is the face that you can before you party guests schedule you can make up
+00:23:23 [W] My assumption that this pot has been scheduled as so that you assume this part of resource in the slogan cash and the permit is a very useful extension point that
+00:23:38 [W] You can.
+00:23:41 [W] Wait until a certain criteria like a group of path coming inside. All of them are satisfied and you approve all of this stuff pause in badge. So this permit is so useful extension point in
+00:23:56 [W] You brought to a close and also post a few Therese that new extension point we introduced the wine 19 it we place the old hard-coded preemption logic so that it's the preemption
+00:24:12 [W] More extensible like in the before we just in the default preemption.
+00:24:16 [W] We just consider the strategy to preamp that the no sorry pre-empting the path single note, but sometimes he's not not the case and you want to extend this Behavior like you want to preempt one group will pass
+00:24:31 [W] And that kind of one group pass maybe schedule on two different levels Etc. And also you need to follow up with the latest the change in the scheduling framework and
+00:24:47 [W] The just a read through that really stand out if you have any questions go to the flag or to and yell and Lester to do with your consent. And also we are going to GA the scheduling framework
+00:25:00 [W] 120 we have started to build this framework since 115 know we are able to say that is stable enough. You can be go to the next stage.
+00:25:19 [W] All right.
+00:25:19 [W] it's still the same topic that if you want to implement what specific features you should know which specific extension point you want to extend and write the corresponding logic there.
+00:25:32 [W] For example, if you want to can scheduling requirement, you may need to implement this kind of extended point and if you want to do some
+00:25:46 [W] scoring plugins you need to implement the prisco and score extension point so that
+00:25:54 [W] So with the default schedule the base you build something on top of that and finally you get your compile them together and then you get a unify the schedule boundary.
+00:26:08 [W] it's a new new battery which has 100% of the vanina schedule functionality as well as the additional functionality you built into it.
+00:26:23 [W] Because building scheduled plugging has I won't say it has a high bar, but it has a bar.
+00:26:32 [W] So we initiated a sub-project called scheduled plugins which writing some examples there and some guidance there for you to start with.
+00:26:47 [W] So right now we are ready have some caps on can scheduling
+00:26:51 [W] Um capacity scheduling process scheduling is about elastic quarter and also some ongoing care like which favors to use some real time
+00:27:07 [W] Metric solve the Custer to do scheduling decisions Etc. And also we do some CIA optimizations to do with math you could be with and which so
+00:27:22 [W] Just download the image of from given that F star G. Crio.
+00:27:29 [W] All right, and this this is pretty much for the day's race. So that still the Knology that you're running a burger shop.
+00:27:39 [W] So right now you can use the default ingredients from the upstream and also you can buy some mother ingredients from the local market, right? You can buy some Specialties
+00:27:54 [W] You can buy some special degree dance heads on door.
+00:27:57 [W] what who knows and combine them together to provide additional flavors to for your user tubes and the last feel free to contact us and you can find all the information
+00:28:12 [W] Justin's here. We have weekly meetings raise your topic there and happiness build this community better.
+00:28:21 [W] All right.
+00:28:22 [W] thank you and think this is pretty much for today's session. Thank you.
+00:29:20 [W] Just one question is any starting points for new interested contributors?
+00:29:30 [W] I think firstly is to try to understanding the features that kubenetes schedule have and if you are interested, you can join the slack join
+00:29:45 [W] Committing know what we are doing right now like some day some refactoring work.
+00:29:50 [W] Maybe you are interested. You can get study with some some some some items that doesn't require some comprehensive and standings those dust with someone pissed and start with that and
+00:30:06 [W] Get more deeper into the hole scheduler internal rocket architecture to try to be more fixed.
+00:30:14 [W] So providing new features that basically
+00:30:54 [W] Yeah, it's question is that we are pluggable schedules be configurable per worker within a cluster or only the whole cluster.
+00:31:10 [W] I'm not exactly sure.
+00:31:12 [W] What do I mean by pluggable scheduler if you mean the external schedule batteries? Yes, that is still supported.
+00:31:23 [W] So for example you are running.
+00:31:26 [W] External schedule and no matter you are running a multi profile manner or just using the old Legacy policy file manner that schedulers schedule name is
+00:31:41 [W] Respected by the runtime Behavior. So yes probable scheduler asked that's their configuration can still be recognized and if you're using the latest schedule
+00:31:57 [W] Configuration your external schedule that profiles that schedule name can also be recognized.
+00:32:03 [W] Yes.
+00:32:03 [W] That's true.
+00:32:04 [W] And the other question is what are the next step for the cube schedule?
+00:32:08 [W] Let's say q1, 2021. We do some have some Flora teas.
+00:32:17 [W] I think the something we recently I consider is improving the performance of preemption and the perfecting our schedule and performance framework so that we can we can have
+00:32:33 [W] unify the guidance to know what change can improve some metrics and some doesn't maybe can cause the performance truncation and
+00:32:48 [W] Abdullah if you have any idea about the future Next Step
+00:32:56 [W] Yeah, I think we might want to focus on bash workloads more.
+00:33:02 [W] That's another area that we want to explore and the yeah, and the other thing is perhaps making adding more extension cords into the framework.
+00:33:15 [W] Like how weak you the pods Etc.
+00:33:22 [W] Okay, we have one minute left.
+00:33:25 [W] So the last question we can take.
+00:33:48 [W] Okay. The question is choosing weights is hard any tools available to pick more info weights?
+00:33:59 [W] That's I was saying that's a good question as you know by default. We without knowing the characteristic of your workloads the default scheduler the out of box can now provide.
+00:34:16 [W] Wait, that makes sense for every user. Right so by default, we just give most of the scoring plug-in default weight is 1 in terms of the configuration weights.
+00:34:30 [W] I would suggest going to put schedule performance.
+00:34:38 [W] Sweet too sweet so that you can use your workloads to build a workloads template.
+00:34:45 [W] We provide some descriptive way to for your Duty Finder workloads.
+00:34:50 [W] Llamo so that you can run that llamo and to Benchmark them so that you know, how much weight you want so that maybe that is compiling to you can turn
+00:35:06 [W] Go to the kuma Dennis Leger kubernative.
+00:35:08 [W] There's a folder on the test / in the questions - schedule underscore Perth. You can tend to the readme there for to get more help.
+00:35:23 [W] And I think we have almost used up that time and thanks everyone.
+00:35:27 [W] Thanks Debra Lula for joining and feel free to ask any questions on the slack on the mailing list and welcomed for your contribution, either your contribution, or either your questions in a video ideas bring up
+00:35:43 [W] To your optimal Community to make any better.
+00:35:45 [W] All right.
+00:35:46 [W] Thank you everyone.
+00:35:47 [W] Hope you enjoy this kubeflow.

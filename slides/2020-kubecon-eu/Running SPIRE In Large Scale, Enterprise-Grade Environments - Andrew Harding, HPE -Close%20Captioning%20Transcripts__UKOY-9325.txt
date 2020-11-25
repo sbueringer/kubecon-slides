@@ -1,0 +1,320 @@
+﻿Running SPIRE In Large Scale, Enterprise-Grade Environments: UKOY-9325 - events@cncf.io - Wednesday, August 19, 2020 8:14 AM - 124 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:09:04 [W] Hey, good morning, or good afternoon, wherever you are. Welcome to today's deep dive maintainer track for Spire.
+00:15:59 [W] My name is Andrew Harding and I work at Hewlett Packard Enterprise and I'm a full-time maintainer of spire in this session.
+00:16:09 [W] We're going to explore a few ways to deploy spire and build a reliable identity plane for your infrastructure before we get into it.
+00:16:19 [W] I want to First apologize in advance for any mistakes or problems due to the pre-recorded nature of this presentation provides.
+00:16:20 [W] I think in this way is new to many of us. So I appreciate your patience and leniency.
+00:16:25 [W] Okay. So if you're attending the session you should probably be at least superficially familiar with spiffe Inspire. If that isn't the case. Yeah, you may want to look up some introductory videos from earlier Coop kind of events to get yourself Familiar
+00:16:45 [W] All Joy's in advance for any mistakes or problems due to the pre-recorded nature of this presentation presenting in this way is new to many of us. So I appreciate your patience and leniency.
+00:16:46 [W] Okay. So if you're attending the session you should probably be at least superficially familiar with spiffe Inspire. If that isn't the case. Yeah, you may want to look up some introductory videos from earlier Coop kind of events to get yourself Familiar Eyes.
+00:16:49 [W] can also of course go to the spiffe E dot IO website to learn more.
+00:16:51 [W] So if you're attending Coop con you're probably a bit like me and you have an interest in technology the facilitates deploying software at scale and provides highly available infrastructure.
+00:17:01 [W] Today. We're going to discuss strategies for deploying Spire to meet that kind of a need and we're going to discuss and focus on two main aspects.
+00:17:11 [W] The first is load distribution specifically, how can we just deploy Spire in order to distribute load related to workloads registration and identity management and as we scale up the number of workloads that Spire is servicing.
+00:17:27 [W] How do we ensure that spire and the issuance of service identity doesn't itself become a bottleneck as we scale out your application. The second aspect will be focusing on is Fault mitigation and isolation as much as we
+00:17:41 [W] Isolation as much as we hope for perfect infrastructure. The reality of the situation is that hard drives fail networks break data centers catch fire powers lost developers write bad code that configuration gets
+00:17:54 [W] Datura, so how can we deploy our Spire infrastructure to minimize the impact of these events so that they are more of an inconvenience than a catastrophe.
+00:18:04 [W] So before we talk Spire large scale, let's take a step back and do a quick recap of the essence of what Spire provides at the most granular scale and what it is exactly that we want to ensure reliability of
+00:18:21 [W] A man grows Spire is a reference implementation of the spiffe E specification fundamentally what this means is that Spire particularly the Spire agent provides the spiffe E workload API.
+00:18:35 [W] Now workloads leverage the work load a pi to obtain a couple of different things.
+00:18:46 [W] The first is this spiffe e verifiable identity document or S fit for short an S-Video is a document with which workloads prove their identity.
+00:18:55 [W] Yes, but contains a spiffe Eid which represents the identity of the workload as speeds are authenticated using authorities from the trust the main from which it was issued this brings us to the second thing workloads retrieve over the workloads.
+00:19:06 [W] Guy, which is the spiffe E bundle again. This bundle contains x.509 and job authorities that are used to verify s vids.
+00:19:16 [W] One important aspect of the workloads API is that as these s vids or the spiffe you bundle are rotated or updated. Those updates are streamed back to the workload over that workloads API giving the workload and up-to-date view of its identity
+00:19:31 [W] Google it needs to authenticate other identities.
+00:19:35 [W] The ultimate goal of building up robust highly available Spire deployments is to ensure that this relationship between workloads and the workload API can be maintained that workloads are always in a position to reach out to the workloads API.
+00:19:51 [W] obtain s vids and bundle content
+00:19:54 [W] So let's begin with the most basic Spire deployment. The first thing we Define in our Spire deployment is the trust domain the trust domain is a logical construct that represents a security boundary within our organization
+00:20:11 [W] Trust the main for each business unit, for example, or maybe around different classes of software within a business unit.
+00:20:22 [W] The key takeaway here is that the identities issued to workloads within a trust domain are all issued by the same set of authorities and can be verified using the spiffe E bundle of the trust domain.
+00:20:33 [W] Also, there's no requirement on how many trust domains, you know, you maintained within your organization.
+00:20:39 [W] It's all dependent on what your needs are around security boundaries and isolation.
+00:20:41 [W] Now within that trust domain we have a machine virtual or otherwise, which is hosting some workloads and our workloads are of course spiffe enabled workloads that leverage the spiffe E workload API hosted by the
+00:20:57 [W] boundaries and isolation
+00:20:57 [W] now within that trust the main we have a machine virtual or otherwise, which is hosting some workloads and our workloads are of course spiffe enabled workloads that leverage the spiffe E workload API hosted by the
+00:20:59 [W] Through which they obtain their service identity and bundle information.
+00:21:02 [W] now Spire agent does not meant as itself, but rather relies on the Spire server within the trust domain Spire servers have a few responsibilities, but the primary of which is to act as the certificate authorities and job issuers of
+00:21:18 [W] They maintain and rotate key pairs for signing. X.509 and Jesuits.
+00:21:24 [W] Spire agents query the server's about workloads. They're responsible for and they also issue signing request the Spire server to obtain Identity or S vids on behalf of those workloads.
+00:21:38 [W] Now there is one more actor.
+00:21:43 [W] We need to consider in our basic deployment and that is the database in the Fulfillment of its duties. The Spire server has various persistent storage needs.
+00:21:49 [W] Let's step aside for a moment and discuss the database layer in more detail.
+00:21:57 [W] The database layer is a critical component in a Spire deployment it acts as the unified persistent storage layer for all of the Spire servers within that deployment for the purpose of today's discussion.
+00:22:09 [W] Let's focus on just a few things stored by the database.
+00:22:14 [W] The first is the spiffe you bundle like we discussed earlier the spiffe E bundle contains the public key material for the X 5 and 9 in Java thorat. He's that workloads.
+00:22:20 [W] to use to authenticate estimates second are registrations these registrations from the policy and the trust domain about what workloads exist and how to identify them and where they are authorized to run the
+00:22:35 [W] Russian let's focus on just a few things stored by the database.
+00:22:36 [W] The first is the spiffe you bundle like we discussed earlier the spiffe E bundle contains the public key material for the X 5 and 9 in Java thorat, he's that workloads used to authenticate estimates. Second are registrations these registrations
+00:22:37 [W] Two things, you know the spiffe you bundle and the registrations along with the signing request for S. Vids that agents do constitute the majority of the traffic and communication efforts that take place between the Spire server and agent.
+00:22:51 [W] The third thing that the database stores is Agent authorization information or in other words, the authorization policy for authenticated agents this information plays an important part in ensuring that incoming agent requests are being issued by valid agents.
+00:23:07 [W] It's important to note that this database layer is what links up Spire servers within a Spire deployment Spire servers attached to the same database have a shared view of all the above information.
+00:23:20 [W] Alright, so now that we've discussed the database layer, let's return to our basic deployment.
+00:23:30 [W] We've got a Spire agent servicing workloads with s vids and bundle information which that aging obtained through coordination with the Spire server acts by a database that holds bundle and registration information.
+00:23:39 [W] And with that. We've got a complete Spire deployment.
+00:23:41 [W] But you know, this this deployment is nowhere close to robust.
+00:23:47 [W] So we're going to look at a few ways to scale this up. But first let's go over some failure scenarios.
+00:23:54 [W] For example, what happens when the Spire server can no longer talk to the database.
+00:24:00 [W] Without access to the database.
+00:24:05 [W] Service attached to the same database have a shared view of all the above information.
+00:24:08 [W] Alright, so now that we've discussed the database layer, let's return to our basic deployment.
+00:24:09 [W] We've got a Spire agent servicing workloads with s vids and bundle information which that aging obtained through coordination with the Spire server that act by a database that holds bundle and registration information.
+00:24:12 [W] And with that we've got a complete Spire deployment, but you know, this this deployment is nowhere close to robust.
+00:24:14 [W] So we're going to look at a few ways to scale this up. But first let's go over some failure scenarios.
+00:24:20 [W] For example, what happens when the Spire server can no longer talk to the database.
+00:24:21 [W] Without access to the database.
+00:24:21 [W] There's not much that can happen within your deployment new workloads cannot be registered new agents cannot attest and join the trust domain and like we mentioned before the database contains authorization policy for azns vids.
+00:24:23 [W] Cannot be registered new agents cannot attest and join the trust domain and like we mentioned before the database contains authorization policy for azns fits without access to that policy.
+00:24:25 [W] The server cannot authenticate request from existing agents and will deny access. This means agents cannot miss vids for workloads or maintain up-to-date bundle and registration information. Critically. It also prevents s bits from renewing their
+00:24:36 [W] sorry agents prevents Agents from renewing their own estimate, which means that eventually the agent May effectively lose its membership in the trust of Maine and we'll talk about that more a little bit later a failure event of this magnitude would need to
+00:24:52 [W] Quickly in order to decrease the chance of this failure event happening and to provide a quick failover path when it does we want to add some redundancy in our database layer.
+00:25:04 [W] There are a variety of options here with various trade-offs and reliability cost and performance.
+00:25:20 [W] For example, we could set up a manager own database cluster with read only replicas and a quick strategy for promotion to master and the case of fell over we could also Leverage The manage database solution like Amazon RDS or Cloud SQL or
+00:25:25 [W] Solutions offered by the various Cloud providers in any case with row bunt redundancy or robust fell over strategy in place.
+00:25:39 [W] We've reduced the chances of a problem in our database layer and given us a path to quickly repair and outage next. Let's discuss what happens when there is a loss of communication with the Spire server.
+00:25:45 [W] Now in this failure scenario, the Outlook is still pretty bad.
+00:25:52 [W] In fact from an agent perspective this scenario more or less mimics that of a loss of availability in the database.
+00:25:59 [W] No new workload estimates, no updates for bundle or registration information.
+00:26:03 [W] No agent. Espadrille Tatian.
+00:26:05 [W] Depending on the nature of the failure say a network failure in between agents and servers.
+00:26:15 [W] We may still have other actors in the system that are able to talk to the Spire server and perform registration or other administrative maintenance, but from the agents perspective, which is the most critical actor according to our workloads, you know, the agent is just out of luck.
+00:26:25 [W] Like the previous failure scenario. The deployment is in an unhealthy state that should be addressed quickly even so what can we do to decrease the chances of downed or otherwise unavailable Spire service from impacting our Spire infrastructure
+00:26:41 [W] Mission here is to scale out the number of spire servers so that if one server goes down agents have another place to go.
+00:26:49 [W] Operating multiple servers at scale like this isn't without its own challenges.
+00:26:57 [W] For example, when you go to roll out new software configuration, you want to adopt a rolling deployment strategy so that a problem with the updates does not take out all of your servers at once and you can roll back failed servers and in case there is a problem.
+00:27:08 [W] There's a lot of collective operations knowledge out there around this sort of thing. So we won't go into that in more detail. However, despite our best attempts at Shoring up the server or the database.
+00:27:20 [W] Are no infrastructure is perfect. And there will be outages due to unforeseen circumstances.
+00:27:27 [W] Luckily.
+00:27:28 [W] There is a Saving Grace and this is a critical mitigation for all of these failure modes. And that is where the Spire agent comes in.
+00:27:35 [W] If we dig into the agent internals, we see that the agents do not mint workload estimates on demand instead.
+00:27:46 [W] They actively maintained an SVG cash the agent fetches and maintains fresh estimates for all workloads.
+00:27:56 [W] It is authorized for independent of whether or not that workloads has attempted to contact the agent through the workloads API this cash becomes an important property for surviving infrastructure outages by buying time for operators to repair the infrastructure without
+00:28:05 [W] If we dig into the agent internals, we see that the agents do not mint workload estimates on demand instead.
+00:28:06 [W] They actively maintained an estimate cash the agent fetches and maintains fresh s vids for all workloads.
+00:28:07 [W] It is authorized for independent of whether or not that workloads has attempted to contact the agent through the workloads API this cash becomes an important property for surviving infrastructure outages by buying time for operators to repair the infrastructure without
+00:28:08 [W] Also valid service identity for workloads.
+00:28:09 [W] Each s vid minted by Spire has a time to live or TTL under healthy conditions an agent does not let an S would drop below half of its TTL agents actively check all the estimates.
+00:28:25 [W] have cashed and quickly rotate them when they cross the half TTL threshold.
+00:28:28 [W] This means that in the face of an infrastructure outage operators have a buffer of up to half of the smallest estimate TTL to repair the outage to the infrastructure before the u.s. Bid will expire.
+00:28:42 [W] The TTL is a powerful knob for operators to configure the trade-off on ttls is between security and reliability the smaller the TTL the faster a compromise despot expires.
+00:29:00 [W] This reduces the time and attacker has to abuse the S bid per for impersonation.
+00:29:06 [W] However, the higher the TTL the more time operators have to address infrastructure outages.
+00:29:11 [W] Now the Spire reagent has two kinds of s vids cashed the one we've primarily focused on so far the workload of Spades.
+00:29:23 [W] These are the ones that are served to workloads over the workloads API and you know, they are primarily a concern of the data plane when workloads fit expires or is otherwise unavailable.
+00:29:35 [W] This week's leads to workloads level failures, which are the ones that are most apparent to our customers, unfortunately.
+00:29:38 [W] Second is the agents own estimate.
+00:29:47 [W] This estimate is given to the agent when it enters the trust the main be a note at the station.
+00:29:50 [W] It is maintained in rotated by the agent.
+00:29:52 [W] The agent estimate is used to authenticate request to Spire servers and represents the agents membership in the trust domain if the agent s fit is allowed to expire the agent will no longer be able to authenticate with Spire servers in the trust domain effectively
+00:30:04 [W] This means that the agent will have to rejoin the trust of Maine throughout his station.
+00:30:15 [W] However, Reata station can be burdensome for most add to station' methods.
+00:30:17 [W] So allowing an estimate two laps is not ideal.
+00:30:19 [W] generally speaking ttls for both workloads estimates and agent s vids are configured to some low number of days or hours.
+00:30:26 [W] The TTL is of these two estimates can be controlled independently, this gives operators flexibility with the security reliability trade-off.
+00:30:41 [W] For example, if the workload has been lapses, but the agent s vid does not after the outage is repaired. The agent will be able to quickly recover since its membership in the trust domain has not been lost.
+00:30:47 [W] For this reason it is an uncommon for Asian estimates to be given a higher TTL than a workloads estimate.
+00:30:57 [W] Especially if the control plane segregation makes it more unlikely that an agent estimate is compromised than a workloads estimate sitting in the data plane. The takeaway here is that operators are given a choice.
+00:31:05 [W] So to quickly summarize data base and Spire server will I build is critical to maintain a healthy Spire infrastructure redundancy and quick failover will go very far to provide reliability in these layers.
+00:31:22 [W] The agent cash is the first line of defense to mitigate infrastructure outage.
+00:31:27 [W] Makes it more unlikely than agent estimate is compromised than a workloads estimate sitting in the data plane.
+00:31:36 [W] The takeaway here is that operators are given a choice.
+00:31:36 [W] So to quickly summarize data base and Spire serverless ability is critical to maintain a healthy Spire infrastructure redundancy and quick failover will go very far to provide reliability in these layers.
+00:31:39 [W] The agent cash is the first line of defense to mitigate infrastructure outage.
+00:31:40 [W] This is because the cash allows Spire to continue in its fundamental mission to provide s vids and bundles over the workload a pi while the infrastructure is being repaired.
+00:31:44 [W] And last ttls are a powerful knob to adjust between the trade-off of security and reliability keeping the ttls as small as possible but no smaller is important to survive infrastructure outage while reducing the window
+00:31:51 [W] Perry and last ttls are a powerful knob to adjust between the trade-off of security and reliability keeping the ttls as small as possible but no smaller is important to survive infrastructure out as while reducing.
+00:31:53 [W] prized estimates
+00:31:55 [W] So now that we know a little about failure modes and mitigations.
+00:32:02 [W] Let's go back to our simple deployment and talk scale for a while in our simple deployment.
+00:32:09 [W] We had a single agent servicing a handful of workloads.
+00:32:12 [W] Of course, that isn't going to be enough our business is of course thriving and load against our workloads is climbing in order to meet customer demand.
+00:32:21 [W] We need to scale up the number of workloads as the number of workloads in a company agents grow.
+00:32:25 [W] The load on that lonely little Spire server is going to go up and up. And of course if that Spire super Falls over agents are suddenly unable to obtain a rotate workloads feds.
+00:32:36 [W] To increase the reliability of our system and to scale up demand. Let's add a few servers to our deployment.
+00:32:43 [W] Of course as we mentioned earlier Spire servers in a highly debated will available deployment will share a database sufficient to say that a single database instance will not provide the reliability we need so we'll need to provide some redundancy here as well.
+00:32:59 [W] All right.
+00:33:03 [W] Now we are cooking.
+00:33:06 [W] We've got some redundancy and our Spire server and database layers. This will help us prevent and mitigate those failure modes we discussed as well as distribute load.
+00:33:12 [W] But now we've got another problem.
+00:33:18 [W] Our trust domain is all within a single data center Zone. Let's take a look how we can scale out across multiple data centers or zones.
+00:33:23 [W] So on the left here, you can see zone' has a bunch of workloads running service by agents that are Distributing their load across several Spire servers.
+00:33:36 [W] Of course, this is all well and good and this will hold Zone has an outage
+00:33:39 [W] So let's go ahead and deploy Spire to a few more zones.
+00:33:42 [W] And just a reminder.
+00:33:47 [W] We're still talking about several Spire deployments belonging to a single trust domain.
+00:33:50 [W] Like we mentioned previously s bids within a single trust. The main are minted by the same set of authorities. This means that each of these zones must have a shared view of the spiffe you bundle for the trust domain so that workloads minted in one's own can authenticate and
+00:34:06 [W] Workloads in other zones.
+00:34:10 [W] Let's explore some options.
+00:34:11 [W] When they mentioned the database layer we talked about how every Spire server at a ch2 the same database layer has a shared view amongst other things a bundle information.
+00:34:24 [W] So our first option to linking the Spire clusters in each zone is to employ a shared database this ensures that all zones see the same bundle in order to understand how this works.
+00:34:38 [W] Let's go over how the spiffe E bundle is built by multiple Spire servers on top of the shared database.
+00:34:40 [W] The way this works is that the Spire server generates the keys that uses the site s vids.
+00:34:47 [W] Concretely Spire self signs and x509 root CA 4 X 5 and S vids and a public/private key pair for jaundice vids the X Farva 9 root, CA certificate and the jaw signing public key are appended to the spiffe you bundle
+00:35:02 [W] This process is repeated for each Spire server every time it rotates the x.509 ca or jot signing key.
+00:35:13 [W] A new key pair is generated and the newly self-signed CA certificate or public key for that key pair is appended to the spiffe you bundle whenever a Spire server is queried for the bundle of the trust domain. It Returns the appended to bundle from the database which to
+00:35:29 [W] Whenever a Spire server is queried for the bundle of the trust domain. It Returns the appended to bundle from the database which to reiterate contains the ca certificates and public keys for each Spire server at shares that database.
+00:35:36 [W] Going back to our multi-zone deployment.
+00:35:46 [W] Each Spire server for meet Zone will be a pending to the spiffe E bundle stored in that shared database since the spiffe E bundle contains the public key material for each Spire server any workload obtaining the bundle via the workloads API can authenticate the estimates signed by
+00:35:55 [W] Cross all zones.
+00:36:01 [W] let's talk about the advantages of this kind of deployment.
+00:36:01 [W] As long as you already have a scalable and robust database layer accessible from each Zone.
+00:36:11 [W] This can be a pretty convenient option both in terms of configuration and deployment Simplicity.
+00:36:18 [W] It has a smaller number of moving Parts than the Alternatives.
+00:36:21 [W] However, there are some potential downsides to consider first that shared database becomes a single point of failure for all zones.
+00:36:26 [W] Second the database has to handle all of the queries for servers from all zones, which definitely adds up.
+00:36:38 [W] This can make a hard to distribute load and scale the database appropriately as the number of zones are workloads in each Stones grows.
+00:36:42 [W] The next option is to leverage the Upstream Authority plug-in interface on the Spire server, the Upstream Authority provides a common x509 Authority that all Spire servers use to sign their Cas every
+00:37:00 [W] Spire servers therefore has a chain of trust back to the same x509 Authority or authorities from the Upstream Authority plug-in, as you can see in this deployment option. Each Zone has its own distinct database cluster.
+00:37:16 [W] This means that each Zone has its own unique view of the spiffe you bundle registration information Etc.
+00:37:27 [W] However, because each x.509 estimate is signed by a common Authority or authorities the x.509 authorities present in the bundle for each Zone.
+00:37:31 [W] Zone ends up being the same this again enables Mutual authentication between workloads across zones.
+00:37:41 [W] Let's take a detailed. Look at how the bundle in each zone is built.
+00:37:44 [W] when configured for an upstream Authority instead of self signing the Spire server instead generates a key pair and sends off a certificate signing request for a CSR to the Upstream Authority the Upstream Authority signs that CSR and
+00:38:00 [W] when configured for an upstream Authority instead of self signing the Spire server instead generates a key pair and sends off a certificate signing request or a CSR to the Upstream Authority the Upstream Authority signs that CSR and
+00:38:02 [W] Mediate CA certificate it returns that intermediate CA certificate along with the set of Upstream root authorities back to the Spire server Spire server, then upends the Upstream route authority to the bundle in the database.
+00:38:15 [W] Since the Spire servers CA is an intermediate Authority off of that route Authority and S would signed by that server has a valid chain of trust back to the Upstream root Authority present in the bundle.
+00:38:28 [W] The Spire service in other zones likewise get an intermediate see a signed by the Upstream Authority and append the Upstream authority to the bundle in their own database as you can see the database in each Zone has an identical bundle furthermore
+00:38:44 [W] Media Authority off of that route Authority and Espen signed by that server has a valid chain of trust back to the Upstream root Authority present in the bundle.
+00:38:45 [W] The Spire service in other zones likewise get an intermediate see a signed by the Upstream Authority and append the Upstream authority to the bundle in their own database as you can see the database in each Zone has an identical bundle furthermore
+00:38:47 [W] I've sewn will be signed by intermediates that chain back to the Upstream room 230 in that bundle. This is how workloads attached to any of these zones can mutually authenticate.
+00:38:54 [W] Now what I just described only applies to the intermediate see a used to sign x509 s vids.
+00:39:05 [W] The story is a little bit different for jot signing keys.
+00:39:06 [W] Jaundice vids are signed by independent keys that aren't part of the certificate chain of trust.
+00:39:16 [W] This means that we cannot rely on the same sort of chaining properties that we can with x.509 Misfits.
+00:39:19 [W] That being said the Upstream Authority interface does provide a mechanism for Spire servers to use to publish their jot signing keys to each other when a Spire server generates a new job signing key.
+00:39:34 [W] It depends the public key for that just signing key to the bundle and its own database.
+00:39:38 [W] It also sends that public key to the Upstream Authority.
+00:39:42 [W] Other Spire servers are watching the Upstream Authority for new jot signing keys.
+00:39:51 [W] They receive the jot signing key of the other Spire server and likewise append the public key to the bundle in their own database.
+00:39:57 [W] This process is repeated for each Spire server that shares the Upstream Authority and after that's all propagated each bundle now contains the complete set of jot signing keys for Spire service, which
+00:40:10 [W] Authority
+00:40:12 [W] before we go on I'd like to point out that this ability to publish jot signing Keys Upstream is an optional feature of Upstream authorities and is not widely implemented.
+00:40:26 [W] So you have to be careful about which Upstream Authority you choose if jot s vids are important to you.
+00:40:30 [W] The advantage of using the Upstream Authority option is that Beyond providing a shared view of the spiffe E bundle of the trust domain?
+00:40:43 [W] Each Zone has its own database instance to handle the queries for that zone. This makes it easier to distribute load and scale out the database layer within a single zone.
+00:40:49 [W] Another Advantage when considering tied together multiple Spire deployments using the Upstream Authority is that interactions with the Upstream Authority are relatively infrequent Spire servers only use the Upstream Authority when they rotate their x509 intermediate CA or jot signing
+00:41:05 [W] Which is a configurable but relatively infrequent event.
+00:41:10 [W] Spire servers rotate the signing key pairs at half the at the half TTL Point similar to the agent and it's s Fedora tation strategy the TTL for the CA and jaw signing Keys defaults to 24 hours, but it isn't abnormal to have a much
+00:41:26 [W] Say a week or a month or more.
+00:41:32 [W] This means that if the Upstream Authority goes down, there's quite a bit of leniency and how fast the average needs to be addressed the disadvantages. Of course that it is a more complicated setup with more moving parts and more points of failure.
+00:41:43 [W] Fast the average needs to be addressed the disadvantages, of course that it is a more complicated setup with more moving parts and more points of failure.
+00:41:48 [W] However, if your deployment is large this can provide better scaling properties than the shared database.
+00:41:50 [W] Spire has a few built-in Upstream Authority implementations. For example one that leverages AWS is certificate managers private, CA feature.
+00:41:59 [W] But let's turn to the third option which is a refinement of the Upstream Authority approach where the Spire cluster where a Spire cluster itself is acting as the Upstream Authority for a downstream Spire cluster.
+00:42:15 [W] This is something that we call nested spire.
+00:42:17 [W] The Spire service in each Zone have their intermediate see a signed by the Spire cluster acting as the Upstream Authority.
+00:42:28 [W] Of course, this means that s vid signed by you Zone again have a chain of trust through the same Authority in this case the Upstream Spire cluster, which fulfills the criteria that all identities in a trust. The main are signed from a shared set of roots.
+00:42:38 [W] Nested Spire allows you to organize your Spire deployments into clusters that are largely independent.
+00:42:50 [W] If an upstream cluster goes down the downstream cluster stay relatively operational for the reasons. We mentioned when discussing the Upstream Authority. This can be a very powerful way to scale out an isolate your deployments.
+00:42:59 [W] There is a trade-off.
+00:43:05 [W] This is something that we call nested spire.
+00:43:13 [W] The Spire servers in each Zone have their intermediate see a signed by the Spire cluster acting as the Upstream Authority.
+00:43:14 [W] course, this means that s vid signed by use Zone again have a chain of trust through the same Authority in this case the Upstream Spire cluster, which fulfills the criteria that all identities in a trust. The main are signed from a shared set of roots.
+00:43:17 [W] Nested Spire allows you to organize your Spire deployments into clusters that are largely independent.
+00:43:19 [W] If an upstream cluster goes down the downstream cluster stay relatively operational for the reasons.
+00:43:21 [W] We mentioned when discussing the Upstream Authority. This can be a very powerful way to scale out a nice leg your deployments.
+00:43:22 [W] There is a trade-off.
+00:43:28 [W] However, remember the each of these clusters has its own database the advantage. Of course, there is load distribution and fault isolation.
+00:43:29 [W] However, if you remember earlier discussion about what the database is in charge of you'll recall that workloads registrations are stored in the database each cluster is in charge of its own registrations.
+00:43:30 [W] This may complicate things somewhat since registrar's will need to be deployed per cluster or at least be able to register
+00:43:31 [W] Things / with a per cluster granularity against the database for the specific cluster that workloads going to run in.
+00:43:37 [W] But this reliability trade-off can be well worth it.
+00:43:44 [W] I'll mention another benefit of using Spire is the Upstream Authority, which is that Upstream Spire implements the optional publishing of the jot signing keys that we mentioned earlier.
+00:43:51 [W] So we've talked about a few options now and how we might span a Spire trust domain across multiple zones.
+00:44:05 [W] You're using a shared database or an upstream Authority.
+00:44:08 [W] However, what do we do when those options are off the table at this point?
+00:44:14 [W] It may make sense to break our deployment into more than one trustful mean and how do we enable authentication between workloads into distinct trust domains? Well, the answer here is spiffe e Federation
+00:44:23 [W] Federation is the process by which a trust domain gains the ability to authenticate workloads from another trust domain.
+00:44:32 [W] You'll recall that workloads registrations are stored in the database.
+00:44:43 [W] Each cluster is in charge of its own registrations.
+00:44:44 [W] This may complicate things somewhat since registrar's will need to be deployed per cluster or at least be able to register things / with a per cluster granularity against the database for the specific cluster that workloads going to run in.
+00:44:45 [W] But this reliability trade-off can be well worth it.
+00:44:46 [W] I'll mention another benefit of using Spire is the Upstream Authority, which is that Upstream Spire implements the optional publishing of the jot signing keys that we mentioned earlier.
+00:44:48 [W] So we've talked about a few options now and how we might span a Spire trust domain across multiple zones are using a shared database or an upstream Authority.
+00:44:52 [W] However, what do we do when those options are off the table at this point? It may make sense to break our deployment into more than one trust domain.
+00:44:53 [W] And how do we enable authentication between workloads into distinct trust domains? Well, the answer here is spiffe e Federation.
+00:44:54 [W] Federation is the process by which a trust domain gains the ability to authenticate workloads from another trust domain.
+00:44:58 [W] It is a one relationship meaning that to enable Mutual authentication. Each trust domain needs to Federate with each other the act of federation involves obtaining and disseminating the spiffe E bundle of a foreign trust domain to the workloads
+00:44:59 [W] the main to the workloads in your own trust Devane
+00:45:00 [W] Spiffe he defines an interoperable mechanism by which a trust domain can obtain the bundle of a foreign trust domain.
+00:45:02 [W] This mechanism is the spiffe E bundle and point which is an HTTP endpoint that serves the spiffe E bundle of the foreign trust Ami the endpoint is authenticated and at this time we Define to authentication mechanisms
+00:45:09 [W] The foreign trust Ami the endpoint is authenticated. And at this time we defined two authentication mechanisms.
+00:45:13 [W] The first is via web pki or via spiffy Authentication.
+00:45:14 [W] As the foreign trust domain rotates its authorities this bundle and point can be pulled with some frequency to maintain an up to date view of the foreign trust the main bundle.
+00:45:25 [W] Spire distributes the foreign trust domain model to workloads over the workloads API enabling workloads to authenticate estimates from the foreign. Trust me.
+00:45:34 [W] So our distinct trust domains can establish a federation relationship and retrieve each other's bundles and mutually authenticate.
+00:45:50 [W] It's also worth mentioning. This deployment strategy is one way that people deploy Spire across cloud and on-premise data centers.
+00:45:53 [W] Well, that's it for today.
+00:45:59 [W] That's what I have for you to summarize today.
+00:46:03 [W] We've explored deployments from the very simple to multi-zone two, nested hierarchies and onto Federated trust domains.
+00:46:14 [W] We've talked a little bit about failure modes and the various layers that require redundancy in order to achieve a highly available deployment that can scale and we've also dug into the details of how bundles are built across databases or shared databases.
+00:46:24 [W] That we've touched on the mechanisms around spiffe e Federation and the ability for to trust domains to Federate with each other.
+00:46:34 [W] So thank you for hanging in there.
+00:46:38 [W] That was definitely a lot to go over. If you have questions. Feel free to reach out on the session chat will be happy to address them.
+00:46:46 [W] You can also visit us at the spiffe E slack and we've got a friendly Community there to help you get going with spiffe E and spire.
+00:46:56 [W] You can also hit up the GitHub Pages for a spiffe Ian Spire or the spiffe E dot DL website for more information.
+00:47:01 [W] Thank you very much.
+00:47:02 [W] Hello, everybody.
+00:47:08 [W] That was a lot to take in.
+00:47:10 [W] I hope you were able to hang in there.
+00:47:13 [W] So I've got a few questions that I'll be happy to answer right now.
+00:47:16 [W] And of course afterwards, I'll be hanging out in the maintainer slack cncf workspace.
+00:47:25 [W] Well, I'll be happy to continue answering questions.
+00:47:28 [W] So first I'll get this one out of the way.
+00:47:31 [W] got a question on if whether or not they'll be slides available. I don't know if the cncf
+00:47:34 [W] CFO provides a place where we can we can host those but I definitely can post up slides for this presentation.
+00:47:44 [W] I'll include the speaker notes as well.
+00:47:49 [W] Cncf workspace.
+00:47:55 [W] Well be happy to continue answering questions.
+00:47:55 [W] So first I'll get this one out of the way.
+00:47:55 [W] We've got a question on if whether or not that we slides available.
+00:47:56 [W] I don't know if the cncf will provides a place where we can we can host those but I definitely can post up slides for this presentation.
+00:47:57 [W] I'll include the speaker notes as well. So you have the the basically the same content that I that I
+00:47:58 [W] spoke to the presentation will also be available on demand so you can you can you know, watch it at your leisure again.
+00:47:59 [W] Second question is how about running spiffe e or Spire outside of kubernative and that is definitely something that we support Spire itself is platform agnostic.
+00:48:14 [W] So you could you could run it inside of you know, you know other than kubernative whether that's managed kubernative by a cloud provider or your own kubernative deployment Spire also can run on bare metal it can run, you know straight on, you know, Emma's on Virtual
+00:48:24 [W] Platform agnostic so you could you could run it inside of you know, you know other than kubernative whether that's managed kubernative by a cloud provider or your own kubernative deployment Spire also can run on bare metal it can run in, you know straight on
+00:48:25 [W] And you know Google compute machines.
+00:48:31 [W] It is really agnostic in the in that way and it supports a plug-in system where if you're running it inside of environment that we don't have built-in support for you can write your own plugins
+00:48:43 [W] No data station workloads attestation Etc.
+00:48:54 [W] That is custom tailored to your environment and still reap the benefits of the workloads API and the frequent rotation of Secrets.
+00:48:55 [W] So yes, definitely can run Spire outside of kubernative Z.
+00:49:00 [W] The next question says in my prod communities clusters and generating wildcard x.509 certificates using a kubernative namespace name.
+00:49:14 [W] Can you please give me a strong reason to move to spiffe e or Spire to that point a few things I guess to talk about. The first is
+00:49:23 [W] If you have wild card certificates operational security around those weld certificate wildcard certificates needs to be quite High and the question then comes like Hoffman. Are those Wild Card Card certificates rotated.
+00:49:39 [W] where do you store them, you know who has access to them because there are very powerful security primitive and if they're compromised then you know, they commit identities that can be that can be, you know used to impersonate, you know, any of those
+00:49:55 [W] Certificates operational security around those welts certificate wildcard certificates needs to be quite High and the question then comes like often are those wild kite card certificates rotated.
+00:49:56 [W] This the benefit of using spiffe e particularly Spire the Spire implementation and the workload API is that your the identities that are handed out to your workloads are going to be
+00:50:10 [W] Short-lived and only kept in memory as they are as they flow through the system and make their way out to your workload.
+00:50:24 [W] You know, what your workload does with them after they get it from the workloads API is up to you, but in general the the keys never touch disc for those those workloads identities and their rotated at an at a great frequency.
+00:50:36 [W] even if they are compromised, you know, the blast radius of that compromise despot is kept short
+00:50:41 [W] so, you know, there's I think a security benefit to moving to spiffe e and Spire also, you know as time as you know, spiffe inspired option becomes more widespread the
+00:50:58 [W] Spiffe e identity inside of your workload as your workload identity will become attractive, you know and having like the the uniform spiffe e identifier and having support for that built into different software products and
+00:51:13 [W] Be could be very useful and provides a uniform standard way of crafting your identity.
+00:51:20 [W] Let's see another question.
+00:51:26 [W] Is Ken Spire be used to authenticate Legacy workloads without rewriting them to implement spiffe e and that's a great question.
+00:51:40 [W] And yes, there are several options available.
+00:51:46 [W] One of the options is of course to grab a a proxy implementation that is spiffe e aware and stick it in front of your workload. This could be Envoy.
+00:51:55 [W] for example Spire agents.
+00:51:58 [W] The envoy SDS API and so envoy can use the Spire agent directly to obtain private key and certificate material for establishing, you know, connectivity between other workloads or the proxies. Another option is
+00:52:13 [W] Sidecar we have we have one implemented.
+00:52:19 [W] It's pretty trivial to implement your own and that sidecar.
+00:52:28 [W] It's job is to communicate with the workload API and obtain service identity and then put that identity in some place that can be consumed by your legacy workloads.
+00:52:43 [W] Of continue to build stronger support for you know, because we're aware that some software systems can't change and and so providing ways to kind of Shem those Legacy software systems with the spiffe you workload. API is
+00:53:00 [W] the key to wide adoption
+00:53:02 [W] Next question is how does spiffe e work with Acme?
+00:53:13 [W] So Acme is primarily at this point used as far as I'm aware mostly for obtaining certificates tied into web pki so, you know you it
+00:53:25 [W] All the challenge and responses for acne or based around, you know, proof of possession of a DNS domain and things like that.
+00:53:37 [W] And so it's not really conducive to service identity.
+00:53:43 [W] You know, you're not going to have every workloads inside of your infrastructure reachable over DNS that you control for example, or at least publicly available DNS where you can have some acne provider like let's encrypt
+00:53:52 [W] I work with that and so spiffe E. I think is more or less orthogonal to Acme at this point and second of all the the benefit of spiffe e is that workloads? Don't need to know how
+00:54:07 [W] Their certificates are obtained. They don't need to participate in any sort of complicated protocol that has requirements on exactly like where they're deployed or where you know, whether or not the reachable.
+00:54:22 [W] All they have to do is talk to an agnostic workloads API and leave those sort of details on how the workload identity is is obtained to the implementation of that API so
+00:54:33 [W] That is convenient from like a from an application complexity standpoint because there's just one single small API that they need to touch and they just receive streaming updates of their identity over that API.
+00:54:45 [W] That's all the questions I have so far. If there's any more, please feel free to type them into the chat again.
+00:54:57 [W] I'll be available on the cncf select channel for the maintainers and you know, I'll be happy to also, you know, you can hit at the spiffe E slack at any time and have happy to answer questions and help you out there as well.
+00:55:10 [W] All right, so we're about out of time here.

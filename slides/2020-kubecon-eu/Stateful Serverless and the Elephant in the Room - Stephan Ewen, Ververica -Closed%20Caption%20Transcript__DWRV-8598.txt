@@ -1,0 +1,286 @@
+﻿Stateful Serverless and the Elephant in the Room: DWRV-8598 - events@cncf.io - Tuesday, August 18, 2020 7:00 AM - 86 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:01 [W] Hi, welcome everyone to this talk.
+00:00:09 [W] My name is Stephen Yuan.
+00:00:14 [W] I'm one of the co-founders and CTO at adverb Erica the company founded by the creators of Apache feeling.
+00:00:22 [W] I'm also one of the co-creators and PMC members of the Apache fling project.
+00:00:26 [W] I'm here today to talk about some work.
+00:00:28 [W] We're doing this project in the in the space of stateful serverless.
+00:00:31 [W] So going to talk about yeah stateful serverless, and and the
+00:00:32 [W] And the room thanks for joining.
+00:00:36 [W] So when Q Khan was originally scheduled as a physical event and I was I was starting to make my slides I had to add some introductory motivation slides will then I came actually across something really nice of you a few days ago and
+00:00:53 [W] Motivation much better than what I had initially laid out.
+00:00:59 [W] So I just decided to borrow that instead.
+00:01:05 [W] It's a quote from from Kelsey and a Dilbert comic and yeah, what what they're basically saying if I can try and sum it up in my own words is that there's been a lot of like really cool work done in projects like kubernative is about
+00:01:15 [W] Using the infrastructure layer, but it's also very important to invest on the application layer. So the ways we built the applications above the Frameworks that the paradigms the libraries because otherwise
+00:01:30 [W] We're going to end up with really cool infrastructure and and still, you know, not not really well-built scalable applications.
+00:01:43 [W] So trying to maybe illustrate this in my own words.
+00:01:43 [W] What what they're saying here is if we're starting out with the with the non-scalable application Oregon together with let's say Legacy database and so on and we put this in on top of
+00:01:58 [W] Infrastructure, you know no matter how fancy features of the infrastructure we use where well, we're pretty pretty much still ending up with an unscalable application.
+00:02:14 [W] And yeah, so the idea in this and this discussion that that calcium mentioned there is we should we should probably be looking at least that's how I understand it.
+00:02:26 [W] should probably be looking for for something in the application layer. They are also invest and you
+00:02:30 [W] you application Frameworks and libraries and so on to ya too kind of Heaven have a way to make applications developed on top of these Frameworks which may or may not built on systems like kubernative.
+00:02:43 [W] Yeah, something like magic is scalable.
+00:02:57 [W] It's probably not going to be that magical in the end. But yeah, just look at application Frameworks and libraries that helped build these these distributed scalable applications and and scalability really is only one aspect.
+00:02:59 [W] I think that's that's being that's being mentioned here.
+00:03:06 [W] There's there's a lot of other aspects that that matter as well. Of course, there's the scalability to computation and state there's consistency of the application security observability a lot of things that that currently despite all the efforts on the infrastructure
+00:03:17 [W] I worry a lot about doing the development of the of the application layer and that that is very much.
+00:03:25 [W] what what I would like like to talk about today and like an idea in which direction this is distributed application Frameworks and libraries could go and we're we're we're building a project that falls into this category in the in the Apache
+00:03:40 [W] Old called state for functions that's looking at some of these aspects not all of them.
+00:03:51 [W] I don't I don't think it's yet the Holy Grail but it has some very interesting ideas or interesting directions and thoughts that I would like to share and yeah, hopefully also get some some comments and feedback on from the community here.
+00:04:01 [W] the the project we're doing initially focuses on and say those three aspects of the the problem space how to build applications that inherently scale.
+00:04:13 [W] Boots State and also deal with consistency or state consistency meaning, you know, don't do not get corruption are duplicates in the presence of crashes or on network issues and so on.
+00:04:25 [W] So the the talk title says stateful stateful serverless and the elephant in the room. So state for serverless is really kind of a way in which
+00:04:36 [W] Built to build this abstraction where actually we actually working on top of some of the of the serverless work that's being done both in as part of for example, the candidate project or or you can use this together
+00:04:51 [W] It is from cloud providers like with AWS Lambda.
+00:04:59 [W] The other part of the title The of the is the elephant in the room. So what do I what is what is the elephant in the room here?
+00:05:09 [W] And while we're working on this project one thing that we that we came across repeatedly, is that a big part of why and my personal belief where
+00:05:18 [W] With with aspects like scalable State and consistency and so on all together is that we're some are still relying on a bit of an and a child model with the traditional request/response databases.
+00:05:33 [W] Databases are a bad thing here.
+00:05:46 [W] They're actually pretty amazing thing. But I think we have to we have to rethink a few aspects of the database to to make it like a really fitting player for for this effort of inherently scalable and and inconsistent applications.
+00:05:52 [W] That's what we're trying to do in the city of of functions project.
+00:05:57 [W] So one way to to to maybe give an idea in which direction it goes is a lot of the a lot of the ideas you can you can think of are are motivated by this but this paper that's already I think
+00:06:12 [W] A lot of the a lot of the ideas you can you can think of are motivated by this but this paper that's already I think 15 years older or something like that, but it's actually is it was a pretty influential papers like some of you may have come across
+00:06:19 [W] Or something like that, but it's actually is it was a pretty influential papers like some of you may have come across it as has been pretty popular.
+00:06:26 [W] It's allowed but it's a bit like a like a Bob Dylan song.
+00:06:28 [W] It's like it has some sometimes Nats truth in it.
+00:06:36 [W] in it. And I hope that Patel and wouldn't wouldn't kill me for summing it up and such and such a simple way about it in my words. It advocates for for building applications based on stateful event-driven entities or state flag.
+00:06:43 [W] Actors and in some sense.
+00:06:48 [W] that's really the core of what we're trying to do.
+00:06:52 [W] So to explain really the the ideas that we're trying to bring into this stiffle circular space here.
+00:06:57 [W] Let me introduce you to the to the state for functions project first describe what it is and then give give a brief example of how you can use this to build applications.
+00:07:07 [W] So stable functions the subtitle is a mouthful polyglot event-driven functions for distributed stateful applications.
+00:07:16 [W] I try to break this down into a few more digestible units of the next slides.
+00:07:22 [W] Yeah as mentioned in the introduction. The the core idea is to try and build like an API framework that helps with building distributed stateful applications with
+00:07:34 [W] That inconsistency and and very much like the the motivation and that and that paper that I had that I mentioned.
+00:07:44 [W] starting out with a with a building block. That's as the name also suggests.
+00:07:48 [W] Functions so the the idea is to to model the model applications as very fine-grained functions that that represent entities and really represent them at a very fine grained level.
+00:08:03 [W] Let's say there's one function for each user that that that is currently that exists in your system.
+00:08:10 [W] There's one function for each.
+00:08:17 [W] Let's say inventory item in your in your warehouse this one function for each parcel being delivered at the moment or so, so
+00:08:19 [W] A very fine Grant Management where the function really corresponds to to an entity not not really a group of entities with, you know, like diverse diverse taxes state.
+00:08:28 [W] The it really encourages to model it in such a fine grained Way by assuming that as a function doesn't consume any resources when they're when they're not not invoked.
+00:08:45 [W] And yeah the in some sense it Bears some similarities to if you wish also actor programming with a similar fine grained modeling mechanism.
+00:08:51 [W] The the really crucial thing here is as the other part of the names that will function X suggests is the state for nature of this function.
+00:09:01 [W] It can almost think about it like a local variable. Its function can access a local variable to look at its current state and it has access only to that little bit of state. So let's say the function modeling the I don't know the tennis socks inventory item
+00:09:20 [W] has access to that particular State at any point of time, but it has access to that said exclusively and consistently and then these functions basically message each other again very much like alike in an actor programming so you can if you want think of this whole thing
+00:09:35 [W] A transactionally consistent virtual stateful actor actor system stateful actors in the sense of State for functions that message each other arbitrarily virtual in the sense that you don't have to assume that they
+00:09:51 [W] Active so they're not like standing threads or even, you know, entries and memory and consistent because messaging and state are like transactionally integrated. You don't have to worry about messages getting lost getting
+00:10:07 [W] Getting messages instead getting out of sync and so on. So all these all these issues like retrying or yeah or working with taking care of that State updates are either item potent or retracted.
+00:10:23 [W] You don't have to worry about these things the way we the way we're building this is might be a bit surprising initially, but it actually does have a database behind it instead it it actually rather than proxying all
+00:10:37 [W] Based on a distributed snapshot model. So between all these functions that are that are there with all the with all the state the system draws a snapshot across all these functions and the snapshot is consistently taking care of current state and
+00:10:52 [W] So on to make sure that if we use this to recover from a failure, we don't duplicate or those messages or or anything communication with the outside world is with ingredient Ingress and egress or so.
+00:11:08 [W] This is strictly an event driven system. And also this integration with the outside world is strictly a transaction also picking up events from the Ingress sending them between functions updating State and sending out messages through the event Ingress is inherently transactionally safe,
+00:11:22 [W] don't have to you don't have to worry about sending to placate messages to the outside world or or compensating for for any and any loss or change of state during failures, which is a which is a pretty neat property that
+00:11:38 [W] Gets rid of quite a bit of complexity.
+00:11:42 [W] How does it look like if you if you use the system like this?
+00:11:56 [W] What what what components does it consist of if you deploy it and it consists of yeah, it consists pretty much like a like a classical desegregated architecture with an hour with the state and the database and the stateless
+00:12:02 [W] Of these two parts. Also we have the State field part, which is the stiffer functions cluster running with running running on top of the Apache fling system here instead of a database and
+00:12:18 [W] to the Ingress and the egress streams and then we have we have our functions which we can deploy in pretty much any way that you know that we that we can that we can deploy state in this piece of computation with so
+00:12:34 [W] You know that we that we can that we can deploy state in this piece of computation with so we can we can put this in an a container with an with a request Handler HTTP request Handler behind a service
+00:12:43 [W] Chandler HTTP request Handler behind a service and then deploy it on kubernative so we can we can take these functions and put them onto something like a function as a service platform like AWS Lambda or we can
+00:12:54 [W] A man and a different way behind a Microsoft standpoint and the interesting thing to notice here is that this these functions really are even though they act in a stateful away.
+00:13:06 [W] They are they are actually completely stateless all state that they work with is always supplied to them on demand as part of the invocation and as part of the message so State and messages are given to the functions
+00:13:20 [W] As one unit atomically and that makes the functions themselves really really pure and stateless. So they're very easy to scale.
+00:13:30 [W] They're very easy to maintain their you can you can really operate them like a pure status application this there's one coredns specced in here in the in this philosophy that that I want to highlight which is which is very interesting and it goes back to
+00:13:44 [W] The database we have to rethink a few of these aspects there and try to explain it may be based on on this slide.
+00:13:56 [W] There's a slight typo on the left hand side. The second stream of input events will actually be the result around pretty dense.
+00:14:01 [W] about that. So if we look at a if we look at a traditional database based architecture in our computational part and a database part,
+00:14:15 [W] we typically start starting the application the application receives either the event or it receives the the HTTP requests or any other form of requests with which it is invoked and then it talks to the to the database and
+00:14:29 [W] Stage gets a confirmation or a failure deals with that and then it you know, usually it response to the request in some way.
+00:14:38 [W] Now what we're doing in this state for functions projects actually something something slightly different.
+00:14:44 [W] We're sort of turning this upside down.
+00:14:57 [W] We're seeing everything starts actually in the in the in the database if you wish the database is the part that receives the events and manages the state and then it invokes the application logic with the state and the events together and it can decide when to involve the application Logic for
+00:15:00 [W] When nobody else is currently working on that state. So to make sure that that state is exclusive he used.
+00:15:16 [W] So in some sense, we're changing the role of the of the driving party of the application from from the from the application logic to to the database and the part that reacts us is the other part not the database reacts to request from the application, but
+00:15:21 [W] reacts to request from the database that might seem a bit strange and unimportant initially, but it has some really interesting properties that help with with solving some of these problems and might not be a match for like every possible situation, but when you can actually try to
+00:15:37 [W] Some it actually can simplify a lot of things.
+00:15:43 [W] Let's look in detail actually what happens if an event flows through such a system and going back to this example of of the shopping cart.
+00:15:55 [W] So let's assume some some user Kim wants to add some socks to her to a shopping cart.
+00:15:59 [W] we would receive an event designated at the type card for Kim to add to add a socks and the system would initially route.
+00:16:09 [W] This event to The Shard that they don't stay they don't start shopping cart and would retrieve the state of the shopping cart and then Supply the state and the message to the function together.
+00:16:22 [W] The function would decide what to do with it.
+00:16:29 [W] Typically, you know this case just you know, add this item to the card and then respond with the updated State and a set of messages that it wants to send out which goes again back to the system. So the system will then update the state and send the event and we will make sure that this is a transaction at unit. So there's no failure can of
+00:16:41 [W] No failure in between once the function responded in this response has been accepted like you're safe.
+00:16:44 [W] And yeah, then these events are routed to the sharks that are responsible for owning in this case the the line item or the inventory entry for for the socks. And in this case, we're invoking again the function with the current stage, which is let's say the
+00:17:00 [W] Um and and the action like, you know withdraw Reserve three items from that.
+00:17:07 [W] So the important thing here would be that.
+00:17:14 [W] Yeah, everything is driven by strengthened by the by the system that in one unit manager State and messaging together and and the functions really become kind of pure and even though their state full you can pretend they're stateless.
+00:17:28 [W] They they are only stateful because data supplied as part of the invocation on demand.
+00:17:32 [W] If we try to you know, not deploy such a system.
+00:17:40 [W] How what what parts would we what we need how the hell does this look like actually using it on on on infrastructure like kubernative.
+00:17:54 [W] So what we would actually need the the logic of the functions which we would put let's say just on a deployment and create a service in front of them can even put a horizontal autoscaler around them if you know if we expect
+00:18:00 [W] Out then we would have our staff will function deployment.
+00:18:09 [W] That's that's that's an Apache fluentd flowmill and consisting of several processes.
+00:18:21 [W] It's actually a deployment here notice that for set because aperitif link doesn't really work with with ex did four volumes or anything but instead it is persistence by snapshots threw something at to something like S3 or hdfs or so.
+00:18:25 [W] So this is another part that we need but it's it's an interesting architectural choice, I think because it makes some things actually quite
+00:18:31 [W] it's quite simple to not deal with the with these persistent volumes and stateful sets.
+00:18:36 [W] um
+00:18:38 [W] The the Apache fling clusters also subscribe to the Ingress and egress has in order to receive the messages and send the messages.
+00:18:49 [W] And the same thing actually, you know Maps pretty well also to other infrastructures, like if we for example would like to run this on the Amazon stackrox, so we could just put our functions in Lambda. We have an API Gateway snapshot to S3 and Ingress and egress with kinesis.
+00:19:05 [W] All right.
+00:19:12 [W] So let's actually look at a concrete example.
+00:19:14 [W] how would we for example build a building application based on this?
+00:19:22 [W] Script and status of the user.
+00:19:37 [W] Let's say grab through change data capture from something like this Central user management database.
+00:19:41 [W] We would actually have a stateful function where one function is subscribed to this set of events being a user function and this user function maintains, you know State like what's the user ID the subscription status and the billing interval
+00:19:52 [W] Set of events being a user function and this user function maintains, you know State like what's the user ID the subscription status and the billing interval billing is something that doesn't happen all the time.
+00:19:58 [W] So the first thing we actually need to do is when do we want to do the billing and say we do it end of the month or beginning of the month always and because we want functions only to be active when they really do something. The first thing we do is we actually schedule a a trigger payment
+00:20:09 [W] When they really do something the first thing we do is we actually schedule a trigger payment message for let's say for the end of the month.
+00:20:20 [W] So the function can go away and then this scheduled message is also part of the database and messaging system and basically reinforce the function at this end of the month point in which case the user function
+00:20:26 [W] actually, I'm actually sending a new message with a let's say a generated payment ID or so to a payment function which if this if no function for this specific payment idea existed before it will not will be created
+00:20:42 [W] So what would under state of the current Payment Processing that's a on with with issued a request to the payment provider with not yet heard a response or maybe it has failed twice. We're trying to retrieve later today.
+00:20:57 [W] Otherwise, we're assuming that the I did feel for this month.
+00:20:59 [W] So like the state food processing being part of another function.
+00:21:01 [W] Here's here's a quick Glimpse at a good part of the code.
+00:21:11 [W] It's not a lot of code that this application needs in the end without going through every line of code. The the really important thing.
+00:21:21 [W] I want to point out here is that you can see it's just a bunch of actually messaging for those of you who recognize protocol buffers.
+00:21:29 [W] You'll see a bit of protocol buffer packaging and unpackaging messages instead for functions are inherently protocol buffers. So the
+00:21:35 [W] Some itself doesn't actually really see anything except the target address and some bites and then the target functions unwrap and wrap it into a protocol buffer any messages and then this application really accesses just on the stage pulls out pulls out
+00:21:48 [W] Just a sense a message and then this is done with the state.
+00:21:54 [W] So for let's let's see this in action actually.
+00:22:02 [W] So with the plot this on on a sampler kubernative cluster.
+00:22:06 [W] There are a bunch of pots running here.
+00:22:13 [W] There's the state for functions master and worker processes, which are the equivalent of the of the database of the state management system here with two more deployments for the payment workers. And for the subscription workers.
+00:22:21 [W] These are the two functions that I just explained in the example. We put them in
+00:22:24 [W] Deployments are we could have also put them in the Inn on the same and the same deployment.
+00:22:32 [W] They're just they're just different different request handlers involve through HTTP and through different we can you know through different your eyes also have them in the exact center Planet.
+00:22:44 [W] There's a there's a lock that actually shows the output of the payment worker which will use for a later part of the demo. So we can't see a lot of a lot happening here, but there's there's another sample data flowing around in the back.
+00:22:57 [W] Ground some payments being processed switching to the to a bare patch if link your eye. This is the this is the main operator from flings perspective that handles the state for functions and and we can see from the from the different parallel charts a few hundred events per second going through.
+00:23:09 [W] It's a very tiny Diplomat just for for the for the sample case here. And I think we're far underutilizing it.
+00:23:18 [W] We can use this, you know, you can use all of flings tools to diagnose this application.
+00:23:33 [W] For example, we can look at the back pressure. If our functions cannot keep up with processing the events, then know if link will eventually affect pressure the whole system back to the back to the increases and not pick up events anymore from there.
+00:23:37 [W] All right.
+00:23:46 [W] So one really important thing that we wanted to talk about is the consistency and for payment provider consistency is really important.
+00:23:48 [W] We don't want actually to trigger multiple payments for the same user.
+00:23:51 [W] That's really embarrassing thing that we have to you know handle it so we can simulate actually what happens if a duplicate payment happens and we can we can see it in the in the bottom right window.
+00:24:04 [W] We injected accidentally adapter kit message and we can see that the payment functions immediately pick up this consistency.
+00:24:11 [W] Deviation there's you know, there's there's a response from the payment provider about a payment. We didn't actually even initiate initiate so we can we can try this another time.
+00:24:22 [W] So this is just to show you that the system is actually build up to detect are our sample application detects these inconsistencies.
+00:24:30 [W] So we can simulate actually what happens if a duplicate payment happens and we can we can see it in the in the bottom right window.
+00:24:41 [W] We injected accidentally add up ticket message and we can see that the payment functions immediately pick up this consistency deviation.
+00:24:42 [W] There's you know, there's there's a response from the payment provider about a payment. We didn't actually even initiate initiate so we can we can try this another time. So this is just to show you that the system is actually built up to detect or our sample application detects this inconsistency.
+00:24:47 [W] Aziz so usually this inconsistencies can happen pretty easily. If you in are you talk to the outside world?
+00:24:50 [W] Let's say since I'm messages to Cuff can also update database state.
+00:24:52 [W] So if you actually crash everything at the same time usually have to take some care in order to not have any any duplicates, but here we can really just crash all parts at the same time get them restarted and will it can actually see from the logs that there's no we cannot detect any
+00:24:57 [W] The kids but here we can really just crash all parts of the same time get them restarted and really can actually see from the logs that there's no we cannot detect any inconsistency.
+00:24:59 [W] Like we didn't really get our internal State and the messages that we sent to the outside world out of sync and this is really because the the State updates the message turning it's all inherently transactional integrated so you don't have to worry about duplicates or anything there.
+00:25:04 [W] Yeah, that's that's actually that's actually the end of the short demo. And that's also the end of the of the talk pretty much.
+00:25:13 [W] I hope you enjoyed it.
+00:25:16 [W] What I what I really want to you know to tell you today is this idea of the state for functions project trying to help build distributed scalable consistent applications, and it combines these two two ideas this idea
+00:25:28 [W] project trying to help build distributed scalable consistent applications and it combines these two two ideas this idea of a programming abstraction based on stateful entities and a distributed architecture that
+00:25:35 [W] kind of in re things how to use databases and in this case doesn't use a database that uses a like an event driven system like Apache Chief link, you can think of it almost as a combination of a database and and and the messaging system in one and
+00:25:51 [W] We got some some very interesting results.
+00:26:01 [W] So I want to acknowledge also very quickly. If you other folks that work on this project.
+00:26:09 [W] I'm the one giving the talk, but this is really developed by the Apache fling community. And especially those for folks here deserve a special shout out for for for being the ones that make this project Brigade. So thank you very much.
+00:26:17 [W] And that is it.
+00:26:20 [W] I'm very happy for you to attend this talk and and show some interest in and what we're doing here.
+00:26:25 [W] Thank you very much, and I'm happy to take questions.
+00:26:29 [W] Hello.
+00:26:40 [W] Yeah.
+00:26:41 [W] Hey, so there thanks for listening to the the talk.
+00:26:52 [W] There's there's a bunch of questions that were asked in the in the Box. Let me actually go through through them through them one by one the the first question that came up is how do you differentiate
+00:27:02 [W] Functions from from Cloud State.
+00:27:08 [W] I think that's a very good question.
+00:27:11 [W] There is there's a lot of I think similarities between the two projects in in the problem that they want to solve. They both they both tried to give you this stateful serverless abstraction where the the
+00:27:23 [W] to solve they both they both tried to give you this stateful serverless abstraction where the the application gets this on gets this consistent state by by notion of of integrated
+00:27:31 [W] It's bye-bye notion of of integrated State and messaging and there's a few differences though.
+00:27:37 [W] I think the I think the way that you define functions is it follows slightly different different philosophies.
+00:27:48 [W] So instead for function, basically a function is a this is an HTTP request Handler or if you use an SDK that is included in the project you can you can basically just Implement a function and it
+00:27:57 [W] he ate it with the let's say with the with the type a name space and then the the sdks request Handler would actually work that invoke that function.
+00:28:10 [W] I'm not an expert on Cloud State.
+00:28:14 [W] I think it's it's a grpc protocol that you that you develop it and Cloud State if you want if you want to state for entity there.
+00:28:22 [W] So there's there's a there's a few differences.
+00:28:27 [W] I think the I think the approach that we picked instead for functions hashicorp.
+00:28:27 [W] Has this nice advantage that it it works pretty easily to actually put this also behind something like an API request Gateway on on on Amazon and and run the actual function logic as a
+00:28:43 [W] Function as a service.
+00:28:48 [W] I'm or similarly on kubernative stew to put this in a similar deployment put it behind a service and and scale it independently.
+00:28:59 [W] I think the model that cloud state uses a statue strictly deploy these functions as sidecar containers to the to the state to the system that manages the state which in this case is like a cluster
+00:29:08 [W] Containers to be to the state to the system that manages the state which in this case is a car cluster talking to to a database in the background.
+00:29:11 [W] That is the persistence.
+00:29:21 [W] So, so if you wish AA mean tldr, I think the differences are the the decomposition between State and computers are think different instead for functions. And the other than that, the the stack is different, you know
+00:29:27 [W] Them that the stack is different, you know, in this case. It's a type a chief link and the other case it's it's a cup plus some database that I could persistence can talk to like Cassandra. For example.
+00:29:36 [W] There's another question estate for functions like and is a state for function like an object from object-oriented programming encapsulating data and behavior.
+00:29:48 [W] I guess you can think of it like that.
+00:29:56 [W] I personally like to think of it more as an as an actor. So the notion of you know
+00:30:02 [W] Processing messages or you know methods of the function being invoked only only one at a time one after another at least per unit per entity key.
+00:30:16 [W] So I think different so there's there's there's no there's no parallelism.
+00:30:27 [W] But yeah, other than that, I think that the differences are probably the same as you would you would say that are the differences between an actor and an object from Jake oriented programming.
+00:30:29 [W] The other the other thing maybe worth pointing out is that an object from object-oriented programming like in the naive way?
+00:30:43 [W] it's always around it sitting somewhere and your HEAP memory versus function isn't really isn't really active unless it's involved. Right? The only thing that lets say permanently exists is the state entry in in Apache Chief link and when a message for this function comes
+00:30:52 [W] Put out and the state and the message I deliver to the function and for example, if this function is running on a function as a service provider, you may not have any resource occupied on that's really really a message comes
+00:31:08 [W] Question would it work for multi-tenancy as well?
+00:31:18 [W] Something like multiple users making the payment in absence of a database to handle stores.
+00:31:20 [W] I'm not a hundred percent sure what the second part of the question refers to but multi-tenancy you can you can use this in a multi-tenant fashion.
+00:31:34 [W] I think pretty well. If you assume that the let's say the the administrator of the of the Apache Flink part of the
+00:31:39 [W] the system that you know that that handles the messaging in the state that subscribes to the incoming events that this is like a trusted party. Then the the actual function code can come from different parties that don't don't really um,
+00:31:53 [W] Trust each other because they're running a separate deployment separate containers.
+00:32:01 [W] They can take a not really that they cannot really interfere with with each other.
+00:32:13 [W] They cook they don't have you know, like direct access to two state in the system and so on they can really only yeah, they can really only communicate by sending messages and thus they cannot really interfere with the with the other functions and the
+00:32:21 [W] So say so. Yeah, it's we've haven't really yet spent a lot of time designing it into a strongly multi-tenant system.
+00:32:34 [W] So they're probably a few, you know, like a few quirks you'll run into in.
+00:32:38 [W] Let's say setup configuration aspects that aren't that aren't absolutely optimized for multi-tenancy, but I think the architecture the whole this is pretty promising for multi-tenancy, especially because the computation in different Services is strongly isolated against each other which is which
+00:32:51 [W] It is a very big part that that makes for example stream processing or or other systems where you know code from different parties really runs in the same system which poses a big challenge there.
+00:33:05 [W] There's a question how would the migration to stateful functions work?
+00:33:15 [W] And that is a very interesting one.
+00:33:16 [W] Like how do you actually migrate an application to stateful functions?
+00:33:21 [W] It's a bit of a different a different Paradigm, right?
+00:33:29 [W] So it's not as easy as let's say swapping my SQL for postgres also underneath the hood and keeping everything else the same.
+00:33:40 [W] If you do want an application to to my greatest ever function. You probably do have to to rewrite it.
+00:33:41 [W] That is a very interesting one.
+00:33:51 [W] Like how do you actually migrate an application to stateful functions?
+00:33:52 [W] Say it's a bit of a different a different Paradigm.
+00:33:52 [W] Right?
+00:33:52 [W] So it's not as easy as let's say swapping my SQL for postgres.
+00:33:53 [W] So underneath the hood and keeping everything else the same.
+00:33:55 [W] If you do want an application to to migrate to stay for function. You probably do have to rewrite it.
+00:33:55 [W] of all what one thing that we're trying to to add to the project is tools that that help with that same migrating the state from another another application into set for
+00:34:01 [W] It's meanings meaning taking let's say Adam from the database and actually loading it into the into the into Apache Chief link. So there's some some early tooling for this already.
+00:34:07 [W] It's called state bootstrapping where you can actually you can take some some input data and basically load it into into what's called a safe point for Flink, which is basically like a like that snapshot snapshot archive or so, and then you can you can
+00:34:18 [W] Of the into that into Apache Chief link, so there's some some early tooling for this already.
+00:34:19 [W] It's called state bootstrapping where you can actually you can take some some input data and basically load it into into what's called a safe point for Flink, which is basically like like that snapshot snapshot archive or so, and then you can you can start
+00:34:20 [W] It's actually a bit of involved and involved procedure. So you actually have to write and an Apache Chief linked data stream application for that at the moment to load this data in there.
+00:34:34 [W] We're working on making this easier to Triad to add tools like, you know, just issue SQL query in order to to to import basically Statin to and it is said for functions stay tuned.
+00:34:46 [W] There's there's going to be more releases in the future that that will make this easier.
+00:34:51 [W] This one question. Do you have detailed comparison of your approach to scalable state to scalable state to other approaches pros and cons and I mean there's a scientific evaluation.
+00:35:07 [W] I think we we do have that like there's this there's a conceptual like a bit pretty strong conceptual difference here that that I try to motivate in the introduction like this switching the roads between application and database in terms of acting
+00:35:23 [W] Which which the the programming model also inherently means that you really distribute bye-bye entity because each each set of function by its address and so on can basically live anywhere.
+00:35:40 [W] Points for for like a detailed comparison.
+00:35:45 [W] I don't know.
+00:35:52 [W] I think if somebody is looking for for for research project someone in Academia, so I think this would actually be a very interesting one.
+00:35:55 [W] and I personally don't don't know that something like this already exists.
+00:35:58 [W] I think we might have time for one more question.
+00:36:04 [W] Here's another one.
+00:36:08 [W] How high is the memory consumption of Apache Flink?
+00:36:11 [W] So how do you think is is developed in Java?
+00:36:17 [W] So there is a certain amount of memory consumption that just comes with the jvm fling itself. I think you can you can kind of
+00:36:21 [W] Confident comfortable around the framework with something like half a gigabyte or so.
+00:36:36 [W] So the let's say the the main part of the of the of the framework the the coordination part think if you give it a hundred a hundred megabytes, it should be actually fine. And then there's a good amount of memory that that should go
+00:36:42 [W] The rocks to be instance, which is where the with the with the local state index is stored.
+00:36:56 [W] So this this should always have I would say maybe roughly half a gigabyte of memory for decent performance and so on. So, yeah, the the memory footprint of link is pretty much that jvm with embedded rocks to be you can you can think about it like that so half a
+00:37:04 [W] It's a good it's a good start or obviously always helps with with performance.
+00:37:08 [W] There's one more question. I'm just going to keep going unless the I'm just the organizers cut me off here.
+00:37:18 [W] So how do you handle synchronous communication like getting errors?
+00:37:27 [W] Yeah, I'm
+00:37:31 [W] how do you deal with synchronous communication here?
+00:37:39 [W] And so there's I think there's two two answers to that.
+00:37:42 [W] Just got the message.
+00:37:43 [W] This is our last question.
+00:37:44 [W] Sorry about that.
+00:37:50 [W] If you if you actually deploy this in a way that that your function invocation can can easily can easily block because you can spawn a lot more, you know processes that handle the different implications like if you put it for example on
+00:37:59 [W] The function as a service platform then, you know just through synchronous communication in the the function.
+00:38:06 [W] It doesn't doesn't matter if it blocks if you actually are are limited to the number of processes. You you you are you have then you have some some facilities in state four functions to actually to actually do
+00:38:20 [W] Synchronous requests and asynchronously handle responses. So that's that's pretty I would say pretty much how in many reactive systems you would you do you do it to external requests in terms of consistency.
+00:38:35 [W] How do you do synchronous requests if you if you were worried about consistency, you wouldn't all external communication should actually go through aggressive ends. If you do that, then consistency comes out of the box if you do external communication that defect
+00:38:49 [W] The facts from within the function then basically, it's your own game to worry about consistency again.
+00:38:55 [W] All right, and that there we said thank you very much for listening. And this like this very interesting questions.
+00:39:06 [W] Very cool.
+00:39:07 [W] There's a slack Channel Cube conserver lists. If you want to ask further questions there I'll be I'll be in that slack channel for the next hour or so.
+00:39:20 [W] Feel free to also bring me there if you have some follow-up questions.
+00:39:21 [W] Thanks a lot for listening.
+00:39:23 [W] And yeah.
+00:39:25 [W] Very I'm very happy for for for you guys attending the session and asking these questions. Thanks a lot.

@@ -1,0 +1,328 @@
+﻿Build Your Own Envoy Control Plane: LLTF-1021 - events@cncf.io - Tuesday, November 17, 2020 4:52 PM - 33 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi everyone.
+00:00:00 [W] I'm Steve sloka and today I'm going to walk you through how to build your own Envoy control plane.
+00:00:05 [W] So we're going to introduce some some Court Envoy Concepts.
+00:00:08 [W] Look at how we can Implement those Concepts in two different ways of configuring Envoy.
+00:00:13 [W] And once we understand those we're going to go ahead and build our own control plane.
+00:00:16 [W] Well today we're going to use going for are our source code and we'll have lots of examples that will be available for you at the end.
+00:00:23 [W] Let's get started.
+00:00:24 [W] Alright quick little bit about me.
+00:00:27 [W] So again, I'm Steve sloka my roles on my maintainer of Contour at VMware.
+00:00:30 [W] Contour is an open-source Ingress controller for kubernative.
+00:00:34 [W] It's also a cncf project so enough about that. Let's dig into the project. So
+00:00:39 [W] so what is Envoy so Envoy is an open-source Edge and service proxy.
+00:00:43 [W] It's designed for cloud native applications.
+00:00:46 [W] This is this is a quote from the envoy haproxy website.
+00:00:49 [W] So it's a service proxy.
+00:00:52 [W] We use it all over the place Contour uses it as the state of playing data path component other projects use this as well.
+00:00:58 [W] It's becoming a more and more popular service proxy out in the industry.
+00:01:03 [W] It's used by a bunch of people again, this is taken from the envoy website some
+00:01:08 [W] There's much more in this list.
+00:01:10 [W] It's also used by a bunch of different projects.
+00:01:12 [W] So you'll see here if I move myself all these different projects are leveraging Envoy under the hood. Again. It's taken from from the community website.
+00:01:23 [W] So let's dig into some Core Concepts and terminology in an Envoy.
+00:01:28 [W] And the first thing I want to talk about is the difference between upstream and downstream.
+00:01:32 [W] So any request that's in Envoy and it routes somewhere to some sort of end point or other place. This is what we call the upstream and any request that comes to Envoy from outside.
+00:01:43 [W] What we call the downstream so request will throw from Downstream to Envoy and then from Envoy to an upstream is important to get this right at least for the next 20 minutes.
+00:01:53 [W] just so we're on the same page. But this is what nine voices upstream or Downstream. This is what they mean.
+00:02:00 [W] Okay, so we talked about Downstream. The first thing we're going to introduce is a listener and a listener is a named Network location and it's what you know Downstream clients connect to this will be a TCP or UDP connection and then
+00:02:15 [W] Can also apply filters to this and chain them together so filters an Envoy are sort of the extension magic they'll let you take these TCP connections and you can do different things with them.
+00:02:25 [W] So in our demo we're going to go build out, you know, an L7 or HTTP type Network proxy, which is what kind of what Contour is with that we'll be able to take the CPC TCP connection run it through a filter and that filter will then make it turn that into
+00:02:40 [W] HTTP headers and requests and responses and still make us easier to do this different type of L7 routing.
+00:02:46 [W] There's a lot more to filters and filter chains with you can dig into that on your own again just to introduce it. These are Concepts that you can apply to your server.
+00:02:56 [W] Alright, now that we have that we have routes. So routes are results of listeners listeners will then call different routes.
+00:03:02 [W] So again our L7 model we're going to have a bunch of different virtual hosts that we can route to so you could have, you know, Steve spółka.com and you know vmware.com has two different virtual hosts.
+00:03:15 [W] And from there. I can have them route different places.
+00:03:17 [W] I can also, you know modify the headers on each type and do the bunch of different things. So again, this is this is a super quick and not very much but then just
+00:03:25 [W] Just to introduce that these things called routes are what makes you decide where things should route within your within your customer.
+00:03:34 [W] Now once you have a route you're going to route to a certain place and we're going to route to clusters and a cluster and Envoy is a group of logically similar Upstream hosts.
+00:03:43 [W] So I always think of this as kubernative is right because we're not he's has services and some you services like a cluster where it's just a name and then it points to different subsets of n points an Envoy is the same way.
+00:03:55 [W] So Envoy has again, it's a cluster which has members and members are discovered via service Discovery and a few ways that you can Implement that service discovery.
+00:04:04 [W] The first way is you can just be static, right? You can define a cluster and Define all of the endpoints that exist in that cluster and then move along you can use DNS and you can use stricter logical and the similar in a few ways that they both
+00:04:19 [W] Look up endpoints dynamically or asynchronously but strict will look for all the end points that resolved from a DNS query.
+00:04:26 [W] So say three come back from a query for a DNS entry Envoy will then say all right.
+00:04:31 [W] There's three members in this cluster and the load balance across those three different endpoints now logical will use similarly.
+00:04:38 [W] It has a circleci look up the IP addresses, but it will use the first DNS entry as its result. So we'll just proxy out to that one initially and not without load balancing over all of the endpoint.
+00:04:49 [W] It's in that back end.
+00:04:50 [W] We can have original destination.
+00:04:52 [W] I'm not going to do that today.
+00:04:54 [W] We'll skip through that and there's also another we're going to introduce will skip as well.
+00:04:58 [W] But the one I want to really focus on is this thing called endpoint Discovery service or EDS?
+00:05:03 [W] or EDS? This is our first XDS kind of protocol that will introduce.
+00:05:07 [W] So four clusters we can have again we can statically Define the members or we can have the the members be defined by another lookup service.
+00:05:15 [W] So kind of like how DNS is implemented.
+00:05:17 [W] This will be a service within Envoy that we can then feed in the members of that cluster.
+00:05:21 [W] So EDS is what we're going to do today in our demo.
+00:05:24 [W] And again, I mentioned you can have custom like I'm not gonna get into that.
+00:05:29 [W] Alright, so now that I have these Core Concepts, I need a way to configure Envoy with these these types right these routes and listeners and clusters Etc.
+00:05:36 [W] So there's a couple ways you can do this.
+00:05:39 [W] Sway is to implement a static file so I can just go build a file program in all of the different routes and listeners and all the things that I want and pass it off to Envoy on we will load that file in and then we'll serve traffic based on that.
+00:05:53 [W] I can also have a place on a file system so I can tell Envoy. Hey look in this directory for your files and it'll load them in dynamically from there.
+00:06:02 [W] I can use the rest endpoints for my management server, or I can also use grpc.
+00:06:06 [W] This is what we're going to do today. So grpc is has an advantage of a rest is that rest has the Pole right and it's going to be slow and it's got a lot of overhead because it's always pulling for traffic grpc.
+00:06:17 [W] Is it rich connection? Right so I can stream changes bi-directionally very easily.
+00:06:21 [W] So that's what we're going to implement today in our XDS example.
+00:06:25 [W] And there's two ways to implement these managers servers.
+00:06:28 [W] So the first one is called state of the world and the second one is called Delta. So state of the world says hey say, I have nine clusters in my in my configuration and I add a tenth cluster.
+00:06:38 [W] What I'm the management server is going to do is it's going to pass down all ten clusters to Envoy and say hey Envoy, here's the state of the world.
+00:06:45 [W] This is all the Clusters that I know about.
+00:06:47 [W] And so this is what you should use your configuration against and it works for all the different types right now. Delta is going to work like you might imagine instead of its ending
+00:06:55 [W] Ten clusters down to Envoy is going to send just the one cluster that was added same way if it was deleted with delete one cluster and said that that one deletion down if a cluster is deleted in the state of the world example, it would just, you know, omit that from the list so we would just
+00:07:10 [W] We sent eight clusters down instead of 9 and then on what would say?
+00:07:13 [W] say? Hey this cost was missing and it would be deleted out of its configuration.
+00:07:18 [W] All right. So let's talk about XDS.
+00:07:20 [W] We've kind of hit around it a little bit but we've introduced these different things called listeners called routes clusters and end points, right?
+00:07:27 [W] Well the each have a different Discovery service or XDS protocol that we can Implement so over grpc we can have each one of these return a list of listeners routes clusters or end points just like we just had and if you strip off the first name replace it with an X. You can see
+00:07:43 [W] This is we get this name because there's a bunch of different protocols that exists that you can Implement again.
+00:07:48 [W] These are just four of them introducing there are more and I encourage you to go research this more afterwards.
+00:07:53 [W] but essentially my point here is I want to get across is that this is where you get XDS from
+00:07:59 [W] Now there are four different variance of X DS just like we talked about we have the state of the world as well as incremental we can also decide on how we want to send out our setup our grpc streams.
+00:08:10 [W] So default way is to have a grpc stream per resource type.
+00:08:15 [W] So for listeners clusters routes and end points. I'll have one stream for each type.
+00:08:19 [W] So we'll have four total and that's in this top version. Now alternatively I can Implement 80s, which is aggregated Discovery service an 80s lets me have basically
+00:08:29 [W] One stream for all those different resource types and I can I can send traffic across all different types over that one stream for today's example and today's purposes. We're going to use the simple way which is a stream per resource type as well as the state of the world type updates.
+00:08:45 [W] So having all that background, right and that's a lot all these different concepts.
+00:08:50 [W] Let's take all of that and put it together and let's go build an example and we'll see what this looks like. If you had to go build this yourself.
+00:08:57 [W] So this diagram here is going to be what we're going to actually demonstrate today.
+00:09:00 [W] Refers to eat an Envoy obviously an Envoy will then get past it is a bootstrap config. Right?
+00:09:07 [W] And this is a static file that will pass to Envoy.
+00:09:10 [W] And what's in that bootstrap config essentially is anything you want to preload to Envoy, right? So we can set up static cluster static listeners any kind of static resource in that file, then we can also reference Dynamic resources and that's what we're going to go today.
+00:09:24 [W] Dynamic resource is basically will say hey instead of you loading my listeners in clusters and all those different XDS types.
+00:09:30 [W] Statically we're going to load them dynamically and they're going to come from this XDS server here this box and green and what we'll do is we'll create a cluster a static cluster which will point to this XDS server.
+00:09:41 [W] So when Envoy starts up it will have enough information to go look at that cluster and pull down all of us all with information. Dynamically.
+00:09:49 [W] Now with the extra server needs is this going to be some Source information, right?
+00:09:53 [W] What is it source of Truth in terms of how it understands what routes and clusters and end points.
+00:09:57 [W] It should configure Envoy with this is going to vary depending on your implementation.
+00:10:01 [W] So for Contour, you know, we run on kubernative so quickly that is is our source information.
+00:10:05 [W] So Contour looks for things like services for endpoints for Secrets as well as Ingress objects.
+00:10:11 [W] It takes all that different from information and it makes you know Envoy configuration and then fills in those Envoy.
+00:10:19 [W] Yes caches and then passes those down to Envoy.
+00:10:24 [W] So that is the nutshell of what we're going to do.
+00:10:26 [W] Let's go ahead and let's poke around.
+00:10:31 [W] So the first thing want to look at is this thing called go control point, right?
+00:10:34 [W] Point is a project in the envoy project organization and its a go implantation of the data plane API. So the data plane and Envoy is a bunch of protobufs that represent all those objects.
+00:10:46 [W] We just we just described about in the last couple slides.
+00:10:50 [W] But this one they have they're all ghost truck. So you can import them into your go project and use them from there. The second thing that this project gives you is it gives you a sample implementation XDS server, which we're going to utilize today.
+00:11:03 [W] So instead of you having to go build out all the grpc connections and all the extra overhead and routing you can Leverage The implementation here in this project to go ahead and build your own control point if you like now, you can read through a bunch of things here, but here at the bottom there. Is
+00:11:18 [W] Example server.
+00:11:19 [W] So shout out to this user here who helped build this out.
+00:11:22 [W] I know we used to have to look at unit tests before to get a good example.
+00:11:26 [W] So this is this is great.
+00:11:27 [W] So this will give you a lot of enough information to spin up your own server as it says, right.
+00:11:32 [W] So I'm going to show you the basically the same exact example.
+00:11:36 [W] I took this and reused it.
+00:11:37 [W] But what I did was I added a little bit more Dynamic configuration.
+00:11:41 [W] So instead of it being statically configured. I have my configuration come from a GMO file right and we'll look at that next here.
+00:11:48 [W] This is my project.
+00:11:49 [W] I'll have the link to this at the end of the slides if you want to check it out yourself. So and here when I have is a main dot go and to get started.
+00:11:57 [W] What we'll do is we'll go ahead and create a cash a snapshot cash.
+00:12:01 [W] Now. This cash is the core of this go control plane, you know XDS server the snapshot cash holds all of the different snapshots that exists that we've passed down to Envoy.
+00:12:12 [W] So remember we're talking about setting this state of the world set of set configuration to Envoy.
+00:12:18 [W] so what we'll do is we'll go ahead and look at build up our configuration based on our source information and we'll build out a list of of listeners and routes in clusters and end points and then we'll create a snapshot out of that and we'll pass that snapshot down to Envoy and then on we will load that in
+00:12:33 [W] So whenever this whenever those any of those different objects change will generate a new set of caches will make a new snapshot and then we'll pass that down to Envoy until Envoy.
+00:12:42 [W] Hey, here's a new version gold load this in on will parse that in that's essentially we're trying to do here.
+00:12:48 [W] So, like I said, I have this config file that we created and this config file here.
+00:12:52 [W] Is this the help us, you know configure this serverless amick more. Dynamically. The server has this is my source information again for contour and others.
+00:13:00 [W] This could be a kubernative.
+00:13:01 [W] This could be again depending environment. This is what our whatever it needs to be. But for me, this is going to be the static file here.
+00:13:08 [W] Okay, so to watch this file for changes, we're going to go set up this Watcher. So we first created the snapshot cash.
+00:13:15 [W] We're here to watch her and what the Watcher does is anytime the file changes we get a notification back here over this channel.
+00:13:22 [W] That's all we're doing is we're getting a call back to say hey the file changed and essentially that's going to be our signal to go rebuild a new configuration.
+00:13:30 [W] Now we have that set up. We're gonna go start up or XDS server.
+00:13:33 [W] So here we're going to go ahead and build the server out.
+00:13:35 [W] We're going to pass it the cache again.
+00:13:37 [W] That was the snapshot cash. It created here online 56
+00:13:40 [W] Now that we have that will go ahead and run the server and make it get the pass it up port and for us this will become from a flag will default to 9002.
+00:13:50 [W] So let's go ahead and run this.
+00:13:55 [W] Okay, so we ran the server you can see we're listening on Port 9000 to like we said and here this debug line says this is the snapshot we're going to story Bob.
+00:14:02 [W] So here you can see we have some information in here and what it is is this information matches our configuration file here.
+00:14:09 [W] So if you can look in here you see we've got this cluster named Echo and here I have myself over here for you here. I have this cluster named Echo and if we dig in we can see I've got a listener 0 and here we got to listen to 0 so this snapshot
+00:14:24 [W] Came from this file.
+00:14:25 [W] And what happens is any time we change this file a new snapshot generated.
+00:14:29 [W] So let's take a look at how that happens. So here in this processor.
+00:14:35 [W] You'll see here is we have this new snapshot. I'm sorry this process file.
+00:14:40 [W] And when it gets passed in is the file that changed so the Notifier again since it's an event whenever the file changes and tells us what file get updated.
+00:14:48 [W] So the first thing we do is we just parse that yeah mon into a ghost racked so out here I have this API and it's API defines our our struct in go.
+00:14:59 [W] So coming back to our processor a few parts that in what we do is we actually go and generate Envoy types out of that that yellow file.
+00:15:07 [W] So we'll go ahead and loop through every listener that exists and we'll go ahead and build a set of listeners.
+00:15:14 [W] Right and we'll pass in the name of it the routes and the address and the port and then from there we'll build a set of routes.
+00:15:20 [W] So here's our listener cash and then here's our route cash.
+00:15:25 [W] Then we'll build out our cluster cash here.
+00:15:27 [W] So add all the Clusters and then what a doll the endpoints.
+00:15:30 [W] So essentially by time we get to this point.
+00:15:33 [W] We have a cache full of listeners and points routes and clusters.
+00:15:39 [W] So now after we build those all out we've generated in sense our point in time or state of the world type cash.
+00:15:46 [W] Now we go generate a new snapshot and what we'll do is we'll pass in a snapshot version.
+00:15:50 [W] So let's forgo increment our snapshot version. Basically just increment it by 1 for whatever the previous one was and then we'll also go ahead and toss my place.
+00:16:00 [W] we'll go ahead and pass in the contents. Now, this cache contents will goes and converts my local type that I have here into Envoy XDS types. So if we look at something like listeners,
+00:16:15 [W] you can see we have this resources package and its resources package goes and builds a new resource type called listener not listener.
+00:16:22 [W] Now this type are actually Envoy types.
+00:16:25 [W] So you see here.
+00:16:26 [W] I'm into this listener protobuf.
+00:16:27 [W] So again now we're digging into that go control plane.
+00:16:30 [W] And now we have this listener go struct which lets us create Envoy listeners.
+00:16:34 [W] So we do is we go ahead and build out.
+00:16:37 [W] So I'll go back in here.
+00:16:52 [W] We have route. So here's make route.
+00:16:55 [W] And again, it returns a route configuration and this route, you know has a match in an action again.
+00:17:00 [W] These are Envoy specifics, but these are building out all the different Envoy prototypes.
+00:17:05 [W] We can create endpoints here and then create clusters.
+00:17:10 [W] So the processor goes and builds out a cache of of that Mo file at then generates a new snapshot against that type cut converting all those different types of the envoy types.
+00:17:20 [W] We then make sure that the snapshots consistent meaning do we have all the routes referencing proper clusters and so on if it is consistent we'll go ahead and create a new snapshot will set the snapshot to Envoy and this is where we're actually going to tell Envoy.
+00:17:34 [W] Hey go ahead and load in this new snapshot. And once you have that new snapshot you can then process your update all your cash is locally to get the new configuration.
+00:17:43 [W] So excuse all that said we have all that done now, right? So the next thing I do is we're going to go ahead and spiffe.
+00:17:50 [W] Up Envoy.
+00:17:51 [W] So let's go ahead and create a new window and You tab here and let's take a look at what this Envoy looks like. So as I mentioned we need this this bootstrap cluster.
+00:17:59 [W] I'm sorry this booster a pmo and this bootstrap config.
+00:18:03 [W] We'll go ahead and load and static resources and we talked about loading in, you know, a static cluster 2 point 2 R RX TS server, and that's this so a localhost 9000 to again.
+00:18:12 [W] That's where our XDS servers running.
+00:18:15 [W] Go ahead and tell it create a cluster in Envoy to point to this. Once we have that cluster. We're going to set up all of the XDS endpoints.
+00:18:23 [W] So we're going to set up our cluster or CDs config. Again. We're going to use grpc type and we're going to point it to this XDS cluster created here in this previous step.
+00:18:30 [W] So Envoy knows now that hey, I have Dynamic clusters and they come from this end point here the set of n points. This is similar for LDS or listeners. So listeners going to come from this cluster name.
+00:18:43 [W] Here what's going to set a cluster name and ID and then down here?
+00:18:47 [W] We're going to expose an ad in web page and the other webpages helpful to debug Contour.
+00:18:51 [W] I'm sorry to bug Envoy and look at all the different information that we've loaded into that Envoy instance.
+00:18:58 [W] Okay.
+00:18:59 [W] So now this is up there.
+00:18:59 [W] We'll go ahead and start Envoy.
+00:19:00 [W] We're going to go find the binary local on a machine and we'll pass in that bootstrapping Mo file here using - see bootstrapping Mo so I can go ahead and say ax our Envoy.
+00:19:10 [W] And with the first thing you'll see is when Envoy starts up it loads all the extensions that are compiled in so by reusing the Upstream one here, so by default, we will see as we have all of the different extensions already automatically compiled it and then just logged out for your information
+00:19:25 [W] Down here.
+00:19:26 [W] You can see that we've spun up this this runtime layer, and we loaded one static cluster and that cluster is that XDS serverless.
+00:19:34 [W] We referenced earlier and then you can see that we connected.
+00:19:38 [W] To our server and we added a cluster and we added a listener here.
+00:19:44 [W] So here's listener is 0 and it matches our config and this should be an echo server here right here this update cluster Echo.
+00:19:51 [W] So that could edit as well as my listener.
+00:19:53 [W] So we connected to our server here.
+00:19:55 [W] So let's go verify our configuration real quick.
+00:19:59 [W] So we'll go look at again localhost 9000 and three right?
+00:20:02 [W] I'll refresh this.
+00:20:03 [W] So here we are and what we can see in here is we've got you know a set of listeners.
+00:20:06 [W] So again, listener 000 9000 and again that matches our config 000 on Port 9000.
+00:20:14 [W] We can also see clusters in here so we can see that we have this Echo cluster and it has two sets of n points.
+00:20:20 [W] so dot 244 on nine 101 and Dot 2449 102 again that matches our configuration here.
+00:20:28 [W] So it's called Echo 244 online 101 and I want to
+00:20:34 [W] we can also look at this config dump and this dump shows you all the running configuration and Envoy.
+00:20:38 [W] So again, it shows you all the different extensions that are compiled in.
+00:20:44 [W] Down here a bit further will go to see the static configuration.
+00:20:47 [W] We loaded.
+00:20:48 [W] So here we see static resources and we have our static XDS cluster again pointing the port 9000 and to and then here you can see we've got our dynamic dynamic resources.
+00:20:57 [W] And again, this is that LDS config point the grpc over that same static cluster recreated.
+00:21:05 [W] All right coming down a little further. We can now see our Dynamic clusters.
+00:21:08 [W] So this is what Got Loaded dynamically through our management server.
+00:21:11 [W] So here you can see that cluster called Echo again.
+00:21:14 [W] It comes from this XDS server.
+00:21:16 [W] I'm sorry our endpoints again are coming from EDS mention that back in the service Discovery slide.
+00:21:21 [W] So EDS is the is the source of our Echo circleci, sir. And again, it comes from the same XDS server.
+00:21:29 [W] And again, here's our Dynamic listener because we know that dynamically as well and then here we're loading in those six those filters.
+00:21:35 [W] So here's our filter chain and we're loading in this HTTP Connection Manager, which gives us that, you know L7 proxy routing. Okay. So this is enough to get running.
+00:21:47 [W] Let's go ahead and query this and see what happens. So if I go ahead and curl,
+00:21:52 [W] Localhost 9000 I get a response and you'll see this is this is that simple Echo server that we have running and you see here's the hosting that respond. So we have two endpoints. So if we equate this again, we should get a different one maybe.
+00:22:07 [W] 682 and then here's 3 FC, right?
+00:22:09 [W] So there's those two so I can go ahead and do a curl on this will curl every second and we should just load balance between those two end points. 682 3fc. You can see that right.
+00:22:21 [W] If I go ahead and come into here and I remove an end point.
+00:22:25 [W] Again, as soon as I hit save I change the configuration our callback will fire and goaling will then create a new configuration will then create a new snapshot will pass a snapshot off to Envoy.
+00:22:37 [W] They will update. So once I save this you'll see Envoy down here updated if it come back to our window here now, we're only going to hit the same endpoint so 682 because now only have one endpoint in our cluster right cool,
+00:22:53 [W] So now we can do is we can add another another cluster in a route if you like so we can go ahead and copy this and we'll call this new.
+00:23:00 [W] And we'll put this on nine 103.
+00:23:03 [W] And then maybe nine 104 and the what add a new cluster here.
+00:23:07 [W] We'll call this one new route.
+00:23:10 [W] And a point to the cluster new maybe we'll call this one / through that'll be our prefix. Right so we can do routing on / or / Foo again. Our goal here is the Macon and L7 load balancer.
+00:23:23 [W] So we'll go ahead and save that again our file changed.
+00:23:27 [W] We created a new internal state of the world configuration create a new snapshot and pass that back off to Envoy.
+00:23:32 [W] So now if we go ahead and do our curl, nothing should have changed here for the / endpoint, but if we curl for /foo.
+00:23:40 [W] What was you getting out is computer to different endpoints.
+00:23:47 [W] Okay.
+00:23:48 [W] Alright, so there we go.
+00:23:49 [W] So we got /foo and / running so I think everyone else so I think that's all we have for slides here.
+00:23:57 [W] So if you're interested in learning about more, there's some resources here this top resource is the sample.
+00:24:03 [W] We just looked at so it's the XDS server that I wrote which drives from the go control plane example, but adds the mlperf thing file the go control plan is another place and obviously Envoy haproxy that I owe them again.
+00:24:14 [W] I'm Steve sloka. Please reach out with questions.
+00:24:16 [W] I'm happy to answer more. I'm happy to discuss this more.
+00:24:18 [W] This is quick.
+00:24:19 [W] A good understanding of how it works and how you can build your own management server. Thank you.
+00:24:36 [W] Okay.
+00:24:37 [W] Hello.
+00:24:37 [W] How's everyone doing?
+00:24:44 [W] So it looks like there I'm trying to answer questions as we go.
+00:24:49 [W] Anything else?
+00:24:50 [W] Let's see. Daniel says
+00:24:55 [W] If I have multiple Envoy proxies from different services that I need multiple different configs.
+00:24:59 [W] I can have more than one snapshot.
+00:25:03 [W] How does that work some kind of matching?
+00:25:05 [W] So if you have I mean every every Envoy will when the spine up based on the bootstrap config, it will go and try and connect out to its XDS server. So that can be each XDS endpoint can have its own different
+00:25:20 [W] For server, or they can be the same as I demoed today.
+00:25:25 [W] So I think that's your question. So if you had say you had a thousand envoys, they could all talk to one, you know one control plane essentially and that should work.
+00:25:34 [W] You can also map Things based on the the name of envoy.
+00:25:38 [W] So in the I go control plane, there's a node ID.
+00:25:41 [W] So when the when a specific Envoy connects, it will actually say hey, I'm no tidy. One, two, three four or whatever it is. You can actually send results based on that.
+00:25:56 [W] For more questions.
+00:25:57 [W] Yeah, the recording should come up eventually until you're into the I think this online Forum as well as YouTube and we will go on YouTube. The code is out on GitHub.
+00:26:09 [W] The guy have the posted links a few times I can post them again.
+00:26:18 [W] C looks like
+00:26:21 [W] so dick says seems like a DS is better than x yes. There's a different way to implement.
+00:26:25 [W] So yeah, so a DS Aggregates all the grpc connections together.
+00:26:29 [W] So you do get a performance boost because you don't have a different grpc stream / X DS resource, but then you've got to send everything over one one connection. So there are some gotchas there because you've got to have everything lined up properly in terms of having
+00:26:44 [W] Matching end points and matching cluster is matching routes and everything all lined up properly.
+00:26:48 [W] So that's on you to figure out.
+00:26:53 [W] How can Bluegreen deployment work in Envoy a couple ways you can do that so you can have set up multiple clusters and Envoy.
+00:27:00 [W] So you have a cluster for your blue cluster and a cluster for your green.
+00:27:03 [W] And then what you can do is you can just swap out the configuration so you can say hey on your route say I'm going to reference the blue cluster and then update that config to talk to the green cluster.
+00:27:14 [W] And then that will you know, rotate your between blue and green. You can also add weights to the Clusters so you can create a weighted cluster and Envoy where you add both clusters to 1.
+00:27:22 [W] Out I'm going to give me the plate weights and that's one way to do it with with Canary deployments as well.
+00:27:28 [W] You can either shift the weight from zero to a hundred or you can dynamically move the weights up and down to do a canary deployment.
+00:27:35 [W] Leslie asked is is essentially what helped you does?
+00:27:38 [W] This is what Contour does innocence I can't actually has a custom-built XDS service that we use today.
+00:27:45 [W] We just brought in the go control plane work.
+00:27:47 [W] work. Our goal is to help contribute back to that project some there are some things in there that we need that we don't have as well as the control plane that that we were going to help contribute back to that so we can actually support both today and Contour
+00:28:01 [W] Eric asks, do you have any examples of opentracing open policy agent?
+00:28:05 [W] It don't that might be a different different place to go check that out.
+00:28:10 [W] I don't have examples that I know Contour has examples of how to how to validate, you know resources and in Contour, but that doesn't really to Envoy specifically.
+00:28:23 [W] How do you linkerd e with Envoy on that show you have to go chat with the linkerd E folks and see see how you can make that work.
+00:28:38 [W] So Jim asks, if the file has syntax errors in the config.
+00:28:41 [W] How is that handled in my demo code?
+00:28:44 [W] Not very well.
+00:28:44 [W] Yeah, so I think what happened was is the the mo parser would fail and that would get blown up see either some better places. We could probably make that code better.
+00:28:52 [W] This was just an example.
+00:28:54 [W] I was going to use kubernative to demo it on and it essentially we'd have, you know n****** controller, but I was opting to just make it as simple as possible to reduce the overhead of adding extra stuff tufin.
+00:29:05 [W] So that was that was the goal there.
+00:29:09 [W] What are other projects so it asks?
+00:29:12 [W] What are the other projects that uses these API endpoints?
+00:29:14 [W] I think anyone who implements Envoy is going to set up XD servers again, you can pass in custom static configuration most projects going to have some sort of dynamic configuration to update them.
+00:29:29 [W] The question is does envoy does the envoy recommendation to serve static files you can write so you could totally spin up, you know load in a static file and that would work fine against way up to your to your knees and requirements if you just had some
+00:29:44 [W] Figured she had to run then you could do that in and eliminate all of that Dynamic that's have to do with that.
+00:29:49 [W] But if you had a dynamic place you had to change the configuration a lot, and this would be a great place to do that.
+00:29:56 [W] How can I do percentage based routing I'll be the weights look up a weighted cluster in Envoy. You can attach weights to each different cluster to the load balance across.
+00:30:07 [W] Does go control planetscale de thousands and CPU memory requirement.
+00:30:11 [W] Yeah, so go so Envoy itself is doing all the heavy lifting go control point is just kind of the middle ground. So I know in Contour we've scaled up very far too big numbers that all depends on lots of different things in terms of how many objects you lived in this latter into your
+00:30:27 [W] It's Envoy in terms of n points in clusters and routes and different things and then how much those objects churn is where we've seen a lot of memory usage and stuff and Envoy.
+00:30:35 [W] So it's going to depend on it's like anything that working, right?
+00:30:38 [W] It really depends on how on your environment.
+00:30:42 [W] Tobias asks will Envoy reconnect to The Exodus server through started for some reason.
+00:30:47 [W] Yes, so you can actually run multiple instances of your XDS server and then if one would go down on but where we connect and depending on how you configure that and point. So if it's an IP address, it's good. It's going to look at that same instance like in Contours world. We use
+00:31:02 [W] A service and kubernative. So if you've got, you know a bunch of different instances of Contour running behind that service, then it will pick another one in that list and connect back to that.
+00:31:13 [W] Because I'm we play both as your kubernative or any cloud deployments with auto scaling.
+00:31:17 [W] It should should work anywhere with kubenetes Works, depending on what you're trying to implement. I guess in terms of Ingress control guys should work should work weather.
+00:31:30 [W] What excess service you recommend for local development?
+00:31:33 [W] I'm not sure what you mean by that you can be should be able to run all of this locally as well as in your in a cluster somewhere that we depend on on what your situation is.
+00:31:48 [W] Yeah, I think we have the slack channel. It's that Cube 101 happy to chat there afterwards. The grpc definition files of those are in the envoy project. So there's a data plane or data project you can dig into their
+00:32:03 [W] In the go control plane, if you're going to use go to be here your API spec for that.
+00:32:11 [W] Can you imagine webassembly control plane server?
+00:32:13 [W] Absolutely.
+00:32:14 [W] Yep, what happens when nice replica has a slight delay when updating it depends on which I'm was connected.
+00:32:19 [W] So yeah, if you had, you know, ten control planes with different sets of onwards connecting then you could have some sort of eventual consistency being an issue.
+00:32:28 [W] That's either something you have to deal with or have it only runs run less less replicas. I guess it'd have only you have the character one have kind of a hot spare.
+00:32:42 [W] Can you just share tutorial for Envoy?
+00:32:44 [W] Yeah, this is crazy complex, right?
+00:32:47 [W] Envoy is not easy to pick up.
+00:32:48 [W] So I suggest the envoy proxy website is a good place to start and then chat with folks around here at coupon. This would be a great a great place to pick up pointers from folks.
+00:33:01 [W] If I was single Envoy, what's the benefit of using X DS over reading from the file system?
+00:33:05 [W] There's probably not if you just have one again. If you have a very small very small use case than yeah. This is going to be Overkill. But if you need that in the dynamic world of updating Envoy. Dynamically, this is what you want to do this.
+00:33:20 [W] I think we're almost out of time.
+00:33:22 [W] Thank you all for coming.
+00:33:24 [W] I will be in the slack the 101 slack if you want to ask more questions and we can go from there.

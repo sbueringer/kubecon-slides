@@ -1,0 +1,295 @@
+﻿Improving Network Efficiency with Topology Aware Routing: PMEV-7536 - events@cncf.io - Thursday, November 19, 2020 4:52 PM - 42 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hey, my name is Rob Scott and I get to work with a great team at Google on kubernative networking today.
+00:00:29 [W] Hey, my name is Rob Scott and I get to work with a great team at Google on kubernative networking today.
+00:00:36 [W] I want to talk with you about improving Network efficiency with topology aware routing.
+00:00:43 [W] But before we get into that, I want to provide just a brief outline of how I want to structure.
+00:00:48 [W] Today's talk.
+00:00:50 [W] First I'm going to go through a little bit of background as far as how we got to where we are and then cover our first attempt at apologia. We're routing and some of the limitations associated with that.
+00:01:02 [W] Then I want to explain our second attempt and what we're trying to do differently this time as well as how that actually performs in real life with the simulator simulating millions of different inputs and scenarios.
+00:01:18 [W] Haitians associated with that
+00:01:20 [W] Then I want to explain our second attempt and what we're trying to do differently this time as well as how that actually performs in real life with the simulator simulating millions of different inputs and scenarios.
+00:01:35 [W] Long-term vision for where we see this going in the months and years to come.
+00:01:42 [W] But before I go any further, I have to add some disclaims topology aware routing is hard to get right this talk attempts to show our thought process here and I'll be the first to say this approach is not
+00:01:57 [W] We'll have lots of areas for improvement and things still could change but I wanted to bring attention to the direction. We're going and the improvements were hoping to make you.
+00:02:10 [W] So let's get into the background a little bit.
+00:02:13 [W] Now if you've used kubernative recently, you've probably created a service or a pot or both and if it's a new cluster a relatively new kubernative cluster.
+00:02:25 [W] It probably has the endpoint slice controller running and that watches services in pods and creates and point slices based on those and those endpoints slices are just lists of potties for each service.
+00:02:38 [W] And Kudo proxy watches those and point slices and configures iptables on each node.
+00:02:47 [W] So what does iptables look like here iptables configuration that we're writing is very much based on probabilities.
+00:02:58 [W] So I copied this little snippet from iptables config on a node and one of my kubernative clusters that had a to endpoint service and that just means a service with two pots behind.
+00:03:11 [W] And in this case, we have two key lines here first.
+00:03:16 [W] hunt each node
+00:03:17 [W] So what does iptables look like here?
+00:03:21 [W] Iptables configuration that we're writing is very much based on probabilities.
+00:03:28 [W] So I copied this little snippet from iptables config on a node and one of my kubernative clusters that had a to endpoint service and that just means a service with two pots behind and in this case
+00:04:25 [W] Ability and second. If you don't choose that service endpoint continue down the list.
+00:04:30 [W] And since you haven't chosen that and point, you should choose this second service endpoint.
+00:04:37 [W] So each endpoint has a 50% chance of being Chosen and you can see that same thing scaled out to thousands or even a hundred thousand and points across different kubernative clusters. We rely heavily on iptables probabilities.
+00:04:53 [W] Now this works but it does come along with some issues. Traffic is distributed randomly across all end points regardless of where it actually originates from.
+00:05:04 [W] So in a three Zone cluster traffic is more likely to go to another Zone then to stay in the zone it actually originated from
+00:05:13 [W] and every instance of coop Roxy needs to keep track of every single and pointing your cluster, which means the larger cluster gets the more endpoints every instance of Kudo proxy has to manage which results in slower updates
+00:05:28 [W] Across different kubernative clusters. We rely heavily on iptables probabilities.
+00:05:35 [W] Now this works but it does come along with some issues. Traffic is distributed randomly across all end points regardless of where it actually originates from.
+00:05:46 [W] So in a three Zone cluster traffic is more likely to go to another Zone then to stay in the zone it actually originated from
+00:05:55 [W] and every instance of coop Roxy needs to keep track of every single and pointing your cluster, which means the larger cluster gets the more endpoints have every instance of Kudo proxy has to manage which results in slower updates
+00:07:53 [W] times more latency
+00:07:56 [W] We also have to work within some constraints here Kudo proxy doesn't handle requests directly.
+00:08:02 [W] It just programs IP tables or IP v s and that's great in many cases.
+00:08:09 [W] It means if there's some kind of problem with Coop proxy your networking doesn't break immediately instead. It just relies on whatever was already in iptables.
+00:08:20 [W] Configure IP vs.
+00:08:21 [W] Config, which is good because Coupe proxy is not perfect.
+00:08:26 [W] But unfortunately, it means we don't have visibility into request errors of timeouts and it's really difficult to understand when an endpoint is overloaded.
+00:08:37 [W] And also Coop Roxy is deployed on each node in your cluster.
+00:08:41 [W] So any significant change could be expensive.
+00:08:45 [W] so think about this because it's running on every note in your cluster any change to an end point anywhere in your cluster has to be sent out to every instance of Kuma proxy on every node.
+00:08:58 [W] So for updating endpoints more frequently that's expensive similarly more advanced logic increases CPU utilization.
+00:09:07 [W] Again on each node, which is significant overhead to add on every single node in your cluster.
+00:09:13 [W] So we have to be careful with any approach we take okay.
+00:09:18 [W] So with that background, let's talk about our first attempt.
+00:09:21 [W] By arbitrary topology keys and any order and Cooper oxy would then filter and points based on those topology Keys based on those labels.
+00:09:32 [W] So any endpoints with matching values for those labels would be filtered in and everything else would be excluded from what kublr oxy considered on a given node a wild-card character could then be used to indicate that if matching
+00:09:47 [W] Found traffic should be routed elsewhere.
+00:09:34 [W] So let's take some concrete examples here of this configuration.
+00:09:39 [W] First if you wanted to require traffic stay in the same zone or region your topology Keys might look something like this.
+00:09:49 [W] And if instead in of requiring you are fine with just preferring the traffic stay in the same Zone a region.
+00:09:55 [W] You would add that final wild-card at the end of the field.
+00:10:01 [W] So this made sense, it was a very powerful API, but it did come with some real limitations.
+00:10:10 [W] now first off this was a relatively complex API and what most users wanted was very similar traffic should stay as close to where it originated from as possible and unfortunately that
+00:10:25 [W] Users want it was very similar.
+00:10:22 [W] Traffic should stay as close to where it originated from as possible.
+00:10:28 [W] And unfortunately that really common use case was relatively difficult to communicate with this API and it required configuration on every single service and relatively
+00:10:43 [W] nificant and complex configuration
+00:10:47 [W] Similarly all the logic behind this functionality lived in Coop proxy and that meant that there was extra processing on each node. And it also meant that all endpoints still needed to be delivered to every
+00:11:03 [W] Even if that node was then going to filter those endpoints out.
+00:11:09 [W] It was also a relatively difficult API to implement.
+00:11:13 [W] So ideally topology Keys would be given more weight if they appeared first in the list.
+00:11:20 [W] But this will be quite difficult to achieve safely.
+00:11:23 [W] There's a very real potential that we could overload and points.
+00:11:28 [W] So let's take an example where we have a lot of traffic originating from his own but only one endpoint to serve that traffic. It's easy to see if you had configured a service with prefer or even require Zone.
+00:11:43 [W] That would be very difficult to avoid overlooked.
+00:11:47 [W] Now, you know at first we just did some basic filtering that matched any labels based on topology keys and that kind of work but we still had the same risk of overload. And of course if that wild card character was passed in then
+00:12:02 [W] Do any filtering because while you could Route traffic anywhere, so our initial implementation was very basic and it was hard to get it quite right especially because you could have so many potential combinations
+00:12:14 [W] creation
+00:12:05 [W] So ideally we would prioritize and points matching earlier labels in the list and we'd avoid overloading those endpoints.
+00:12:12 [W] We'd also avoid sending traffic nowhere.
+00:12:16 [W] So as an example, we would avoid sending traffic to you know, no end points if there's no end points in the zone a region. We want to avoid that situation where traffic has nowhere to go and similarly we'd make that
+00:12:31 [W] And similarly we'd make that star character. Behave more like a wild card more like failover configuration instead of just removing filtering all together.
+00:12:40 [W] And although these all seem like break goals.
+00:12:43 [W] They became quite difficult to achieve especially with such a flexible API.
+00:12:51 [W] So with that background we said well, maybe we should try again.
+00:12:58 [W] And in our second attempt, we wanted to identify three goals.
+00:13:05 [W] First we wanted to build consensus around a small set of topology labels. That would be clearly defined and officially supported.
+00:13:14 [W] We wanted to develop a simple approach that covered the most common use cases as automatically as possible.
+00:13:22 [W] And finally, we wanted to only deliver the end points that each node would actually care about instead of continuing to deliver all endpoints to all instances of coop proxy.
+00:13:33 [W] We thought this would make a very significant difference for both scalability and performance.
+00:13:40 [W] So because this is kubernative each one of these goals had an Associated cap.
+00:13:45 [W] So if you're interested in all the details associated with each one of these proposals highly recommend you get on GitHub and go to the kubernative enhancements repo and look up each one of these caps.
+00:13:58 [W] And in our second attempt, we wanted to identify three goals.
+00:14:05 [W] First we wanted to build consensus around a small set of topology labels. That would be clearly defined and officially supported.
+00:14:14 [W] We wanted to develop a simple approach that covered the most common use cases as automatically as possible.
+00:14:21 [W] And finally we wanted to only deliver the end points that each node would actually care about instead of continuing to deliver all endpoints to all instances of coop proxy.
+00:14:33 [W] We thought this would make a very significant difference for both scalability and performance.
+00:14:40 [W] So because this is kubernative each one of these goals had an Associated cap.
+00:14:45 [W] So if you're interested in all the details associated with each one of these proposals highly recommend you get on get Hub and go to the kubernetes enhancements repo and look up each one of these cats.
+00:14:58 [W] I'm going to provide a decent overview of each of them in this talk, but I simply don't have enough time to provide the same level of detail that each one of these caps provides on their own.
+00:15:10 [W] For example keptn 2004 Lee topology where routing kept hat describes a lot of the different algorithms.
+00:15:17 [W] We considered and provides diagrams to show exactly how they might work.
+00:15:22 [W] I don't have enough time to cover every different algorithm we've considered but I hope I still will be able to give a decent overview in this talk.
+00:15:32 [W] So with that said let's talk about the first Cap building consensus around a small set of topology labels.
+00:15:40 [W] now in this cap, we wanted to standardize on the following labels one for region and one for Zone and we wanted to Define region and Zone as being hierarchical this meant that zones
+00:17:24 [W] In this talk, but I simply don't have enough time to provide the same level of detail that each one of these caps provides on their own.
+00:17:32 [W] For example. Keptn 2004 Lee topology where routing kept hat describes a lot of the different algorithms.
+00:17:40 [W] We considered and provides diagrams to show exactly how they might work.
+00:17:44 [W] I don't have enough time to cover every different algorithm we've considered but I hope I still will be able to give a decent overview in this talk.
+00:17:54 [W] So with that said let's talk about the first Cap building consensus around a small set of topology labels now in this cap.
+00:18:05 [W] We wanted to standardize on the following labels one for region and one for Zone and we wanted to Define region and Zone as being hierarchical.
+00:18:16 [W] This meant that zones could not be spread across multiple regions but a region could contain multiple zones.
+00:18:24 [W] We also wanted to state that these labels should be considered immutable.
+00:18:30 [W] This is a very big deal and something like that should dramatically simplify any implementations working with these labels.
+00:18:38 [W] And finally we've left open the door for a third or maybe even fourth key to be introduced in the future, but
+00:18:46 [W] For right now, we want to keep it very simple and straightforward our second goal was likely the most significant one.
+00:18:53 [W] It was to develop a simple approach that covers the most common use cases as automatically as possible and an automated approach meant we needed a good algorithm, but not just a good algorithm a good
+00:19:08 [W] most common use cases as automatically as possible in an automated approach meant we needed a good algorithm but not just a good algorithm a good way of evaluating lots of potential algorithms so we could actually
+00:19:28 [W] Waiting lots of potential algorithms so we could actually understand what a good algorithm wants.
+00:19:34 [W] and so Rick Chen and awesome Google intern developed an open source tool called kubernative topology simulator and this allowed us to plug in any number of algorithm and run our guard against millions of inputs
+00:19:49 [W] Well or poorly it performed and we'll cover a little bit more about this topology simile simulator later on.
+00:19:58 [W] But let's talk about the algorithm that we ended up deciding and of course this algorithm can still change and can still be improved.
+00:20:06 [W] I've tried to simplify this algorithm into just a couple sentences.
+00:20:12 [W] So once the service has enough endpoints subset those endpoint slices by Zone.
+00:20:19 [W] If a Zone doesn't have enough endpoints contribute some from a zone that does.
+00:20:26 [W] So what does it mean for a service to have enough and points?
+00:20:30 [W] Below a certain threshold this approach results in a lot of churn and potential for overloaded endpoints are testing showed that approximately three times. The number of zones was a reasonable starting point here.
+00:20:44 [W] So if you had three zones approximately nine endpoints was a good starting point anything below that risk significant overload potential or significant churn.
+00:20:58 [W] So as an example if you have
+00:21:00 [W] three and points and three zones, you could theoretically distribute them across those zones evenly, but what if one's own is slightly larger than the others or what if all the traffic is coming from one's own instead of all the
+00:21:16 [W] As the number of zones was a reasonable starting point here.
+00:21:15 [W] So if you had three zones approximately nine endpoints was a good starting point anything below that risk significant.
+00:21:26 [W] overload potential or significant.
+00:21:28 [W] churn. So as an example, if you have three end points and three zones, you could theoretically distribute them across those zones evenly, but what if one's own is slightly larger than the others
+00:21:42 [W] or what if all the traffic is coming from one's own instead of all the zones you have significant risks of overlooked.
+00:21:50 [W] And also if there's any changes along the way you have significant risk of churn where everything has to change across all of these zones across all of these license and that gets expensive.
+00:22:02 [W] So at least initially we're proposing starting once we have a little bit of room to work with
+00:22:10 [W] And not just precisely 9 and the 3 Zone cluster case.
+00:22:16 [W] We need to add a little bit of padding both above and below to ensure that we're not constantly flapping back and forth between approaches.
+00:22:24 [W] So as an example the upper limit might be closer to 12 and the lower limit might be closer to six when we're switching between these approaches.
+00:22:35 [W] Now once the service has enough and points we want to subset the endpoint slices by Zone.
+00:22:43 [W] So we're introducing a new label that can be set on endpoint slices and Kudo proxy will be updated to read from this label and only care about endpoint slices for the specific Zone.
+00:22:56 [W] And of course for backwards compatibility kublr oxy will continue to watch and point slices that don't have this label at all.
+00:23:05 [W] But we imagine going forward the vast majority of endpoint slices will get a label like this that indicates which
+00:23:12 [W] each Zone they're intended for.
+00:23:15 [W] Doesn't have enough influence.
+00:23:17 [W] What do we mean by a Zone not having left endpoints now in this case we're talking about the number of expected endpoints, which at least initially will be based on the proportion of CPU cores in a Zone.
+00:23:31 [W] So let's take this example.
+00:23:32 [W] We've got a cluster that has 12 total endpoints and we've got six total CPU cores three of those or half of those happen to live in zone a so we expect
+00:23:47 [W] And we've got six total CPU cores three of those are half of those happen to live in zone a so we expect half of the endpoints to also be delivered to Zone 8.
+00:24:00 [W] Off of the end points to also be delivered to Zone a and similarly one third of the course live in zone B.
+00:24:09 [W] So we expect one third of the expected end points to also be in zone B all the way down the list.
+00:24:16 [W] So that's relatively straightforward.
+00:24:20 [W] But what happens if this isn't the case if there's a zone that doesn't have enough endpoints well,
+00:24:28 [W] To minimize churn.
+00:24:30 [W] We're only going to redistribute those endpoints. Once I threshold has been passed we Define an acceptable overload threshold as maybe 25% and what does overload mean it at least in this context
+00:24:45 [W] To minimize churn.
+00:24:46 [W] We're only going to redistribute those endpoints. Once I threshold has been passed we Define an acceptable overload threshold as maybe 25% and what does overload mean it at least in this context
+00:25:13 [W] As the amount of extra traffic some endpoints might receive so if we expected ten in points in the zone and we only had eight that would mean each of those eight and points were
+00:25:28 [W] Eight that would mean each of those eight and points were 25% overloaded. They had they could get 25% more traffic than might be expected. If everything was evenly distributed now
+00:25:43 [W] expected if everything was evenly distributed now 7 and points on the other hand would be below that threshold because now each of those end points would be getting forty three percent more traffic than expected
+00:25:58 [W] Than expected which is something we're trying to avoid.
+00:26:01 [W] So once we reach that level of difference, it's time to start redistributing and points before then.
+00:26:08 [W] We rely on kind of lazy rebalancing.
+00:26:12 [W] So when a new endpoint comes in it's automatically delivered wherever it makes the most sense. Now, there's a lot more to this algorithm than I can explain in this talk. So if you're interested, we've included a lot more diagrams and examples and
+00:26:27 [W] the cap itself
+00:26:30 [W] But finally you may be trying to picture exactly how this might work. So I thought an example might be helpful here.
+00:26:37 [W] So in this case, we've got nine total pods or in zone a and to end zone see with our original approach.
+00:26:47 [W] All of those pods would be bunched into a single endpoint slice. But with this automatic topology aware routing approach instead what we're suggesting is that
+00:27:00 [W] Three endpoints go into a slice for zone' same with Zone B.
+00:27:06 [W] And for Zone see we only have two end points from Zone see that we can contribute but we have an extra one we can take from zone' so we do that so that's a very simplified way of how we
+00:27:22 [W] That's kind of subsetting woodwork.
+00:27:25 [W] And of course as I mentioned, there's a lot more examples in the cap of earning a large number of potential edge cases we could run into here and finally we want to only deliver endpoints that are closest
+00:27:40 [W] Could proxy instead of delivering all and points everywhere.
+00:27:29 [W] So we've introduced two new Lanes one for Zone and one for region to indicate where an endpoint slice should be delivered and Kudo proxy will be updated to watch and point slices with those
+00:27:44 [W] And so it will specifically not.
+00:27:45 [W] Pay any attention to end point slices labeled for another zone or for another region.
+00:27:51 [W] So in summary, there's three main things happening here.
+00:27:55 [W] One two official topology labels Zone and region are now well-defined to and point slices can be delivered to zones or regions and three users can opt into automatic
+00:28:10 [W] On every surface.
+00:28:10 [W] This will likely start as an annotation but could be extended in the future and maybe if we're lucky we'll get this done well enough that we could even default this to just being enabled and we wouldn't need any configuration at all.
+00:28:28 [W] So with all that background now that you understand how this approach works. It would be helpful to understand how our simulation actually scored this approach so
+00:28:39 [W] To understand our score to understand our results.
+00:28:43 [W] and it's helpful to understand what we were evaluating algorithms on.
+00:28:48 [W] So we gave a high weight to the percent of traffic that stayed in zone and that weight was 45% of the total score.
+00:28:58 [W] Next we cared about overload the proportion of extra traffic that any single and point might expect to receive in a simulation.
+00:29:07 [W] So across our 39 million and puts that we tested every algorithm against our Max overload.
+00:29:16 [W] Got a 20 percent contribution to the total score. So our worst case scenario, you know of those 39 million inputs the single worst endpoint Apollo's in portworx.
+00:29:27 [W] We also gave weight of 20% to our average overload.
+00:29:29 [W] And finally, we also cared about the proportion of new and point slices.
+00:29:33 [W] that would be required with this approach. So we gave away a 15% to that proportion.
+00:29:43 [W] So our automatic approach actually scored reasonably. Well here it managed to keep 84% of traffic in zone which is significantly better than the original approach which you would expect because the original approach wasn't
+00:29:58 [W] traffic in zone but 84% we thought was quite good because all these inputs included a lot of edge cases be kind of edge cases where you'd have hundreds of n points in one zone and only one in another Zone and so
+00:30:09 [W] Some really impressive results given those highly lopsided inputs what we observe when results were more balanced or poor normal was significantly better than even this 84%
+00:30:18 [W] and then next are overload.
+00:30:21 [W] Our overload was quite good on average. It was around 1.7 percent which we thought was a reasonable level of overload and although it's not quite as good as the original
+00:30:36 [W] A reasonable compromise to get to that very high level of in zone traffic.
+00:30:41 [W] And again overload performs significantly better when you aren't dealing with all these wild edge cases that we had in our inputs.
+00:30:50 [W] And finally for extra slices the new automatic approach required approximately 37% more and point slices than the original approach, but even still that did not seem like a
+00:31:06 [W] Issue and definitely seemed worth all the advantages that we got for keeping traffic in zone.
+00:31:06 [W] So overall our simulator gave this automatic approach an 87% score compared to a 73% score for the original approach.
+00:31:19 [W] approach. So we recognize there's still room for improvement here. But we think what we have already is a significant significant step in the right direction.
+00:31:29 [W] And with that I want to talk just a little bit about our long-term Vision here because really we're still in a pre-alpha stage.
+00:31:37 [W] We're still very early in this process and we still could use feedback and we still could use a lot of work.
+00:31:43 [W] Our first priority is to get this into Alpha and get some feedback. We're hoping we'll hit that Target and kubernative 1.21.
+00:31:54 [W] We also have a number of open questions, you know, obviously, how can we improve this approach if you have ideas if you have feedback don't hesitate to get in touch comment on the cap come to Sig Network, whatever.
+00:32:07 [W] It happens to be.
+00:32:08 [W] We'd love to hear what you're thinking and we're also interested in if we can use any kind of similar patterns for DNS.
+00:32:15 [W] We can just make this the default and we won't need any configuration at all.
+00:32:16 [W] Now some longer-term bigger picture questions are how can we Implement? Apologia? We're routing with real-time feedback.
+00:32:24 [W] This is really the goal.
+00:32:26 [W] If we had real time feedback, we could detect overloaded and points and Route traffic elsewhere automatically.
+00:32:33 [W] This is really something like that would be great to include inside kubernative, but it requires a lot of changes all the way up and down the stack and is a bigger project. That will not be done.
+00:32:46 [W] Probably in the next couple of release Cycles at least but we're still thinking about it and we're trying to picture ways that we could actually achieve this.
+00:32:55 [W] And finally, can we do any of this redistribution of traffic without updating and point slices on each change because right now we're highly reliant on updating and point slices to describe.
+00:33:09 [W] what Kudo proxy should do work group proxy should Route traffic, which is fine, but it seems like there's probably a bit more room to add local optimizations.
+00:33:20 [W] maybe in Coop proxy that could require less updates.
+00:33:25 [W] And point slices. So this is just a sampling of the things we're thinking about there's plenty more many of them are addressed in the Caps.
+00:33:34 [W] We'd love to hear from you.
+00:33:35 [W] So, thanks so much for coming.
+00:33:37 [W] My name is Rob Scott. You can find me on slack GitHub Twitter Etc.
+00:33:42 [W] If you have any thoughts about how we can make this even better.
+00:33:45 [W] I'd love to hear from you. Thanks so much.
+00:33:53 [W] All right. Hey everyone.
+00:33:55 [W] Thank you so much for the great questions that have come in through this talk.
+00:33:59 [W] I tried to respond to a couple and chat but quickly fell behind here.
+00:34:05 [W] So hopefully we can run through some of the questions together here in the last few minutes.
+00:34:10 [W] And if I miss any feel free to find me on slack afterwards and the kubernative networking channel and we can continue the discussion there, but with that let me start going.
+00:34:23 [W] There's some of these questions there's some great ones here.
+00:34:25 [W] Let's start with a question from Kristoff.
+00:34:35 [W] It doesn't mean that the flexible API that has been recently introduced will be shortly deprecated.
+00:34:41 [W] Yes. That is Our intention that API reached Alpha it was introduced in Alpha and unfortunately some of the feedback we received, is that it
+00:34:53 [W] It was more complicated than necessary.
+00:34:58 [W] But it made Implement implementations a bit more complex. And it also meant that any user wanting to make use of this functionality that we thought most people would want would have to provide relatively complex configuration on each
+00:35:04 [W] I'd so yeah, there's a bit more in the cap around why we chose to to try a different approach here, but that's a high level idea. But our idea is to eventually deprecated that initial.
+00:35:11 [W] favor of this approach
+00:35:14 [W] Have you considered routing the traffic also within racks or nodes?
+00:35:20 [W] This is another great one.
+00:35:22 [W] This this relates to that first kept I discussed which is about standardizing on topology labels right now.
+00:35:29 [W] We're hyper-focused on these own topology label because that seems to be the thing that 90 plus percent of kubernative users are hyper focused on right now.
+00:35:39 [W] Can we prevent or can we limit cross own traffic?
+00:35:43 [W] And so that is what we are very focused on right now. We also want to eventually add support for region and potentially.
+00:35:52 [W] really we want to consider adding additional topology keys that might be lower down the list more granular like region rack sub-zone other type things, but for now depending on your implementation
+00:36:07 [W] And creatively use these own label to be meaningful and will work on broader more and more advanced implementations going forward, but for right now, we're trying to find
+00:36:21 [W] Covers 90% of these cases and that's where we landed right now.
+00:36:20 [W] What are the ramifications for the work being enhanced and sto 1 8 + 1 9 around locality load balancing?
+00:36:29 [W] I think this is a really good question. Sto has some really powerful features and their locality based load balancing is one of them.
+00:36:38 [W] I am not super familiar with sto. But my understanding is that this feature in STO includes some things that we cannot easily provide in-toto.
+00:36:49 [W] Knative kubernative one of those would be automatic failover.
+00:36:54 [W] So if as I understand it, if one of the endpoints becomes unhealthy, they can fail over to another end point in another Zone that may not be overloaded.
+00:37:04 [W] We don't have that kind of real-time feedback and coo proxy.
+00:37:09 [W] So what we're trying to do is provide as reasonable a distribution of n points as possible to make overload unlikely.
+00:37:20 [W] But we can't or at least with within the tools we have right now.
+00:37:24 [W] We can't provide that kind of automatic failover what this feature does have that sto couldn't do on its own is the idea of subsetting endpoint slices, which I think is helpful in the sense that were saying
+00:37:39 [W] A small fraction of endpoint slices need to be delivered in any one location.
+00:37:42 [W] This will provide significant scalability and potentially performance improvements that I imagine is Tio and others may be able to benefit from as well.
+00:37:52 [W] So they're certainly overlap there but I would say sto right now has more capabilities than something like cou proxy or something like knative inside kubernative, but I think the fundamentals were describing here.
+00:38:07 [W] Here can be applied with a lot of different open source tools that could build on this and make it even better.
+00:38:19 [W] Add another great question.
+00:38:21 [W] What does it mean to put endpoint into a Zone?
+00:38:24 [W] Yeah, that's a really good question.
+00:38:26 [W] Does it mean to move the Pod to a different node in a different Zone that I'm sorry for the confusion there?
+00:38:34 [W] It's a good question.
+00:38:35 [W] What I'm describing there is we are delivering at set of endpoint slices to each zone.
+00:38:43 [W] So basically we're saying this endpoint is now going to be
+00:38:48 [W] Zoomed by this summer.
+00:38:50 [W] So the endpoint Maxell actually belong to zone' but zone' has more endpoints that it needs and Zone C has less endpoints that needs so instead of delivering this extra and point does own a we deliver it to
+00:39:06 [W] Use it so we're trying to give each Zone a reasonable amount of endpoints to work with so that no and point gets overloaded.
+00:39:03 [W] It's not a perfect system by any means but it is trying to be as cautious as possible to prevent potentially overloading and points but still keep as much traffic as possible in zone.
+00:39:19 [W] Yeah that and and another question from James here were the additional labels. You've been thinking about above region or below Zone.
+00:39:28 [W] Yes, one other potential label that we've thought of that isn't really either is cluster and I'm not sure where that
+00:39:43 [W] Not sure where that falls.
+00:39:33 [W] I don't know that anyone share, you know, like the some could view it as above region unclear right now, but most of them like say a sub zone or if we were talking about Rack or something like that would fall below Zone.
+00:39:47 [W] That's a really good question and let me see if there's any others before I go through.
+00:39:55 [W] Yeah as so I really good one how frequently
+00:40:02 [W] will automatic routing get updated.
+00:40:04 [W] Let's say Padma move to another zone or pods were added by HP a so, I really want to cover the auto scaling and implications here.
+00:40:16 [W] This is I'm glad someone called it out.
+00:40:20 [W] This is an area that we really need to figure out and work through with implementation and testing to ensure that our controller implementation does not fight against or conflict with
+00:40:32 [W] Auto-scaling there.
+00:40:33 [W] There is real potential for conflicts there. And the the answer right now is that it's it's a no one potential issue and we need some real testing to understand how the to will interact with each other, but
+00:40:48 [W] That our controller implementation does not fight against or conflict with auto-scaling there.
+00:40:55 [W] There is real potential for conflicts there.
+00:40:57 [W] And the the answer right now is that it's it's a no one potential issue and we need some real testing to understand how the to will interact with each other, but I don't have a more detailed answer quite yet
+00:41:21 [W] More detailed answer quite yet and then I know we're a little over time here. So I'll just take one last question.
+00:41:30 [W] Is there any impact on latency?
+00:41:32 [W] And this is this is theoretical right now, but what I've observed my last coupon talk, we noticed that latency dramatically increased the larger number
+00:41:47 [W] That each node had to deal with so this was at a large scale.
+00:41:52 [W] But if I'd knowed has, you know say a hundred thousand and points that it's processing which is not unheard of then the latency increases significantly what were describing with this subsetting
+00:42:07 [W] potentially cutting that number into a third so even just that could have a significant impact on latency and then the latency impact as far as the cost of
+00:42:20 [W] Transiting across zones is going to depend on where your cluster is deployed. And I think every cloud provider every implementation may have slightly different numbers there. So I don't know that I could comment on that but I would imagine it would be a
+00:42:35 [W] Significant enough Improvement that it would be noticeable.
+00:42:37 [W] Yeah, and with that thank you so much for the great questions.
+00:42:42 [W] I see a couple are coming in on slack now, so I'm going to move over there to the kubernative networking channel.
+00:42:48 [W] Thank you everyone for the great feedback.
+00:42:51 [W] I appreciate it. And yeah, we'll keep on discussing in slap.

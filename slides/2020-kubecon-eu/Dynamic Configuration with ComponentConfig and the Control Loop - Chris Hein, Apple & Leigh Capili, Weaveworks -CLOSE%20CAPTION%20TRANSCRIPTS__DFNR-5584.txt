@@ -1,0 +1,263 @@
+﻿Dynamic Configuration with ComponentConfig and the Control Loop: DFNR-5584 - events@cncf.io - Thursday, August 20, 2020 11:20 AM - 194 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Perfect.
+00:00:03 [W] So let's get started before we jump into the meat and potatoes of this whole talk.
+00:00:10 [W] We wanted to walk through just a little bit of a story a story about configuration and something that you might have experienced.
+00:00:21 [W] I would assume that you have but you might already you might have been born in the new age and not have to experience this.
+00:00:22 [W] So we're going to talk through it. Anyways, so meet Bob bobson SRE at Acme Corp, and he's one of those S3's that manages.
+00:00:30 [W] a handful of servers too many servers that it's somewhat difficult to manage, but he could still do it by hand and bombs on call because he's one of a few people on his team and so he's on call one night and he gets paged and
+00:00:45 [W] Nothing, I assume we've all experienced and so he starts to check out what's going on and he notices that a server restarted and when it restarted it started operating in correctly, and so he's not sure what's going on, but he can see you can see that there's alerts happening.
+00:01:01 [W] And so he starts to look into it.
+00:01:08 [W] So first line of action, as of course, it goes an SSH is into the server and notices.
+00:01:09 [W] It's on fire and starts debugging a little bit notice is that it's the nginx configuration file so somehow that this configuration file was set up wrong.
+00:01:21 [W] So he opens up a VM session now, unfortunately for all the emacs users in the group them are Bob is a hardcore Vim user and he's going to he's going to get on
+00:01:30 [W] and get in there start changing everything that he needs to change. And once he figures everything out, he saves he quits the file and then he goes and reloads nginx.
+00:01:44 [W] And as you'd hopefully expect when somebody was to reload nginx, the server comes back fine and everything's good to go. So
+00:01:51 [W] Yeah, now we're here 24 hours later and Acme.
+00:01:57 [W] I'd like to introduce you to somebody named Carol.
+00:01:59 [W] Carol is a Dev and she's been working on an awesome feature and this feature needs to be deployed. It requires a feature flag to be configured in a newer version of the config.
+00:02:11 [W] And so she's got everything code review.
+00:02:15 [W] She's super excited about it.
+00:02:16 [W] It's going to add value for the experimental user base.
+00:02:20 [W] it's just a subsection of all of the people that acne serves and she hits the deploy button with the approval to start the imperative bash script that Jenkins uses to orchestrate the rolling update of the nginx config
+00:02:34 [W] And things are going good.
+00:02:37 [W] She's watching the metrics things are rolling out all green and suddenly the patch logic inside of that bash script.
+00:02:47 [W] It's just not having it with the newer version of the config that was changed by Bob in his incident response and suddenly Carol seeing 502 s and 400s in Downstream Services because the feature
+00:02:58 [W] Is not enabled globally for a long enough period of time for the future to do its rollout and now the servers are in this inconsistent State we have configuration drift, which is this problem that was supposed to be solved with systems like puppet and
+00:03:13 [W] Now we have mechanisms to deal with this kind of issue and in kubernative land, we just take different approaches.
+00:03:25 [W] We have different mechanisms Chris Could you teach us a little bit about why kubernative API Machinery starts to solve this problem and what the basic mechanisms are.
+00:03:35 [W] Yeah, absolutely.
+00:03:39 [W] So you're probably all familiar with what we're looking at here deployment.
+00:03:42 [W] Yeah mlops just kubernetes and realistically because at this day and age we should all just call ourselves the Emily Engineers.
+00:03:49 [W] This should be very familiar.
+00:03:53 [W] But if it's not we're going to dive into the the nuts and bolts of how this thing works. So
+00:03:56 [W] One of the biggest important things about this is that every kubernative Z Mo file is actually version and it has a version schema that defines it and you can see this up at the top of this file denoted by the GVK or the group
+00:04:15 [W] version kind and what's really interesting and nice about these things is they can be kind of annoying because of how terse they are and how much you have to write and the fact that we all have to deal with this day in and day out but they Define
+00:04:30 [W] Exactly what the state of the world is supposed to be and this is where the the declarative nature of kubernative and kubernative style apis gets really nice. And when you go back into it and you really look at that that GVK you start to realize that this actually
+00:04:45 [W] Really provides us some really good benefits.
+00:04:54 [W] So if we if we debug this a little bit we can see that the group in this instance for deployments is actually apps and the version is that V1 dot V1 tag and then underneath each one of those versions that can be defined and
+00:05:01 [W] Be any number of these that are needed to get to a stable State we have kinds represented. And so under apps. We have things like Damon sets as well and deployment when you start to talk about more the the lower level core object.
+00:05:16 [W] You have things like pods that are just under the V1 API.
+00:05:21 [W] Technically the group is called core, but you don't have to write it. And so it gives us this ability to do things like provide version stability guarantees. So if I have a cluster,
+00:05:33 [W] And I know in my cluster. I have version 1 and V 1 beta 1 if I Supply V 1 beta 1 I know it's going to work because that that API is already exposed and I can expect that my scheme afford that that I'm using that is a valid schema
+00:05:46 [W] Will satisfy what kubernative expects to be passed into it?
+00:05:59 [W] And what's really cool here is we have these structured schemas and we're able to take these and really start to think about them from a machine level and a human level.
+00:06:02 [W] I as a person can go and write this manifest file.
+00:06:04 [W] It does might take me a little bit.
+00:06:15 [W] I might have to go and look at stackoverflow to grab the the actual schema because I don't remember them always off the top of my head, but at the same time I can build tools to actually work with these things. So you
+00:06:16 [W] you see this in the common tooling that we have today that everybody works with whether you're just you're creating a cluster and you're just using Cube cuddle or if you're starting to be a little bit more advanced and work with templating and packaging of your applications using things like
+00:06:31 [W] Customize or even further beyond that into the whole plethora of other third-party tools that work with this things like Helm and Pulu me and cdk there's so many tools out there these days that can use this
+00:06:45 [W] version schema to provide kubernative use a standard API
+00:06:51 [W] Yeah, this is a really great benefit when we get to actually work with these apis, right?
+00:07:03 [W] So say you have Kuma Nettie's or use you're using these kubernative knative tools. Now, you can provide configuration and these apis they promise you stability.
+00:07:14 [W] They promise you versioning you get the benefits of validation defaulting and conversions between these apis using common tooling.
+00:07:18 [W] But if you're just running your own workloads, or unfortunately, I mean we have to run a lot of other people's workloads.
+00:07:23 [W] Just these unix-style programs, right you invoke them and then you give them arbitrary strings.
+00:07:30 [W] It just so happens that we've used flags for so long that every major programming language now has parsers for Flags, but it doesn't have to be that way like the fact that we have - - vs / / or backslash like,
+00:07:43 [W] You know is common in Windows command line tools.
+00:07:47 [W] It's arbitrary.
+00:07:53 [W] There's actually parsers that need to be built into your component into your programs that work with these swags, but those flags are config, right?
+00:07:58 [W] That's how you indirect.
+00:08:02 [W] That's how you change the way that your programs behave and say you're running a lot of programs right because
+00:08:04 [W] We've got these custom parsers and we are able to work with convenient small deployments. But say you're running kubermatic, right?
+00:08:17 [W] This is an example of a smaller kubernative cluster.
+00:08:20 [W] There's you know 5S CDs here.
+00:08:23 [W] There's a couple of kublr it's running for various nodes as well as Coop proxy.
+00:08:28 [W] You've got the API server in a redundant deployment and then you have all of the controller managers and your own web hosting.
+00:08:34 [W] An operator's to support your configuration of the cluster.
+00:08:39 [W] This is a lot of different components.
+00:08:40 [W] Even if you're not running kubernative say you're in an environment like Bob and Carol where you were managing your own servers. The reality is that in order to run modern businesses these days we happen to have gotten ourselves into a world of managing multi program distributed
+00:08:54 [W] Deployments and when you're doing things with flags, it can be hard to make promises across changes to your program.
+00:09:04 [W] Let's consider the kubelet.
+00:09:08 [W] This is one component one instance of it on a single node inside of that kubernative cluster.
+00:09:19 [W] We were just talking about there's a wall of configuration here in the form of flags because the kubelet literally has like a hundred fifty options or something like that and each one of those flags. Some of them are common deliberate some of them you can pass multiple.
+00:09:24 [W] All versions of the flags and it builds into a collection some are accepting integers, but the raw type of flags is a string and so there's parsers that have to be built into the kubelet and the kubelet is the authority on those things.
+00:09:39 [W] So then if you want custom tooling right to be built around this harder configuration problem, it becomes quite clumsy to work with what really is a public API that's represented by these flags
+00:09:52 [W] Tools understand these structures.
+00:09:54 [W] You've got it what import the parsers from the kubelet into your config management tool and the fact of the matter is that this is just something that's very brittle and it's not very fun to deal with either.
+00:10:08 [W] This is not easy to look at if you're an operator trying to understand the difference between some node pools of your kublr deployments. And this is true as well for any of the workloads that you might be building yourself.
+00:10:19 [W] yourself. And so the kubernative solution that we've been playing with in more recent versions of the releases.
+00:10:22 [W] It is to support what's called componentconfig here.
+00:10:27 [W] We have an example of the kubelet configuration.
+00:10:29 [W] Just the very beginning of that API that would be equivalent to the flag set that we were looking at before and this allows us to use kubernative style apis groups versions and kinds in we've talked about how humans like to read and author these because
+00:10:42 [W] all is a better format than a bunch of strings on one line and tools like them because it's a good serialization format and it gives us types and versioning so that we can do formal patching
+00:10:57 [W] And munging of config as well as the fact that it's a version schema which just helps everybody right? And so that allowed that enables tools to build Eco systems that rely on that version being supported inside of the kubelet for a specific period of
+00:11:12 [W] Time and then it also lets people pick their own strategy for upgrading.
+00:11:17 [W] and
+00:11:20 [W] so we've got kubelet we've got componentconfig, right the fact that you can load it kubernative API owned by the component that needs to be configured directly from a file.
+00:11:36 [W] But then we want to get out of this world of where components are out of sync with their context.
+00:11:39 [W] And so you need some sort of controller.
+00:11:42 [W] They're all there isn't always a controller that's taken care of you and so in the kublr we've been running an experiment called Dynamic kubelet configuration.
+00:11:47 [W] What dynamic kubelet config will do is you tell the kubelet. Hey in the a petabyte-scale
+00:11:51 [W] Answer me that you connect to there's a config map that's holding your config.
+00:11:57 [W] It's holding all of the data in a raw format that you can then load in and validate and default and convert yourself.
+00:12:05 [W] And this means that we are using the kubelet controller to also reload, its own config and change the way that it behaves.
+00:12:12 [W] So this is a pattern that's a quite useful but
+00:12:17 [W] We need some way to do that conversion, right this is this kind of creates a problem.
+00:12:30 [W] So if the API server isn't what owns the kubelet config API then we don't get the benefits of all the Machinery that's built inside of the API server.
+00:12:39 [W] Inversions defaulting and validation that's normally provided as those apis are defined in registered inside of what would normally be hosted in kubernative.
+00:12:49 [W] But now we don't get that luxury.
+00:12:52 [W] So since the kublr is written in go what we can do is we can import the same libraries that are necessary to do that APM Machinery inside of the API server, and we can use some of those same functions inside of our kublr.
+00:13:04 [W] It's config implementation. This allows us to
+00:13:06 [W] To support the alpha and beta versions of the kublr configuration concurrently with a single version of the kublr we do this through an internal Hub type.
+00:13:20 [W] So at the top is diagram you see is is apps internal deployment.
+00:13:25 [W] But imagine having a kubelet configuration be the internal type and then you have these bi-directional function pairs each. One of these lines are these spokes in the diagram connecting to the hub allows us to then get from V 1 Alpha 1 to the internal type
+00:13:35 [W] Or V 1 Alpha 1 through the Hub type to the be 1 beta 1 version so you can build tooling around these apis by importing the go knative library. And now it's fantastic that we have these
+00:13:50 [W] internal types that we can use go native libraries and API Machinery to extend our tools are actual programs that need to run but in a world of controllers and operators,
+00:14:05 [W] Actually have the luxury of the API server Chris.
+00:14:11 [W] Would you tell us a little bit about cri-o is yeah.
+00:14:14 [W] So as least calling them CRTs.
+00:14:18 [W] They're also represented as custom resource definitions and you've probably heard this term.
+00:14:23 [W] It's gotten a lot of buzz in the last year or so.
+00:14:27 [W] it originally spawned from a feature called TP ours or third-party resources, and it's been around for a bit and kubernative. But when you start to actually dive into it, it's not that complex if you understand.
+00:14:35 [W] What a kubernetes style API is and so in this example, you can see that we have an API version and a kind and that API version being a pi extensions k8s dot IO / V 1 so it's a stable API and it has a kind of custom resource
+00:14:50 [W] Mission and as we kind of like dive into these things you start to realize what it really is doing. So it is allowing us to take a kubernative API server.
+00:15:02 [W] just the raw a pi server.
+00:15:06 [W] No extra servers. No extra pods that are actually having to serve direct request and it allows us to dynamically create apis against that that control plane.
+00:15:17 [W] So in this example, we're defining out in the under the spec field. We are defined a group of GitHub dot Godot Hind.
+00:15:20 [W] Dev and then under it. We actually Define some kinds so we have the kind of repository.
+00:15:31 [W] We defined the list kind so that kubernative knows how to parse these these attributes and then we Define the singular and plural version so that it understands the the way that these things are structured and how people might address them and then the last thing in here you're defining a version
+00:15:42 [W] And so this is taking a yam will manifest and saying I want to tell kubernative that I'm going to give it this new object and it again doesn't need an extra Server doesn't need anything special.
+00:15:57 [W] It's just a Jama manifest and then kubernative starts to do some special magic with it.
+00:15:59 [W] So Chris years saying that if I just give Kuma nineties a CR D then I can specify a type of object and it will create an API for me and give me all of the benefits of the community is a pi server for free.
+00:16:15 [W] Absolutely, which is what's so cool about these things.
+00:16:19 [W] And I think that they're probably one of my favorite features realistically and crouppen and I spend way too much time doing these as you can see this example is about creating GitHub repositories, like who thinks of who wants to go and manage GitHub using
+00:16:30 [W] Genetics it's a weird experience and and more like an experiment for me to do but as you can see here, we're taking Cube coddled and saying get with an output of the ammo and we're calling against repositories this resource that is not in every kubernative
+00:16:45 [W] It's non-standard.
+00:16:52 [W] It kind of doesn't make any sense, but it's fun to play with and now I can say I'm going to create a repository sample and under it when you really look at this object.
+00:16:58 [W] You can see everything that's going on behind the scenes.
+00:16:59 [W] I have my GVK to find that we defined using that kubernative manifest before the actual crd manifest.
+00:17:13 [W] And so it's GitHub dot Godot hind up Dev V 1 Alpha 1 again from that last slide when we showed showed the version getting exposed and the kind is now repository so I can Define
+00:17:14 [W] fine these things create as many of these as I want Cube cuddle apply them and kubernative is going to go and dynamically create these endpoints exactly what Lee was asking about creating these end points that you see under the self link under metadata.
+00:17:29 [W] So it's going to be /yeah eyes the group The version the actual kind of resource and then the repository the actual name of the resource that it's fetching and so dynamically creates these things and allows kubernative to store those resources for you.
+00:17:43 [W] So what about the other benefits that I mean, it's like we can declare the schema of our data like do I get validation and like what's the value of versions? If I can't convert between things yeah the kubeedge community thought of it all.
+00:17:59 [W] We've got we got ways to do all of these things.
+00:18:05 [W] So at the actual llamo level you can Define the schema perversion and so as you can see here, we're using open API V3 schema and say for instance under this we have a spec attribute and under that there's a expect there to be a
+00:18:16 [W] Paige and I don't want to get requests that are that are rejected from from GitHub.
+00:18:23 [W] So I have a pattern match on that attribute.
+00:18:32 [W] I'm always going to make sure that it matches a true URL. So it's going to have to have www or it's going to have to have HTTP or https and then whatever else follows after that so that I know that I can pre validate in essence before I send off to another end point
+00:18:39 [W] And even beyond that I can do things like matching based on the type so I can expect an integer. I can expect a string and I can create these complex structures and as Lee was asking about the the versioning and all that stuff.
+00:18:54 [W] These are perversion as you can see across the top and also on the next slide where we Define out those versions.
+00:19:02 [W] So now I can go through and say I'm going to define a v 1 Alpha 1. I'm going to serve it and we'll go into what these fields mean in a second and I'm going to store that V 1 Alpha 1 and then I'm going to define a v 1 beta 1
+00:19:09 [W] going to serve it and then I'm also going to define a V1 and serve that one true as well.
+00:19:19 [W] So now I have this the structure where in that in the comments.
+00:19:21 [W] There is actually where you define that schema that we just talked about.
+00:19:24 [W] And so now I have three different versions all exposed at the kubernative control plane.
+00:19:29 [W] I didn't create a web server.
+00:19:30 [W] I didn't create anything.
+00:19:32 [W] I didn't set any up any proxying or anything like that.
+00:19:36 [W] It's just purely exposed. And anytime I make a request to V1. It's going to it's going to try and actually
+00:19:39 [W] Serve that request and and fulfill that request now.
+00:19:44 [W] This is where we get into the weird space.
+00:19:49 [W] Now when when Lee was talking about API Machinery conversions and how that's Works in in componentconfig. We have something similar in this space, but we do it a little bit differently because now we're on the on the back end so we can't just do it client side so we
+00:20:00 [W] Like Define a conversion strategy for these and so you in this example or using the web hook conversion strategy.
+00:20:15 [W] You can actually you define the versions that you want to convert between so when these API server gets a v 1 or V 1 beta 1 it's going to know to take that object and lob it over to this web server that were exposing.
+00:20:21 [W] You can configure the mutual TLS between the API server and that and that webhook server you define the path you want to request a pain and it sends you a just a standard.
+00:20:33 [W] Fact that you can parse validate convert into whatever you need and then pass it back to the API server. Now how this all works behind the scenes is continuing to be slightly different but still the same notion at the end of the day if you notice back in
+00:20:44 [W] In the versions slide. I talked about served and stored in that example.
+00:20:56 [W] I was using I was serving all the API so that anybody could Supply a v 1 Alpha 1 V 1 beta 1 or V 1 and I need to actually go and convert those to store into that V 1 Alpha 1 which is what I defined what you what I told kubenetes to make the
+00:21:06 [W] An STD about so to do that behind the scenes the web Hook is an Essence taking in and converting and treating that V 1 Alpha 1 as the Hub type that we defined earlier.
+00:21:20 [W] So when you do this you define and this is following the patterns that we've developed within Cuba during these days.
+00:21:33 [W] so this is a form of a form of those API Machinery, but instead you define a convert to in a convert from instead of having a handful of auto-generated functions from API machinery.
+00:21:38 [W] So this is saying I want to convert my V 1 beta 1 to my view 1 Alpha 1 and if I wanted to convert back because I expected to get a v 1 beta 1 object back. I can convert that back through before passing that back to the user and same goes for the
+00:21:50 [W] V 1 Alpha 1 and it's kind of interesting here is like as you're starting to realize we can tell kubernative that we want to store any type of object.
+00:22:00 [W] I created a repository here.
+00:22:03 [W] It's nothing to do with kubernetes, but it doesn't really do me any good when you really start to just realize that this is just being treated as a data store solely. Can you talk a little bit about controllers and how those work?
+00:22:13 [W] Yeah, I'd love to so controllers are the exciting idea of kubernative in my opinion. Right? And the value of a controller succinctly is that it allows us to take that declared data and then build a level
+00:22:28 [W] A great system around what it declares so that we can get reliable convergence Behavior.
+00:22:38 [W] I say level triggered which is different than if you've ever heard of an edge triggered system which uses events or changes in values translated as events to cause controllers to operate on those changes
+00:22:48 [W] We're in a level trigger system.
+00:22:50 [W] It's different.
+00:22:53 [W] You see this a lot in pull based workflow is like puppet and Chef where they're constantly looking at the current state of what is declared and desired and what is actually there now in a level triggered System since you're always aware of where you want to be
+00:23:05 [W] Where you are, you can reliably compute what needs to be done to get you to the desired State and what makes kubernative controllers more fun than what we had in previous systems.
+00:23:21 [W] Is that the kubernetes API server exposes. This thing called The Watch the watch is enabled by the consistent data store of SCD, and it's got some Machinery in there that gives us a stream of events with some guarantees
+00:23:33 [W] and so without at CD you don't kind of have the basic mechanisms to be able to build Edge triggered reconciliation in a level trigger system and so because of the machinery and
+00:23:48 [W] The mechanisms available in the API server combined with what SED gives us as a data store. We can get much more rapid reconciliation from are reliable controllers.
+00:24:04 [W] And so when you combine that technical solution of a controller with the fact that we can extend the kubernative API with custom resources.
+00:24:13 [W] This allows us to build our own controllers that allow us to model declarative control of what would normally be really error-prone and require people to be involved.
+00:24:18 [W] And I think that that's super exciting.
+00:24:22 [W] So controller. Is there the big idea but you might have heard the hot term of operators right Chris.
+00:24:29 [W] Can you help me understand?
+00:24:30 [W] What's the distinction here?
+00:24:31 [W] Yeah.
+00:24:33 [W] Well besides being an awesome buzzword these days.
+00:24:37 [W] It's there's there's some meat behind this.
+00:24:45 [W] So what an actual operators meant to be is it something that takes that that control Loop Theory and the way that we're building kubernative and it tries to take non-standard to linkerd.
+00:24:48 [W] To bring them into that world.
+00:24:58 [W] So you can you've probably experienced things like there's a there's a net CD operator out there for example, and so that that is taking a complex tool chain and trying to make it so that it is an automated system that can be leveraged by kubernative.
+00:25:05 [W] these can you take and say I want an STD instance and it's going to deploy those resources into your cluster may be outside of your cluster wherever it needs to function and convert them into this the system of reconciling to a desired State
+00:25:20 [W] And so as you can kind of Imagine, these are all are a lot of these systems are built off of older style apis. And this is just bringing it into the new world taking getting rid of those are trying to hide I guess more or less the imperative systems that are under the hood, but
+00:25:35 [W] This is the unfortunate thing about this is their applications in themselves.
+00:25:43 [W] Which means there's more for you to manage.
+00:25:45 [W] its means Bob's got more work to do or somebody's got more work to do to actually make these things work and to keep them up and keep them stable and keep them configured.
+00:25:54 [W] And so that's kind of where we're this whole thing starts to connect back together.
+00:25:58 [W] These operators are going to cause a lot of overhead.
+00:26:03 [W] need that config to be managed and you also need to make sure that you're not leaking the abstractions of what's really going on.
+00:26:09 [W] Under the hood and making sure that you define a solid API that follows us declarative patterns.
+00:26:16 [W] And this is where we're bringing back in the notion of okay.
+00:26:20 [W] These probably are going to be be created out of the box with things like Flags.
+00:26:21 [W] And so we're back to this. Yes world.
+00:26:23 [W] that seems a little problematic right we talked about how Flags you know, as you're trying to maintain the configuration of a componentconfig become a little bit difficult to maintain guarantees for you know, especially if you're writing an operator and you're trying to distribute that to other teams
+00:26:38 [W] Deploying and getting value out of the new apis that you are controlling you want to be able to give somebody a guarantee that the way that the operator is configured to work is going to function next year.
+00:26:54 [W] And so maybe instead of using Flags. We could adopt the kubernative knative solution. Right what we're doing in the actual components inside of kubernative.
+00:27:02 [W] Can we use componentconfig inside of operators?
+00:27:05 [W] Right? So in this diagram we have a deployment.
+00:27:08 [W] Ain't a deployment is facilitated in kubenetes because of other control loops that are running in the cluster.
+00:27:20 [W] We have the controller manager, which is actually operating the deployment struct and then creating pods.
+00:27:22 [W] We have the coop scheduler which is assigning those pods two nodes.
+00:27:35 [W] We have the kubelet watching for pods to what end up on it snowed and then actually schedule it with the conflict maps and secrets and volume mounts and all of that properly configured so that the Pod runs in the way that we specify right and so we have these control loops taken care of us if we put a componentconfig.
+00:27:38 [W] It config in the data field of a conflict map and then project that volume out into the operator container inside of our deployment.
+00:27:49 [W] Then we will end up with pods that have that data on the file system that gives the operator freedom to then import API machinery and own the API of the componentconfig dynamic version of this example
+00:28:01 [W] Involves a little bit of different Machinery here. What we would do is we would modify the operators control Loop to actually keep a watch with the API server for its componentconfig from a data field.
+00:28:14 [W] This could also be driven by secret instead of contact map.
+00:28:21 [W] And so instead of relying on the controllers that are inside of the cluster say we wanted to play the operator externally from the cluster but still get this Dynamic componentconfig reload.
+00:28:29 [W] This would be the analogy to the dynamic kublr config experiment that we've been running.
+00:28:31 [W] But directly built into the operators control of to change the way that it behaves and so this is how we can use componentconfig and the existing examples and kind of like history that's already been
+00:28:47 [W] Establish their for the technical implementation of using kubernative apis to give promises for configuration for our controllers themselves bootstrapping them actually running them and getting them to connect an API server do leaders election between themselves
+00:29:02 [W] Austin Mitchell TLs, but there is an even more interesting World beyond componentconfig beyond just bootstrapping the controllers and getting them to update in a consistent way and that has to do with then using custom resources
+00:29:17 [W] Control Loop to change Behavior Chris.
+00:29:20 [W] Can you tell us about it?
+00:29:25 [W] Yeah, absolutely. Love to again series are like are my bread and butter these days.
+00:29:27 [W] I love the thoughts that you can do with these things. And so taking taking custom resources and trying to fit this into a model of managing configuration and dynamic configuration.
+00:29:40 [W] It's pretty fantastic because you have informers that are built in as long as you're using the client go libraries and all that you have informers that you can set watches on and you can say anytime this
+00:29:47 [W] big cri-o
+00:30:16 [W] And that allows us to automatically have those versions schemas directly with any controller runtime based project.
+00:30:30 [W] And so when this gets released that'll end up in operator SDK, it'll end up in Cuba later and you'll be able to dynamically create operators that are already using these are create controllers that are already using these configuration files, but then we can we can lunge new worlds into it to do.
+00:30:39 [W] That that runtime level configurations so we can do things like configuring the the way that storage class has work in kubernative use, for example, how would you select a different storage class and we can build those methodologies into this pattern
+00:30:54 [W] Lady want to talk about Sir manager and Contour.
+00:30:59 [W] Yeah cert manager and client or have some great prior art on this there some of the earliest and most successful controllers and operators in the ecosystem and certain manager has this idea of an acne issuer.
+00:31:13 [W] And so if you have these namespaced issuers or cluster issuers, then you are able to then pair those up with the certificate objects that ultimately need to be certified by the issuer.
+00:31:26 [W] that's running and this is an example of certain manager providing multiple instance of configuration API that then changes the way that the control Loop treats other resources in the same cluster
+00:31:41 [W] And then we get to Contour which is my favorite.
+00:31:49 [W] They invented this idea of namespace Delegation.
+00:31:51 [W] I'd really like to chat with who came up with this but I saw a great talk by Josh Russo a couple of years ago talking about this idea.
+00:31:59 [W] We also use this idea of namespace Delegation inside of flux has Helm operator.
+00:32:05 [W] And so this is a it's a very powerful pattern that allows you to use a custom resource of one type.
+00:32:11 [W] In a parents or administrative namespace and with the way that you declare that custom resource in that administrative namespace you can change the way that the controller reacts to and behaves on custom resources of another type.
+00:32:25 [W] In the Target namespace and so the way that they use this in Contour is with their old Ingress route API, you could do Ingress route delegation, which would allow you to administer the way that sub domains were treated in other namespaces to
+00:32:41 [W] Tenants and then in flux with Helm operator, we have a Helm release delegation, which allows you to declare Helm releases in one namespace that ultimately end up deployed in another namespace. So great pattern.
+00:32:56 [W] Just one other example would be that if you were to say create a configuration resource for your operator, you could add a flag to turn it off without actually disabling or scaling down the deployment that backs it and that is a very powerful debugging thing that you could put in
+00:33:11 [W] You also see this with ignore annotations in that kind of thing, but creating formal apis around that so people can depend on the version so that you know, the you always have a reliable way to turn off your operator for the years to come that. It's supposed to be delivering value to you is
+00:33:26 [W] Something to consider when building your own controllers, so great examples from The Real World and ultimately I think that when you combine the mechanisms with controllers in the kubernetes world we can get away from
+00:33:41 [W] Configure of problem right Chris.
+00:33:46 [W] absolutely and you can kind of see this. I mean if we if we really start to look at it the new world of this is going to allow Dynamic configuration be passed directly to your operators.
+00:33:55 [W] The control Loop is going to go and go and configure everything for you.
+00:34:00 [W] And so this world of a server that's out of sync.
+00:34:01 [W] It's just not going to happen.
+00:34:10 [W] So realistically if we look at Carol's example again, she's going to deploy it's going to active for actively reconcile and eventually get to their correct state.
+00:34:14 [W] So again, thank you so much for coming to our talk.
+00:34:16 [W] I'm Chris. Hi.
+00:34:17 [W] I'm Lee and please get in touch with us or got time.
+00:34:23 [W] We're open for questions.
+00:34:23 [W] Thank you.
+00:34:25 [W] Anybody has any questions we're here to help out.
+00:34:41 [W] I see one question in there. We'll make sure and get our slides posted to sketch so that you can actually download these.
+00:34:46 [W] Thanks for pointing that out.
+00:34:49 [W] well, we don't have any further questions in just want to shout out a great life tweets adding more context and a good place to discuss on Twitter from Rich and then feel free to bring any more topics about
+00:35:16 [W] Just in general extending kubernative.
+00:35:20 [W] He's but we can talk about componentconfig and that kind of thing in the slack Channel as well.
+00:35:24 [W] Thanks Lee for the compliment.

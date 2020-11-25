@@ -1,0 +1,516 @@
+﻿Day 3 Keynotes: ZHDA-2010 - events@cncf.io - Thursday, August 20, 2020 9:25 AM - 262 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Rancher is the market leader in open source, Cloud knative kubernative management and allows you to manage and scale workloads consistently across thousands of clusters in any environment and support any certified kubernative distribution
+00:04:08 [W] Rancher is the key to unlocking the full potential of kubernative a hospital shifting to remote patient care in 48 hours a university moving hundreds of apps quickly to the cloud.
+00:04:22 [W] They're redefining what's possible now and VMware is helping them do it.
+00:04:29 [W] Rancher is the market leader in open source, Cloud knative kubernative management and allows you to manage and scale workloads consistently across thousands of clusters in any environment and support any certified kubernative distribution.
+00:08:49 [W] Rancher is the key to unlocking the full potential of kubernative a hospital shifting to remote patient care in 48 hours a university moving hundreds of apps quickly to the cloud.
+00:09:04 [W] They're redefining what's possible now and VMware is helping them do it.
+00:09:10 [W] Hello and welcome to the last set of key notes for the first ever virtual coupon Cloud native Khan. And today my cat decided to join us to kick us off. We have Derek Argueta.
+00:10:22 [W] Derek is a senior software engineer at Tesla. But before that he worked at Pinterest today, he will provide a comprehensive overview of how Pinterest servicemeshcon from static configuration files to a dynamic centralized control plane,
+00:10:36 [W] Please welcome Derek.
+00:10:38 [W] Everyone.
+00:10:46 [W] Thanks for joining me.
+00:10:49 [W] My name is Derek and I'm going to give him the story on how we built a servicemeshcon scratch at Pinterest.
+00:10:50 [W] The Story begins with the traffic engineering team which are joined in 2017 and was relatively new at the time.
+00:11:04 [W] We had adopted the edge infrastructure as our domain particularly the CDN and DNS infrastructure as well as our Ingress load balancing to our front-end applications.
+00:11:11 [W] One of the first projects that I was able to participate in on the traffic team was replacing our HTTP proxy Insider Ingress load balancer.
+00:11:12 [W] The English load balancing architecture at Pinterest consists of a cloud will bouncer of the ghost of set of HTTP proxies that can do more rich and feature complete proxying such as HTTP routing on headers or paths or provide Rich stats on survivability the proxy that we were using at the time.
+00:11:27 [W] I'm was lacking some core features that we wanted in our proxy and was constraining our ability to innovate and go faster in the Ingress load balancer.
+00:11:35 [W] We looked at the existing proxies available and did a feature comparison of what they all provided Envoy checked all the boxes that we needed for an haproxy. But we were particularly excited about the C++ API that allows us to do whatever you want inside the proxy with a type safe
+00:11:51 [W] And fast language along with the strong unit testing framework and awesome build support.
+00:11:58 [W] We were also really excited about the open source Community around Envoy was very receptive to any issues that we had and people were willing to work with us on workarounds or to encourage us to contribute poor quest to the envoy codebase and improve the proxy better for it. Make it better for everyone.
+00:12:12 [W] To get ready for Envoy.
+00:12:16 [W] We did a lot of operational homework to make sure that we had fast and reliable deployments.
+00:12:20 [W] Well integration with our ci/cd and monitoring and alerts.
+00:12:24 [W] We wrote to plenty of fun books around Envoy to make sure we're prepared for when things could go wrong and we wrote numerous extensions both internally and open source to make Envoy feature complete and provide exact parity with our existing proxy.
+00:12:35 [W] Our objective here was to have such close feature completion that we could essentially swap the load balancers and nobody would notice.
+00:12:41 [W] The bottom center image is the email announcement that was sent out for once we had successfully launched Envoy but launching Envoy was only just the beginning of the mesh story meanwhile elsewhere in the infrastructure.
+00:12:56 [W] We had a big migration occurring to shift all services to empty LS. The service framework team sibling infrastructure team that manages serves to servicemeshcon was working on the Frameworks that all these languages used to get them ready for TLS.
+00:13:07 [W] We started with the Java service framework since Java is one the most commonly used languages at Pinterest and that migration involved a lot of work including bug fixes and libraries and a massive coordination efforts to ensure that deployments were safe.
+00:13:20 [W] Once the completion or what's the migration for Java was completed.
+00:13:25 [W] We looked at the long list of languages that we had ahead of us python node C++ Elixir and go and thought man.
+00:13:33 [W] We really have to complete this all over again for each of these languages.
+00:13:38 [W] that sounds like a lot more work and not to mention the intricate petabyte-scale in the languages.
+00:13:43 [W] How do you make sure that python tools libraries play nicely with the C++ libraries and so forth and all this is TLS over Thrift as well to add another layer of complexity rather than repeating all this work for
+00:13:50 [W] All these Services again.
+00:13:54 [W] We started looking at Envoy has a solution to terminate TLS elsewhere and infrastructure the way that we have completed. Our load balancer infrastructure is such that although it can be deployed to arbitrary hosts and accept arbitrary configuration using
+00:14:06 [W] environment variables that are set by your deployment tooling so we looked at doing just that we played around with taking some non Ingress hosts and adding them into the envoy deployment group as an experiment to say what happens if you put Envoy there and once it is there where
+00:14:21 [W] Figures in look like and play around with the different settings that we needed to successfully terminate TOS on a canary machine. Once we had a successful configuration going we adjusted our Ingress load balancers to recognize this new deployment environment that had Envoy permitting TLS.
+00:14:36 [W] And using Envoy is incremental routing verse re-weighted routing.
+00:14:45 [W] We gradually shifted traffic from non Envoy TLS to Envoy with TLS. And eventually we got some good looks like this which if you squint a little bit it's kind of starting to look like a mesh right?
+00:14:53 [W] We have Envoy on both ends proxy and traffic and so once this TLS formation project was completed and people started to see the value that Ava was providing that if we could put it elsewhere it could take care of all these really difficult problems that we had across a variety of programs.
+00:15:06 [W] Which is and thus began a great flooding of use cases and feature requests and the common vernacular around Pinterest included metaphase II and measure 5, I'd managed to Phi is 2, of course to add a service to the servicemeshcon proxy traffic and
+00:15:21 [W] If I'd was the state of whether a service has been added to the servicemeshcon.
+00:15:26 [W] While we're adding all these services to the servicemeshcon troll thing stayed relatively simple one of envoy is shining feature that many people know it for its XDS API that allows it to config be configured over HTTP or grpc and we did Leverage
+00:15:42 [W] Service Discovery since service Discovery is a highly Dynamic component with hosts coming in and out of surface covered all the time, but the other configuration aspects of envoy like routes clutches and listeners didn't really change all that often for us, which is treating them maybe once or twice a week.
+00:15:57 [W] Maybe then we're off to think that if we were giving an act of migration, but those false stayed relatively static once they were in place.
+00:16:07 [W] So we figured why are we going to add complexity where we don't need it?
+00:16:10 [W] And so we just kept these as flat files that get deployed to the hosts.
+00:16:14 [W] And these are just Envoy configuration files handwritten full yellow files. And as we started to add more services into servicemeshcon found this configuration starting to become more difficult to manage and so start to introduce Jinja templating as a means to
+00:16:25 [W] You control the complexity as well as to build higher level abstractions that other developers can use to adopt the servicemeshcon.
+00:16:47 [W] Deep that having all the configuration in a single repository also allowed us to do a lot of powerful static analysis and sort of compiler level controls on the configuration when a person is compiling the data templates, we can check and verify things such as routes
+00:17:04 [W] Was point to a valid cluster so we never end up with a bad crowd and production.
+00:17:16 [W] We're also using Envoy is schema validation tool to make sure that all the configuration options that people were using would actually be recognized by the data plane. Once it got into production.
+00:17:19 [W] This has saved us many times from Bad configuration options even just typos or whatnot that get post into a pool requests and to see itools which check and say no this is going to work this is going to be to production and so we can fix our configurations before even putting it into the pipeline.
+00:17:34 [W] At this point we had really nailed the fundamentals of what it meant to package and deploy Envoy in a generic fashion.
+00:17:45 [W] We had the ability to deploy Envoy to any service.
+00:17:46 [W] There are deployment tool.
+00:17:48 [W] We have the ability to configure Envoy for any service.
+00:17:52 [W] There are compiler tekton compiler in configuration pipeline.
+00:17:54 [W] We had templates in the configuration to provide a simple interface and providing the ability to write drawn bow when needed just in case we had some crazy use cases that required more in-depth Envoy expertise, but also had a build system.
+00:18:06 [W] Through the open source software project that allowed us to write C++ extensions apply patches and regularly synchronize our Envoy build with options code.
+00:18:19 [W] We were often thinking are up to encode up to twice a week deploying new Envoy builds and the build system that allows us to do that help this go very quickly.
+00:18:24 [W] We also had a static analysis system that I just mentioned for a configurations that make sure that our config changes were relatively safe to do.
+00:18:33 [W] But the fundamentals in place we started to get a lot of new use cases and feature requests from teams outside of traffic.
+00:18:48 [W] One of the my favorite use cases here when the first ones that came from security is internal web Envoy. The idea being that Pinterest has a lot of internal web services websites that are running for a variety of reasons deployment tooling or say an ml tool
+00:18:55 [W] Analyze scoring on images whatever you could imagine. We wanted all these websites to you safe security defaults, even though they are internal to VPN.
+00:19:03 [W] To do so the security team built a configuration pipeline that enables Envoy to be deployed with the standard and well accepted security defaults for web services such as csrf protection course protection TLS termination and clickjacking across scripting prevention
+00:19:19 [W] Is all this without the web developers having to really do much except to find their service and the envoy configuration Jinja language the key idea here being that internal web Envoy while being a really cool pattern and deployment strategy is really
+00:19:35 [W] Just another note in the mesh.
+00:19:39 [W] It's not a unique case of need to cater to we simply need to write to the configuration DSL for it.
+00:19:46 [W] And then treat it just like any other no to the mesh deploys to a host and given an arbitrary configuration.
+00:19:48 [W] This now runs the front of all of our major web services including open source software such as fabricator and Jenkins as well as a variety of internal web services.
+00:19:56 [W] so more meshmark of these cases, I'll start to come our way after proving the success with internal web Envoy the web infrastructure team had a particular interesting case where the deployment patterns use for the web app really difficult and fragile to work with and it was constrained to team from adopting newer
+00:20:13 [W] Such as kubenetes.
+00:20:14 [W] By analyzing the problem.
+00:20:29 [W] We realize that this is really a routing problem. And if we could write an Envoy filter that would correctly about requests to an arbitrary designation that we wanted to go to we could very much alleviate the problems at the Webster team is facing and allow them to adopt newer infrastructure.
+00:20:31 [W] And so to do so, we wrote a novel extension then the circulatory team came to us and said well if we're deploying on way everywhere then perhaps we could do SLI monitoring in a very generic way for HTTP and thrifts which is true
+00:20:44 [W] Regardless of what language you are using we could deploy all their front of your service and have Envoy monitor for success and error rates and Report those back and the site Bode team can then compose error budget reports that are generic to any application that's deployed within Pinterest infrastructure.
+00:20:58 [W] And the Privacy legal team came to us as well and said oh, this is really cool.
+00:21:03 [W] Your proxying all ztp.
+00:21:03 [W] Traffic the envoy that means you could probably see all the cookie header Zealand passed around and make sure that the cookies being used are what we allow it to be used with a concern of user privacy in mind.
+00:21:18 [W] We don't want to be accepting third-party cookies that we find malicious or it could compromise user privacy.
+00:21:22 [W] And so Envoy provided a really powerful observability point where we can inspect all Cookie traffic and make sure that all the cookies were what to expect.
+00:21:31 [W] Be that they have proper expirations and they're using the right semantics for cookies such as secure only and HTTP to do. So, we also wrote an OP extension to solve this problem as well.
+00:21:39 [W] And so we started to accumulate all these external use cases and start to really become a platform that people wanted to use we often do not have to ask people to use Envoy.
+00:21:51 [W] It was more often that people came to us asking.
+00:21:55 [W] Can you put Envoy in front of our service and every like to read reflect on how did we get here?
+00:22:07 [W] How do we build this mesh will most seemingly accidentally we started off with an Ingress load balancer and ended up with Envoy being deployed everywhere and having many new use cases that we had never for seen before.
+00:22:09 [W] And I like to leave them got here by solving business problems first.
+00:22:14 [W] We had a meeting saying let's build a servicemeshcon what business problem is it that we need to solve in. The first is problem. We needed a more reliable and better disability in our English slow down surgeon.
+00:22:27 [W] And so we deployed Envoy then we need to tell us termination.
+00:22:32 [W] So we took Envoy has is and put it elsewhere and then very custom use cases came in like cooking monitoring and SLI monitoring for which we could rights extensions using this powerful C++ API that we love and in that process.
+00:22:43 [W] We began delivering incremental progress and showing business value at each step.
+00:22:49 [W] There was no mass time or people are waiting for a new mesh. It was kind of incrementally growing and accumulating new use cases that were very specific to the problems that Pinterest needed to solve in this process.
+00:23:02 [W] We also unified the traffic and service framework teams.
+00:23:04 [W] We found that they were solving very similar problems in regards to proxying and servicemeshcon Taz we decided to unify this efforts in following the idea that every Envoy
+00:23:13 [W] Roxy is just a note in the mesh the Ingress elotl answers from the meshmark.
+00:23:19 [W] Knative aren't really that special. They're just more of a proxy is getting configuration.
+00:23:22 [W] We also got here by having a build system that allows us to write these powerful Envoy extensions and customize the behavior at the data plane while you do want to or create as much of the control plane layer.
+00:23:36 [W] It's very powerful to have the ability to manipulate the data plane Behavior. HTTP cookie monitoring is not something you can really Implement as a control plane feature.
+00:23:43 [W] This thing that has to be done at the data plane when it's running the traffic through it and lastly but most importantly we got buy-in from teams outside of the traffic team.
+00:23:52 [W] It wasn't the traffic team pushing for people to adopt our infrastructure.
+00:24:02 [W] It was a lot of people asking to use traffic infrastructure and that's a fantastic position to be in as an instructor team and throughout all of this we of course will grow and incrementally evolve the mesh to handle more complex use cases and our control plane is increasingly becoming more
+00:24:07 [W] Bustin centralized and we now scream our configuration tufin grpc instead of flat file is deployed to host but we always push this complexity until we actually need to do it and focus instead on solving business problems first. Thank you for joining me
+00:24:22 [W] the story of how we built a servicemeshcon trust
+00:24:24 [W] Thank you Derek. And really appreciate the pragmatic approach to adopting Cloud native Technologies in your stack next up.
+00:24:37 [W] We have dr.
+00:24:38 [W] Thomas D jacquimo. Thomas is the president of engineering and Innovation at Susie today.
+00:24:46 [W] He will highlight some exciting work being done in cncf community projects to adapt Cloud native Technologies for Edge use cases, please welcome. Dr. Thomas di Giacomo.
+00:24:54 [W] Hi everyone, and thank you for joining This Cloud native is Edge knative to short discussion.
+00:25:13 [W] I'm Thomas the Giacomo from Souza and the one thing I both cannot ignore and cannot talk about today is Souza and Rancher the chameleon and the cow or the so-called comedian. Now that it's out of the way, let me
+00:25:20 [W] How we see Club knative Technologies and many of them coming from the cncf community efforts or based on them how they are applicable to edges cases Edge Computing as a lot of applications and across many different Industries.
+00:25:35 [W] Its adoption keeps growing similarly to cloud computing Edge Computing requires infrastructure application and data management and above all is smooth and tight integration with on-prem private data centers and public
+00:25:48 [W] It's and a while the other service approach of clouds and the device based perspective of age. May initially seem very different.
+00:25:59 [W] They are actually not disconnected to be successful.
+00:26:02 [W] They are called dependent on one another.
+00:26:04 [W] So let's take a concrete example, which smart almost smart enough to be self-driving cars.
+00:26:10 [W] And bear with me the picture of the forest shall make sense, very soon as an agent cloudbees realization.
+00:26:16 [W] So even though there's a lot of compute units and sensors inside a car cows can be seen as the end point of such Edge architecture girls in that Forest other leaves and they happen to be green because they are small so they
+00:26:32 [W] In as well and smart cows to not only collect Sunshine there.
+00:26:39 [W] They are generating tons of data.
+00:26:42 [W] Some of it is processed locally close to the computes. As for instance latency is not a very good friend of driving reaction time. Some of the data is going back to the branches of the trees going back to the on-prem or
+00:26:54 [W] Located data some tells of the automotive manufacturers where it is stalled analyzed processed and filtered out.
+00:27:04 [W] is a two-way street. Well, the leaves get updates and instructions from the branches to
+00:27:10 [W] and actually that's a multiple ways traits with exchanges coming from and to the trunks as well and Trunks here are public clouds hosting Sunrise data and user applications connecting with and to the car.
+00:27:24 [W] Last but not least and I would have even argue that it's the most important part of the entire Forest is the ground the underground.
+00:27:33 [W] that's where the seeds are fertilizing and supporting the health of this entire ecosystem.
+00:27:40 [W] And that's basically you users and companies itm developer professionals and teams tools and processes to manage applications infrastructure security observability and so on this is the layer that makes the
+00:27:52 [W] They are Forest possible reality.
+00:27:55 [W] So Cloud native Technologies are very relevant for edges cases either directly or with some adaptations.
+00:28:09 [W] And in any case they help connect the dots with compute for instance as Linux and containerless can virtually Run Anywhere.
+00:28:09 [W] To really to illustrate that let me share just a few examples and there's many more of some of the projects and where they could sit in that Forest as each layer as different purpose and different requirements Our Lives. The edges
+00:28:25 [W] Can be anything from sensors get ways to small data centers.
+00:28:33 [W] Usually there's a lot more leaves and branches and Trunks and there's a also much smaller.
+00:28:36 [W] Hence the need for optimized lightweight Solutions.
+00:28:39 [W] Solutions. So technology is like kubeedge or k3s enable Edge friendly kubenetes environments or Longhorn Edge friendly storageos system storage back-end.
+00:28:47 [W] The specific needs at that level apply to anything networking and connectivity as well as the operating systems with special flavors of Linux for Edge.
+00:28:58 [W] Technology is running on specific hardware and chipsets are often needed at that level as well and arm is an example of that.
+00:29:06 [W] Going to the branches are unprimed data centers.
+00:29:12 [W] That's where you have a little more resources more traditional computes and infrastructural setups.
+00:29:20 [W] This is also well Rook with safe will be a very relevant storage back-end and it is well full-fledged kubenetes distributions and crystals can sit too.
+00:29:26 [W] And then to the trunks we have the Services Public clouds over there. Say a Kaz KSDK and adults.
+00:29:35 [W] All of that has to come together if anyone becomes unhealthy not implemented.
+00:29:43 [W] Well not talking to the others properly jonte of forest is at risk on the ground.
+00:29:50 [W] We need to abstract this whole ecosystem as much as possible yet.
+00:29:55 [W] All the components and all the layers of that Forest which are living and evolving things. And of course Edge Computing networks get very fast very large very fast and the include very different types of clouds and
+00:30:07 [W] Is thankfully there are projects that give us the men to cope with all the layers via multi-cloud multi cluster and Edge management capabilities.
+00:30:17 [W] So in closing, I'd like to remind you that first across Industries and use cases Edge Computing does require an integrated infrastructure that spans from Edge to go to clouds second Cloud native Technologies are now being adapted and used
+00:30:33 [W] 4-H Computing itself and more importantly these advances will enable kubenetes and cognitive Technologies to become the unifying platform that make Edge Computing available to the world.
+00:30:47 [W] I hope you take advantage of your time here at cook on to learn more about those projects and others and that you remember you remember that cloud native is really Edge native to thank you.
+00:31:00 [W] Good time of day everybody.
+00:31:06 [W] Thank you Tomas before I introduce our next speaker the very mysterious Vicki, you know, you might have seen her earlier today.
+00:31:17 [W] I want to say I am so proud of everyone and so thankful that everyone's doing the class without the reminders.
+00:31:18 [W] Thank you.
+00:31:18 [W] Everybody.
+00:31:19 [W] Keep it up.
+00:31:22 [W] It makes our community so lovely and warm and I really appreciate it.
+00:31:27 [W] And I know that the keynote speakers really do so for our next speakers Vicki Vicki.
+00:31:28 [W] She's my lovely co-chair.
+00:31:31 [W] She's a staff software engineer at lift and
+00:31:32 [W] So yesterday, but yesterday, I hope I guess days were blending into one should give us updates on kubenetes and today. She'll tell a story of Hell in four teams can quickly get a handle on their systems on how their systems are running by monitoring from the end user perspective,
+00:31:48 [W] Please welcome back Vicky.
+00:31:49 [W] Hi, so I'm Vicki and I am the co-chair of this conference along with constants.
+00:32:08 [W] And today I want to talk to you about how you can observe kubernative without losing your mind.
+00:32:11 [W] So I'm a software engineer at left. If you were paying attention.
+00:32:22 [W] I was previously a manager. So at some points in this talk, I might put on my manager hat.
+00:32:24 [W] And this is following a theme from my talk last year. So I want to talk about complexity again because this is really a topic that comes up all the time from different angles.
+00:32:41 [W] So last time I talked about complexity to your user and how do we simplify the user experience this time?
+00:32:53 [W] I want to talk about complexity from The Operators point of view and how you can simplify things for your infra team.
+00:32:58 [W] Okay, as an operator set the zero is to deploy your kubernative.
+00:33:07 [W] That sounds simple enough.
+00:33:08 [W] Okay. So let's deploy all of these things actually had to go into my team's repo to look at like what things I missed and there were actually quite a bit, but
+00:33:22 [W] I think you get the point that there are a lot of pieces to the system.
+00:33:32 [W] You don't need all of it to work like to get a vanilla kubernative deployment.
+00:33:35 [W] You don't need, you know even half of this stuff, but I think for a typical Enterprise installation, this is really what you're looking at.
+00:33:43 [W] So you're looking at like a lot of Pancakes?
+00:33:49 [W] Okay, so yeah, everything installed and running as seems like things are green and ready to go. So now you're ready to go on your Cloud native journey and onboard all your users and your applications.
+00:34:07 [W] And we all know things go wrong sometimes and you know, it's okay.
+00:34:24 [W] We're good engineering is and we do post-mortems. And we you know take whatever lessons we can so we don't ever have that incident again.
+00:34:25 [W] And so a lot of times at least for me, I think a lot of post-mortem action items are how do we catch this faster?
+00:34:40 [W] How do we monitor better?
+00:34:44 [W] So now we have to add monitoring.
+00:34:44 [W] There were a lot of different components in the system. So where do I add monitoring? Do you add it everywhere that you have to know what it means for each thing to be running well and healthy.
+00:35:01 [W] So what you end up with maybe is that you have a ton of alarms, but somehow things are still going wrong.
+00:35:14 [W] So, you know, I think it's a pretty routine thing where you have an alarm and then you tune it because you know, you didn't have a very good Baseline before and maybe you have more data now so you get paged at
+00:35:32 [W] And then you grumpily tune your limes.
+00:35:34 [W] So now you have all these very artistically crafted alarms.
+00:35:41 [W] And you have more post-mortems.
+00:35:47 [W] And then you add more artistically crafted alarms.
+00:35:52 [W] And then you're like what you see even happening anymore. When you when you get paged, you know, your may be spending a cycle or to being like is this real?
+00:36:09 [W] What is the impact?
+00:36:10 [W] Why does it matter?
+00:36:12 [W] So your team is slowly losing their mind.
+00:36:18 [W] And this is definitely Loosely based on some real stories.
+00:36:33 [W] So the moral of the story is that this tribute in systems are really hard and they have a lot of moving parts.
+00:36:34 [W] And even if you get each moving part, right, you still have to get the interactions between the parts, right?
+00:36:47 [W] So it's not just getting all the individual components running correctly.
+00:36:50 [W] It's also that how do you make sure they're behaving correctly together?
+00:36:53 [W] So can you relate to find the right behavior for each part as well as their interfaces to other parts?
+00:37:05 [W] What are you actually care about in this is me putting my manager hat on.
+00:37:12 [W] what is the impact?
+00:37:13 [W] So I think at the end of the day, what I care about is actually that my users can do things that my clusters working correctly for them.
+00:37:32 [W] So let's go into an example.
+00:37:34 [W] For example, my my users are running jobs on my cluster.
+00:37:43 [W] So let's just say that they can run a job on my cluster and this example, I chose, you know a pod that can make
+00:37:47 [W] networking requests
+00:37:48 [W] So, how do I test for that?
+00:37:52 [W] Well, it's actually pretty straightforward.
+00:37:56 [W] It turns out you can more easily Define.
+00:38:01 [W] what the right behavior is to create a good user experience. Then maybe you can Define all the individual little behaviors from each component of your system to create an
+00:38:15 [W] Result that is correct.
+00:38:18 [W] So here's a very simple test that can write. It's like a three-step test.
+00:38:29 [W] I create a pod the pot does basic potty things like maybe download a private file from S3. And then I clean up after myself and then I just run this over and over again.
+00:38:35 [W] That was a very simple test maybe like a super tiny script but you're getting so much out of it. Here are the signals that maybe you're getting you know that the API is responding because you can create and delete your pod, you know that scheduling works
+00:38:52 [W] because the pot did a thing, you know that networking works because the Pod was able to download a file and maybe throughout this process you
+00:39:05 [W] log a stat at each point of the each step of the cycle.
+00:39:15 [W] And so you can say how long the wait was between each step and so you can say even that latency is acceptable and so on and so on.
+00:39:21 [W] So now you're aligning what you care about with what works for your user and this makes actually updating your status page has a lot easier as soon as you get paged on
+00:39:40 [W] This particular test like pots can launch now you can just automatically update your status page and say pots can't launch.
+00:39:55 [W] So you're really making it so that what you care most about is your users.
+00:39:57 [W] Okay, let's say you get paged what happens next?
+00:40:03 [W] This is when you dig into your observability toolbox.
+00:40:13 [W] These are just some of the Court tools that I rely on that basically come out of the box from my kubernative installation.
+00:40:24 [W] And I'm sure people have a lot fancier tools that they've bills that they rely on but I find that these are the things I reach for most often.
+00:40:30 [W] Now I also want to talk about in the same theme as the rest of the talk, you know, I focus a lot on Simplicity.
+00:40:43 [W] So I want to talk about a couple of simple tools that I've written that I got a lot of value out of it's probably not as fancy as you know, some of your Enterprise installations, but just bear with me search for a second.
+00:40:54 [W] tiny tool one is an event Watcher all it does. Is it watches for events on the cluster?
+00:41:02 [W] Locks them and then I have a lot of forwarder that slips up the logs and throws into elastic elastic search with the rest of my logs.
+00:41:11 [W] Tiny tool to is a container Watcher.
+00:41:16 [W] I watch all the containers events and changes on the host. And I log those updates similarly. My log forwarder reads all those logs and force them to wear my logs go.
+00:41:27 [W] Okay. So those were two super tiny scripts again that are in my toolbox. But combined what I get is one timeline for what happened to my jobs.
+00:41:44 [W] Here's a hypothetical timeline for creating a job and then eventually it containerd crashing.
+00:41:53 [W] I think typically what you might do if you get paged for something like this is you'll have to cook cuddle describe maybe like 20 things.
+00:42:03 [W] You have to look at logs of like different objects here just my attempt at simplifying that workflow and giving you one unified for you.
+00:42:12 [W] and I another good thing about the the single timeline is that it also empowers your users to debug their own their own issues as well because because it's simpler because they don't have
+00:42:33 [W] To know about all the system internals to do Kudo describes to Nowhere what events are even so I think it's a win-win and again, I know they're super
+00:42:48 [W] And Paul, but sometimes simple is best.
+00:42:50 [W] And talking about the users. Do you have users who built platforms on top of your platform?
+00:43:00 [W] So now they can use the same trick.
+00:43:07 [W] Actually, they can run their workflow tests continuously on the cluster as well.
+00:43:11 [W] I think the key takeaway is that when you write these end-to-end monitors, you don't have to be an expert in the underlying system.
+00:43:27 [W] You just have to be able to Define what behaviors you want and how you want them consistently.
+00:43:36 [W] So you're really only dealing with the highest level of abstraction and then everything that's happening underneath, you know the systems.
+00:43:43 [W] Plants and how they interact with each other you don't really care about that.
+00:43:47 [W] So again, if I could encourage one thing is to try to rely on simple things really think about what what is the simplest thing you can do to get
+00:44:07 [W] The signals you don't need that you care about and just do that and it makes your customer Communications a lot better also, because now what you care about is what your customers care
+00:44:22 [W] You carry that they can do their thing. You have monitored that constantly checks that they can do it. And so you can discover errors or even like minor issues or
+00:44:37 [W] the Seas before your customers do
+00:44:40 [W] So I hope maybe this will simplify some of your life.
+00:44:49 [W] If not, please feel free to reach out to me.
+00:44:55 [W] I love to talk to you about that.
+00:44:58 [W] Thank you so much for having me again.
+00:44:58 [W] Awesome.
+00:45:05 [W] Thank you Vicki for our next presenter is Keith.
+00:45:11 [W] Basil Keith is Vice President of edge solutions that Rancher is Jackie will discuss the challenges of security heterogeneous architectures and critique connectivity the must be overcome and managing causes that massive scale.
+00:45:22 [W] I'd hope the coffee it kicked in by now guess not but anyways more importantly, please welcome Keith basil.
+00:45:31 [W] Hello and welcome.
+00:45:36 [W] It's great to attend Kuma 2020 Europe.
+00:45:38 [W] My name is Keith basil.
+00:45:41 [W] I work for rancher as the vice president of hitch Solutions today.
+00:45:45 [W] I want to discuss some insights related to the growth of kubernative.
+00:45:47 [W] I want to kick us off with a prediction from 451 research here J Lyman predicts that kubernative standardization will happen within the next three years.
+00:45:58 [W] There's an old adage in says be careful what you wish for because you just might get it. And so today eight the
+00:46:02 [W] Have one research prediction seems to be holding up very well with ranchers own k3s project.
+00:46:11 [W] We're seeing tens of thousands of downloads monthly as an example as a product manager.
+00:46:20 [W] I wanted to share a few insights into challenges emerging in parallel with the proliferation of kubernative.
+00:46:26 [W] And so we are seeing use cases where kubernative is running on wind turbines.
+00:46:30 [W] We're seeing kubernative is now being used to support the oil and gas industry and factories are actually turning to chronosphere.
+00:46:32 [W] Kubernative to manage assembly line applications and a lot of the use cases that you just saw are driven by digital transformation.
+00:46:43 [W] So many Legacy systems are being replaced by Cloud native applications and kubernative.
+00:46:51 [W] And any of the Greenfield opportunities are more than likely going to go Cloud native from the beginning.
+00:46:59 [W] But in this deployment model, there's a nuanced set of challenges embedded in the growth of kubernative stats quickly coming to light and in summary. This could be some
+00:47:02 [W] Up with one customer quote that speaks to the Nuance here and the customer said anything below kubernative.
+00:47:12 [W] He's is overhead for us.
+00:47:16 [W] And after you pull it out an answer and tease that out a bit what that meant was that organizations rarely have the internal resources to manage infrastructure below kubernative at scale.
+00:47:27 [W] So on the surface, this means that we may collectively have to take on the burden of helping our customers out in this particular area. So if we're going to succeed
+00:47:32 [W] Port the 451 prediction we need to address cluster challenges in three areas.
+00:47:39 [W] So heterogeneous architecture is one broad area security is a second and limited connectivity is the third.
+00:47:47 [W] So let's take a look at each one of those the beauty of Open Source in an open ecosystem has given us basically great great deal of choice in our deployment options these choices and Hardware are largely driven by a need for lower cap ex. I mean you're looking at tens of thousands
+00:48:00 [W] Of machines at the far Edge secure don't secure device onboarding and then some specialized use cases actually require GPU or fpga Hardware to support that particular use case.
+00:48:14 [W] So we want to make sure that we have kubernative support for that specialized Hardware.
+00:48:17 [W] The second area is security so the state of our security posture should always be known for systems under management and we think here zero trust based approaches may do very well because with those approaches we can Define data we can Define our
+00:48:33 [W] Medication flows and we can Define identities use throughout the system. Right? And these elements should be enforced by policy that meets our security need the last issue on security are the last challenge is one of visibility. So it will be awesome
+00:48:48 [W] We could figure out how to give a complete top-down view of the security posture of the things that we have under management.
+00:48:57 [W] And then the last area here is connectivity.
+00:49:00 [W] So we have very limited connectivity in some of these deployments.
+00:49:05 [W] We've had got what I call a clusters in transit or the data center in a van model where Vans are actually driving out to to do work in the field and doing compute right there in the van.
+00:49:15 [W] these approaches typically use a gitops driven pull model and that seems to
+00:49:18 [W] To be a very natural fit for managing many clusters, for example with satellite. There's High latency and T ones are actually still a Fang. We've got me any retail locations that are still connected by T ones and we need to consider because of the reduced bandwidth in that case that
+00:49:32 [W] Some of our ci/cd processes may need to be optimized to deliver smaller container images, right?
+00:49:40 [W] So that's a concern and so I wanted to end by revisiting the 451 prediction because standardization is actually happening very very fast and to continue our momentum will require addressing architecture security
+00:49:54 [W] And conductivity and so we've got a quite a few open source projects on the table to kind of get us there and we hope to see you and work with you Upstream with those projects. And lastly. I want to thank you very much for your time and attention and have a wonderful coupon 2020.
+00:50:10 [W] Thank you, Keith.
+00:50:16 [W] Next up. We have constants keep those clouds coming in slack.
+00:50:25 [W] And since it's a principle software engineer at Splunk and my fellow co-chair for this event today Shield discuss how she impersonated several roles all at once to migrate users and what she learned from this experience to make her a better engineer,
+00:50:35 [W] Please welcome back constants throughout my career.
+00:50:48 [W] I've always fudge the definitions of my rule and this year.
+00:50:50 [W] I took it to the extreme.
+00:50:55 [W] I let a design partner program to work with users do everything under the sun in a short amount of time.
+00:50:57 [W] Like all projects are right. And in this short amount of time we had to migrate users the back and they're using the UI Frameworks.
+00:51:06 [W] I work on opentelemetry as well.
+00:51:09 [W] And so part of it was also getting feedback for opentelemetry Builders our relationships gather more feedback. Oh and still make sure that they liked us at the end of it.
+00:51:16 [W] I didn't realize that this I didn't realize this at the time but a require me to act impersonate roles.
+00:51:28 [W] I've never done before or know much about so this isn't a migration story or talk focus on Tech.
+00:51:32 [W] This is about the different roles and people involved in a product life cycle and what I learned from them I can say that this has made me a better engineer and it helped me grow my career. Maybe if you're at a stage where you don't know what to do next this can maybe help you.
+00:51:44 [W] So who am I? Well I'm a principal software engineer at spunk.
+00:51:54 [W] I came through an acquisition of a stress delwp that was focusing on tracing.
+00:51:59 [W] I work on opentelemetry both as a contributor to The Collector and on the governance committee and in previous life.
+00:52:03 [W] I was at lift.
+00:52:04 [W] To work on Envoy and I was at Microsoft in various projects.
+00:52:08 [W] So going back to the design partner program I was mentioning about is that I had to gather data for various organizations, right and people people who work in sales PMZ peas and your New Year's marketing support and I
+00:52:25 [W] two
+00:52:26 [W] Learn what they actually needed and so what are these roles?
+00:52:34 [W] What were the roles that I need to adapt or to learn?
+00:52:37 [W] So the many roles that's chameleon right blending in or I also like to say one of the many hats I wore so one of the many hats I wore was software engineer.
+00:52:46 [W] Thankfully.
+00:52:48 [W] This is very natural for me right then over hopefully natural for a lot of you so I don't need to describe it to us for this. But you know, I viewed as delivering a product that fixes a problem, right we want to
+00:52:57 [W] You want to tackle big problems?
+00:53:07 [W] Next one is product management, right? This is painting the picture where we should go is creating a focus on let's all the different, you know possibilities out there.
+00:53:13 [W] there, right? This is a view this as being really refining. What is our Target.
+00:53:16 [W] Support they get a lot of attention right there around for general questions and when things go wrong and they have to strike fine balance between ants acknowledging things acknowledging issues and questions quickly and getting the actual answers
+00:53:32 [W] Resolution done quickly, then there's customer success, right?
+00:53:38 [W] This is about building momentum ensuring successful adoption, right?
+00:53:42 [W] There is a difference between begrudgingly using a project product or actually being in love with it and advocating for it and just wanted to interact with it for
+00:53:50 [W] and then there are sales engineer, right?
+00:53:54 [W] This is about getting something working.
+00:53:59 [W] It's usually about working or is usually working with all these different roles, you know, vp's Engineers business and trying to come up with some form of solution that would work for them.
+00:54:09 [W] So, let's take a little tour of all the different rules. Let's start with the software engineering
+00:54:15 [W] So what are some of the takeaways I took from this project one is that reference documentation is not user documentation, right reference documentation, you know is explained.
+00:54:32 [W] I view it as explaining what is already in there versus user documentation is explaining how these features can solve a problem. Right a problem isn't necessarily.
+00:54:40 [W] Oh, how do I turn on the flag?
+00:54:41 [W] But how do I solve you know, an infinitely larger infrastructure issue?
+00:54:46 [W] or
+00:54:46 [W] something like that.
+00:54:48 [W] Nothing is that it's really rewarding right?
+00:55:04 [W] It's I think it's part of why so many of us come to KU Khan is to see what we've built and could you bear to is used in value right to see all these logos up on the screen to know that you'd part joined that you were contributing to it.
+00:55:09 [W] Something really valuable and something that I kind of forgot how much I love that about the roll.
+00:55:16 [W] When I was a really fun thing is that it gave me the ability to go into details, especially since I was working with so many users so many different users from different backgrounds trying to solve different problems, right?
+00:55:33 [W] Is that every so often there would be a question about you know, why is specifically for focusing on tracing this like, you know, why would I want to you know, add instrumentation from databases and then after you know being able to go into the actual details
+00:55:43 [W] Like one how to do it while you can do it.
+00:55:55 [W] What are ways around it, you know, if you do a don't this is really fun because one who doesn't like having a little debate about different fluentd implementations, but it's like a fun.
+00:55:56 [W] It's a fun whiteboarding session.
+00:56:04 [W] And so this this program gave me the opportunity to do this with all these different inputs and users.
+00:56:06 [W] So what's next product management?
+00:56:14 [W] This role is an art it's about being able to see the forest for the trees because usually product management is getting so many requests there. So many different problems you can solve and so when
+00:56:28 [W] There is a Clear Vision of where we go. It helps everyone else Focus.
+00:56:32 [W] And to be able to actually come up with a Clear Vision is that it requires so much active listening.
+00:56:42 [W] It is one getting all these different inputs right helping me tons of inputs.
+00:56:51 [W] You don't agree with and listen to them and also trying to understand what is the motivation for these people. You know, where do these problems come from?
+00:56:54 [W] from? What are the motivations for what their Solutions are looking for? It's a really
+00:56:59 [W] It's a very active role.
+00:57:00 [W] But I think out of the I have two favorite takeaways from my entire experience.
+00:57:09 [W] And this was one of the first one is that the question shapes the answer right?
+00:57:11 [W] It's kind of like leading the witness if you were to ask someone do you think this feature is useful you're going to get an answer either?
+00:57:17 [W] Yes or no chances. Are you might get a yeah, probably because either someone's being nice or you know, they can see a way that they could shape a feature to work for them.
+00:57:30 [W] But that doesn't really give us a lot of answers but doesn't give as much
+00:57:34 [W] Go on and if we were to rephrase that question, what problems do you need to solve that aren't being solved today that opens it up for one just unstructured thinking you're not framing a solution based.
+00:57:46 [W] You're also going to feature based on the existing solution and after the can be so much more diagonal like in terms of like why what how who
+00:57:54 [W] I can go on about this for hours.
+00:58:04 [W] And so I just want to reiterate the like the question shapes the answers like think about what question you're asking and if it is leading to an ester you want right?
+00:58:12 [W] We should be going into this trying to get as much data as possible and then after look for commonalities.
+00:58:14 [W] Support well now support definitely deserves the metal armor on this because they answer so many questions and they're also there when things go wrong and so it's not always fun to get that type of attention.
+00:58:34 [W] So what are what are the takeaways one is that they're in a unique position to see commonality when you're answering questions from users of all different backgrounds.
+00:58:46 [W] You're able to see. Oh, well, maybe you know this one feature.
+00:58:49 [W] Is better documentation or you know, whatever configuration we provided we thought it was intuitive, but there's so many, you know, there's a few things here that we just need to put better safeguards in.
+00:58:59 [W] One is documentation.
+00:59:03 [W] If something is unridden, really something's written down.
+00:59:17 [W] There's no way for other people to know and as you know, if we're to look at as a whole product life cycle as team, write all these different roles is that we need to write will we know down because there's going to be someone like someone is a port who's going to
+00:59:24 [W] Have to try and answer a question for a user or customer and if there's no documentation it puts them in a really bad spot.
+00:59:33 [W] Another thing is that you know, especially since they are gathering near the Gathering questions and seeing some issues from different ways.
+00:59:44 [W] Is that as a software engineer is that I should you know help create tools that simplify the data collection because if you're debugging something or you're asking for help and someone's like okay Graeme configuration grab me two metrics graph is the logs.
+00:59:58 [W] Oh grab me this other little bit sample here and have all these steps that takes right. It is kind of be really difficult to
+01:00:07 [W] Close this look really quickly. Right support is trying to acknowledge an issue and resolve issues as quickly as possible.
+01:00:13 [W] No asterisk there and so we should try to make that process better.
+01:00:19 [W] process better. And of course documentation, please everyone right more docks.
+01:00:24 [W] Let's talk about customer success, right? This is this is an interesting one because it's something that
+01:00:34 [W] I think we kind of think that it happens magically, right if you provide something and you know, it seems useful people will come and that's kind of right now. Like the first thing is that it's like it's all about a lot of it is about communication trust is
+01:00:49 [W] Our needs to be established ways to say what is going on.
+01:00:54 [W] What is going on?
+01:00:55 [W] What is going wrong?
+01:00:57 [W] What's going right?
+01:00:57 [W] What is to come?
+01:01:01 [W] I need to build it and build that trust right very similar to how we public projects will release fishing docks and post issues.
+01:01:07 [W] Right?
+01:01:08 [W] It's very similar.
+01:01:09 [W] It's very similar to that.
+01:01:11 [W] The one thing that is a little painful about this that is a slope, right?
+01:01:19 [W] This doesn't happen overnight and it's something that you just need to write out is not something that can be rushed.
+01:01:21 [W] And to talk about my favorite to my second favorite take away. This is a success is more than technology.
+01:01:29 [W] It's about successful adoption right is that we can build the coolest piece of technology that maybe solves everything but if it is incredibly difficult to use, you know, Engineers incorporating into their infrastructure
+01:01:43 [W] find that it's really brittle to build or you know, there's just so many ways configure that it's just you can't even actually just can't figure it out without you know, 10 people reviewing it that is technically adoption, but
+01:01:58 [W] That is success, but that isn't successful to option that is progressively exhibit adoption.
+01:02:09 [W] And so going back to product life cycles that and also to cncf projects that we are all Building Products.
+01:02:12 [W] We just forget about that and that really actually in the people that are building products for are usually other engineers.
+01:02:25 [W] so when it comes to thinking about successful adoption, we need to think about how do we make our lives better for the engineers who are using a day to day for the engineers who doing realize that they're using it but one
+01:02:28 [W] Day, they might get a page other Kuma D's, you know positive through creative pods.
+01:02:33 [W] Are we starting they never know? They know kubernative is a word.
+01:02:40 [W] They think it's a word like how do you make it easy for even those who don't have to work on the day-to-day, you know be able to respond to those pages and move forward.
+01:02:47 [W] So I really encourage all of you to think about what successful adoption means.
+01:02:51 [W] and last sales engineer
+01:02:54 [W] What does it mean to be a sales engineer a it's what's really interesting about sales in New Year's and you know, you don't necessarily have to be selling something to have seals in your view it as a person. That is the hype.
+01:03:07 [W] It was a promoter in the marketing who is trying to get other people to like Hey, we're solving your issue. We can help you come up with an ivp, right? So what does that kind of look like it is
+01:03:20 [W] Things to like bring back to like my role as an engineer software engineer. So that minimal viable product is where to start now. I'm going to make these two takeaways the first two takeaways for sales Engineers are so well known.
+01:03:34 [W] But they're always really hard to apply right is that especially like for a minimal viable product?
+01:03:39 [W] Right? Is it once we see that there's a problem.
+01:03:42 [W] We're going to solve all of it.
+01:03:45 [W] We want to, you know, come up with a solution that can get us right from a to zed right away instead of acknowledging their we're going to go from A to B to C.
+01:03:54 [W] So start small right find something that provides value right away because
+01:03:59 [W] I'll get to it because afterwards but part of that is like to confirm getting anywhere. Is that Perfection is the enemy of good enough.
+01:04:07 [W] Now as someone who practices Perfection paralysis daily, I logically understand this but I still don't buy this reasoning but I'm trying to work through it. Right is that since you know a all of this any form of adoption of a
+01:04:23 [W] Product or project right is always an iterative process.
+01:04:27 [W] So going back to the MVP.
+01:04:28 [W] You just need to start somewhere.
+01:04:29 [W] They're going to be bugs.
+01:04:30 [W] Yes.
+01:04:30 [W] It is.
+01:04:31 [W] scary makes me scared too, but we need to work through them. And the last part is that you need to make a decision. If you don't have an MVP, if you don't at least try and see how it works, there's no way
+01:04:46 [W] There's very little way to actually understand if something's going to work for you. And so that's where you put on your cowboy hat and just try something new.
+01:04:54 [W] so
+01:04:57 [W] what is my challenge for all of you is that I really encourage all of you to try on a new hat.
+01:05:07 [W] Right eye.
+01:05:10 [W] You know, I I've made a lot of mistakes during this during this program of and well that's just a different story.
+01:05:26 [W] But the thing is that it did teach me a lot. And what was really fun about it is like for the first time in a really long time is that I was out of my Waters trying to do something new and try to blend into all these different roles exactly like this communion here.
+01:05:35 [W] And so see if there's something that you can learn from these other roles.
+01:05:39 [W] Thank you very much.
+01:05:42 [W] Thank you Constance and super important lesson about the different hats that we may have to wear.
+01:05:54 [W] Yeah so much wisdom.
+01:05:57 [W] Keep the clouds coming and slack next up.
+01:06:00 [W] We have Cheryl hung director of ecosystem at cncf will present the end-user award for 2020, please welcome Cheryl.
+01:06:09 [W] Hi everyone. My name is Cheryl hung.
+01:06:22 [W] I'm the VP of ecosystem at the cncf where I run the cncf end user community and this community is a group of more than a hundred and forty companies who are adopting Cloud knative infrastructure.
+01:06:35 [W] But not selling any Cloud need to products or services and for my point of view end users are more than passive consumers.
+01:06:47 [W] They have a huge amount of knowledge and Real World experience and they play a really poor important part in the open source ecosystem.
+01:06:56 [W] So that's why it's cncf we want to amplify that voice and as part of that every year we the end user Community chooses one componentconfig.
+01:07:05 [W] Knee out of the hundred and forty to win the top end user award based on their impact and contributions.
+01:07:16 [W] So the winner of this year's 2020 top end user award is zalando and it's my pleasure to welcome yanis to receive this award, which I'm going to give you right
+01:07:28 [W] now
+01:07:29 [W] Thank you very much.
+01:07:36 [W] Thank you Cheryl on behalf of the land. Oh, I'm honored to receive this award and the associated recognition of zealanders contributions to the cncf community again.
+01:07:56 [W] congratulations.
+01:07:59 [W] So Jonas, please introduce yourself and zalando what you do?
+01:08:02 [W] It's a Lando and tell us about why you adopted Cloud native. What impact has it had on you and your teams?
+01:08:09 [W] Yes, of course. My name is Janis Hawk Island and I'm an engineering manager for example, and oh leading the cloud infrastructure team for those that don't know who we are is a Lando is Europe's
+01:08:27 [W] Online fashion platform and connects customers Brands and partners we serve more than 32 million customers across 17 countries.
+01:08:38 [W] Initially, we started our communities Journey just as a proof of concept as part of a heck week.
+01:08:45 [W] Right now it has become the default runtime for more than 200 engineering teams and currently serving almost ninety percent of our production applications.
+01:08:57 [W] Well, zalando already used containerd Technologies on Amazon web services before the adoption of kubenetes.
+01:09:06 [W] We were lacking efficiency a common operating model and a central compliance and security and point.
+01:09:14 [W] So switching to communities and other cncf projects allowed us to build a platform.
+01:09:22 [W] This is to satisfy exactly these requirements and at the same time increase or rather improve developer experience and increase developer productivity.
+01:09:33 [W] Awesome.
+01:09:36 [W] That's great to hear that.
+01:09:41 [W] So I know that solando contributes to many different open source projects.
+01:09:45 [W] Why and how does your company supports these open source contributions?
+01:09:49 [W] so I know it has from its Inception light on open source software to build our business and promoted open source contributions internally ever since
+01:10:01 [W] We strongly believe that by being a open source a good open source software citizen. We can influence the projects that we use so this can be done by contributing code Upstream, but also
+01:10:16 [W] by sharing knowledge such as success or
+01:10:22 [W] something like failure stories
+01:10:24 [W] as to the how we Foster this is starts as early as when you join the landowner. We have a dedicated open source software session during our engineering onboarding.
+01:10:38 [W] This also covers guidelines for contributions and Licensing models employees may also organized internally as part of our open source software built.
+01:10:51 [W] Last but not least we see our contributions also as an important part of our being and attractive employer.
+01:11:00 [W] Absolutely.
+01:11:03 [W] That's awesome to hear that. And lastly this award comes from the your peers at the end user community. So ioannis, what's your favorite part of being in the end user community?
+01:11:16 [W] The latter is very active especially in the special interest groups of the end user Community for instance developer experience or the servicemeshcon.
+01:11:30 [W] These groups are great place for us to share and receive knowledge and learn from the experience of others in a safe and also vendor neutral space.
+01:11:43 [W] As part of the community you quickly learn that you are not alone with the problems that you're trying to solve and may even find out that someone has already solved them.
+01:11:58 [W] So that part is definitely my favorite part of being part of the cncf and user community.
+01:12:00 [W] Fantastic.
+01:12:03 [W] Thank you so much.
+01:12:06 [W] You're honest. And once again, congratulations to zalando for winning the 2020 cncf top end user award.
+01:12:13 [W] Thank you very much.
+01:12:16 [W] And thank you to the community.
+01:12:17 [W] Thank you. Everyone for joining us Vicki and I are trying to get all of our pets home screen.
+01:12:33 [W] Yes.
+01:12:38 [W] So everyone this is the real life Puppy Cam that you've heard about.
+01:12:39 [W] This is Kota Vicki.
+01:12:40 [W] What's your dog's name?
+01:12:41 [W] And I keep on forgetting.
+01:12:42 [W] Omicron he's very asleep all the crying.
+01:12:53 [W] Well, we want to say thank you very much for joining us this week.
+01:12:54 [W] We know that it's very different than what any one of us had expected back, you know, either you students efps, or you buy your tickets back in what is it is still the same year. I don't even know what year it is.
+01:13:08 [W] is. But so first of all, can we all give a virtual Round of Applause for cncf event team?
+01:13:12 [W] All of this would have been possible about okay I go for Vicky.
+01:13:21 [W] Oh, it was such a heroic effort.
+01:13:23 [W] great put all of this together roll with the punches of 2020.
+01:13:33 [W] mean, it is incredible that we gotta put this together in such a short amount of time.
+01:13:35 [W] Yeah, really big.
+01:13:38 [W] Thank you. Also, give everyone a round of applause yourselves included for attending and participating right?
+01:13:49 [W] It's definitely for all used to hallway track or meeting people in person and being so perfect like participating so much in slack in the QA Twitter, you know Twitter I guess is always there but thank you for embracing that moment. I was a little bit nervous about this because
+01:13:58 [W] Of where I'd only been to in-person conferences and few webinars.
+01:14:04 [W] And so I just want to say thank you for making this as close as possible to being the friendly like lovely loving where we warm community that I know that is koukin.
+01:14:14 [W] So we all wish we could have been here together in person and 2020 is what it is. So let's just talk a little bit about what's next right our next virtual Kook on.
+01:14:27 [W] Koukin cut knative con the North America chapter is happening November 17th or 20.
+01:14:34 [W] Sorry. My dog is afraid of metal. Any actually touch. The bowl is November 17th to 20th 17th to the 20th and the schedule be announced on October 1st with the registration opening soon sponsorships are still available.
+01:14:44 [W] And please join the keynote speakers within the keynote slack channel on the cloud native slack workspace for the next 15 minutes to ask any questions you may have and also just to show your love by clapping.
+01:14:59 [W] The last set of breakout sessions will begin at 5:20 p.m.
+01:15:05 [W] Central European summer time.
+01:15:06 [W] Thank you everyone once again for attending the first-ever cloud cuckoo-land cloudevents virtual event.
+01:15:18 [W] a great day.
+01:15:19 [W] A hospital shifting to remote patient care in 48 hours a university moving hundreds of apps quickly to the cloud.
+01:15:38 [W] They're redefining what's possible now and VMware is helping them do it.
+01:15:51 [W] Rancher is the market leader in open source, Cloud knative kubernative management and allows you to manage and scale workloads consistently across thousands of clusters in any environment and support any certified kubernative distribution
+01:17:19 [W] Rancher is the key to unlocking the full potential of kubernative.
+01:17:25 [W] A hospital shifting to remote patient care in 48 hours a university moving hundreds of apps quickly to the cloud.
+01:20:18 [W] They're redefining what's possible now and VMware is helping them do it.
+01:20:25 [W] Rancher is the market leader in open source, Cloud knative kubernative management and allows you to manage and scale workloads consistently across thousands of clusters in any environment and support any certified kubernative distribution.
+01:22:00 [W] Rancher is the key to unlocking the full potential of kubernative.
+01:22:04 [W] A hospital shifting to remote patient care in 48 hours a university moving hundreds of apps quickly to the cloud.
+01:25:01 [W] They're redefining what's possible now and VMware is helping them do it.
+01:25:06 [W] Rancher is the market leader in open source, Cloud knative kubernative management and allows you to manage and scale workloads consistently across thousands of clusters in any environment and support any certified kubernative distribution.
+01:26:41 [W] Rancher is the key to unlocking the full potential of kubernative.

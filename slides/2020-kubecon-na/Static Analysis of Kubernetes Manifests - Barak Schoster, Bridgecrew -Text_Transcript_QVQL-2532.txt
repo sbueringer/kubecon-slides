@@ -1,0 +1,262 @@
+﻿Static Analysis of Kubernetes Manifests: QVQL-2532 - events@cncf.io - Wednesday, November 18, 2020 3:02 PM - 41 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi everyone, and welcome to cubicle today.
+00:00:03 [W] We're going to talk about static analysis of kubernative manifest kubernative Z animals.
+00:00:29 [W] Hi everyone, and welcome to cube Khan today.
+00:00:33 [W] We're going to talk about static analysis of kubernative manifest kubernative giannios.
+00:00:40 [W] We will talk about how to identify Miss configs and the process of doing that we did in common organization will talk about some security findings that we had by while scanning the open source repositories containing kubernative manifests.
+00:01:07 [W] In that within in common organization will talk about some security findings that we had by while scanning the open source repositories containing kubernative manifests right policy is code and automate that as part of our
+00:01:24 [W] Policy is code and automate that occur as part of our ci/cd Pipeline and also on a running cluster.
+00:01:33 [W] So thanks very much to keep Callin for having me.
+00:01:37 [W] My name is Brock Shaw stir and the CTO and co-founder of a start-up name bridgecrew that helps to solve the exactly that identifying these configs at infrastructures could manifest.
+00:01:47 [W] I'm also an open-source maintainer of a cloud security project name check out that we're going to talk about today and also contributor to other projects in that cloud security space all of the slides are going to be available.
+00:02:02 [W] Moreover Cloud security project name check out that we're going to talk about today and also contributor to other projects in that cloud security space. All of the slides are going to be available on our bridgecrew blog.
+00:02:24 [W] Our bridgecrew blog and if you have any question or join project that you'd like to go on the open source, feel free to reach out to either a Twitter or follow my GitHub account.
+00:02:35 [W] So before diving into Chekhov, and what does it do?
+00:02:40 [W] Let's let's give some background on a story of an engineer in this case myself.
+00:02:46 [W] Having to maintain kubernative cluster.
+00:02:52 [W] So as I mention earlier, I want to move fast.
+00:02:56 [W] And unlike people like to think I really do not like to break things and that means that I want my cluster to be running reliably even reliable Manner and in a secure
+00:03:12 [W] And in that also means that I probably have a love and hate relationship with ticketing systems.
+00:03:20 [W] So the day-to-day activities of me as an engineer are containing the Sprint planning where I have a predictable amount of tasks that I want to handle the next two weeks.
+00:03:35 [W] All right also have unpredicted tasks which are security tasks that the security team is finding whether on my production cluster or my Dev environment.
+00:03:48 [W] Here's an example of in kubernative has containers user IDs should really not be shared with the hostname with the hostage.
+00:03:57 [W] are running on because a route process might be shared and my click from
+00:04:05 [W] The containerless Ville into the host level giving it permission to compromise the entire host and other workloads are running with it
+00:04:16 [W] another one is that I should read do not need to allow the container and the host to share network network name space allowing hurting the isolation of the container itself
+00:04:31 [W] The Host
+00:04:24 [W] and another one on the networking space that I just got is not related to specifically the kubernative cluster but to the infrastructure that is wrapping it over here. I have a security group a firewall rule that is allowing.
+00:04:39 [W] Access from the entire world into my cluster because my security groups that is rubbing. It is a like that and basically what I'm saying is I have this Sprint planning where I should have predictable
+00:04:40 [W] He's rubbing. It is a like that and basically what I'm saying is I have this Sprint planning where I should have predictable amount of work that I gave story points to that.
+00:04:50 [W] I distributed within my team but the security team which is doing an honest job finding Miss configs in my kubernative manifest and my terraform terraform infrastructure code.
+00:05:04 [W] Is creating a lot of jira's and is hurting my original planning and this is where my Story begins.
+00:05:14 [W] I just had too much jurors and too much too low amount of resources and I had to reprioritize my Sprint over and over again within the Sprint.
+00:05:29 [W] I had to reprioritize my Sprint over and over again within the Sprint and it caused me to a destruction from the plant features that as an engineering engineering resinous.
+00:05:43 [W] want to deliver to my customer.
+00:05:47 [W] So so I try to understand if others are having the same issue the does open source projects have the same issues when they're creating kubernative clusters
+00:06:02 [W] They having the same issues when they're creating infrastructure as code modules.
+00:06:07 [W] So I decided to scan the entire GitHub repos and let's look at this data.
+00:06:16 [W] Over here.
+00:06:18 [W] We have a sample of that scan that I performed on The Open Source repositories in this can I've looked for all of the kubernative deployment manifest that I could find crawling crawling GitHub and it is the sample of it.
+00:06:34 [W] And I've identified several disturbing default configurations.
+00:06:39 [W] That should really not be there.
+00:06:43 [W] And the reason for that I'm saying that should not be there is because as an engineer to think that I do the most is hitting copy and paste from stackoverflow or open source repositories and getting inspired by and kubernative and other
+00:06:58 [W] Creations, that should read not be there
+00:06:57 [W] and the reason for that I'm saying that should not be there is because as an engineer thing that I do the most is hitting copy and paste from stackoverflow or open source repositories and getting inspired by and kubernative
+00:07:24 [W] It's called Frameworks have so many configurations that it is really easy to get lost and not identifying that some of those configuration might be
+00:07:39 [W] While others are just an opinionated way to run a kubernative cluster there is nothing wrong about it.
+00:07:46 [W] It might sound of the configurations might be the right ones for the cluster but I really wanted the engineering team to acknowledge it each and every best practice and verify if that's possible on our deployment deployment.
+00:08:02 [W] So over here, we have some of the top msconfig that can be found on the only public open source repositories over here.
+00:08:13 [W] There are some disturbing one's one is having a public and point accessible from the entire internet or not disabled and others are more of auditing capabilities like have logging enabled by default
+00:08:28 [W] It's encrypted by default and and some others that are just best practices to have if you're running a kubernative cluster.
+00:08:36 [W] So the thought that came to my mind is that infrastructures could manifest presents a risk because it's another configuration layer that people might do mistakes in and like the your tickets
+00:08:52 [W] All my engineering team and myself have done those mistakes, but they also present in you opportunity.
+00:08:49 [W] Let's take a look on on this kubernative manifest as an example.
+00:08:57 [W] We have run as root as non-root configured to false.
+00:09:03 [W] And over here we have run is not rude configured to true. But the thing about here on the left is we're running not as rude as contact the containerless Vil, but we're overriding
+00:09:19 [W] Is as non-root configured to false.
+00:09:19 [W] And over here we have run is not rude configured to true. But the thing about here on the left is where running not as rude as context the containerless Vil, but we're overriding
+00:10:06 [W] The Pod configuration that told us to run as non-root.
+00:10:10 [W] So on the containerless Ville we're enabling routes user to run.
+00:10:17 [W] However, writing the pods pacification. So this is a bad configuration to have while this one is looks like a fixed kubernative manifest not allowing
+00:10:35 [W] So looking on those computer kubernative manifest those those different configurations Frameworks saying for kubernative is terraformed or anything other that I can configure
+00:10:50 [W] It allowed us to create an open source project name check out.
+00:10:54 [W] So Chekhov is a static analysis open source tool that allows you to scan infrastructure as code manifests.
+00:11:06 [W] It was released. Just last December.
+00:11:08 [W] It's under the Apache 2 license already has more than 50 contributor. So thank you and different contributors for making that project possible have more than eight thousand downloads more than
+00:11:24 [W] With stars and it's basically read it in Python.
+00:11:23 [W] So it's very easily extend extended.
+00:11:28 [W] So check off statically analyze has four known best practices implemented across infrastructure is called manifests like the kubernative zmo that we're focused on today, but it is also doing a good job with terraform HCL files
+00:11:43 [W] Those as your arm templates serverless framework and can easily be extended to other other infrastructure as code Frameworks.
+00:11:47 [W] Over here. We have a sample output of check out scanning and infrastructure as code directory and we run that is the devil. So so check check out books. Essentially.
+00:11:58 [W] He's a policies code engine.
+00:12:00 [W] What is policies code is the ability to enforce a best practice in a manner that a policy can be version controlled meaning it can be go back and forth in time emergence of commit you can version
+00:12:15 [W] As sample output of charcoal scanning and infrastructure as code directory and we run that as a bevel so so check out books essentially is a policies code engine.
+00:12:22 [W] What is policies code is the ability to enforce a best practice in a manner that a policy can be version controlled meaning it can be go back and forth in time emergence of commit you can version
+00:13:39 [W] Your policies and create a policy bundle a policy can be peer reviewed as part of a poor Quest.
+00:13:47 [W] Specifically in check out we are utilizing the pythons capability to create inheritance between different policies and the policy can also be a part of your development life cycle. Meaning let's say that you are developing a new infrastructure and you
+00:14:02 [W] And you want to enforce a company policy. For example, each cluster should have an owner Team tag, you can automate that as part of your planning when we are planning a new cluster or a new infrastructure in the cloud.
+00:14:17 [W] Whirring, what are the policies that we would like to enforce them that cluster as part of this threat modeling that can be done on that infrastructure.
+00:14:25 [W] And once you have this policy written you can automate that as part of your CI pipeline scanning each and every infrastructure change with it to like check out.
+00:14:39 [W] So what is the policy is an example for one best practice in kubernative cluster is CPU.
+00:14:46 [W] It's should be set it created a name to that policy created an identifier to that policy.
+00:14:56 [W] set what kind of configurations I want to scan and basically looked for resource dispelled resources in the kubernative Manifest the limits and verified that CPU
+00:15:11 [W] Set if it does it is being sir.
+00:15:13 [W] Did you check his passing? If not, the check is failing.
+00:15:20 [W] All right. So, let's take a look on a live demo.
+00:15:33 [W] So over here what I have is kubernative Project.
+00:15:39 [W] We'd recorded his deployment camel of a Jenkins server.
+00:15:47 [W] I can see here specs and the tags and basically everything that I need to start a Jenkins cluster.
+00:16:00 [W] What I'm going to do now is one I can flip install.
+00:16:05 [W] Chuckle checkups prayer requirements are that you will use Python 3.
+00:16:11 [W] So if Python 3 is not the default item version on your workstation you spiffe 3 install check out and I already have it installed over here.
+00:16:22 [W] So what I am going to run now is I want check out.
+00:16:28 [W] Let's take a look. How on how it looks like. I want check up to scan my current directory.
+00:16:35 [W] in peeping stall
+00:16:28 [W] check out checkups prayer requirements are that you will use Python 3.
+00:16:34 [W] So if Python 3 is not the default item version on your workstation you spiffe 3 install check out and I already have it installed over here.
+00:16:45 [W] So what I'm going to run now is I want check out.
+00:16:51 [W] Let's take a look. How on how it looks like. I want check up to scan my current directory.
+00:16:58 [W] Containing the kubernative Manifest.
+00:17:01 [W] So check of can scan different Frameworks that we've talked about formation turn phone kubernetes serverless arm, and we want it to scan all of those options.
+00:17:14 [W] even though that currently in the directory, I have only only kubernative I can also choose to run an ad to the Run external shocks meaning custom checks that are not part of the 400 policies that Jacob has
+00:17:31 [W] Before diving in further do the devil. And the thing that I would like to show you is the amount and the different scans that we currently have. So if you go in to check of iot
+00:17:59 [W] so
+00:18:04 [W] so if I'd like to create a custom jackals just like the one that we've seen before it's just creating a python file and putting in a directory. I can also put it in a GitHub repository that way the policy the
+00:18:19 [W] They have so if you go in to check of iot.
+00:18:45 [W] So if I'd like to create a custom channels just like the one that we've seen before it's just creating a python file and putting it in a directory.
+00:18:54 [W] I can also put it in a GitHub repository that way the policy the custom policy the custom checks that I've created can be peer reviewed and can be Version Control.
+00:19:05 [W] For that reason we have the external checks get option.
+00:19:10 [W] I can also ask Jacob to run only a specific check ID not to show passing Trucks Only failing ones.
+00:19:23 [W] And let's give it a try.
+00:19:26 [W] And also integrated with the bridgecrew platform.
+00:19:29 [W] So what I'm going to run now is check out - di meaning directory and I want you to scan my current directory with Mike Jenkins kubernative configuration.
+00:19:42 [W] so
+00:19:45 [W] I have it executed right here it first he tells me if I need to upgrade check out to a newer version so over here. I have a new update available, which I can upgrade using the following command.
+00:19:58 [W] Let's keep it for now and I can see the entire results of the kubernative manifests.
+00:20:03 [W] Can I have 31 passing checks, which is good meaning.
+00:20:07 [W] I did some good work from security perspective on my kubernative manifest.
+00:20:14 [W] And I have 19 failing checks.
+00:20:18 [W] So if I drill down into the penny ones over here I have for example seccomp profile that is not set.
+00:20:28 [W] Is charcoal - team winning directory and I want you to scan my current directory with my Jenkins kubernative configuration.
+00:20:39 [W] So I have it executed right here it first he tells me if I need to upgrade check out to a newer version so over here. I have a new update available which I can upgrade using the following command.
+00:20:55 [W] Let's keep it for now and I can see the entire results of the kubernative manifests.
+00:21:01 [W] Can I have 31 passing checks, which is good meaning.
+00:21:04 [W] I did some good work from security perspective on my kubernative manifest.
+00:21:11 [W] And I have 19 failing checks.
+00:21:15 [W] So if I drill down into the penny ones over here I have for example seccomp profile that is not set.
+00:21:26 [W] So what I can do I can open this URL which opens up a guideline stabbed with the scripture and rational on why I need to do that and how does fixed?
+00:22:36 [W] and open this URL
+00:22:39 [W] which opens up a guideline stab with the scripture and rational on why I need to do that and how does fixed manifest should look like
+00:22:55 [W] so the thing that I should probably do is copy the following section and put it inside my kubernative manifest and then my test will pass my checkup dust will pass.
+00:23:08 [W] So we have here a set of different results each time. It will print the specific section inside the file that is not configured correctly and will guide me with a link to the virtual communication.
+00:23:23 [W] To remediate that piece.
+00:23:28 [W] Now what we're going to do.
+00:23:31 [W] is
+00:23:36 [W] talk about another option that I can run.
+00:23:40 [W] So obviously I can run check up over and over again manually on my workstation and it will help me to fix identify and fix Miss configs in the kubernative Manifest before deploying them to
+00:23:55 [W] pull request and how can I automate that process the thing that I can do an ad is a pre-commit hook where I can try to do a change the pre-commit will scan it and will either block or
+00:23:56 [W] Locally on my workstation and if it passes if you go through GitHub open a PR and start the deployment in Kuma into my kubernative cluster.
+00:24:01 [W] Let's see.
+00:24:02 [W] How does that look like? So I'm in the same directory.
+00:24:13 [W] And what I added right now is a pre-commit configuration llamo.
+00:24:20 [W] So the pre-commit hook is for those who are not familiar with pre-commit is a technology that hooks into the commit to the git command of it commits and will scan all of the resources usually used with
+00:24:35 [W] That are going to be committed into the GitHub repository so over here. I've configured check out to be one of the hooks and I told Chekov to run always on the current directory the directory that contains that code.
+00:24:51 [W] so if I'll type in
+00:24:55 [W] git status
+00:24:58 [W] I can see that I have this new file that I've created. What I'm going to do now is to create a commit message trying to push on my way to push this file into the GitHub repository.
+00:25:13 [W] It commits means M my new Jenkins cluster.
+00:25:10 [W] Let's give it a try.
+00:25:13 [W] The thing that I do we do now is it will run chuckle and it will fail the commit. I cannot commit and it will show the results of of Chekov on the current directory
+00:25:30 [W] Do now is it will run check out and it will fail the commit.
+00:25:30 [W] I cannot commit and it will show the results of of Chekov on the current directory now. I cannot run.
+00:25:46 [W] The commit without passing all of those Jets checks, but what if one of those issues the chekhov's is reporting on is actually my opinion.
+00:26:02 [W] The committee without passing all of those Jets checks, but what if one of those issues the chekhov's is reporting on is actually my opinion.
+00:26:18 [W] Should actually run either there is no risk or it is accepted risk or there is a Sig a Justified reason to run kubernative in that manner.
+00:26:29 [W] So check off just like J unit testing or audio or by text or other testing framework supports skipping checks subscribing tests.
+00:26:40 [W] So let's take a look on how does it look like I'm here again on the check of the commendation.
+00:26:47 [W] And actually the thing that you can do to skip a check is ADD metadata annotation?
+00:26:54 [W] where you can skip a specific check idea and write the reason for that specific check if you look at it
+00:27:09 [W] Skip check is part of you DJ and it XML if you're working with a j-unit XML Plug-In or skip check on the bridgecrew.
+00:27:15 [W] So on this check out CLI report. If you do not want to go to a configuration by configuration and Skip every individual check. You can exclude globally as specific
+00:27:30 [W] Following flag which is skim check with a specific check ID.
+00:27:27 [W] All right, so we have a pre-commit hook and now we cannot push into GitHub and in change, but that actually means that every engineer should have pre-commit hook deployed
+00:27:42 [W] Station another way to validate that infrastructure as code manifests are answering those rest practices is having check off as part of your ci/cd pipeline.
+00:27:54 [W] Very new change request is being submitted to GitHub or other version control system.
+00:27:53 [W] You can run Chekov as a CIA job.
+00:27:56 [W] Just like you're running unit tests. So let's collect infrastructure security test.
+00:28:01 [W] And if the tests are passing you can trigger a deployment trigger of your infrastructure into your cloud account.
+00:28:11 [W] Now, let's see. How does that look like?
+00:28:16 [W] What I have here is a fork of kubernative vote.
+00:28:22 [W] For those who are not familiar.
+00:28:24 [W] It's an amazing project created by madhu.
+00:28:27 [W] Thank you model for creating that piece of a vulnerable by Design kubernative cluster.
+00:28:33 [W] In this project, you will find some educational material of how about cluster configuration looks like and how you can actually hack this cluster.
+00:28:46 [W] What I've added inside. My phone is a GitHub action workflow containing a check out command over here scanning a specific directory.
+00:29:02 [W] So what I'm going to do now is I'm going to go into that specific directory.
+00:29:06 [W] All about cluster configuration looks like and how you can actually hack these cluster.
+00:29:14 [W] What I've added inside. My phone is a GitHub action workflow.
+00:29:20 [W] Containing a check of command over here scanning a specific directory.
+00:29:29 [W] So what I'm going to do now is I'm going to go into that specific directory.
+00:29:37 [W] I'm going to create a new file.
+00:29:41 [W] The file and I'm going to create is actually the same one that I've used before of the Jenkins. So I'm just going to copy it copy it from my local.
+00:29:57 [W] environment
+00:30:16 [W] What I'm doing that here.
+00:30:19 [W] It's the same Jenkins deployment.
+00:30:25 [W] Going to give it the same name.
+00:30:36 [W] And what I'm going to do know is to create a new branch.
+00:31:01 [W] I have your nice new file.
+00:31:05 [W] And I'm going to probably going to see again up action being triggered.
+00:31:09 [W] Have your nice new file?
+00:31:14 [W] And I'm going to probably going to see again. I'm action being triggered.
+00:31:20 [W] So what the GitHub action will actually do is on every commit to a pull request that is going to master.
+00:31:28 [W] It's going to take the cheque of action the latest version out of GitHub. So if you type in GitHub bridgecrew / Jack of action
+00:31:42 [W] You have an example of how to run check off on your GitHub repository.
+00:31:51 [W] So it's installing the checkout latest version which takes about a minute.
+00:32:03 [W] Then checks out the repository with all of the communities code gold code and then having a set of failing checks.
+00:32:16 [W] On my deployment and make weird any deployment.
+00:32:21 [W] So if I go back to the poor Quest
+00:32:25 [W] refresh it.
+00:32:27 [W] I can see that the kubernative goat see I have failed on the chunk of action.
+00:32:34 [W] And if I was not an admin, it would have blocked me from merging that specific Branch into the main branch meaning. I cannot deploy bad configuration into production if I'm working
+00:32:49 [W] I can see that the community's goat.
+00:32:53 [W] see I have failed on the chunk of action.
+00:32:57 [W] And if I was not an admin, it would have blocked me from merging that specific Branch into the main branch meaning. I cannot deploy bad configuration into production if I'm working with
+00:33:22 [W] raishin
+00:33:27 [W] Cool, so we have a ci/cd pipeline. And actually another phase that we can do is we can actually deploy Chekov as another container that will pull out of the kubernative cluster are running configuration from
+00:33:43 [W] I and then we can have another phase of Chekov running on my eks cluster checking the runtime configuration verifying that there are no drifts from my fixed configuration
+00:33:58 [W] Runtime configuration verifying that there are no drifts from my fixed configuration in GitHub and my kubernative cluster and I remember taking me in slack Whenever there is a bad configuration on my
+00:34:10 [W] Whenever there he's a bed configuration on my production account.
+00:34:15 [W] So actually msconfig analysis can be done in three places pre-commit post-commit on a prion a pull request and on a running cluster. That way we can help we can be sure that
+00:34:30 [W] First commit on a pre on a pull request and on a running cluster. That way we can help we can be sure that the Miss configs are not happening in my production environment.
+00:34:43 [W] So the pre-commit hook and the poor request really helped me to develop in a faster Pace because I have a very fast feedback loop. I can automatically prevent from those Miss configs to happen online environment
+00:34:59 [W] Hook and the poor request really helped me to develop in a faster Pace because I have a very fast feedback loop. I can automatically prevent from those Miss configs to happen online environment, and I don't need
+00:35:14 [W] You can still hurt out with my day-to-day business operations.
+00:35:19 [W] So the key takeaways to have is to one keep your money first secure have a fast feedback loop instead of a ton of your tickets monitoring both build time resources, meaning the code itself and the running
+00:35:34 [W] Look instead of a ton of Europe because monitoring both built time resources, meaning the code itself and the running cost cluster and have an ability to create new policies and Version Control them and peer review them.
+00:35:47 [W] So that's that's all of it folks.
+00:35:49 [W] Thank you very much for joining this talk.
+00:35:53 [W] If you want to try Chekov just type in check out in GitHub. If you have any question, please join our slack Channel slackened bridgecrew audio or send me an email.
+00:36:04 [W] Thank you very much coupon for having me and have a great day everybody.
+00:36:43 [W] Right.
+00:36:44 [W] I have your body. So corny Q&A session.
+00:36:47 [W] You have a few interesting questions regarding check on.
+00:36:51 [W] Let me start with a few of those.
+00:36:53 [W] So one of those words can check out help make any careful. So actually check out in town Deeks infrastructures good Frameworks times.
+00:37:07 [W] AWS an apartment complex.
+00:37:11 [W] So the key check out should be used also when you write a letter.
+00:37:16 [W] Another one was how how does check out compared to Polaris?
+00:37:23 [W] So Polaris is a great project.
+00:37:25 [W] That is very focused on kubernative.
+00:37:29 [W] And it can also tell you energy help you drink kubernative manifests parsec is very focused on Exchange of infrastructures called pregnant.
+00:37:41 [W] check out in spread across the five different infrastructure as code prints just mentioned.
+00:37:51 [W] And I drink interesting question by German crutch is what are the trade-offs between easy check out and see I versus Opa gatekeeper and Kanpai.
+00:38:03 [W] Kanpai. So the main advantages of catching Miss Constance, very early on is the ability to have a faster feedback loop.
+00:38:14 [W] So you can install circles or pre-commit hook even before triggering see I can be engineer who writes the code will be able to see and analyze what configurations they should change
+00:38:29 [W] commit yourself
+00:38:14 [W] and on wrong time you'll see a lot of
+00:38:21 [W] a lot of the configuration of a lot of Engineers that are applying the same ready.
+00:38:27 [W] So if you want to see on a community level what would be the msconfig I really suggest to have it very early on having said that I do believe that you should have around time admission control other or
+00:38:42 [W] Keeper or any kind of other just to be sure that each release is having only valid configuration that you have become. So thank you very much for that.
+00:38:44 [W] We had another question the check of the policies were terraformed providers.
+00:38:52 [W] Like a serrated is disappearing vsphere are required.
+00:38:56 [W] So that's why Jason Bourne.
+00:39:01 [W] So check out has on their foreign policies for other AWS PCP and actually also be spent to products.
+00:39:09 [W] We do not have it still but we're open for contribution.
+00:39:12 [W] So about 80% of the last 100 policies be check of work contributed by the community and we highly webassembly.
+00:39:22 [W] Also beats me once or at least enough to the other Cloud providers.
+00:39:27 [W] So how does if we friend from open policy agent by William Byers?
+00:39:36 [W] Thank you William. So actually I look at those two projects completing one.
+00:39:44 [W] To use on a pre-commit hook so I would say that there are four different stages of the pipeline, but you can use those if you'd like to also there is a matter of syntax work
+00:39:50 [W] So check out hand over 400 BC policy in Opa. You will have to create your own policy Sig regularly during the regular
+00:40:06 [W] 61 very fast time to handle work and to see what he's going to take you home try to encircle first.
+00:40:12 [W] They need to feel like we need additional policies that can either choose to use them on the chuckle format or do Opa for working beside herself.
+00:40:22 [W] That's Chuckles support home.
+00:40:25 [W] So you're welcome to join and CB bridgecrew slots, which are posted three days ago how to use check off we come charts.
+00:40:39 [W] It's pretty straightforward. We also wouldn't give her options example to be able to see that on the bridgecrew Block.
+00:40:48 [W] All right, cool. So super interesting questions, and thank you everybody and thank you coupon.
+00:41:00 [W] If you'd like to join exact Channel, we can we can talk there.

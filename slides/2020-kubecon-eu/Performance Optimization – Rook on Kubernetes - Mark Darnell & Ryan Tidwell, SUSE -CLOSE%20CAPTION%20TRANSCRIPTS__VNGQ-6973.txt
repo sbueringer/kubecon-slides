@@ -1,0 +1,262 @@
+PerformanCLOSE CAPTION TRANSCRIPTS_ce Optimization – Rook on Kubernetes: VNGQ-6973 - events@cncf.io - Thursday, August 20, 2020 8:30 AM - 367 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, this is Mark Darnell with Souza Ryan and I will be presenting performance optimization Rook on kubernative today.
+00:00:09 [W] Real quickly. Ryan Tidwell is a senior network engineer with Souza who works in one of my team's I'm a principal product manager handling our SDI and platforms for Souza. What we're going to be covering today is specifically running Rook, which is
+00:00:27 [W] version of ceph on top of kubernative and doing some performance measurement or some Benchmark evaluations of that technology quick intro will talk about the Benchmark environment will work through methodology and results give you some of those insights
+00:00:43 [W] Ask us what we want future work to be.
+00:00:46 [W] So as an introduction, why did we do this put simply Souza has been a long time player in the open source space. We are involved in kubernative.
+00:01:00 [W] We're involved in SEF software-defined storage, and we're rolling products out that will integrate those Technologies via rook in order to integrate them. You need to ensure that you have a reasonable Network stack in terms of performance,
+00:01:13 [W] Those together and the driving component to do that is a cni-genie.
+00:01:36 [W] Real quickly just to make sure that we're all operating from a Level Playing Field.
+00:01:44 [W] This is a slide from Rook documentation.
+00:01:50 [W] Once again Rook is a project which takes SEF as a piece of software containerize has it and puts it on top of kubernative.
+00:01:56 [W] So rather than running SEF bare metal without any kind of orchestration in between.
+00:02:06 [W] We actually have a three layer stack in order to link those together. Once again, you'll end up with the CM I plug in that sits underneath rook in order to make sure that it's talking to
+00:02:08 [W] Kubenetes and the network the underlying Network stack correctly.
+00:02:13 [W] So let's talk about kubernative networking enough to ensure that once again, we're working from a Level Playing Field with in the audience kubernative networking Works in a couple of ways one is what you would call kind of the standard approach and this uses a
+00:02:30 [W] That are part of both user space and kernel space in Linux.
+00:02:37 [W] You will create things like Vee pairs, you'll have macneill and ipv land you'll talk to a physical interface. You may actually use an SRO of the virtual function as part of an Sr. Iove it also for some networking
+00:02:49 [W] A Linux Bridge were to alized switch.
+00:02:56 [W] So there's a set of components that traffic must go through this set of components will add overhead a second mode that kubernative provides knative Lee is called host networking and what this does is this effectively opens up access from the device
+00:03:08 [W] I'm devices or sorry to the pot. It opens up access from the pods directly into host networking devices.
+00:03:21 [W] Its kind of bypass a chunk of security that you would typically expect to have.
+00:03:28 [W] So while performance tends to be the best because you're not running through any of that overhead that's listed there in the first bullet point.
+00:03:32 [W] You do have a problem in the sense that you may be less secure.
+00:03:38 [W] So Souza is we're rolling these products to people we want to make sure that we provide the best possible performance.
+00:03:42 [W] While not compromising security and that's part of what these benchmarking methodologies are for that we're working through.
+00:03:47 [W] I'm going to go ahead and turn this over to Ryan he's going to do some of the heavy lifting here and describe a lot of the work that he's done in this benchmarking environment.
+00:03:56 [W] So Ryan over to you.
+00:03:57 [W] Thank you, Mark.
+00:04:03 [W] Yeah the start by a just briefly talking about the environment where we had at our disposal to Benchmark these different configurations.
+00:04:12 [W] So this is a snapshot of the hardware specs that we have for our stuff nodes and our client node.
+00:04:24 [W] Got some top-of-the-line Nick's at our disposal as well as some really fast nvme SSD storage.
+00:04:34 [W] What I wanted to show here was to kind of set a Level Playing Field the the first bottleneck you might think of would be the hard drive of SSD itself.
+00:04:55 [W] So the first thing we did was just Benchmark the performance of these ssds that we had in our storage nodes.
+00:05:01 [W] are the same ssds in the same same motherboard and identical configurations across the cluster so weaveworks.
+00:05:09 [W] First Benchmark that with testing right Andre dialogues.
+00:05:23 [W] I want to just point out something on this slide that might be useful as we useful to remember as we go on with the the right benchmarks.
+00:05:30 [W] We notice that we start off kind of slow at 1 K into K block sizes. And we believe this is just a function of not aligning to knative block syseleven.
+00:05:39 [W] Things like page tables sizes and that sort of thing.
+00:05:47 [W] So keep that in mind again.
+00:05:53 [W] I also want to point out here that we're measuring I Ops in terms of hundreds of thousands of ions.
+00:05:58 [W] These are really fast discs and the idea here is to not have them be a bottleneck in the system. We're looking for the fastest disks we can get
+00:06:04 [W] Shot of the software your kernel versions of Rook things like that two bullet points.
+00:06:18 [W] I want to call out here are at the bottom Calico and psyllium.
+00:06:23 [W] These are the two seen I plug ins that we tested we grab psyllium and tested that we do a lot of work with psyllium here at Sousa.
+00:06:34 [W] This is also interesting from a performance perspective because of the ppf.
+00:06:39 [W] F datapath involved calcio is also another popular tool that people use and both supports different encapsulation modes.
+00:06:54 [W] I don't want to call your attention back to psyllium and just mention that we're going to be testing with both encapsulated Network traffic with vxlan and we're going to be testing a Mode called psyllium direct
+00:07:04 [W] We don't encapsulate Podrick.
+00:07:07 [W] For Calico, we're going to use IP and IP encapsulation and vxlan caps.
+00:07:13 [W] So let's
+00:07:18 [W] kind of look at the design of the cluster and a logical level. What we want to wanted to have was a single RBD client.
+00:07:30 [W] We wanted to use Rook to deploy some almonds and some osds which are kind of basic building blocks of Seth.
+00:07:38 [W] Now what this looks like when we deploy it from a physical perspective is a four node cluster and we're ignoring the controller node right now. We're just focusing on the workers in the cluster.
+00:07:57 [W] So we have three nodes that are we're dedicating as storage nodes and a single note that we're using is our client node.
+00:08:02 [W] Now there's a couple things I want to call out here at the top in that in that top box.
+00:08:10 [W] You'll see a file I/O pod now if you're not familiar with file file as a benchmarking tool that we can use to run synthetic workloads on a storage system whether that's physical device
+00:08:25 [W] Out for NFS. So in this case f we're gonna use that to gather our data.
+00:08:35 [W] So we have a pod there that's acting as our client. And that's where our file benchmarking tool is going to run also want to call attention to the networking Technologies real quick.
+00:08:45 [W] and a hundred gig ethernet networking available to our storage nodes and bonded pair of 25 gig mix available to our client code and we'll get back to the bonded pair.
+00:08:58 [W] Or 25 gig mix that is important part of the story that we'll talk about later.
+00:09:06 [W] So let's move on and actually get into the meat talk about the methodology that we went through and talked about the results before we do that.
+00:09:22 [W] I want to set the stage with two basic concepts want to talk about latency and I want to talk about High.
+00:09:26 [W] So first, let's talk about latency as a someone with a networking background who really works in the networking space my first approach to this is say latency is the in late.
+00:09:42 [W] What is latency?
+00:09:47 [W] We're going to find that just very broadly as variable delay inserted by components in a pipeline.
+00:09:49 [W] And talk about the results before we do that.
+00:09:56 [W] I want to set the stage with two basic concepts want to talk about latency and I want to talk about High.
+00:09:57 [W] But first let's talk about latency as a someone with a networking background really works in the networking space my first approach to this is say latency is the enemy late.
+00:09:59 [W] What is latency? We're going to find that just very broadly as variable delay inserted by components in a pipeline.
+00:10:00 [W] You look to the left see where we add latency in the system.
+00:10:04 [W] So we'll start kind of from the top left to work our way around first place that we can introduce a link to using accessing the disk.
+00:10:06 [W] Now that I want to point out.
+00:10:07 [W] This is something that you're seeing I configuration and your network configuration is a really good influence that's going to be a pretty static cost in the system the Bennett the next
+00:10:18 [W] Bullet point is Network transport lead. See now.
+00:10:28 [W] This is the latency that's going to be incurred by mitting a packet on the network having it Traverse your top of racks, which maybe a couple of top of rack switches may be router pens on your on your subtle
+00:10:38 [W] last in the system the Bennett the next
+00:10:39 [W] bullet point is Network transport lead. See now.
+00:10:39 [W] This is the latency that's going to be incurred by mitting a packet on the network having it Traverse your top of racks, which maybe a couple of top of rack switches may be the router pens on your on your subtle
+00:10:41 [W] You're going to be bandwidth availability congestion bonding and switch configuration and those kinds of things then the last bit is that that Colonel Lane see the network stack that we have to Traverse.
+00:10:57 [W] between the Nick and the pod
+00:11:00 [W] this is going to be highly dependent on our cni-genie figuration. When you add this all up the disk access plus the network transport latency first plus the colonel Network stack latency you get a
+00:11:16 [W] Our goal is to minimize the latency in both the kernel and the network fabric.
+00:11:24 [W] now
+00:11:27 [W] when we talk about the performance of storage systems, we like to measure things in terms of items.
+00:11:36 [W] Now.
+00:11:37 [W] What's an eye out short for iot second. So a single iot operation is going to incur all the overhead related to both the disk access latency and all those
+00:11:51 [W] The key Point here is less Network latency equals more ions.
+00:12:03 [W] So the more we can drive down that Network latency the more efficient we can be with providing storage to clients.
+00:12:10 [W] Because we talk in terms of I Ops and we think about storage systems.
+00:12:19 [W] We're going to express these results in terms of ions going forward.
+00:12:24 [W] So that's just a note to set the terminology and
+00:12:26 [W] Now, let's move on and talk about the methodology.
+00:12:30 [W] So scientific method the this is kind of what was in our mind while we were trying this out want to change one variable at a time hold all others concert that variable.
+00:12:43 [W] Really being the cni-genie here more optimized the base system make that as fast as we can. So we've got jumbo frames or maximum transmission unit or MTU of 9,000
+00:12:59 [W] Fastest disks we can so the discs are faster than the network.
+00:13:05 [W] We don't want the network to be.
+00:13:08 [W] We don't want the discs to be the bottleneck here.
+00:13:10 [W] We want the network to be the bottleneck so that we can
+00:13:13 [W] change parameters on that and see how those different configurations influence the performance of the system.
+00:13:20 [W] As I've been alluding to disk access time is effectively going to be a constant here regardless of the cni-genie and then we have a single barbecue client running on a dedicated node, and that's where we measure the high Ops
+00:13:36 [W] See and pick them with the man measurements and then we run through this whole process swapping out the sea and I Plug-In or the cni-genie figuration and re running the tests by changing that variable.
+00:13:50 [W] So now that I've set the stage, let's dive into the results.
+00:13:59 [W] So let's start by looking at read benchmarks and I'm going to call out what I'm gaining common block sizes.
+00:14:07 [W] So this would be anything from one k8s block sizes when performing a read Benchmark with the single client.
+00:14:16 [W] We observe a 20 to 25 percent overhead when using encapsulation
+00:14:21 [W] So psyllium and Calico when encapsulating podcast affic are occurring pretty significant overhead. Now, I mentioned psyllium direct mode earlier.
+00:14:36 [W] This is a mode that psyllium runs in there's a spirit of similar configuration for Calico that we didn't test but the principle still holds over not encapsulating traffic and we're not paying those overheads.
+00:14:48 [W] It's so as you can see something direct mode actually Stacks up quite nicely against host networking from a performance perspective as opposed to 20 to 25 percent overhead really paying about a two percent overhead, which is pretty impressive.
+00:15:06 [W] So let's not look at these larger block sides.
+00:15:17 [W] So anywhere from a one may block size to an 8 Meg block size.
+00:15:28 [W] Again. We have significant overheads here when encapsulating podcast affic with vxlan or IP and IP their tea to 50 percent overhead relative to host networking
+00:15:33 [W] You see that psyllium direct mode only at that to magalix eyes incurs a 10 percent overhead, but as much more competitive at other block sizes again psyllium direct mode stacks of really nicely.
+00:15:49 [W] Compared to host networking and we're not paying that overhead with the encapsulation cost.
+00:15:56 [W] So let's move on and look at the right benchmarks.
+00:16:05 [W] So these common block sizes again. What one k8s we observe a five to fifteen percent overhead will encapsulate upon traffic.
+00:16:12 [W] So in direct Mode still Stacks up favorably again. We're seeing roughly two percent overhead for that psyllium direct mode really competitive with host networking.
+00:16:23 [W] And then when we look at the larger block sizes in one bag to the 8 Meg block sizes, this is where things got a little interesting had to dig a little deeper into what was happening.
+00:16:39 [W] We're only seeing one to two percent overhead Calico the I put the IP and IP encapsulation current a little bit more overhead of these are surprising results.
+00:16:52 [W] Why does the performance not differentiate cell phone, right?
+00:16:55 [W] On this is something that we had to dig into now. If you recall in the previous slide where I was discussing the environment, we had mentioned a pair of 25 gig
+00:17:09 [W] Nick's we have oil client node, and it turns out that this is an important factor that we didn't consider initially. But before we dig into the Hat
+00:17:24 [W] Let's talk about bonding a little bit and make it clear what we mean and talk about bonding.
+00:17:32 [W] So bonding is when we take multiple physical interfaces make them appear as a single interface with multiple channels working behind the scenes now Linux supports the Myriad of bonding we
+00:17:46 [W] with lacp bonding might be referred to as move for this is just the configuration that we have in this specific configuration lecp has some tunable parameters and one of those parameters is a hashing algorithm
+00:18:02 [W] Transmitting packets determining which interface we're going to admit the packet on that's done through hashicorp.
+00:18:12 [W] The key here is we want to figure out how we can balance traffic really nicely across these mix again.
+00:18:22 [W] We have 225 big Knicks.
+00:18:24 [W] This is a lot of bandwidth.
+00:18:27 [W] Let's make the most of it. So how do we balance this? And it turns out it's these hash table seized.
+00:18:33 [W] Max
+00:18:34 [W] So bring this back to the environment our initial round of benchmarks.
+00:18:40 [W] We observe that pouring utilization on that on that on our Network bandwidth demands topped out about 25 gig when we have second 25 gig Nick that we could have spilled over traffic to
+00:18:55 [W] It's a question. We naturally asked is how we drive some better utilization on that.
+00:19:01 [W] We had to tune these blonde settings and it turns out that the parameter that yielded the most dramatic results was tuning this transmit hashicorp C parameter on the bond now, let me just preface this by saying.
+00:19:19 [W] Results was tuning this transmit hashicorp C parameter on the bond. Now, let me just preface this by saying these are the settings that you'll the you love the most dramatic performance gains in our cluster.
+00:19:25 [W] These are the settings that yield the yield of the most dramatic performance gains in our cluster.
+00:19:27 [W] So for host networking and selenium with vxlan and selenium with direct mode.
+00:19:34 [W] These are the configurations that we tested by with the tuning hashicorp.
+00:19:41 [W] We had to tune them a little different because they have different characteristics than the way that they set up the data path. So with host networking we use this later.
+00:19:49 [W] Oh three plus four patch policy.
+00:19:54 [W] Which what that does is it just takes into account your Source IP your death psyche your Source port and destination Port feeds those into the hash algorithm and determines which Nick packet goes out based
+00:20:07 [W] 4vx plant for sewing a vxlan we had to use n cap free clothes for and what this does is this does the same thing as at layer 3 plus 4 bonding accept it looks inside the inner
+00:20:24 [W] X land encapsulation and uses the inner packet Source IP debts IP Source port and escort. It doesn't use the average packet now psyllium direct mode
+00:20:40 [W] Layer 2 plus 3 hack-a-thon, which takes into account the source Mac address the destination Mac address in the source IP and the destination IP these settings you love the most dramatic performance gains in our cluster.
+00:20:57 [W] Keep in mind these are very specific to our cluster factors such as cluster size bonding mode Hardware capabilities. They're all going to call for different settings and you may need to tune things differently if you're going to use bonds.
+00:21:13 [W] What did this get us?
+00:21:17 [W] Well, let's start by again. Looking at these common block sizes at 128k.
+00:21:26 [W] And we was kind of underwhelming.
+00:21:30 [W] We didn't really see much difference when we to bash policies here turns out that these block size is we're not actually generating enough Network traffic for the balancing of packets across the fit Nick's that participate in the bomb matter.
+00:21:45 [W] Again, looking at these common block sizes at 128 K. And we've kind of underwhelming. We didn't really see much difference when we compassion policies here turns out
+00:21:47 [W] but
+00:21:48 [W] when we move to toward those larger block sizes these 128 Meg block sizes.
+00:21:58 [W] We're actually putting more demands on the network in terms of bandwidth and what this does is this causes us to me this spill over to that second Nick to utilize its bandwidth and what we see here
+00:22:11 [W] Significant performance gains by by tuning policies as much as 40% more I Ops by making this simple change.
+00:22:22 [W] And that that's that's across the board both vxlan encapsulated traffic as well as the host networking and the cilium direct mode. One thing. I want to point out here is this is not a direct simulate simulation
+00:22:37 [W] Host networking and the cilium direct mode. One thing I want to point out here is this is not a direct simulate simulation of a cluster that's under low from multiple clients, but the the fact that
+00:22:43 [W] Under low for multiple clients, but the the fact that what we're doing here is demanding more bandwidth from the network.
+00:22:52 [W] This is an indication that these sorts of bonding settings will matter if you're using if you have multiple clients using the network and putting
+00:23:04 [W] Multiple clients using the network and putting packets out there and stressing the network.
+00:23:11 [W] Now. Another thing to point out here is you may not be using bonding.
+00:23:13 [W] This may not be common on your client nodes.
+00:23:21 [W] That's where are the bonding in our set of was but you may be employing Bonds on your storage nodes in the same principle applies want that good balance of traffic across the bonds that were
+00:23:26 [W] we're having the Knicks that were having participate in that long.
+00:23:30 [W] So we learned a lot from this. So let's talk through some of these.
+00:23:40 [W] basic insights again
+00:23:46 [W] so
+00:23:48 [W] let's finish up talking about bonding what to know about bonding again. This this may not be something that you do in your environment.
+00:23:59 [W] But if you do it's something to pay attention to and there's a there's a lesson here that that we learn which is question your assumptions.
+00:24:10 [W] We just assume that we had a bonded pair 25 gig Nick's that's 50 get pipe, right?
+00:24:15 [W] That should be plenty of bandwidth.
+00:24:17 [W] There should be a bottleneck there. Well turns out wasn't tuned properly and it did become a bottleneck.
+00:24:22 [W] But if you do it's something to pay attention to and there's a there's a lesson here that we learn which is question your assumptions.
+00:24:36 [W] We just assume that we had a bonded pair 25 gig mix. That's if you get quite right that that should be plenty of bandwidth.
+00:24:37 [W] bandwidth. There should be a bottleneck there Well turns out wasn't tuned properly and it did become a bottleneck.
+00:24:39 [W] So these it turns out if you're going to use bonding bonding modes matter you want that balance of traffic again, these are sorts of configurations that are going to be specific to your environment in factors such as your see and I
+00:24:42 [W] Curations that are going to be specific to your environment in factors such as your C and I can figuration your scale Hardware capabilities are going to drive your choices here.
+00:24:45 [W] as far as general recommendations
+00:24:50 [W] some of these may seem seem basic but you know, we again these are learnings that things that were confirmed for us overlays and encapsulation or going to limit your eye Ops because they're going to introduce latency in the network.
+00:25:08 [W] So where possible try and avoid encapsulating patro affic with vxlan or IP and IP for GRE pick your encapsulation protocol that that's going to add overhead.
+00:25:20 [W] So we want to avoid that where we can bandwidth demands of the single client are going to be highly correlated with block size.
+00:25:33 [W] We harken back to the slide.
+00:25:37 [W] I showed that have the benchmarks. We ran natively against the SSD and the right benchmarks.
+00:25:42 [W] Kind of exhibited a strange Behavior at 1 K into K block sizes and then all of a sudden once we hit 4K block sizes performance shot up when an aligned with a knative block size.
+00:25:58 [W] Again question everything and then this experience that we had with bonding is a perfect example of that.
+00:26:25 [W] with that I want to hand it back to Mark to wrap things up.
+00:26:27 [W] Thanks, Ryan.
+00:26:39 [W] I really appreciate all the solid work there and we believe it's going to set the stage for some great follow-up work that we want to present it following coupons. So let's let's drive one specific point home. Once again, we were really doing this work in order to determine
+00:26:46 [W] We'll see an IPO gives you can use a multiple Network paths that you can use in order to set this three level sandwich of ceph rook and kubernative. Zup primary lesson to learn here is look the best hardware without the best cni-genie
+00:27:02 [W] Quick caveat do we believe that we've covered all of the possible cni-genie R know you'll see that momentarily in a next steps.
+00:27:15 [W] Next lesson host networking is easy.
+00:27:16 [W] It's a little bit insecure it performs.
+00:27:21 [W] Well, it was really the Target that we shot at for all of the tests that we did.
+00:27:30 [W] So it's an excellent thing to kind of set the stage for where your system is, but it may not be what you want to actually deploy in production next. I Ops matter.
+00:27:32 [W] And this this one is one of those obvious statements have realized that storage piece will look at I Ops unnecessary Network latency is going to hurt I Ops so as a system architect ensure that you design your architecture to minimize Network latency.
+00:27:47 [W] Next thing Seth actually implements policy enforcement.
+00:27:54 [W] Why does why does this matter?
+00:28:01 [W] Well, you have policy enforcement that can happen at the ceph layer you have policy enforcement that can happen at the CMI layer and you will have some stories people tell you.
+00:28:09 [W] Hey, I've got this at SEF. I don't necessarily need this at my cni-genie are one of the things we did not Benchmark here was implementing additional policy in the cni-genie elf and different cni-genie have strikingly different performance levels. If you go look at talks between
+00:28:18 [W] XDP and say IP tables, you'll see that point really hammered home.
+00:28:26 [W] So realize that you may want to push implementing CMI policy and which would actually make the performance gains even more striking in the benchmarks that we ran. So futurewei cook.
+00:28:38 [W] One of the things we did not look at was multics with Sr.
+00:28:40 [W] Ioved actors using virtual functions both Ryan and I with our Network background believe that fundamentally that should not matter that host networking should be the primary or the
+00:28:49 [W] Best performance case that you're going to be able to generate we would like to test that though. Next thing Calico is doing some extensive work integrating BPF into their environment. So that would begin differentiating now between Calico and
+00:29:03 [W] The same underlying technology which would be BPF and XDP.
+00:29:09 [W] We believe that would be a valid test case to start looking at in addition.
+00:29:15 [W] We would like to improve our inline instrumentation in terms of making sure we can actually time stamp from the time a packet leaves fio and actually exits a Nick on the box right now.
+00:29:28 [W] We have a round trip with fio of from the time it leaves fio and goes down and back across and then returns all the way all the way back to fio. So it's a black box.
+00:29:34 [W] EXT EXT test that we're using right now and we'd like to make that finer granule.
+00:29:44 [W] Finally. We have three nodes in a cluster and one device driving a workloads.
+00:29:55 [W] So we'll go ahead and open the floor for QA.
+00:30:05 [W] I'm going to rip through this and we'll figure out how this works with our with our online format right now.
+00:30:06 [W] Thank you for your time.
+00:30:10 [W] Appreciate your attention and look forward to hearing back from everyone.
+00:30:12 [W] Okay everybody.
+00:30:23 [W] Thanks for joining.
+00:30:24 [W] Happy to take some questions.
+00:30:28 [W] We've had a few good ones come through the chat while the presentation was airing. So dive into a couple of those one question that popped to the top here was
+00:30:41 [W] How do I improve latency if I'm using NFS? My answer to that would be everything that we talked about here applies to NFS as well.
+00:30:57 [W] So whether you're using our beanie or NFS the same principles are going to apply.
+00:31:01 [W] Another question and this one is one that I wanted to spend a little time on I wish I had spent a little more time on it in the presentation question is how are I opted Bound by Network latency?
+00:31:20 [W] I would have thought that they were limited by bandwidth and that's exactly the intuition that I went into this exercise with myself.
+00:31:32 [W] I had a hundred gig networking on my storage node.
+00:31:36 [W] 25 gig bonded pair on my client node
+00:31:41 [W] I should be able to get amazing performance because I have all this fast networking they able to meet and the reality is at least in this setup latency or bandwidth was not the driving
+00:31:58 [W] Factor for performance and what really turned out to be where these different configuration parameters that we discussed in the TOC cri-o ugh in and the way you
+00:32:13 [W] You figure it actually makes a huge difference and what we're hitting there.
+00:32:18 [W] is that latency both in how we access the network and in the kernel as we use different cni-genie figurations, you know, the the other thing that I
+00:32:32 [W] I should have known going in but I didn't think was you know, I'll just be able to fill this pipe. If I try to write it turns out the really the way to use all that bandwidth was actually to push
+00:32:47 [W] Roger block sizes now, of course as you scale up and you start using more as you have more clients using the cluster there regardless of the block size as you scale that out you're going to make better use of that bandwidth.
+00:33:02 [W] But you know bandwidth was not the determining factor in performance here and it was these different areas where we have latency both making sure that the bond is configured correctly and minimizing the
+00:33:18 [W] Overheads and traversing the network stack so great question. I appreciate that one. I didn't get to spend as much time on that in the TOC as I wanted.
+00:33:28 [W] See the next question that came through in the chat.
+00:33:35 [W] Did you also measure CPU overhead caused by the network plugins? And when was there any there's absolutely CPU overhead here and I'm sorry to say that's not something that we measured this go-round.
+00:33:49 [W] We were really focused on what knobs we can turn to drive.
+00:33:53 [W] I Ox in the cluster.
+00:33:57 [W] So that's definitely something to look at going forward. I know that others have done.
+00:34:01 [W] We're profiling psyllium and Calico and other cni-genie so you may be able to find some answers and maybe combat together, but I don't have those numbers right now,
+00:34:15 [W] something I would like to go back and look at
+00:34:18 [W] what else do we have here?
+00:34:33 [W] Can you say more about the networking equipment which was used in The Benchmark.
+00:34:35 [W] This can have a huge impact on the results.
+00:34:49 [W] Yes. So we had as I mentioned we had both mellanox and kubeedge ich Knicks at our disposal running at 25 and 100 Gig
+00:34:50 [W] We also were connected to believe this was a dose which I would have to double check with my storage engineers in hundred giving networking off the switch. So
+00:35:06 [W] Yeah, basically a hundred gave Network Fabric and then my client node was only able to run it 25 you.
+00:35:15 [W] Let's see or future tests.
+00:35:35 [W] We look at production clusters and the block sizes. They are doing for reads and writes to get more realistic benchmarks one for my block sizes are nice for filling your pipe, but not
+00:35:40 [W] For I Ops yeah, absolutely. The the one for Meg that definitely feels the pipe put stress on the network and kind of the
+00:35:55 [W] reason, I still know there's actually profiled the characteristics of different block sizes just as something to explore its kind of see what the impact on the network was and it turns out that that turned into a
+00:36:10 [W] A sort of a proxy for scale and in the system.
+00:36:18 [W] It's not a perfect one, but it puts more Network traffic out there and more for the system to handle so it did sort of a proxy for scaling up of multiple clients.
+00:36:30 [W] Obviously as we talked about in the TOC just having a single client out there is not realistic and that's one of the things that we're looking at is doing this exercise.
+00:36:40 [W] Sighs in a scaled-up environment where we are using more realistic block sizes what we're using a more realistic number of clients and a more realistic configuration.
+00:36:53 [W] This exercise is kind of a first pass to build kind of a basic understanding of what the key factors.
+00:37:03 [W] We need to pay attention to with regard to performance on so, yeah.
+00:37:04 [W] Thanks for that question.
+00:37:05 [W] All right.
+00:37:15 [W] Well again, thanks for attending and thanks for the great questions everyone. We can move this conversation over to slack and I'm happy to take questions there.

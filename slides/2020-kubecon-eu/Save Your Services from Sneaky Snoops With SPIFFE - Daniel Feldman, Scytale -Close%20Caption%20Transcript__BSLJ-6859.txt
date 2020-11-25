@@ -1,0 +1,232 @@
+﻿Save Your Services from Sneaky Snoops With SPIFFE?: BSLJ-6859 - events@cncf.io - Tuesday, August 18, 2020 11:37 AM - 58 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:55 [W] Hello, welcome to the cube.
+00:08:01 [W] calm Cloud knative con the Europe 2020 virtual event.
+00:08:10 [W] I am Daniel Feldman, and the title of this session is savior services from sneaky snoops with spiffe e first of all, I'd like to start by introducing myself.
+00:08:11 [W] Again.
+00:08:13 [W] My name is Daniel Feldman.
+00:08:14 [W] live in Minneapolis in the US and I've been working on cloud security engineering for most of my career. I started out at a company called Veritas which makes the number one used Enterprise backup software, which has a lot of really interesting security requirements.
+00:08:26 [W] Cure the engineering for most of my career.
+00:08:36 [W] I started out at a company called Veritas which makes the number one used Enterprise backup software, which has a lot of really interesting security requirements.
+00:08:38 [W] I worked on the security protocols team at that company that work led me to join a startup called sight L, which developed the spiffe Ian Spire open-source cncf security projects that I'll be discussing today.
+00:08:41 [W] Then just recently sight L was actually acquired by HP e which is the number one manufacturer of servers in the world and has a very
+00:08:46 [W] a variety of really interesting open source projects.
+00:08:53 [W] So I'm really excited to be continuing to work on spiffe E and Spire at hpe but I'm not just here to represent myself.
+00:08:59 [W] There's a huge team with security experience at a variety of top companies that's working on spiffe E and Spire.
+00:09:08 [W] In fact, one of our founding Engineers have been Gilman was the author of the book zero trust networks, and he'd probably be here today except that he's out on paternity leave.
+00:09:12 [W] congratulations Evan here are the subjects will be discussing today.
+00:09:16 [W] First what is service identity and why is it an interesting problem to solve second?
+00:09:25 [W] We'll be discussing several different approaches to service that identity that you might already be familiar with third will be discussing spiffe e which is the standard for service identity.
+00:09:30 [W] Fourth will be discussing Spire which is the implementation of spiffe e that I work on every day and then V will be discussing the next steps for using spiffe e and Spire at your company and contributing back to open source.
+00:09:44 [W] Why is service identity and interesting problem?
+00:09:49 [W] Well, you've probably seen charts like this before each one of these dots is a service at Netflix.
+00:10:01 [W] in the code and changing how these Services interact with each other in order to do any kind of security each entity that you're trying to secure has to have some kind of identity for example to encrypt something you have to know the identity of the party that will be decrypting it
+00:10:20 [W] Integrity if you're adding a digital signature, you have to know who will be verifying the digital signature and how they'll access your public key in order to do Authentication.
+00:10:34 [W] Obviously, the thing that you're authenticating has to have some kind of identity and in order to do authorization you need to First do authentication and authentication depends on identity for humans identify identity is mostly straightforward each. Human is a
+00:10:45 [W] Humans don't clone each other.
+00:10:52 [W] They don't constantly change. They have memories. You can give a human a username.
+00:10:56 [W] You can give a human a password. You can give a human a two-factor authentication device and expect them to retain that information for services.
+00:11:02 [W] The situation is much more complicated services are constantly scaling up scaling down moving around changing completely.
+00:11:10 [W] They have no long-term memory when the service starts up.
+00:11:11 [W] How is it supposed to know what it's username and password is so solving the service identity problem is very important in order.
+00:11:16 [W] Our to be able to do any kind of security for connections between back in the pre cloudbees. We used to use perimeter Security in the perimeter security model everything inside a perimeter is trusted and everything outside is untrusted.
+00:11:31 [W] So you have a firewall you have a DMZ that allows the connections that that go through the firewall boundary and then all the services inside the perimeter are essentially trusted. They can all talk to each other. They don't require any credentials within the perimeter.
+00:11:44 [W] As you add multiple datacenters multiple clouds multiple regions within clouds. This becomes increasingly complex to maintain you need really complicated firewall rules to allow specific connections from service a to service be to service see and then as you add in
+00:12:00 [W] You code constantly with continuous integration and continuous delivery.
+00:12:08 [W] This gets impossible to maintain because the the connections between services are constantly changing and as the system's get more and more complicated there are more and more holes on the perimeter that a hacker can exploit.
+00:12:18 [W] Can we just use shared secrets?
+00:12:21 [W] Well, this is what you're probably using today. If you haven't heard of spiffe yet in the shared Secrets model every service has credentials or certificates that are used to access other services. Hopefully, these are all stored in a Secret Storm.
+00:12:30 [W] Maybe Amazon sneaker store, maybe hashicorp Vault maybe as our secret store, but maintaining these secrets is hard work. You have to you have to rotate them frequently up to make sure they're not being misused.
+00:12:45 [W] You have to make sure that they aren't being stolen by insiders by by Hackers from the outside and and then you're really reducing the problem to a different question.
+00:12:54 [W] which is how do you authenticate your service to The Secret store in the first place?
+00:12:56 [W] And there's no good way to do that. Usually you just have some kind of a token that's in your config map that
+00:13:01 [W] Your service to the secrets or soda and get other Secrets.
+00:13:05 [W] This is really a hack mapping username password authentication for humans on to services, but it doesn't work very well before we move on.
+00:13:19 [W] It's worth asking why we can't just use web public key infrastructure or web pki to secure our internal Services web pki works great for securing access to our bank accounts.
+00:13:25 [W] By Hackers from the outside and and then you're really reducing the problem to a different question.
+00:13:31 [W] Which is how do you authenticate your service to The Secret store in the first place?
+00:13:31 [W] And there's no good way to do that.
+00:13:32 [W] Usually you just have some kind of a token that's in your config map that authenticates your service to the secret sorcerer can get other Secrets.
+00:13:32 [W] This is really a hack mapping username password authentication for humans on to services, but it doesn't work very well before we move on. It's worth asking why we can't just use web public.
+00:13:37 [W] Infrastructure or web pki to secure our internal Services web pki works great for securing access to our bank accounts.
+00:13:47 [W] So it should work for internal Services, right?
+00:13:48 [W] Unfortunately webp Ki is just not a great fit for internal services in webp ki your browser requests a host name from DNS and DNS gives it an IP address, then your browser connects to that IP address and receives a certificate signed by
+00:13:49 [W] In what they ki your browser requests a host name from DNS and DNS gives it an IP address, then your browser connects to that IP address and receives a certificate signed by a certificate Authority indicating that that server really owns that host name.
+00:13:51 [W] Of a service to the actual service itself. Unfortunately internal Services sit to pickly do not have an individual globally recognized DNS name you might have a service with thousands of copies.
+00:14:04 [W] They might all have different host names or you might have one service that only has an IP address.
+00:14:09 [W] It doesn't have a host name at all.
+00:14:12 [W] Even if we could solve that problem there would be no way for an instance of a service that's just starting up to find out its own identity. So web pki just doesn't
+00:14:22 [W] fit well with solving the internal service identity problem and we don't see it used very often for that application.
+00:14:26 [W] so if you think about the solutions, we just discussed perimeter security shared secrets and webp Ki you'll realize that what we really need is a way to securely distribute identities to services without depending on any manual effort without depending on any external services like
+00:14:42 [W] At store and that method is spiffe e the secure production identity framework for everyone.
+00:14:50 [W] That's what we're here to talk about today.
+00:14:51 [W] And that's what I work on spiffe e is a platform agnostic standard for implementing service identity.
+00:14:59 [W] It's inspired by internal software that was developed at Google Netflix and Facebook and people from those companies got together with back in 2017 to start drafting the spiffe E standard spiffe.
+00:15:10 [W] He gives your service a passport for communicating with other services.
+00:15:12 [W] It doesn't actually do the communication. It's not a servicemeshcon.
+00:15:13 [W] Shhhh, it's not an overlay Network.
+00:15:18 [W] It just gives your service that identity information. It needs to establish connections within those other systems, but it is partially implemented in several different servicemeshcon.
+00:15:25 [W] Then the full implementation is called spire and that's the reference implementation.
+00:15:31 [W] That's the code. I actually work on but other other software is free to implement spiffe e
+00:15:36 [W] this is a fee standard consists of four different pieces. The first piece is spiffe e IDs spiffe e IDs are a standard format for identifying Services.
+00:15:48 [W] It starts with spiffe e colon slash slash.
+00:15:49 [W] It looks like a URL and then there's a trust domain field That's Unique identifier for your organization. Typically, it's just your organization's top level domain.
+00:15:58 [W] Then there's a slash then there's an identifier for the service.
+00:16:02 [W] It's very simple.
+00:16:07 [W] The next piece of spiffe e is spiffe e verifiable identity documents.
+00:16:09 [W] Effects spiffe Eid we actually support two different formats for S. Fins one is x.509 certificates with certain Fields filled in to include the spiffe Eid and the other is Javascript web tokens again with certain Fields filled into
+00:16:28 [W] To a service Pacific spiffe Eid and you may want the x.509 certificate or the JavaScript web token in different situations?
+00:16:37 [W] The next piece of the spiffe E standard is trust bundles.
+00:16:51 [W] These are sets of certificates that can be used to verify the essence and the spiffe E standard provides a format for the dress bundles and then a way for a service to get the list of trust funds that's available.
+00:16:52 [W] Finally this spiffe E standard includes the workload API.
+00:16:57 [W] This is a very simple local grpc API that allows your service to obtain its spiffe Eid It's s vids and it's trust bundles and then use them to establish secure communication later on.
+00:17:12 [W] Why is it a local grpc API?
+00:17:16 [W] Well, it was a remote API, it would need some kind of authentication and when your services first starting up, it doesn't have any kind of identity.
+00:17:21 [W] So it can't perform any kind of authentication so
+00:17:22 [W] As part of the specification we guarantee that this local workloads API is available.
+00:17:27 [W] Here's another diagram of the spiffe E standard.
+00:17:39 [W] You have a spiffe e provider which is providing those four elements of the spiffe E standard to each of your services. Each service gets a spiffe Eid and S vid a trust bundle and access to that workloads API, which lets it obtained this if he IDs did
+00:17:49 [W] and also notifications whenever any of those elements change, so there are a couple of different implementations of the spiffe E standard that are available right now some of the servicemeshcon including Kuma sto and network servicemeshcon parlament spiffe e to varying degrees, and
+00:18:05 [W] Its implementation is Spire, which is the implementation of spiffe e that includes the entire API and it is production quality software.
+00:18:16 [W] It's in use that a number of big companies right now.
+00:18:19 [W] It's at the incubation level in the cncf structure.
+00:18:23 [W] So similar to Envoy or at CD we're trying to get it up to to the graduated level in cncf, but that may take a little while longer.
+00:18:29 [W] And it's available on GitHub.
+00:18:35 [W] You can download it right now and see the open issues and contribute back up to it.
+00:18:37 [W] I and many others work on Spire every day.
+00:18:38 [W] Spire consists of two parts the Spire server is actually responsible for signing the S vids because it needs to be highly secure.
+00:18:52 [W] We recommend running Spire server on an isolated virtual machine or even a dedicated Hardware within your data center. Then the Spire agent provides the workloads API and that runs on all the alongside your services on individual nodes.
+00:19:01 [W] The first step in getting Spire running is called No data station in no data station.
+00:19:13 [W] The node proves its identity to the Spire server on cloudbees are in kubernative the node provides an instance identity document to the Spire server. And then the Spire server validates that instance identity document and grants the agent its own s vid.
+00:19:22 [W] Also possible to perform no data station through pre distributed certificates or using join token strings because the note attestation process is automated as you scale up. The number of nodes each node can be attested automatically so you don't have to do any manual effort as you
+00:19:38 [W] Now that we have secure communication from the Spire agent to the Spire server.
+00:19:44 [W] The Spire agent can provide the workload a pi over a local connection as new workloads connect. The Spire agent performs. Another process called workloads attestation for each workloads.
+00:20:15 [W] Actor Aesthetics of the workload can be checked.
+00:20:17 [W] Once no data station and workloads attestation are done. We have a secure chain of trust going from the workload of all the way back to the Spire server.
+00:20:26 [W] And it looks a little bit like that so you can have all these different workloads.
+00:20:34 [W] They're all communicating with the Spire server get an up-to-date s visits and those workloads can establish secure communication between each other using their secure identities.
+00:20:46 [W] It's important to remember that none of this is static the bundles and acids are getting updated frequently workloads are starting up and shutting down nodes are starting up and getting shut and shutting down.
+00:20:55 [W] Typically. We actually refresh the S vids every four hours. So
+00:20:57 [W] It's very frequent. And there's no manual effort needed. Everything is happening behind the scenes automated by the Spire employee.
+00:21:04 [W] Workloads, they're all communicating with the Spire server get an up-to-date s visits and those workloads can establish secure communication between each other using their secure identities.
+00:21:09 [W] It's important to remember that none of this is static the bundles and S vids are getting updated frequently workloads are starting up and shutting down nodes are starting up and getting shut and shutting down.
+00:21:12 [W] Typically. We actually refresh the S vids every four hours.
+00:21:13 [W] So it's very frequent. And there's no manual effort needed. Everything is happening behind the scenes automated by the Spire employee.
+00:21:14 [W] So of course running Spire in real systems is a little bit more complicated than the toy example.
+00:21:17 [W] We just did first of all most organizations will run several Spire server side by side two or three copies of the same Spire server for high availability.
+00:21:19 [W] Second if you have multiple clouds you want them to be Loosely coupled so that if one can't access another the entire system doesn't go down immediately.
+00:21:32 [W] So we support a feature called Federation which lets you have multiple Spire clusters that are exchanging their bundles periodically so that they can all exchange all the estimates are compatible with in both systems, but they are they are tightly coupled.
+00:21:43 [W] Thirty-second if you have multiple clouds you want them to be Loosely coupled so that if one can't access another the entire system doesn't go down immediately.
+00:21:45 [W] So we support a feature called Federation which lets you have multiple Spire clusters that are exchanging their bundles periodically so that they can all exchange all the estimates are compatible with in both systems, but they are they are tightly coupled.
+00:21:48 [W] called Upstream authorities, which lets you use an external see a to do this by a root certificate signing and this is really common for organizations that have some kind of compliance mandate to use a single single trust hierarchy for their organization
+00:22:01 [W] Maybe they want to use some kind of Hardware security module like an HSM available in AWS to do all the root certificate signing or maybe they want a hierarchy of spire servers.
+00:22:14 [W] They want to have one master Spire server for the whole organization and then lots of spire servers for individual individual divisions within their organization.
+00:22:20 [W] Now let's talk about some frequently asked questions about spire.
+00:22:28 [W] First of all, why do we need one Spire agent per node and what counts as a node anyway do virtual machine host counts as a note do kubernative hosts count as anode and the answer is remember. The Spire agent is providing the spiffe E. Workload API the spiffe E. Workload API is a
+00:22:40 [W] Authenticated and then the implementation uses features of the operating system to identify the process that's connecting to that API and then use characteristics of that process to give that process the right s fit so you need at least one Spire agent per instance
+00:22:55 [W] Them and again we support Linux we support BSD.
+00:23:03 [W] We mostly support Windows, although that's not official yet.
+00:23:05 [W] But whichever operating system your used you're using you need one Spire agent for instance of that operating system.
+00:23:17 [W] So a virtual machine host wouldn't make sense to run a Spire agent on because it doesn't have access to those those operating system system calls that let us determine which process is connecting to which socket but a kubernative node running lots of PODS is
+00:23:25 [W] One Spire agent because there's just one coral and that Colonel can identify which process is connecting to the workloads API regardless of which pot is in.
+00:23:35 [W] What if the Spire agent is compromised so I didn't discuss this in the presentation, but the Spire agent itself has really minimal trust. It can only issue as fans that are allowed to be issued by that node.
+00:23:51 [W] So even if the Spire agent is completely compromised even if a hacker gets in and tampers with the Spire agent, it can't simply request estimates for any possible workloads within your organization can only request estimates for the processes that are supposed to be running on that node also.
+00:24:06 [W] All the Spire agent doesn't have any of your Cloud credentials.
+00:24:11 [W] All of that is stored in the Spire server configuration.
+00:24:19 [W] So even though it probably isn't great if you're Spire agent is compromised because it can implement it can issue estimates that that it isn't supposed to issue.
+00:24:26 [W] It can tissue just NES fit for your entire organization.
+00:24:29 [W] It can only issue estimates that are supposed to be issued by that node next.
+00:24:33 [W] What about my old workloads that I don't want to change remember spiffe e you have to
+00:24:36 [W] You have to implement some kind of client for that workloads API in order to get your spiffe Eid trust bundle and S vid.
+00:24:42 [W] Well, you can use a sidecar proxy and kubernative stamp laments Spire Spire client.
+00:24:52 [W] Jar that plugs into the Java TLS apis at a low level so you can use Java you can use spiffe in Java without changing your code at all.
+00:25:05 [W] You just need to change some Java configuration. And then when your Java application creates a TLS socket, you will automatically use spiffe e to get a client certificate.
+00:25:13 [W] How do I specify which workloads get which spiffe e IDs?
+00:25:18 [W] So in spire?
+00:25:21 [W] This is done using a concept called registration entries and these are stored in the Spire database.
+00:25:25 [W] The registration entries map the characteristics of a workload to a specific spiffe Eid and then Spire will generate an estimate for that spiffe Eid when it needs to so here is an example registration entry for node is says if this
+00:25:39 [W] And as this AWS tag database then give it the spiffe E ID corresponding to database.
+00:25:49 [W] So these are these are little chunks of it's almost like code that says if something has these characteristics give it the spiffe Eid.
+00:25:56 [W] Here's another example for workloads.
+00:26:05 [W] And also has the uid payments then give it the spiffe Eid database / payments and this kind of structure can be used to create spiffe pids flexibly for all the services within your organization and the specific we call them
+00:26:20 [W] Things like AWS tag parent a duid characteristics of the workload or the node that can be used to generate the right spiffe.
+00:26:35 [W] IDs. Those are all defined in plugins. So you can even create new plugins that Define new characteristics of the note that can be used in registration entries.
+00:26:37 [W] Finally what if the Spire server goes down?
+00:26:44 [W] Well every s V8 is configured with a time to live and it will continue working for that length of time in our default configuration.
+00:26:51 [W] We've set up the time to live to be four hours.
+00:26:53 [W] So if you're Spire server goes down you have four full hours to fix it before estimate start filling in a lot of organizations four hours isn't long enough.
+00:27:02 [W] So they make that time to live longer.
+00:27:03 [W] they make it a week or two weeks and that way if the Spire server goes down. They actually have a
+00:27:07 [W] Good length of time to be able to fix it before connections between services start to fail.
+00:27:12 [W] Now, of course the problem with making the TTL longer is then you have a greater risk that an attacker will be able to get in and steal those as fits and be able to use them to make all unauthorized connections to services. So there's a trade-off between up time and security.
+00:27:29 [W] One of the aspects of spire that I'm most proud of is the growing ecosystem of third-party tools and plug-ins for using it in specific situations.
+00:27:45 [W] The team of Bloomberg has written a plug-in for Spire that uses a trusted platform module to do know datastax ssion.
+00:27:48 [W] Now, of course the problem with making the TTL longer is then you have a greater risk that an attacker will be able to get in and steal those as fits and be able to use them to make all unauthorized connections to services.
+00:27:52 [W] So there's a trade-off between uptime and security.
+00:27:52 [W] One of the aspects of spire that I'm most proud of is the growing ecosystem of third-party tools and plug-ins for using it in specific situations.
+00:27:55 [W] The team of Bloomberg has written a plug-in for Spire that uses a trusted platform module to do know datastax ssion.
+00:27:56 [W] So say you're running physical Hardware in the data center. And you order a thousand new serves you can do that. No data station automatically using the secure unique identifiers that are built into those servers at the factory.
+00:28:00 [W] They also developed Vault author Spire a plug-in for hashicorp Valle de lets you connect to it using a Spire s vid so you can access shared Secrets.
+00:28:14 [W] This is very useful for organizations that are currently using shared secrets for communication between those services, but they want to switch to spiffe e authentication gradually. Finally GitHub has released Emissary a sophisticated sidecar proxy based on Envoy.
+00:28:23 [W] They also developed Vault author Spire a plug-in for hashicorp Vol 2 lets you connect to it using a Spire s vid so you can access shared Secrets.
+00:28:25 [W] This is very useful for organizations that are currently using shared secrets for communication between those services, but they want to switch to spiffe e authentication gradually. Finally GitHub has released Emissary a sophisticated sidecar proxy based on Envoy.
+00:28:26 [W] And also flexible Access Control based on estimates this lets you wrap your existing services in a fully featured spiffe T client. So you don't have to change a lot of code. I'm really looking forward to using this one in our own projects.
+00:28:40 [W] Now that you've heard a basic introduction to spiffe e you might be interested in who's using it.
+00:28:48 [W] Well, first of all because spiffe e is just a standard parts of it are actually implemented in most of the major servicemeshcon sto Kuma. Nsmcon Soul.
+00:28:57 [W] connect Hamlet or several other servicemeshcon that are all part of cncf. But as far as Spire specifically implementing the entire spiffe E standard separately as a first-class service.
+00:29:06 [W] A number of big companies are using it within their infrastructure including bite dance Uber Square GitHub, Bloomberg stripe Anthem and transferwise and because it's open source, there are probably others that haven't announced that they're using it.
+00:29:21 [W] So this is very widely used software at this point.
+00:29:22 [W] Where can you go to find out more?
+00:29:28 [W] Well, you can go to our website spiffe e dot IO we also host regular Community Days.
+00:29:31 [W] These are quarterly events their online these days. Of course, we're members of the spiffe E Community present and how they're using the standard and propose various improvements and enhancements to the standard. And finally we have a very active slack.
+00:29:44 [W] I'm always on the slack answering questions about spiffe e and many others are too and that's where you should go. If you have questions about how to get started or ideas for improvements that make sense for
+00:29:52 [W] Your use case.
+00:29:56 [W] PowerPoint that you can download first, you can see an introduction to spiffe in Spire from Heaven Gilman again, he's the author of the zero trust networks books.
+00:30:09 [W] Then we have another presentation.
+00:30:11 [W] that's part of cube calm 2020, which is called Running Spire in large scale Enterprise grade environments that gets more into the Federation High availability Upstream certificate authorities that kind of stuff that you need to run Spire for
+00:30:24 [W] like with tens of thousands of Agents
+00:30:27 [W] Finally, I have linked to another presentation that's on our website called beer building zero trust based authentication in healthcare with spire and this is actually a presentation from the team at Anthem health insurance about how they're using Spire to make
+00:30:43 [W] Secure to protect Healthcare data, finally again.
+00:30:49 [W] We're part of hpe and hpe runs its own annual conference at actually just happened.
+00:30:55 [W] It's all online these days of course and there are a number of spire deep Dives at that conference. That will be very helpful. If you're trying to learn more about Spire finally again. We're on GitHub. You can just go to GitHub see what the open issues are.
+00:31:08 [W] Maybe contribute a patch maybe update some documentation.
+00:31:12 [W] We can always use the help.
+00:31:12 [W] So again, just to recap we discussed why you need service identity. We discuss several different approaches to service identity that don't use spiffe e such as perimeter security shared secrets.
+00:31:26 [W] Web pki things that aren't a perfect fit for the service. They didn't need to challenge then we discuss spiffe e which is the standard that I work on we discuss Spire which is the actual implementation of that standard.
+00:31:39 [W] And then we discuss next steps for adopting spiffe e within your organization.
+00:31:44 [W] Thank you very much everyone for your time.
+00:31:50 [W] You can follow up with me on Twitter on email and we should have plenty of time for questions within the session.
+00:31:55 [W] Hi everyone.
+00:32:07 [W] I hope you enjoyed the talk and I'm here to answer a couple of questions that came up during the talk.
+00:32:10 [W] It's and this is a really good.
+00:32:16 [W] This is a really good question.
+00:32:21 [W] We actually have a working group in this 50 standards org working on something called transitive identity, which is going to be a way for one authentication Service to essentially
+00:32:34 [W] To the rest of your system that a user has a particular identity. So it'll be a way to attach user information to S vid service identity that's work in progress, and we're discussing a bunch of different ways to do it and different trade-offs.
+00:32:50 [W] Discussing a bunch of different ways to do it and different trade-offs.
+00:32:51 [W] I'd really encourage you to get involved with that but we're just working on it now and it's not quite ready yet. The next question from shyam Sundar will different instances have different spiffe e IDs
+00:33:05 [W] Application have a unique spiffe Eid if there's a deployment with three replicas will have three different spiffe.
+00:33:12 [W] He IDs and that's a really good question to the easy answer is basically you can do whatever makes sense for your organization.
+00:33:21 [W] There's no rules about this and we do have organizations doing a bunch of different things.
+00:33:29 [W] but I'd really recommend is just have one spiffe Eid for all the instances of your service and that way when you scale out multiple instances of the service.
+00:33:35 [W] They can all have the same authentication properties, but that's that's what's really interesting about spiffe e is it's really flexible and people are using it in a bunch of different ways for a bunch of different needs.
+00:33:49 [W] next question from Natty on slack would spiffe e and Spire work for is workloads IE traditional servers and VMS and the answer is yes, actually a lot of what makes this so complicated is because we're trying to support
+00:34:05 [W] Individual variables that are outside of kubernative so we support kubernative, but we're not super tightly linked to kubernative and we also work on bare metal servers.
+00:34:17 [W] We work on all kinds of different platforms.
+00:34:20 [W] We have plugins that can talk to all kinds of different platforms again.
+00:34:23 [W] I work for hpe where a server company.
+00:34:29 [W] So we're working on some features that integrate with hpe bare metal servers as well next. Oh, sorry. That's the
+00:34:35 [W] Same question. Another question that comes up early frequently is can I use spiffe?
+00:34:46 [W] He IDs to authenticate to my databases may be databases that are running in Amazon RDS or the equivalent on as Ur, or gcp and the answer is yes.
+00:34:53 [W] have a way to do that. We can share all the root certificates the root certificate bundle from your stiffy server in a standard format for oid see Federation.
+00:35:05 [W] Then you can use your spiffe es vid to connect seamlessly to a database that's in some managed service.
+00:35:14 [W] That doesn't know about spiffe e that's something that I think is really useful because often the the database security is really that weak point in a lot of environments. So are there any more questions you can feel free to follow up with me on
+00:35:26 [W] Or in the Q&A box on in Toronto, I guess and I'll be here to answer answer questions for a while.
+00:35:37 [W] You can also email me or join the spiffy Slack.
+00:35:40 [W] And again, thank you very much.
+00:35:41 [W] I'm really happy to be here.
+00:35:44 [W] I guess we're done a just a couple minutes early.
+00:35:45 [W] So thanks everyone.

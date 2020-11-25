@@ -1,0 +1,280 @@
+﻿Managing Developer Workflows with the Kubernetes API: VLEU-7978 - events@cncf.io - Wednesday, November 18, 2020 4:57 PM - 45 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello and welcome to managing developer workflows with the kubernative API.
+00:00:03 [W] My name is Colin Murphy.
+00:00:04 [W] I'm an engineering manager at Adobe.
+00:00:06 [W] texture and the software
+00:00:08 [W] why I write your own curb, and he's client.
+00:00:10 [W] You certainly could just write a bunch of bash scripts with Q cuddle throw that into Jenkins and get 80% of what you could hope to achieve with with your own kubernative client.
+00:00:23 [W] Is it really worth all the effort for that extra 20%
+00:00:29 [W] For us the overriding reason is that just like anything it'll large company like Adobe you're never in a green field.
+00:00:36 [W] You always have lots of other things to consider first off all of these applications where our were already deployed either on D cos or another Homespun
+00:00:51 [W] So we needed to go from those configurations on to kubernative in a seamless manner so that the first one is is really we want to provide outages, right we need to exert a greater control.
+00:00:49 [W] Over what our application teams can do than just saying, you know, here's Cube cuddle.
+00:00:48 [W] Here's some yam will files go have at it, right you do that. You're going to have you're going to have outages because people just don't understand kubenetes and I'll get to that in a second. But you also want to limit the kubernative objects you have
+00:01:02 [W] You know potentially apply labels keep them from interfering with each other and all this.
+00:01:07 [W] This is really just to say I should point out that it's not a substitution for you know, our back neck would say Network segmentation open policy agent other controls on the on the control plane
+00:01:22 [W] To implement to protect so this isn't this isn't a replacement for those.
+00:01:24 [W] It's just a it's just a nice supplement Terry thing.
+00:01:31 [W] So we also as I mentioned it was it's not a green field, right?
+00:01:35 [W] We had an existing deployment system.
+00:01:37 [W] call it Moonbeam. It actually made the the problem statement a little easier because we knew we just had a shot and that's all we had to do a deployment. So I get repo Shaw and that meant that made it kind of easy to start as a nice
+00:01:52 [W] It actually made the problem statement a little easier because we knew we just had a shot and that's all we had to do a deployment. So I get repo a shot and that made it kind of easy to start as a nice place to start but, you know, we couldn't just
+00:02:04 [W] You know, we couldn't just use Spinnaker because we already had a bunch of stuff that that Spinnaker can do and say likewise for other tooling out there.
+00:02:15 [W] So so, you know the other big thing, right we want to reduce cognitive load application Engineers have a deep technical knowledge, right? They understand, you know how to manipulate a
+00:02:30 [W] alright Echo sign agreement or maybe some sort of
+00:02:35 [W] Machine learning they don't really have time to do kubernative is right.
+00:02:39 [W] I mean if there's no such thing as a person who fully understands everything that's required in a web application, right then we had our site reliability engineers.
+00:02:52 [W] And and really they had the same story, right?
+00:02:54 [W] They have there's a huge Legacy application it it needs constant attention.
+00:02:58 [W] They don't have time to do, you know when this whole other system kubernative?
+00:03:02 [W] We also have some compliance and on tickets, so it's just it's just not a thing that we could just always just re-educate hundreds of people on how to do something.
+00:03:17 [W] Another reason is is secret management.
+00:03:22 [W] We use hashicorp vault at Adobe.
+00:03:26 [W] And and we really can't have especially some of the Clusters with very complex requirements.
+00:03:33 [W] You know, we have we're going to fedramp clusters coming online, but we have PCI HIPAA.
+00:03:38 [W] We can't we can't always have a connection to some sort of from a cluster to a Secrets management. So we really had to find a way to package up all the secrets and application could need from within our internal Network and and push that
+00:03:53 [W] Safe way out to kubernative Cluster in a way that would allow.
+00:03:58 [W] Allow for rollback. Make sure there wasn't a way that it would interfere with with secrets in the next release that kind of thing.
+00:04:08 [W] And then lastly, it's really it's just not that hard.
+00:04:12 [W] It's very simple.
+00:04:13 [W] It's fairly well-documented if you understand if you know kubernative he's familiar with the concepts of kubernative.
+00:04:19 [W] You can write a kubernative client. I mean go is a little bit of a learning curve.
+00:04:25 [W] You don't have to course right your your client and go.
+00:04:29 [W] But it's probably the best supported SDK that I always at the time I wrote I wrote The Client.
+00:04:37 [W] Okay, before we continue just want to point out that the client has been open sourced.
+00:04:42 [W] It's on GitHub Adobe / Portage group Nettie's.
+00:04:52 [W] So moving on to the requirements having no of already pretty flee touched on them.
+00:04:58 [W] The first one being just that we were migrating from another system or to other systems onto a single system. So we had to
+00:05:07 [W] Have the way that secrets were retrieved have the way that environment variables set to be the same.
+00:05:13 [W] That was formatted.
+00:05:07 [W] When addition to that we need two teams to just to Media teams to migrate right away, or at least my great without talking to each and every single one of them in treating them is each.
+00:05:19 [W] It's a special little snowflake.
+00:05:21 [W] So we had we did a lot of work around automating automation.
+00:05:28 [W] Generating the right files 44 teams automatically.
+00:05:33 [W] And that's still true now. So our onboarding system will give will stub out the directories required.
+00:05:41 [W] And teams can kind of just go from there.
+00:05:43 [W] There's they're really it's don't we don't have as I pointed out.
+00:05:48 [W] We don't have a team that can just owe me. You know me with a new service every time there's a new service right and figure out what they need unless they need something new and different that we don't we don't support
+00:06:01 [W] one really key thing in a real improvement over our previous systems was this whole idea of segmentation of responsibilities.
+00:06:08 [W] We allow teams to do a lot within their Repository.
+00:06:13 [W] generating service instances generating operator
+00:06:17 [W] You know me with a new service every time there's a new service right and figure out what they need unless they need something new and different that we don't we don't support.
+00:06:23 [W] One really key thing in a real improvement over our previous systems was this whole idea of segmentation of responsibilities.
+00:06:30 [W] We allow teams to do a lot within their repository generating service instances generating operator.
+00:06:40 [W] Instances so that that allow them to create MySQL databases or dynamodb or various Azure backing stores, things like that.
+00:06:54 [W] And we let them out the way that's all their their responsibilities and they in this tool allows them to do it, you know through through kubernative objects.
+00:07:02 [W] We'll catch on a little bit because that does cause some problems but when we certainly don't allow them to do whatever they want, but but certainly a lot more freedom than they had before.
+00:07:11 [W] there's no other they don't have to learn some other system of you know, cloudformation templates or some internal system. We have that generates structure code that kind of thing.
+00:07:21 [W] It's all completely in their control.
+00:07:26 [W] and also, you know sometimes in previous system, we had you'd have to go to some other service if you wanted to make a certain kind of change to your service Soul another internal web UI and you have to click through it and you know, it takes
+00:07:42 [W] Some internal system. We have that generates structure code that kind of thing.
+00:07:46 [W] It's all completely in their control.
+00:07:51 [W] And also, you know sometimes in previous system, we had you'd have to go to some other service if you wanted to make a certain kind of change to your service.
+00:08:01 [W] So another internal web UI and you have to click through it and you know, take some time. And so this this that was another thing we really want to get rid of was was anything like that right?
+00:08:14 [W] It's just there's a single deployment system as I showed a few slides before you can make any change to your service using that system and
+00:08:21 [W] And for change management that system we rely on that system to to verify that the appropriate approvals have been made and reviews and things like that.
+00:08:32 [W] There's a concept this is a little bit of a stretch but there's this concept of hermetic builds from the SR Emmanuel that I think hopefully most of you have already already built that way which is, you know to build
+00:08:48 [W] The on the build system, right?
+00:08:50 [W] So easiest way to do that is to build a docker.
+00:08:56 [W] And but I've kind of if you kind of can stretch stretch that a little bit to deployments right? You don't want a service to roll back and have that he'll have that roll back.
+00:09:12 [W] Behave differently that that rolled back once you roll back a service.
+00:09:15 [W] you don't want it to now behave differently than it where it was when I was at that previous version.
+00:09:22 [W] So so we really want to tie the secrets and the environment variables of a specific get shot for the service.
+00:09:32 [W] 222 that deployment interview Nettie's so every deployment is that our that our client deploys it has the Sha labeled and and
+00:09:47 [W] We have we inject into it config map.
+00:09:41 [W] And secrets that kubernative secret with that shot.
+00:09:45 [W] So if we ever roll back, even if you know our that secret was changed somewhere in hashicorp Vault.
+00:09:55 [W] We're still getting those those secrets and we keep up to 5. So you can't roll, you know, if you roll back more than five previous deployments then I guess you could you could potentially get a secret change, but we really just we
+00:10:10 [W] If you ever roll back, you know that you're going to a safe place.
+00:10:06 [W] Then one last thing is we, you know, I might have kind of inferred this but we deploy to multiple Cloud providers and and some applications actually deploy two data centers, and we want to abstract that away from from the service
+00:10:22 [W] and service team to say oh I need
+00:10:21 [W] you know a different domain name because I'm in this or this is HIPAA compliant or oh it's fedramp.
+00:10:26 [W] So I have to you know, make sure my kubernative configuration is a little different. So the idea was we're going to have a configuration live in each kubernative cluster and actually in an it's a for namespace configuration and we'll have
+00:10:42 [W] Figuration live in each community's cluster and actually in and it's a for namespace configuration and we'll have the client as it deploys read that if you did that that information and modify the objects as required.
+00:10:50 [W] The objects as required it sounds actually kind of complicated.
+00:10:54 [W] I'm sure we could have gone crazy with it.
+00:10:55 [W] It's actually not that hard for the most part.
+00:10:58 [W] It's really just the docker registry.
+00:11:02 [W] Whether it's using web of clusters is Geor contour and and also domain names.
+00:11:09 [W] But you know what?
+00:11:10 [W] We're it'll I'm sure it'll expand as we go but it was it was it's kind of a nice idea to just have all that configuration the common configuration for all the applications just live in the cotton. The namespace saves us a lot of effort.
+00:11:26 [W] Okay, so moving on to how the porter to kubenetes works.
+00:11:32 [W] We take the Shah. We clone the service repository and and we kind of go from there.
+00:11:40 [W] We read in a bunch of environment variables and secret references. I'll just show you what those look like in a second then we
+00:11:51 [W] Read the cluster configuration from the cluster itself. And then we compared to what we have for up for an update and we update the
+00:12:02 [W] Update the communities objects as required.
+00:12:06 [W] So I'll just show you quickly because I couldn't get it into a slide.
+00:12:10 [W] What?
+00:12:13 [W] What these what these configuration files look like?
+00:12:19 [W] Fi we try to keep it really dry. So these files will reference each other.
+00:12:27 [W] We need what least one for every environment for every for every region and and as I said, they can they can reference each other. So, you know, we'll there's one that's common for all ews.
+00:12:38 [W] 1/4 cup is common for all azure.
+00:12:42 [W] You know, it's just all about it's all about scalability.
+00:12:45 [W] That's that's the name of the game. So
+00:12:49 [W] as lat so it looks a little intimidating.
+00:12:51 [W] It's a lot of files, but it's fairly straightforward.
+00:12:59 [W] So in those in those files, we have four different environment types.
+00:13:06 [W] So in configuration environment entries, the first is is most straightforward and environment variable and the and the value.
+00:13:14 [W] we also have as I mentioned many times now secret references so Vault paths.
+00:13:20 [W] We also have the ability to override cluster settings.
+00:13:26 [W] So say you had a different certificate and you had needed a different domain name or TLS or write for
+00:13:34 [W] or if
+00:13:37 [W] You know you didn't want to.
+00:13:39 [W] The first is is most straightforward and environment variable and the and the value.
+00:13:31 [W] we also have as I mentioned many times now secret references so Vault paths. We also have the ability to override cluster settings.
+00:13:43 [W] say you had a different certificate and you had needed a different domain name / TOS, sir right for or if
+00:13:54 [W] You know you didn't want to.
+00:13:57 [W] You didn't want to use the same Gateway for a steel Gateway or contouring Gress. That kind of thing is the other services in you namespace.
+00:14:08 [W] And you know, it's it's always it's a constant fight or always always getting requests for more features will probably have to expand it a little bit either some kind of annotations.
+00:14:20 [W] Structure or something like that because it gets very complicated with multiple Ingress controllers things like that.
+00:14:31 [W] So this I wanted to kind of show this this is my guess the first code.
+00:14:37 [W] It's I was surprised how difficult it is to show code in a presentation.
+00:14:41 [W] I just want to credit Catherine cocks bidet.
+00:14:44 [W] I read her book concurrency and go when I got started I had this concept of pipelines that she talked about that. I had never seen in another language maybe are all of you are really familiar with it. But but basically you're just passing a channel here
+00:14:59 [W] Concurrency and go when I got started I had this concept of pipelines that you talked about that. I had never seen in another language maybe are all of you are really familiar with it. But but basically you're just passing a channel here from in a
+00:15:15 [W] And it's really efficient and clever way to to it's not it's it's it is, you know parallel Computing but it's not it's not me obviously embarassingly parallel, but you're passing through each region.
+00:15:30 [W] It's not it's not any obvious embarassingly parallel, but you're passing through each region individually in a kind of a, you know, elegant way.
+00:15:40 [W] But here we're just we're basically creating a struct for each region that's going to be deployed to every each cluster your name space that's being deployed going to be deployed to for us.
+00:15:53 [W] It's typically along regions and we
+00:15:58 [W] so what we're doing here is we're getting that configuration or fetching the secrets were copied.
+00:16:04 [W] We're reading in the objects were copying the objects doing a deep copy because we're going to modify them at that was a lesson learned right?
+00:16:11 [W] You don't you have a pointer to a struct if you modify it for one regions going to modify it for all regions.
+00:16:17 [W] So deep copy function method actually and then and then we get this this
+00:16:25 [W] This big struck that has all the information we need to do our deployment.
+00:16:31 [W] the way we handle Cube can configs is we have just we have a file that lists that's common to all of our services and it just lists out all of the
+00:16:43 [W] all of the cube configs and their locations involved we get we use AWS.
+00:16:49 [W] I am authentication for our eks clusters we use.
+00:16:53 [W] Parades giving warm fuzzy feeling all of our Cube configs are involved and and they get pulled down at deploy time for every service deployment.
+00:17:07 [W] The next thing I wanted to talk about is
+00:17:11 [W] structured
+00:17:13 [W] Client sets versus Dynamic.
+00:17:17 [W] So I really like the the client sets. I really like the schemes that you know, you find those frog kubenetes objects recently.
+00:17:26 [W] I think in the last year or so sto put out their own client Library they call it.
+00:17:32 [W] We use the service catalog that has its own. Unfortunately that newer stuff doesn't so the azure.
+00:17:40 [W] Sorry, the Azure service operator and the AWS controller for kubernative. They
+00:17:48 [W] they don't provide these so we have to actually do Dynamic.
+00:17:51 [W] I'll talk about that a little bit.
+00:17:55 [W] It's kind of an upcoming challenge for this.
+00:17:58 [W] But but yeah, we just use the universal deserialize ER just read in Jama.
+00:18:04 [W] It's really straightforward really easy.
+00:18:05 [W] And then we have you know a struct with all the all of the possible.
+00:18:11 [W] kubenetes objects that we can apply
+00:18:14 [W] It really it really expands.
+00:18:08 [W] And we have to kind of find a new way to do things. But for right now this is what works and this what we do the nice thing also about the schemes and and the type of client sets is it's really easy, like for instance. We have to always make sure
+00:18:24 [W] You know, if it if somebody for some reason puts a number of replicas in their deployment, we typically discourage people from doing that because we want people to use horizontal poddisruptionbudgets.
+00:18:30 [W] If they haven't pours on a pot of this killer, we always we want to make sure that when they deploy they don't reset the number of replicas. So just you know, something like this really basic we just we can we don't have to
+00:18:44 [W] transfer say a map of
+00:18:48 [W] Of strings to interface, right? We just spell out the whole the path.
+00:18:57 [W] Actually, it's oh, uh, sorry in this case.
+00:18:59 [W] It's actually just making sure that the horizontal poddisruptionbudgets the deployment that is actually being deployed. We don't want somebody to
+00:19:08 [W] make it a horizontal part of this killer that that it modifies. Someone else's deployment that you know, that that happens people copy from one another as much as we try to automatically stub things out it's just it's just a reality when you have this many services,
+00:19:24 [W] hundreds of hundreds of Engineers and and you know over a hundred services, so
+00:19:27 [W] And as we expand this actually out to more people in doughy we're now we're going to talk about thousands thousands of Engineers and potentially thousands of services. So so yeah, just these little kind of little little things really easy to do with the type of clients that
+00:19:44 [W] cluster settings. So these are these are when I talked before I said, I mentioned that there's a cluster specific information and it's we've done a kind of a good job limiting it because you could really go crazy here,
+00:20:00 [W] Cluster settings. So these are these are when I talked before I said, I mentioned that there's a cluster specific information and it's we've done a kind of a good job limiting it because you could really go crazy here,
+00:20:19 [W] The real you know, the eat the kind of the obvious thing. So registry we have Registries in every region, you know, we don't want an outage say of AWS in you Central One knocking out our Azure in Singapore, right?
+00:20:34 [W] So we always want in our deployment strategy.
+00:20:37 [W] We always have a regional registry.
+00:20:39 [W] So that has to change for deployment and we don't want the we don't want that's not the engine application Engineers problem, right?
+00:20:48 [W] So in their deployment, I am obey don't have to but they kind of just there's just kind of whatever, you know my registry and then and then the name of their their Docker image for the so that just gets overwritten. It doesn't it doesn't
+00:21:04 [W] You know Porter manatees can handle that whether the whether the cluster has issue or not the domain name of the services in that namespace the sto Gateway if there's a studio.
+00:21:20 [W] so the a minimum number for the HPA is we typically
+00:21:26 [W] You know infants in production you need you need to some Services need, you know a lot more than that. But but we always want at least some redundancy sometimes three first for some heavy to use clusters.
+00:21:38 [W] And then what you know, what is the cloud is it Azure is it is we've asked what is the cloud location?
+00:21:44 [W] This is typically used for the service instances.
+00:21:47 [W] you know is this a is this you know, how what does the
+00:21:51 [W] Cloud provider call their region and that that's useful for setting the location and say in Azure service instance or in or the Azure service operator.
+00:22:06 [W] Then Nazi update. So this is we this is how the updates happen.
+00:22:16 [W] It's in oh, it's kind of if you're familiar with go. This is kind of probably not that interesting.
+00:22:22 [W] But if you're not is this is you know, this is basically how we do it.
+00:22:28 [W] We there's an update function defined for every type of kubernative object.
+00:22:33 [W] Because we have those those type client sets.
+00:22:37 [W] And basically just make it work make a weight group.
+00:22:40 [W] run that function.
+00:22:44 [W] and then once they're all done, then we then we exit out of this this this update or this eggs updated Returns the this the channels with the results and then it gets called again in a for Loop
+00:22:59 [W] That's and basically just make it work make a weight group.
+00:22:55 [W] run that function.
+00:22:58 [W] and then once they're all done, then we then we exit out of this this this update or this eggs updated Returns the this the channels with the results and then it gets called again in a for Loop
+00:23:31 [W] in the next update function
+00:23:35 [W] and and just iterates through obviously the
+00:23:43 [W] the fact that every name space can be updated simultaneously.
+00:23:46 [W] It's a you know, it's enough. It's an embarrassingly parallel operation.
+00:23:51 [W] So there's nothing nothing too clever there just to just a fan fan out fan in.
+00:23:56 [W] And and check the results.
+00:24:01 [W] Okay, so to wrap up I just want to go over some of the things we're working on. Now. The first is we have the it was controller for kubernative in the Azure service operator working on supporting those and they come with
+00:24:16 [W] Ser Dee's, they're going to be a common problem if anybody wants to write their own communities client you're going to run into this issue unless you're very specific in what you want to do.
+00:24:24 [W] If you want to just support, you know hundreds of Engineers you're going to you're going to need to you're gonna run into this problem where there's just too many cri-o s and unfortunately the ack in the a so they don't come with clients assets or schemes so you can either generate them yourself
+00:24:39 [W] Sounds like not a lot of fun or you can use the dynamic client as I mentioned previously the dynamic client has a few drawbacks because you don't have an actual struct that you can really pin down and grab something and compare it to something else, right?
+00:24:46 [W] a it's a map of a string to an interface, right?
+00:24:51 [W] but you know going to try to work through that and
+00:24:55 [W] and see what we can do.
+00:24:56 [W] I mean right now we're just reading it into an instruction structured type like kubernative.
+00:25:01 [W] zpi on structure type and and then using the kubenetes go client to apply that will see now we're not quite done. So I don't really want to show it in action, especially if it turns out to to not work at all.
+00:25:13 [W] all. And then the other thing is that we have the situation where teams don't want to deploy every object to every namespace or they want to have a certain
+00:25:25 [W] type of Ingress that they're used for that they use instead of
+00:25:30 [W] You know instead of just every every pot Ingress that's available.
+00:25:35 [W] So it's kind of how teams can fine-tune things. And as I mentioned before we have the ability to override the produce to communities, you know, the region the registry those those those configurations, but but if that's that that's kind of
+00:25:51 [W] Override the produce to communities, you know the region the registry those those configurations, but but if that's that that's kind of a little bit too blunt of an instrument. So, so we're going to work on that
+00:26:02 [W] So we're going to work on that probably some type of annotation or label that people put in their kubernative objects in their k8s directory.
+00:26:10 [W] It's either inside their repository looks like that's what we'll do but, you know still haven't still haven't decided yet.
+00:26:19 [W] So I'd like to thank you all for coming.
+00:26:20 [W] Thank you for bearing with me at the with the lighting which is super inconsistent.
+00:26:26 [W] I don't have any lights.
+00:26:27 [W] I'm kind of using the Sun and that's kind of fickle and then
+00:26:33 [W] Also, if you want to reach out ask me anything on the kubernative slack, I'm there.
+00:26:41 [W] I don't use Twitter.
+00:26:43 [W] I try to maintain my sanity.
+00:26:44 [W] But but please, you know, please try it out. You know, the as I said, this is all I get.
+00:26:52 [W] It's it's meant to be really a reference for other people to use but you could you know, you could use it.
+00:26:57 [W] We use it here at Adobe for for a lots of services that that are that are run every debt, you know heavily used so please
+00:27:07 [W] Please take a look.
+00:27:08 [W] Thanks. Bye.
+00:29:10 [W] I'm saying enter your conference code followed by.
+00:31:05 [W] Welcome to reservation list plus conferencing enter your conference code followed by the pound or hash sign.
+00:31:26 [W] Thank you.
+00:31:28 [W] You will now be placed into conference.
+00:31:36 [W] instana
+00:32:03 [W] Thank you.
+00:32:04 [W] You will now be placed into conference.
+00:32:09 [W] instana
+00:32:19 [W] since
+00:32:38 [W] Hi, can anybody hear me?
+00:32:41 [W] Yeah, I can hear myself.
+00:32:42 [W] That means people can hear me.
+00:32:51 [W] All right.
+00:32:54 [W] We still have a few people here 88 so we're down to maybe a quarter.
+00:42:41 [W] Hi, can you hear me now?
+00:42:49 [W] Okay.
+00:42:49 [W] All right.
+00:42:50 [W] So let me try again.
+00:42:50 [W] I'm sorry about that.
+00:42:51 [W] Okay, just redialed in so most useful abstraction you've been able to build rapport and communities would be difficult.
+00:43:00 [W] Otherwise, so the answer to that is I didn't hear this before because I answered it but I don't think anybody could hear me the the most powerful thing is is the fact that the cluster specific or the database.
+00:43:15 [W] Settings live within the namespace themselves and that allows the application Engineers to really just create a single object of each type and only have to worry about that within the repository dot. Yeah
+00:43:30 [W] Mr. Really just create a single object of each type and only have to worry about that within the Repository.
+00:43:30 [W] Channel or HP a single deployment object HP a service issue a virtual service contouring Gris route that kind of thing.
+00:43:43 [W] And then another question which I didn't answer in chat.
+00:43:47 [W] How do I prevent developers from Reading real secrets of clients ability to pull them directly from volt. So the because the developers aren't running ported to communities they can they could run it against local communities cluster on their laptop or something like that, but the
+00:44:02 [W] running ported to communities they can they could run it against local communities cluster on their laptop or something like that, but the bridgecrew knative itself runs in a controlled environment in AWS code build that is
+00:44:17 [W] us too, so if a developer, you know, this doesn't change the idea of a developer being acting badly being a farias and trying to log to standard out their secrets from their
+00:44:32 [W] That going into spok coredns.
+00:44:32 [W] have you but
+00:44:35 [W] but although we you actually have a way to open that out. But yeah, it's it's not something that is meant to be run on something.
+00:44:47 [W] Then I didn't answer fedramp compliance pedram compliance is there's a lot to fedramp compliance.
+00:44:56 [W] This is just calling kubernative API.
+00:44:57 [W] This isn't this is nothing to do.
+00:45:01 [W] If you run it the right way, yes, you can be fed ramp compliant with this tool.
+00:45:06 [W] No II there's a lot but yes, I mean it works in fedramp.
+00:45:21 [W] Okay, so sorry.
+00:45:23 [W] I was a little late with that but black Channel.
+00:45:28 [W] I will check the slack Channel.
+00:45:35 [W] yes, it's nothing on the side Channel, but
+00:45:40 [W] But please look forward to hearing anybody have any questions.
+00:45:49 [W] All right.
+00:45:51 [W] right
+00:45:55 [W] Thanks.

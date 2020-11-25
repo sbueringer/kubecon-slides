@@ -1,0 +1,406 @@
+﻿The Quest for the Ultimate Kubernetes Homelab: JNHV-4329 - events@cncf.io - Wednesday, November 18, 2020 3:02 PM - 42 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi, welcome to my crib can't talk. My name is Dan Garfield.
+00:00:03 [W] I'm going to be talking about the Quest for the ultimate kubernative.
+00:00:06 [W] He's home lab and ultimate slight caveat.
+00:00:09 [W] We're going to try to do it as cheap as possible.
+00:00:10 [W] So we'll see how that goes.
+00:00:12 [W] Actions, so my name is Dan Garfield.
+00:00:16 [W] I'm the chief technology evangelist for code fresh.
+00:00:18 [W] But this is more of a hobby talk talking about something I built in my house.
+00:00:22 [W] You can follow me on Twitter at today was awesome.
+00:00:24 [W] Just remember how you felt about the day and if it was awesome, then today was awesome easy.
+00:00:29 [W] I'm a member of the Forbes Technology Council as well as a Google developer expert and so I like to talk about kubernative Zai talk about devops like to talk about cloud and today. I'm going to be talking about home lab.
+00:00:42 [W] That she's actually kubernative bare metal at your house.
+00:00:45 [W] I love doing these at home projects.
+00:00:50 [W] I love Raspberry Pi's. Love home Labs.
+00:00:52 [W] I built a raspberry pie Chicken Coop power Chicken Coop a few years ago, which of course had a linear actuator that open and close automatically based on the time of the day, which was a lot of fun and Cody game box, you know, all the standard stuff that you see people do with pies.
+00:01:05 [W] So I love doing that kind of stuff.
+00:01:07 [W] I love having something at my house that actually provides a lot of value love.
+00:01:12 [W] Like seeing those Tech muscles at home, and that's what I try to do here.
+00:01:16 [W] So my first goal with my kubernative home lab is I basically want to run the services for my house. And that means that I need to be able to run x86. Now when I say run real workloads, this isn't meant as a dig at all to our my love Arm great architecture, of course.
+00:01:31 [W] Got a lot of these Raspberry Pi powered stuff. But the truth is that a lot of the workloads that I work with every day and most Cloud workloads happen to run on x86 that may change, you know apples coming out with that.
+00:01:34 [W] There aren't based chips for their laptops and that might force a change in how people are developing software.
+00:01:40 [W] But in the meantime, I need to be able to run some x86 stuff which is going to be a pretty big limiting factor on what I can choose to build my cluster out of my second goal was to
+00:01:52 [W] to my second goal is that I need to reduced oil and the truth is that I'm the only person that can work on this so I can't have something that's really complex and difficult to manage.
+00:02:05 [W] I can't have something that's breaking all the time because I frankly don't have time.
+00:02:08 [W] I've got three kids.
+00:02:09 [W] I don't have time to go be chasing around broken down servers and I've run, you know nice servers in the past at home and I end up recompiling kernels and fixing storage pools and it's just not something I want to spend my
+00:02:22 [W] I'm on I need to have something that is fairly automated. I can invest a lot of upfront time to get rid of any long-term toil. So we're going to be using those principles as well.
+00:02:32 [W] I also wanted to have something that was multi-node now.
+00:02:36 [W] Why do I want multi-node?
+00:02:37 [W] Really simulate those things very well.
+00:02:26 [W] And so having a cluster with a couple of nodes gives me the chance to see how different pods perform when they when they move and they met maybe my great move to get if they get evicted or that kind of thing and it really just changes the way you think about kubernative.
+00:02:41 [W] Great myth they get if they get evicted or that kind of thing and it really just changes the way you think about kubernative a little bit when you're using it on your home cluster. Now when you're writing in production, you can invest a lot of time to make sure everything runs perfectly and smoothly but
+00:02:55 [W] I think runs perfectly and smoothly but you know, this is a hobby project. So I do want to have multi node.
+00:03:02 [W] I do want to have scale and I also want to have something that's modular.
+00:03:04 [W] So if I'm running a lot of services and I can't you know, I don't have enough room for something else.
+00:03:09 [W] I don't want to replace my entire stack.
+00:03:11 [W] I want to be able to like maybe just grab a chief node and throw it into the pool and call it a day.
+00:03:15 [W] I think that would be really cool.
+00:03:16 [W] Number four. I wanted to be able to support stateful services and you know if I want to this is a home lab, right? So I'm going to
+00:03:25 [W] we're running Plex.
+00:03:26 [W] I'm a running maybe home assistant or Minecraft server or something like that. All of those Services require stateful.
+00:03:33 [W] They're all stateful applications.
+00:03:35 [W] They all require me to maintain persistent volumes.
+00:03:38 [W] And so that's going to be super important for me for us to solve in this build or for me to solve and finally I want to be able to support Hardware transcoding that means I want GPU access for all my nodes and if I throw a pot up that's going to be transcoding
+00:03:53 [W] ten persistent volumes and so that's going to be super important for me for us to solve in this bill door for me to solve and finally I want to be able to support Hardware transcoding that means I want GPU access for all my nodes and if I throw a
+00:04:20 [W] Or something like that.
+00:04:21 [W] I want to be able to take advantage of the GPU to do that so that I can actually, you know have it perform quickly.
+00:04:29 [W] And of course this is important to since I'm doing it on the cheap.
+00:04:31 [W] That means that I have to be really careful with with my choices here and that of course is the final requirement is that this whole thing needs to be cheap?
+00:04:40 [W] I can't break the bank on this anybody could go and spend $10,000 by a bunch of high-performance nodes throw them in a rack and expect it to run pretty well not an option for me.
+00:04:50 [W] Me and it's also a hobby project. So I want to be able to you know, throw note away if I mess it up or something.
+00:04:57 [W] I don't want it to be too costly both in terms of my time. And in terms of the resources that I expand and of course the power usage, you know, I like many of you - some Bitcoin back in the day.
+00:05:09 [W] And of course anybody that does that realize is very quickly that power consumption is costly and in this case.
+00:05:16 [W] I don't want to be paying out the nose for power consumption on
+00:05:20 [W] Server because at that point it's like well I may as well just you know, throw a cloud service up.
+00:05:26 [W] But of course that I'm not getting the on-prem like the bare metal experience that I'm looking for.
+00:05:35 [W] Oops. So oops, so that means that there are a couple of things that aren't options the Raspberry Pi is great as it is as much as I love it.
+00:05:45 [W] It's not an option.
+00:05:46 [W] For power consumption on This Server because at that point it's like well I may as well just you know, throw a cloud service up, but of course that I'm not getting the on-prem like the bare metal experience that I'm looking for.
+00:06:04 [W] Oops. So oops, so that means that there are a couple of things that aren't options the Raspberry Pi is great as it is as much as I love it.
+00:06:14 [W] It's not an option.
+00:06:15 [W] They have this really Kick-Ass touring Pi board that you can put seven compute modules onto it's got twenty eight cores super cool onboard networking.
+00:06:24 [W] They're sold out everywhere really cool board.
+00:06:27 [W] I remember when it came out.
+00:06:27 [W] I really wanted one, but it doesn't actually meet any of the criteria all the criteria that I put out like
+00:06:34 [W] As the Risin thread Ripper you could buy that thing and you could have you know, maybe 64 cores to throw at kubernative. How cool would that be but of course, this is pricey pricey. We're talking I think it's over like 1,500 bucks, but for the 64
+00:06:49 [W] Wanted one but it doesn't actually meet any of the criteria all the criteria that I put out likewise the Risin thread Ripper you could buy that thing and you could have, you know, maybe 64 cores to throw at kubernative.
+00:07:02 [W] How cool would that be?
+00:07:03 [W] but of course, this is pricey pricey. We're talking I think it's over like 1,500 bucks, but for the 64 core words and I think it's more like three thousand dollars. So this is a pricey CPU and of course, you also have to build a whole machine around it.
+00:07:16 [W] So and it's also not scalable, right? So
+00:07:18 [W] This one unfortunately isn't going to be the fit now.
+00:07:22 [W] What is going to be the fit is the atomic pie and this thing is a little-known board.
+00:07:28 [W] It's kind of a gem.
+00:07:29 [W] They're only $35 for one of these boards and they have an Intel Atom Processor with 4 cores.
+00:07:37 [W] They have come with two gigs of RAM.
+00:07:39 [W] They have 16 gigs of emmc memory and they only draw Max bout three amps of power usually less. So we're talking about something that's usually drawn.
+00:07:49 [W] Quite a bit less power than then, you know anything standard that you be looking at very similar Raspberry Pi little bit more power consumption than a Raspberry Pi think but basically another, you know, 5 volt kind of kind of set up this thing is sweet and and we can even
+00:08:05 [W] Another you know 5 volt kind of kind of set up this thing is sweet and and we can even do Hardware transcoding on it, which is really cool. So they are chunky there.
+00:08:14 [W] There are bigger than a Raspberry Pi which you'll see in a minute but people have built some really cool stuff with these this this build way over to my side here is actually I think it's 32 nodes and so they have 32 times 4 cores
+00:08:29 [W] d 2 nodes and so they have 32 times 4 cores to handle all of the different jobs they have and they actually put up benchmarks that show that they were actually able to complete their workloads faster than a rise in nine, which
+00:08:44 [W] Which they spent, you know, 750 bucks on all these nodes and they have something that performs as well as maybe a $750 $800 processor, which of course then requires a whole nother system built on top of it. So they were able to cut, you know,
+00:09:00 [W] I'll stop of this thing.
+00:09:00 [W] plus it's modular plus you can add components.
+00:09:03 [W] There's also some cool stuff on the thingiverse. You can grab and this one right behind me is actually a server rack that someone has put I think twenty four nodes into and they've stuffed it into their RAC so they can I don't know what they're doing with it running builds or whatever, but there is actually a pretty cool Community around these boards.
+00:09:18 [W] Stuffed it into their RAC so they can I don't know what they're doing with it running builds or whatever, but there is actually a pretty cool Community around these boards.
+00:09:22 [W] They're not they're not nearly as popular as the Raspberry Pi for a couple of reasons.
+00:09:27 [W] You do have to manage the power on board unlike Raspberry Pi where you just you know, plug in a USB you basically just have pins and you gotta use some some Dupont, you know wires to actually wired up to a power supply input by a separate power supply and I don't know these you know these
+00:09:42 [W] Supplies you actually have to like Tunes you have get out of screwdriver and like a voltmeter to actually get them to the right voltage sounds a little intense. But once you do it, it's not that hard once you try it once it's fairly easy so you can do it now.
+00:09:56 [W] They do like I mentioned they do support Hardware transcoding. There is a cool Benchmark that somebody did where they actually for they showed for Hardware transcodes on one of these boards.
+00:10:05 [W] They do support x264 transcoding not x265 transcoding, but they do have x265 decoding
+00:10:12 [W] And so you could still potentially get some performance benefit from using this board and it is supported by the kubernative Intel GPU plug-in and it supported is in parentheses.
+00:10:20 [W] We'll get into that in a minute.
+00:10:21 [W] So this met all my criteria and when I started off I drew this out of what I wanted to do.
+00:10:27 [W] I had a Raspberry Pi 3 as my master node, of course this and running my my Naas and of course this actually didn't work well because it's usb2 terrible idea very bad read/write speeds. So I upgraded that to a pie for for my master.
+00:10:42 [W] Out and then I had originally planned to throw a relay into here so I could switch nodes on and off using the Raspberry Pi's iot.
+00:11:11 [W] My for Atomic pie nodes, so that's that's the basic setup.
+00:10:58 [W] This is what I started with and I'll show you in a second what I built as far as setup goes. It's pretty straightforward.
+00:11:04 [W] I basically installed Ubuntu 1804 server through a static IP on there.
+00:11:09 [W] there. I did need to install an NFS package which I forgot to mention just so that my pods could actually access NFS services and then I installed k3s and if you don't know k3s, and some people call it k3s just like it's
+00:11:22 [W] k8s or Kate's or whatever but k3s is brilliant.
+00:11:27 [W] I mean we're talking about kubernative Xin 40 Meg's it's super super small super slim super-efficient is supports both arm and x86 and I am going to have a mixed cluster because I have my arm Master node as well as my Atomic pie worker
+00:11:42 [W] Is is brilliant.
+00:11:44 [W] I mean, we're talking about kubernative Xin 40 Meg's it's super super small super slim. Super-efficient is supports both arm and x86 and I am going to have a mixed cluster because I have my arm Master node as well as my Atomic pie worker
+00:12:11 [W] Then there's basically no step three. The installation for k3s is super simple.
+00:12:15 [W] You're looking at the whole thing right there.
+00:12:17 [W] So getting these setup even doing it manually was actually really really quick and easy and the nodes are basically blank.
+00:12:23 [W] There's nothing really special about them.
+00:12:25 [W] could lose one tomorrow and I'm not going to worry about it. I can add another one in and it's going to be super easy to provision.
+00:12:32 [W] As far as the networking goes this is a home network and I don't have a managed switch. I don't have something fancy going on.
+00:12:38 [W] I basically had I do have Google Fiber which is fancy, but basically on my router all I did is I reserved a hundred addresses in my DHCP so that I could give that to the cluster to actually manage the k3s cluster actually has
+00:12:53 [W] In that's included.
+00:12:55 [W] I don't know if it's Calico or what it is under the hood, but it just works and I haven't had to mess with it.
+00:12:58 [W] So that's great.
+00:12:59 [W] And then I did install metal lb metal load balancer, which is a creative project.
+00:13:06 [W] I think it's in the cncf.
+00:13:07 [W] It's pretty rad and basically gave it around 40 addresses that it could allocate to Ingress or service load balancers or whatever it needs.
+00:13:16 [W] And so this this setup from a networking perspective was pretty easy. When I first did this I actually was doing it.
+00:13:23 [W] With a wireless network bridge in between which is a whole another load of malarkey, but now I've reworked all my networking in my house.
+00:13:33 [W] So I have everything just connected through a switch up into my up into my router and so it's actually very simple networking nothing.
+00:13:42 [W] that's super fancy that you know that requires any Brilliance on my part, which is good because I don't have a whole lot. So I want to show you really quick how the serverless
+00:13:53 [W] Looks and for that I'm going to switch my view to the atomic view.
+00:13:57 [W] This is the live view of the cluster we get up and look over here and I'll point out some stuff.
+00:14:02 [W] You can see all my notes here and add 1 2 3 and 4 and then 4 scale.
+00:14:06 [W] Of course, you do have the Raspberry Pi this is my master node, or my primary node. That's actually running the the main part of the cluster.
+00:14:17 [W] Fancy that you know that requires any Brilliance on my part, which is good because I don't have a whole lot.
+00:14:18 [W] So I want to show you really quick how the serverless and for that I'm going to switch my view to the atomic view.
+00:14:26 [W] This is the live view of the cluster we get up and look over here and I'll point out some stuff. You can see all my notes here and died.
+00:14:32 [W] 1 2 3 and 4 and then 4 scale.
+00:14:35 [W] Of course. You do have the Raspberry Pi this is my master.
+00:14:41 [W] No door, my primary node that's actually running the the main part of the cluster. Hopefully I didn't crash it just by touching it and then you can see I've actually spliced out the networking cables.
+00:14:52 [W] So they all fit nicely and they all go up into a switch.
+00:14:55 [W] That's just sitting above it and back here.
+00:14:57 [W] We've got our power supply which runs this whole length that the power supply is is actually as big as probably two nodes and then I do have a USB 3 Drive sitting in here in the cluster.
+00:15:07 [W] actually not using this for storage Annie more for some reasons that we'll talk about in a minute.
+00:15:12 [W] But it did fit in here nicely with the Legos and eventually I'd like to put this into maybe a rack or something, but I still consider this kind of a work in progress.
+00:15:19 [W] So I'm not quite ready to get you know Fancy with the storage yet.
+00:15:24 [W] So that's the atomic pie and it's the atomic cluster in other words and so far.
+00:15:32 [W] It's working pretty great.
+00:15:33 [W] So we're going to talk a little bit more about the setup and then I'll get into a little bit more demo action here in a second.
+00:15:38 [W] First of all k3s actually comes with a system upgrade.
+00:15:41 [W] Controller for kubernative which is bloody brilliant because otherwise I would have to figure out how to keep these things updated with the latest version of kubenetes.
+00:15:50 [W] In this case.
+00:15:50 [W] I can actually create a plan and you can see the plan up here.
+00:15:53 [W] Basically I specify for my master node.
+00:15:56 [W] How many concurrency can I change so I can actually do haproxy?
+00:16:11 [W] And It upgraded all my notes for me.
+00:16:13 [W] So this is actually super friendly with ci/cd.
+00:16:15 [W] CD.
+00:16:16 [W] I actually have it hooked up to both Argo and code fresh for my my devops kind of reducing toil project.
+00:16:22 [W] So this is super slick great keeps my kubernative nodes updated and it works both for arm and for x86 because again, I have a raspberry pie for my master node and all my worker nodes or x86 so as
+00:16:38 [W] My worker nodes are x86. So as what basically the way this works is Argo does the sink so code fresh can do some testing but Argo does the sink that actually sends the plan
+00:16:53 [W] To the system upgrade controller.
+00:16:55 [W] Basically, it sends it to kubernative records these cri-o plans.
+00:16:58 [W] And then the upgrade controller actually takes the work to make sure that those are applied and it will migrate itself to another note if it needs to I believe so that it doesn't, you know have any issues when it's upgrading nodes and I found that this works
+00:17:14 [W] Take a note offline until it's ready to upgrade it. So the first time I try to do it, I actually had selected like the wrong tag or something for my version and it it just said oh, well, I can't upgrade this with this current this current plan, so I didn't have
+00:17:28 [W] Lose the note or anything.
+00:17:26 [W] So this thing is brilliant and I basically just make a make a change to the version do a git commit and push and then it automatically rolls out through Argo which I'll show you in a second.
+00:17:38 [W] There's the Intel quick sync device plug in for kubernative, which I also installed and this is designed to support open CL which is not supported by the atomic pie, but we only need the VA API, which is supported by this plugin.
+00:17:53 [W] Supported by this plug-in. So installing this exposes the onboard GPU for hardboard hardware transcoding and the only thing I actually did make a poor request to this thing that they accepted which was to make it so that it didn't try
+00:18:06 [W] I'm nodes.
+00:18:07 [W] So I think intel was more than happy to get rid of that and then in kubernative you see if I can move out of the way a little bit.
+00:18:13 [W] This is basically all you need to add to your kubernative pods. Once you've installed this you just make a resource limit and request the GPU Intel and then it will only deploy those pods on two nodes that are capable of doing Hardware transcoding.
+00:18:29 [W] This was actually pretty slick works really. Well. I also mention that I have gitops running here.
+00:18:34 [W] So I have the code fresh Runner installed. The code fresh Runner is basically an on-prem component that you can throw on to a cluster.
+00:18:42 [W] It can run builds. It can access your cluster behind the firewall.
+00:18:45 [W] I haven't opened up an Emi ports for my home network to crack the code fresh or anything like that. But it all basically sits on my cluster everything stays private to my cluster, but I can manage it from the code fresh UI. So no matter where I am.
+00:18:57 [W] I can actually run builds against the cluster or anything like that and they happen automatically so I can actually execute both pipelines and excess resources behind the firewall.
+00:19:06 [W] Well, not necessarily access resources behind the firewall, but that's a whole nother ball of wax but works really well and it's very scalable. So as I add more nodes I can run more bills.
+00:19:16 [W] I also have Argo CD used for sync. So once I'm ready to make an appointment, I do it commit and push in some cases that triggers a code fresh flow that actually does builds and tests before
+00:19:27 [W] Triggering a deployment and in other cases, it just it just goes directly to Argo CD to just sink onto the cluster and you can follow my project at github.com.
+00:19:37 [W] So today was awesome / Atomic cluster so you can actually see how I've got most of the stuff set up and I have a little bit of we're right up and I'll add a shopping list before this airs so that you can actually see all the components in my board.
+00:19:48 [W] Is a bit rough it's tough.
+00:19:49 [W] So I ended up going with a separate Naas for NFL to do my networking to provide my storage and it's serving it over NFS. The reason that I didn't keep it on my Atomic.
+00:20:01 [W] sorry on my Raspberry Pi is that that USB drive just goes dormant sometimes and so as service I try to access the service and it would take a long time to basically warm up the USB mounted remounted.
+00:20:16 [W] Did it provided over the network?
+00:20:17 [W] And by the time that that's happened?
+00:20:20 [W] You know, maybe you have a pod failing things aren't working.
+00:20:22 [W] Well is just slow and clunky and didn't work super well worked fine for the proof of concept, but not a good long-term solution.
+00:20:29 [W] So I move this over to a dedicated NFS which is probably the background fan were that you here and it's a little noisy.
+00:20:38 [W] So I'd like to do something else there. But in this case, it's basically running a bunch of a bunch of hard drives that have a ton of storage on them and the nsmcon
+00:20:46 [W] Fess is very very fast.
+00:20:47 [W] So this does work better. But a lot of these Services were not designed to work in a creative environment.
+00:20:53 [W] And so I've noticed that they do sometimes get a little finicky.
+00:20:58 [W] I'm looking into Rook as a storage provider which supports F which is a distributed file system.
+00:21:06 [W] Ro way, right? They're not special but once I started throw storage on there, I now have to be thinking about redundancy and how that works.
+00:21:05 [W] So I think that's very promising and might work really well for just the kind of config data portions of what I'm doing maybe the Plex configuration that kind of thing that is more expectant of running on a local file system.
+00:21:18 [W] A lot of these services use sqlite which works great when it's sitting on a desktop, but boy howdy it does not like running off of a network file storage. So I have had to repair a
+00:21:29 [W] a number of sqlite databases while I've been using this may be a pod goes down before the lock is removed from the database something like that.
+00:21:38 [W] I actually did use lose data several times, which is this is a good exercise, right?
+00:21:41 [W] This is what home labs are for so that's been a big learning experience for me and looking into the future.
+00:21:48 [W] I am planning on getting some 10-gig networking going where my na my Naas. I'd actually like to have a 10 gig ethernet connection to that.
+00:22:00 [W] That I then distribute told my one gigabit a second nodes and that way I could have very high read write throughput and 10 gig isn't necessarily super expensive.
+00:22:09 [W] You can actually find cards for PCs for like 20 30 bucks.
+00:22:13 [W] The switches are a little bit more tricky. You can find switches that aren't too pricey that have 10 gig copper ethernet connections. And if you can actually use a regular cable if you're going over very short distance, but they are very pricey once you get into the 24 put portworx.
+00:22:28 [W] Range, but now I'm talking more home networking stuff.
+00:22:12 [W] So anyway, that's that's more feature thinking but storage does remain a little bit of a problem.
+00:22:16 [W] I can use my clustered. It does work, but I am a I noticed the storage is a little bit finicky so I have to watch it.
+00:22:23 [W] So I'm gonna that's something I'm going to have to invest a little bit more time into fixing in addressing their once you start doing this you will find there are a ton of community maintained images on Linux server dot IO so they have everything from home lab basically all your
+00:22:39 [W] And they are pretty nice images.
+00:22:25 [W] They usually include things like user permissions mapping which is important when you're using a your your storage you want to be able to put the right permissions mask on it, but they were really all designed for working with Docker compose on a local machine
+00:22:41 [W] I showed this up to a friend of mine.
+00:22:38 [W] He said hey, these are really cool.
+00:22:39 [W] This is really cool that you're running all these services but I do all this on my desktop and I just do Docker compose up and it seems like you've done a lot more work than that to get all those kubernative working to which I would say.
+00:22:49 [W] Yes.
+00:22:49 [W] Yes, I have.
+00:22:50 [W] Yes.
+00:22:50 [W] I've done a lot more working bad, but I have something modular and scalable.
+00:22:53 [W] So it's and and actually cheaper than what what he's designed and built so, you know, I'm happy with the choice in that case.
+00:23:01 [W] So check these images out.
+00:23:03 [W] They have pretty good maintenance and upgrades. I'm going to jump into
+00:23:06 [W] to another demo here.
+00:23:08 [W] Let's actually just browse around the cluster and I'll show you a few things of note here.
+00:23:12 [W] So I'm actually sitting inside my git repo here.
+00:23:15 [W] I have some uncommitted changes.
+00:23:16 [W] So if I commit those it will actually trigger a sink to the cluster. But before I do that, I want to show you some interesting things when I'm looking at my services you'll notice that I actually have 2 plx Services here one is for UDP and one
+00:23:31 [W] I'll show you a few things of note here.
+00:23:31 [W] So I'm actually sitting inside my git repo here.
+00:23:34 [W] I have some uncommitted changes.
+00:23:35 [W] So if I commit those it will actually trigger a sink to the cluster. But before I do that, I want to show you some interesting things when I'm looking at my services you'll notice that I actually have 2 plx Services here one is for UDP and one
+00:24:04 [W] Not UDP.
+00:24:05 [W] it's for TCP.
+00:24:06 [W] I have the same thing going with netboot XYZ, which is a which is a netboot provider so you can boot machines up over the over your land Network.
+00:24:16 [W] The reason I have two is because kubernative load balancers. Do not support both UDP and TCP at the same time.
+00:24:23 [W] So what we've done is these actually use and we resize this window slightly so you can see
+00:24:35 [W] Hang on.
+00:24:35 [W] Let me let me bring it down just a little bit.
+00:24:39 [W] Just a little bit.
+00:24:42 [W] So you can see a little bit more what's going on here.
+00:24:45 [W] There we go.
+00:24:45 [W] So you'll actually notice that those load balancers for the same service actually share IP. So the see this netboot one actually has two is as 10:25 and the other one above it is 1025.
+00:24:57 [W] So this is actually a feature of metal load balancer where you can actually put annotations on a service to tell it that you can actually share an IP address. So this was a little bit of a gotcha to figure out how to serve UDP and TCP and this is important for a couple of services for net.
+00:25:12 [W] It's important just because of the way netboot works and it has to have a tftp server that things can access which works over UDP Plex was the one that was a surprise to me everywhere.
+00:25:23 [W] I look people just had Plex images that were serving up TCP and a lot of local devices don't work.
+00:25:30 [W] Reliably until I added the UDP load balancer and advertise those services. And of course, I have to keep it on the same IP address. Otherwise, I think the whole thing we get confused and funky.
+00:25:40 [W] So that's something to watch out for you do have to care about UDP and TCP.
+00:25:45 [W] And again, this goes towards the home lab. The truth is most stuff is not designed to work with the home lab. The other thing that I ran into and learned very quickly is of course and most people know this I think if your season but
+00:26:00 [W] All of my my volumes and volume claims are actual ability immutable.
+00:26:08 [W] So when I'm working with these things if I make a change, they won't automatically get configured.
+00:26:14 [W] It'll basically throw an error and say hey I can't I can't deploy that so today. I was rolling out a new change which went through Argo CD and code fresh and it couldn't complete the roll out because one of the PVCs was
+00:26:29 [W] Had to go and delete the PVC and the the only issue with that. And again, let me resize my window here is for some reason and this is something else that I probably need to look into.
+00:26:25 [W] I typically run into issues where I'm trying to delete these PVCs because they basically have some protection on them.
+00:26:34 [W] So if I look at these PVCs, let's say that I wanted to delete this Minecraft der one it probably won't delete when I try to
+00:26:43 [W] Delete it.
+00:26:50 [W] So yeah, it says it's deleted but it's hanging and it's hanging because there are finalized errs on it, which is I think it's just a feature built into kubernative.
+00:26:58 [W] So if I pull this open again, it will say that it's terminating and that thing will sit there forever.
+00:27:02 [W] It will never die.
+00:27:03 [W] And so you actually have to do something a little gross and this is all like pretty like I'm not telling you to ever do this with production. Obviously, I'm like, I'm like just I'm the only user here, right?
+00:27:15 [W] So it's so I'm violating some principles here, but basically
+00:27:19 [W] Only way I've figured out how to get these to actually delete is to go in and remove this protection finalizer. And once I do that this thing will delete right away.
+00:27:30 [W] And so you can see that it's been edited and if I get PVC, it'll be gone.
+00:27:34 [W] Gross, and this is all like pretty like I'm not telling you never do this with production. Obviously.
+00:27:27 [W] I'm like, I'm like just I'm the only user here, right?
+00:27:30 [W] So it's so I'm violating some principles here. But basically the only way I figured out how to get these to actually delete is to go in and remove this protection finalizer.
+00:27:42 [W] And once I do that this thing will delete right away and so you can see that it's been edited and if I get PVC it'll be gone. So I just killed my Minecraft
+00:27:51 [W] that instance not a big deal because I'll just reapply the config or I can actually just do it through Argo and that I'll just work smoothly.
+00:27:59 [W] It will be no problems there.
+00:28:00 [W] So this this actually you can see, you know, just looking around my cluster here for a second.
+00:28:05 [W] You can see I've got a number of different namespaces here.
+00:28:07 [W] I've got the Argo CD namespace. I have a system upgrade namespace which is where that system upgrade controller is working and if we look at that, let's get yeah, just just that.
+00:28:24 [W] You can see that we actually just have a single pot they're running for the controller and then if I look in the Argo.
+00:28:38 [W] What you'll be able to see is that I have all my Argo stuff running and then I also have a CF Argo CDH and it basically what that does.
+00:28:46 [W] Is it sits between code fresh and Argo and keeps all the information up-to-date encode fresh so that all my build information is annotated and associated with what deployments and roll outs are happening, which is a really useful view to have I'm not going to get super deep into that demo. But if you want to check it out
+00:29:01 [W] Appointments and roll outs are happening, which is a really useful view to have I'm not going to get super deep into that demo. But if you want to check it out go to code fresh.
+00:29:08 [W] cri-o will have some videos up there.
+00:29:11 [W] So that's pretty slick.
+00:29:12 [W] And then of course, I actually run a lot of stuff out of my default namespace and it's a little silly.
+00:29:16 [W] I've got my Ingress in there and all that kind of stuff. So works pretty smoothly.
+00:29:20 [W] I'm pretty happy with it and overall I'd have to say that this this whole setup runs fairly smoothly and is pretty rad. So I'm going to go back over here for a
+00:29:31 [W] And now I'm happy to take questions and you can follow progress that github.com today was awesome / Atomic cluster.
+00:29:40 [W] I wanted to show you just for a second over here in my let's actually look at the Argo dashboard here.
+00:29:48 [W] So here you can see actually the different services that I have set up with Argo and you can you can see they're all synced.
+00:29:54 [W] And if I go over to code fresh I'll actually get the same view my browser crashed because I've got OBS running and it just
+00:30:02 [W] all of my processor power
+00:30:07 [W] Loading come on.
+00:30:09 [W] There we go.
+00:30:10 [W] So so this view actually will give me all the information now like I mentioned in the future, I think I need to solve the storage issues.
+00:30:19 [W] And I also wanted to set up automated node provisioning using ansible so that when I plug in a node these actually these nodes actually have pxe boot enabled by default.
+00:30:28 [W] Install something now. One of the things that I actually looked into was there is a way to set up these nodes so that they boot an image and just run that so you don't actually install anything on the Node. It just runs the image
+00:30:44 [W] And I actually ruled that out because I lose power sometimes and I want to have cold start easy and I don't want to have some separate Services running thing actually want to run everything on my kubernative cluster anything that's sitting outside of the kubernative cluster
+00:30:53 [W] NFS and even that is a little bit suspect anything that's running outside of the kubernative cluster is another point of failure that I have to maintain.
+00:30:58 [W] I don't want to have to maintain it.
+00:30:59 [W] So yeah, you can see here that encode fresh.
+00:31:02 [W] I've got all these apps sitting here as well.
+00:31:04 [W] And if I look at let's see which one we would be interesting.
+00:31:09 [W] So this one actually has a couple failures on it because I had to delete my pvc because it wasn't able to sink.
+00:31:16 [W] So that was the the issue that I was talking about earlier, but it is in sync right now, so everything's fine.
+00:31:20 [W] Fine and this view actually this one doesn't have build associated with it. But if it did I would actually see the build information here.
+00:31:27 [W] And of course my poor quests any issues and gri would have created which again I'm not doing because clearly this is overkill for my home cluster, but it's just kind of rad to be able to use the the clean devops tough.
+00:31:39 [W] So with that I want to thank you for coming to my coop con talk.
+00:31:42 [W] I hope that this was interesting.
+00:31:44 [W] Maybe it'll inspire you to build your own kubernative cluster your own home lab your own Atomic cluster, and hopefully it works.
+00:31:51 [W] It's really well.
+00:31:51 [W] I was really happy with mine.
+00:31:53 [W] Like I said check out the repo.
+00:31:54 [W] I will throw a shopping list in there. I think this whole build what did I spend? I spent a hundred forty bucks 40 bucks on Atomic Pies because I have four of them.
+00:32:04 [W] I spent 30 bucks on the Raspberry Pi and then I spent maybe 20 bucks on the other thing. So we're talking about sub $200 for this kubernative cluster and let me tell you what for a PC that I could buy for 200 bucks.
+00:32:18 [W] Amount of power and scalability get out of this thing.
+00:32:20 [W] So like I mentioned I run Plex on this thing.
+00:32:22 [W] I got a Minecraft server.
+00:32:23 [W] I got a couple other things that I'm running on it.
+00:32:24 [W] I'm going to be adding more as I go along and I'm not worried about running out of space or storage because I can always throw another note in and so I have this scalable kubernative cluster.
+00:32:34 [W] It's running great and I'm pretty happy with it.
+00:32:36 [W] So feel free to ask me questions on Twitter at today was awesome. And of course if you're watching this at coupon live, I will be hanging out in the chat and having conversation there. So look forward to hearing your
+00:32:46 [W] Your questions and thanks again.
+00:32:48 [W] I hope you enjoyed this.
+00:32:49 [W] I hope it was interesting.
+00:32:50 [W] I don't know if you feel like it was the ultimate cluster.
+00:32:53 [W] Let me know if you feel like this was the ultimate kubernative home lab or if you feel like maybe it's a little too far on the cheap side.
+00:33:01 [W] Maybe you're looking for something a little bit more beefy.
+00:33:03 [W] But at least it's accessible.
+00:33:05 [W] All right.
+00:33:05 [W] Have a good one. Thank you.
+00:33:13 [W] Well, I hope you enjoyed that.
+00:33:17 [W] I've been following their lots of questions on the Q&A here and I see the discussion going on inside of on slack is great.
+00:33:28 [W] So there's a slack that is coupon community.
+00:33:31 [W] So please go check that out.
+00:33:33 [W] Just some of the questions I would answer live one of the people ask me why you know, there's been a lot of questions.
+00:33:40 [W] Is $35 board so buying four of them.
+00:33:30 [W] I mean, it's super cheap and so dealing with that is really straightforward.
+00:33:34 [W] Some people ask me about transcoding with the performances. So somebody asked if I can do 4K transcoding and the answer is I don't think so.
+00:33:47 [W] I haven't actually tried to do 4K transcoding because when you read the documentation on 4K transcoding from Plex, it says don't do 4K transcoding about seven times.
+00:33:57 [W] So I need to try it, but I could actually do you know all of the the like I could schedule jobs automatically set up all the 4K video and it would it would use the nodes available and who use Hardware transcoding?
+00:34:13 [W] And if it would be good enough to do it live.
+00:34:06 [W] So that's a good question.
+00:34:08 [W] Someone else was asking me about the just the networking speed. So these these nodes are 1 Giga second, and I'd like to get into 10 Giga second networking.
+00:34:20 [W] My plan is essentially to use a 10 gig switch with a 10 gig Naas and then each node can be one gig and I can potentially distribute jobs and things among the nodes because if you think about it, each of these nodes is so small.
+00:34:33 [W] That I'm never really going to be using it's rare that I would be using all that bandwidth. And most of the I/O I do is from my home internet connection, which is one gig anyway, so I'm limited on that on that nature.
+00:34:46 [W] That's a good question.
+00:34:48 [W] Joanne has asked me would delete with force and grace period zero not work. It would not work.
+00:34:54 [W] don't I don't know if maybe I'm doing it wrong, but I actually had to go in and and delete the finalizer and I know if
+00:35:03 [W] K3s issue or maybe something specific to my setup.
+00:35:08 [W] Tyler tells me to check out his talk from Tuesday called clean up your room all about final eiders.
+00:35:16 [W] So I think that's a good that's a good direction to go.
+00:35:19 [W] Maybe we'll go take a check out. Tyler Poland's talk and figure out how to do finalizer better than what we've been doing, which is pretty cool.
+00:35:26 [W] I don't I don't know if maybe I'm doing it wrong, but I actually had to go in and and delete the finalized errs, and I don't know if that's a k3s issue or maybe something specific to my
+00:36:22 [W] So I went down a lot of rabbit holes. When I started I first tried to use k3s OS and that was a whole thing.
+00:36:31 [W] I trekked out using proxmox with a hypervisor for each node.
+00:36:34 [W] That was a whole thing.
+00:36:35 [W] So I probably was like two weeks. And before I even just installed k3s, once I had k3s installed. I had my first service up and running within 5-10 minutes. So it's really straightforward. So like the real question was the like
+00:36:51 [W] Figuring all that stuff out. And that was the that was that was the pain point, but now that I've done it and I did a little write-up on Reddit which you can follow on the GitHub that's linked to the the today was awesome / Atomic cluster
+00:37:06 [W] This I think it would help save a lot of time for you that are doing it and then someone asks does your system run quiet.
+00:37:12 [W] Yeah, actually my NES makes noise. My Naas is loud.
+00:37:17 [W] But my kubernative cluster. It makes no noise.
+00:37:19 [W] There's actually no fans in the whole system at all.
+00:37:22 [W] So there's zero sound somebody asks What GPU arcs are you exposing for Trans Cody's this onboarding each node?
+00:37:29 [W] node. Yeah. So the the cherry lake CPUs the atomic pie the atomic Intel Atom Processor has
+00:37:36 [W] Has an onboard GPU that we that we exposed through the Intel GP plug-in kubernative somebody asks, if you were to upgrade your cluster with more powerful nodes like ten day but ethernet fancier storage. So if you manage what services would run on what
+00:37:51 [W] Um an onboard GPU that we that we expose through the Intel GP plug-in kubernative somebody asks, if you were to upgrade your cluster with more powerful nodes like 10 gigabit Ethernet fancier storage. And would you manage what services would run on what nodes?
+00:38:06 [W] I mean, I think so.
+00:38:09 [W] Obviously you can use kubernative built-in kind of resourcing stuff so you can say like, oh I want I want this much RAM this much CPU or whatever but that doesn't really count for is the quality of the CPU. So like if your CPU
+00:38:24 [W] You know, it can handle a lot more.
+00:38:26 [W] I don't think it would balance easily. So I haven't figured out how to do that.
+00:38:28 [W] I haven't really tempted to do that.
+00:38:29 [W] So anyway, that's that's a good point.
+00:38:33 [W] John asked me. Are you running stateful sets in the cluster?
+00:38:37 [W] Yes, and this was something I talked a little about on the talk was just the state of running staple Services.
+00:38:44 [W] I've had some issues with it because my first set up with Naas was through a USB drive and that USB drive and go to sleep. I'd go to access the service and it
+00:38:53 [W] It'd take 20 seconds for that thing to load up.
+00:38:57 [W] So as a whole big pain, I think we're pretty much out of time.
+00:39:00 [W] I don't know if I'm gonna get cut off and if I do then I would just tell everybody come check out the come check out the coop con Community slack Channel.
+00:39:11 [W] I'll keep chatting in there. And then later today.
+00:39:13 [W] I'm actually running a show that we call the hallway track, which is that it's a non kubernetes non pucon non-si unit cncf thing.
+00:39:20 [W] You can find it on Twitter at code fresh or at today was awesome. I'll post the link.
+00:39:24 [W] We're doing around up of kubernative news could canoes.
+00:39:27 [W] You can follow me on Twitter app today was awesome. So I would I would tell you to check it out.
+00:39:36 [W] Let's see if I can answer another question.
+00:39:38 [W] Lots of people say, thanks. Very cool.
+00:39:40 [W] Hey, thank you.
+00:39:41 [W] I appreciate that.
+00:39:42 [W] did pre-record it. And so I've been trying to do the Q&A while we go.
+00:39:47 [W] Across the run one a password manager on another if someone gets on one.
+00:39:49 [W] I don't want them to get on to the other so you can use notes selectors in your in your services.
+00:39:57 [W] However, if somebody is able to break out of your Minecraft container, that's a bigger flaw in kubernative and in the way the kubernative works and if you find that happen, I bet someone will give you you know,
+00:40:12 [W] His Bounty or something because that would be a secure serious risk the containers already provide the isolation. So I wouldn't really worry about it from a security perspective.
+00:39:56 [W] It's really just about keeping them.
+00:39:58 [W] It's you know, keeping a container secure much more so than the node that I think that's fair really cool cluster.
+00:40:07 [W] I got two clusters k3s on Raspberry Pi for awesome and our Ka on Intel i5 for interested in to your ci/cd pipeline using get and a drone for
+00:40:17 [W] Are now experimenting with rook and also open EBS earlier, but networking at one gig is really too little to get decent storage speed.
+00:40:24 [W] Yeah, I think that's a good point getting a 10 gig situation would be nice. My Naas does have for one gigabit Ethernet ports.
+00:40:33 [W] And so I thought about trying to do the the link aggregation, but it's supposed to be very finicky.
+00:40:40 [W] So, I don't know if I love that.
+00:40:46 [W] Let's see.
+00:40:49 [W] Someone says there's a zoom in the hallway track of people are Keen but first keep the community channel. So yeah, I'll go back to the Community Channel say there's people chatting in there.
+00:40:57 [W] Let's see if there's another one I can answer.
+00:41:00 [W] How do you back up your notes? Especially the Nats Master Okay. So the nodes themselves are basically blank.
+00:41:09 [W] There's basically nothing going on in the notes.
+00:41:11 [W] And is I've basically just done like a DD of my, you know, SD card and throwing that onto my Naas and I need you. I need to write a schedule job to do that because then I can just write it on to another
+00:41:21 [W] Drop in a new master node if my master node ever failed.
+00:41:14 [W] So that's a good point.
+00:41:14 [W] Actually. Somebody asked me.
+00:41:17 [W] I have netboot running on my kubernative cluster and someone was asking me if I have that operating yet.
+00:41:23 [W] I actually don't have that operating yet.
+00:41:25 [W] yet. So that's not a subject for this talk. But I've been trying to work on netboot to maybe run like a sort of ansible automatic setup so that I can just drop notes in and have them automatically provision right now. It takes me about two minutes to setup a node so it hasn't.
+00:41:39 [W] Like really pushed me to get there yet, but I didn't need to so no, we do need to wrap it up.
+00:41:44 [W] I see there are a lot more questions.
+00:41:46 [W] I haven't been able to answer.
+00:41:47 [W] Please go to the community slack.
+00:41:49 [W] I'll be active in there for the next little while and follow me on Twitter at today was awesome.
+00:41:53 [W] happy to have conversations with you there, and it sounds like a lot of you have done really cool builds as well. So please send him over.
+00:41:59 [W] love to see them and feature them and throw them up on my Twitter and share with everybody else. So with that thank you very much and appreciate you coming.

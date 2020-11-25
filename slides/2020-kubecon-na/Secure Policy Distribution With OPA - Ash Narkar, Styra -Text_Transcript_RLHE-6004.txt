@@ -1,0 +1,217 @@
+﻿Secure Policy Distribution With OPA: RLHE-6004 - events@cncf.io - Thursday, November 19, 2020 5:41 PM - 27 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello.
+00:00:00 [W] Thank you for joining me today for a talk on secure policy distribution with the open policy agent.
+00:00:07 [W] My name is Ashna darker.
+00:00:11 [W] Agent and I care about developing secure systems that can be easily deployed scaled and managed in today's stock.
+00:00:22 [W] We will look at a quick overview of opa and some of its features then we'll talk about how to do policy distribution.
+00:00:30 [W] And finally, we will see a demo about secure policy distribution with Opa.
+00:00:37 [W] So let's get started.
+00:00:40 [W] What is oppa oppa which is the open policy agent is an open-source general-purpose policy engine.
+00:00:48 [W] Then you use Opa you are decoupling the policy enforcement from the policy decision making so your services can now offload policy decisions to Opa by executing a query.
+00:01:02 [W] So let's understand this a bit more using this figure.
+00:01:07 [W] Imagine you have a service and it can be any service at all.
+00:01:11 [W] It can be a kubernative API server. It can be your own custom server calf cartera for many service at all. Whenever your service gets a request.
+00:01:21 [W] It's going to ask Opa for a policy decision by executing a query Opa is going to evaluate this query based on the policies and the data it has access to and send a decision back
+00:01:36 [W] varied gets enforced
+00:01:38 [W] so you can see that we have decoupled the policy enforcement from the policy decision making
+00:01:47 [W] the policy query itself can be any Json value.
+00:01:51 [W] So for example, if you're doing a PR through ization, this policy query could be the HTTP method the path and so on and if you're doing kubernative admission control your policy query could include the Pod manifest
+00:02:07 [W] Very itself can be any Json value?
+00:01:57 [W] So for example, if you are doing a PR through ization this policy query could be the HTTP method the path and so on and if you're doing kubernative admission control your policy query could include the Pod manifest
+00:02:41 [W] So as long as you give Papa some kind of structured data and you write policies that make sense for that data Opa sends a decision back to your service.
+00:02:51 [W] That's why Opa is called a general-purpose policy engine because it's not tied to any particular data format.
+00:03:01 [W] Even the policy decision Opa makes can be any Json value.
+00:03:05 [W] So not just through faults or allow deny.
+00:03:08 [W] It can be any other Json value as well.
+00:03:10 [W] Let's quickly look at some of Opus features at the core of opa is a high-level declarative language called as Rego and with Rego you can write policy decisions, which are Boolean sets
+00:03:25 [W] And so on Opa is written in go and it's designed to be as lightweight as possible.
+00:03:32 [W] So all the policies and all the data you need for evaluation are stored in memory.
+00:03:37 [W] You can deploy Opa as a sidecar a host level demon or you can embed it inside your code if you're writing go.
+00:03:48 [W] Opa does not have any runtime dependencies which means it does not have to pull down any external services or does not have to talk to any external services for making a policy decision.
+00:04:01 [W] You can however extend Opa to do that, but that's completely optional.
+00:04:07 [W] Opa does provide you with some management apis that allow Opa to pull policy and data from a remote service or upload is decision locks to an external service or upload its status to an
+00:04:23 [W] Do that, but that's completely optional.
+00:04:19 [W] Opa does provide you with some management apis that allow Opa to pull policy and data from a remote service or upload is decision logs to an external service or upload its status to an
+00:04:46 [W] And finally along with the code policy engine Opa provides you with a rich set of to link that you can use to generate test your policies that you can use to Benchmark your profile your policies.
+00:04:58 [W] And also there are Integrations with ID. He's like vs core IntelliJ and there is also an online Rego playground which allows you to experiment with Lego policies and share your policies with the world. So these
+00:05:13 [W] Features of high-level declarative language multiple deployment models management apis for control and visibility and a rich tooling set.
+00:05:24 [W] So now let's talk about policy distribution.
+00:05:30 [W] So today lot of organizations are using micro services to build out their infrastructure. And what they do is they run Opa alongside these microservices to authorize access to these services.
+00:05:45 [W] An opus architectural flexibility allows them to do that because you can simply run opaz a sidecar and you can authorize access to these services.
+00:05:52 [W] And so now imagine if you scale to like tens hundreds or even thousands of microservices and you have Opa running next to each of these microservices the question arises.
+00:06:04 [W] How do you distribute policies and data to each of these Opus?
+00:06:11 [W] How do you ensure that each of this Opus have the most up-to-date versions of policy and data?
+00:06:19 [W] And finally, how do you load these different versions of policy and data without having to restart Opa every single time?
+00:06:32 [W] So to help with all these issues Opa supports bundles.
+00:06:37 [W] So what are these bundles bundles are basically gzip tar balls that contain policy and data so you can have your bundles stored on an
+00:06:52 [W] Don't without having to restart Opa every single time.
+00:06:55 [W] So to help with all these issues Opa supports bundles.
+00:07:00 [W] So what are these bundles bundles are basically gzip tar balls that contain policy and data so you can have your bundles stored on an external
+00:07:34 [W] And opa will periodically pull down these bundles from your service load them and start enforcing the policies inside of those bundles immediately.
+00:07:45 [W] So for example, you could have your Bundle store on S3, and you could Point Opa to that bundle on H3. Hope I will pull it down and start using the policies in that bundle immediately.
+00:08:01 [W] So this is really convenient if you want to distribute a policies to all these different oppas, which are running alongside your Microsoft offices.
+00:08:11 [W] So bundles are great.
+00:08:13 [W] They're awesome.
+00:08:14 [W] But we do have a problem.
+00:08:17 [W] How does OPA know that these bundles are coming from a trusted source.
+00:08:26 [W] Opa will assume that the policies and the data in those bundles are authentic and not corrupt.
+00:08:35 [W] But is that always the case?
+00:08:39 [W] And what if an attacker corrupts the policies in the bundle and now Opa downloads this corrupt bundle and start enforcing those corrupt policies, thereby compromising your system.
+00:08:54 [W] How will you be able to trust the decisions that Opa is making?
+00:09:02 [W] bundle
+00:09:04 [W] the sign bundle looks and feels exactly like a regular bundle, but it has an extra signatures dot Json file.
+00:09:14 [W] And the signature is filed. It dictates essentially watched what files should be included in the bundle.
+00:09:21 [W] What the Sha hashicorp for those files and is cryptographically secure.
+00:09:27 [W] So this is how a signatures file looks it's essentially an array of Json web tokens, which encapsulate the signature of a bundle
+00:09:43 [W] And if you were to decode a jot, what you would see is that for example, in this case the bundle includes couple of files like the Manifest file and it includes a data the Json file and you can also
+00:09:58 [W] The hash of the content of each file.
+00:09:49 [W] So this is simply how the signatures dot. Json file is structured.
+00:09:56 [W] So now what you will see so this was assigned bundle and how it looks but now let's look into how Opa actually verifies that signed bundle.
+00:10:09 [W] So whenever Opa receives signed bundle, it's going to grab the signatures dot Json file.
+00:10:18 [W] open it up. And the first thing it will do its going to verify the jot signature with the appropriate public key a secret.
+00:10:30 [W] So you need to provide Opa with this public key or secret out-of-band and we will see how that is done during our demo.
+00:10:42 [W] Next Opa will try to verify that all the files which have been specified in that job payload actually match the files in the Target bundle.
+00:10:53 [W] So it's going to make sure that there are no extra files or there are no lesser files in the Target bundle to what's mentioned in the joint pillow.
+00:11:03 [W] And finally it's going to take every fight in the Target payload in the in the in the bundle.
+00:11:11 [W] And then compare it with the hash recorded in the jot payload and make sure they are equal.
+00:11:08 [W] So if any of these steps fail Opa is not going to activate that bundle and so only if all these steps are successful Opa is going to activate this bundle and
+00:11:23 [W] Two using whatever policies and data are included in that bundle and start enforcing those policies immediately.
+00:11:18 [W] So this is how Opa verifies signed bundle.
+00:11:26 [W] So we've also provided some command line tools some tooling that can help with sign bundles.
+00:11:32 [W] So we have a brand-new Opa sign command that you can use to generate signatures for the contents of a given directory or an existing bundle.
+00:11:46 [W] And all you have to do is provide it with the signing algorithm that you want to use by default.
+00:11:53 [W] That's RS 256 but there are others like a chess 256 and much more that you can use and also you need to provide deciding key.
+00:12:03 [W] So if you're using an awesome attic algorithm you provided the private key if you're using a symmetric algorithm you provided a secret and the sign command will generate the signature for
+00:12:15 [W] all the contents of the given directory or the existing bundle
+00:12:22 [W] We are all familiar with the OPA build command, which is used to generate regular bundles.
+00:12:27 [W] And it's going to generate a sine bundle for you.
+00:12:29 [W] And finally, if you have to verify assigned bundle, you have the OPA run command, which takes in the signing algorithm and the verification key and it's going to verify that signed bundle.
+00:12:45 [W] Using an awesome metric algorithm like RS 256 you provided the public key.
+00:12:44 [W] If you are using something like a chess 256 which is a symmetric algorithm.
+00:12:48 [W] you provided the secret. So these are some of the command line tools and the tooling support that Opa provides for signed bundles.
+00:13:02 [W] Now, let's see sign bundles in action.
+00:13:07 [W] So to set up our demo what we have is a health care application by Acme health care, which allows its members to see the invoices and we are going to enforce
+00:13:23 [W] Simple policy which says that the claims in the invoices should be hidden from Members.
+00:13:30 [W] We will see the simple policy later. But all it does it says that we have to hide this claims inside the invoice from the members.
+00:13:41 [W] The policy will be distributed to Opa using bundles and let's see the scenario is that we are going to address in this demo.
+00:13:53 [W] So what happens when a malicious user updates a policy they're going to see that in the demo.
+00:14:00 [W] How does that compromise the health care app and finally can sign bundles provide a compensating mechanism.
+00:14:10 [W] So we are going to try and answer all these questions as part of the demo.
+00:14:17 [W] So let's jump into it.
+00:14:21 [W] So what you see here is essentially a dashboard which allows a member Alice of Acme Healthcare to see her invoices.
+00:14:32 [W] There are two buttons here.
+00:14:34 [W] The first one is simulates a scenario without Opa in the picture and second one simulates a scenario with Opa actually enforcing certain policies.
+00:14:46 [W] A couple of invoices and pay careful attention to the claims.
+00:14:43 [W] You can see the claims that are part of this invoice.
+00:14:49 [W] And now if you were to click the second button.
+00:14:55 [W] You would see that the claims are hidden, which means that the OPA policy is getting enforced.
+00:15:03 [W] So with this base in mind, let's see what happens if a malicious user now tries to corrupt the policy.
+00:15:14 [W] So say you have a malicious user.
+00:15:21 [W] Who simply changes the policy?
+00:15:27 [W] Okay.
+00:15:29 [W] And this malicious user now creates a bundle with this garage policy.
+00:15:36 [W] So this bundle is now going to be pushed to your bundle server Opa is going to pull it down and it's going to enforce the policies which are in that bundle which are now corrupt.
+00:15:50 [W] So if we go back to our sample application and if we click the same button again.
+00:15:55 [W] I'll being enforced by opa.
+00:15:48 [W] So, how can you prevent This Disaster scenario from happening? Because now you can see your system is compromised.
+00:15:56 [W] So how can you prevent the scenario from happening? And again, how can you trust the decisions that Opa is making because Opa simply trusted the policies which were in that bundle those policies turned out to be
+00:16:12 [W] It was enforcing decisions which are compromising your system.
+00:16:13 [W] So, how can you prevent all these things from happening?
+00:16:18 [W] Will sign bundles help in this case.
+00:16:21 [W] Let's find out so.
+00:16:25 [W] What let's let's revert back to our original policy.
+00:16:33 [W] And what we do now.
+00:16:36 [W] Is instead of creating a regular bundle will create a signing assigned bundle and you can see that we are providing the algorithm.
+00:16:47 [W] We are providing a private key and we're going to create a sign bundle now, so
+00:16:57 [W] If you look the only difference is that you have a signature style Json file, which is included in the sign bundle.
+00:17:05 [W] So now this sign bundle has been pushed to the bundle server Opa is going to download this signed bundle.
+00:17:14 [W] And now verify the sign bundle with the given public key that we have to provide.
+00:17:19 [W] So, let's see how that actually happens next.
+00:17:25 [W] Seeing now is the runtime configuration that is provided to Opa.
+00:17:29 [W] I think is 256.
+00:17:27 [W] We are providing the public key, which is going to be used by Opa to now verify that signed bundle.
+00:17:35 [W] So, let's see if that worked out.
+00:17:37 [W] We will check out oppas logs and see that so you can see that the bundle has been activated and so now we can go back to our demo
+00:17:53 [W] See that so you can see that the bundle has been activated and so now we can go back to our demo.
+00:17:56 [W] And so again if we simulate a scenario with Opa in the picture.
+00:18:03 [W] It's hiding the claims again.
+00:18:05 [W] And so the reason this happened is that we generated the sign bundle Opa verify that sign bundle and enforce the policies inside that bundle and the policy said do not show the claims.
+00:18:20 [W] Show the claims inside the invoice object, which is great, which is what we wanted.
+00:18:27 [W] So now again the malicious user comes in and updates the policy.
+00:18:33 [W] So let's do that again. So now we have
+00:18:38 [W] the malicious user coming in just like before
+00:18:44 [W] updates the policy and
+00:18:50 [W] Bill's the bundle
+00:18:53 [W] And now this bundle has again been pushed to the bundle server and has been downloaded by Opa.
+00:19:02 [W] So the question now is like before we'll oppa just activate that bundle and start enforcing those corrupt policies or using sign bundles helped.
+00:19:14 [W] So let's check it out again by looking at the OPA logs.
+00:19:20 [W] So if you look at the OPA logs now, you will see that there are a bunch of errors in that log.
+00:19:26 [W] And these errors in the log are happening because Opa could not verify that bundle which are just downloaded and when Opa cannot verify the bundle, which is downloaded.
+00:19:42 [W] Keep on using the last downloaded sign bundle and enforce the policies from that bundle.
+00:19:48 [W] So now if we press this button again.
+00:19:52 [W] You can see that the claims are still hidden, which means that those corrupt policies which were fed by the attacker but not being enforced by opa.
+00:20:05 [W] And so in this way, we have prevented an attacker from feeding corrupt policies into Opa by using signed bundles.
+00:20:15 [W] He used sign bundles in this demo from a security perspective to prevent an attacker from feeding current policies into opa.
+00:20:24 [W] You can also use sign bundles for other use cases. Like if you wanted to rotate the keys inside a non Discovery bundle and there are other applications of sign bundles as well.
+00:20:38 [W] So this was a talk on secure policy distribution with the open policy agent.
+00:20:43 [W] I hope you also how sign bundles can help in reducing oppas attack surface.
+00:20:51 [W] If you want to learn more about sign bundles, please check out the OPA website on open policy agent dot org and check out the documentation about sign bundles join us on slack if you have any questions
+00:21:06 [W] Project on GitHub and if you like what you see, please do star the project.
+00:20:46 [W] Again, I thank you all for joining me today, and I'm happy to answer any questions.
+00:21:05 [W] Hello.
+00:21:06 [W] thank you all for joining us for this talk on secure policy distribution with the open policy agent.
+00:21:12 [W] I'm going to read out a few questions first for the really appreciate you all joining us for this call.
+00:21:18 [W] So one question is been asked by most of society are the policies Always written in here I go.
+00:21:24 [W] Yes. Most of the policies will always be written in Rego and that's what the bundles containerd they contain both policies and data.
+00:21:33 [W] Policies are Rego John Portman says much-needed feature.
+00:21:39 [W] Well done.
+00:21:39 [W] Thank you so much. John really appreciate it.
+00:21:43 [W] Christopher says, is there a way to use a wart or key value to sign bundles?
+00:21:48 [W] That's a good question Christopher. Currently. We don't have that.
+00:21:52 [W] But if you have a use case around this feel free to sign open up an issue and we definitely look into it next question.
+00:22:03 [W] So currently we only allow one signature per bundle but in the future we do plan to add multiple signatures if you want to sign different files in a bundle with different signatures
+00:22:04 [W] Will support that in the future but currently is just one sign keep a bundle.
+00:22:06 [W] There's a question by Ted.
+00:22:11 [W] Did you tell Opa that it should only use signed bundles?
+00:22:17 [W] Yes, Ted that sorry my bad dad. So yeah, so when you start Opa you need to provide it the configuration you need to provide the keys out of Bantu Opa the plug public keys to verify the bundle.
+00:22:32 [W] Yes, stay Dad.
+00:22:32 [W] Sorry my bad dad.
+00:22:34 [W] So yeah, so when you start Opa you need to provide it the configuration, you need to provide the keys out of band Opa the plug public key to verify the bundle.
+00:22:45 [W] So in that way Opa expects or signed bundle. So the scenario is that if you tell Opa that a particular bundle is supposed to be signed and that bundle does not have a signature spire.
+00:22:59 [W] While the activation of the boundary is going to fail.
+00:23:03 [W] So there are two things going on here.
+00:23:06 [W] So you need to tell Opa this is the key to use to verify a bundle and if then the actual bundle contains the signatures it will do go through the verification steps.
+00:23:16 [W] But if the actual bundle does not contain the signature file itself, then the activation fails no power will not use the policies from that bundle.
+00:23:25 [W] So, yes, we have to tell Opa that it's a sign bottle.
+00:23:32 [W] Okay, another question by Christopher.
+00:23:35 [W] In the case of assigned bundled are we assuming the attacker has access to the OPA server from the outside and they do not have access to the private key.
+00:23:48 [W] So prefer what the scenario that we laid out in this particular top was the attacker has access to whoever is Distributing those bundles but doesn't have access to like you said the private key itself.
+00:24:03 [W] So the attacker made change the policy or chatbots.
+00:24:05 [W] Your change the data and publish the bundle somewhere and instead of opa pulling it down and just applying those policies. Blindly.
+00:24:14 [W] We want to kind of have a protection against that so that's why the entire signing thing.
+00:24:20 [W] We're in the private keys are kept the private key design the product bundle with the private key and you provide the public you to Oppa and then you prevent this kind of tampering that could be done to the policy and the data itself.
+00:24:36 [W] So yeah, so that's a great question because typical thanks for asking that another question. We normally get is is this supported only for normal bundles or for Discovery bundles as well?
+00:24:48 [W] So yeah, totally you can use this feature event for Discovery bundles so you can sign Discovery bundles and it's the same way you give it the public key and or give the secret and you you will validate that signature
+00:25:04 [W] Bundles or for Discovery bundles as well.
+00:25:08 [W] See are totally you can use this feature event for Discovery bundles.
+00:25:11 [W] So you can sign Discovery bundles and it's the same way you give it the public key and or give the secret and you you will validate that signature and depending on whether it's successful or not. Opa will activate the discovery bundle or
+00:25:34 [W] Depending on whether it's successful or not Opa will activate the discovery bundle or it won't activate it. And it's actually a pretty good lick. If you're discovered configuration is going to contain keys in the end the runtime config for Opa.
+00:25:48 [W] It's recommended that you sign your Discovery bundles.
+00:25:52 [W] Another question that we normally get is how does OPA know what key to use to verify a particular?
+00:26:03 [W] Bundle and there are multiple ways open was about this one way is you can just provide it in the OPA runtime configuration and Telco power for this bundle. Use this specific public key
+00:26:18 [W] It on the command line to Opa or also you get included in that signatures file.
+00:26:24 [W] We're in the header key ID will be used to determine which public key to use to sign that actual button to verify the bottle. And finally they were questions about the slides.
+00:26:39 [W] actual pump to verify the body
+00:26:37 [W] And finally, they were questions about the slides.
+00:26:42 [W] Are we going to post them somewhere?
+00:26:43 [W] Yes, so we do plan to post the slides on the slack Channel uploaded on the cube convex side and probably on Twitter as well.
+00:26:52 [W] So again, thank you so much for joining us for this talk.
+00:26:57 [W] We really appreciate it.
+00:26:59 [W] if you have any questions, please join us on the OPA slack channel to know more about Saint bundles or the documentation in-toto.
+00:27:06 [W] Dell is available on open policy agent dot-org.
+00:27:09 [W] Thank you so much and have a great day.

@@ -1,0 +1,272 @@
+﻿MLOps at Snapchat: Continuous Machine Learning with Kubeflow & Spinnaker: MNNH-4388 - events@cncf.io - Thursday, November 19, 2020 4:52 PM - 36 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hey everyone, welcome to my talk over the next 20 minutes or so.
+00:00:05 [W] slides
+00:00:10 [W] quick note on me.
+00:00:11 [W] My name is Kevin Delarosa and I'm a machine learning engineer at Snapchat. I primarily focus on computer vision problems to support the scan feature into Snapchat app.
+00:00:21 [W] That's my Twitter handle. Feel free to reach out to me there or on other channels like LinkedIn.
+00:00:31 [W] So here's a quick overview of what we'll be covering first.
+00:00:36 [W] I'll give you a brief introduction to what I work on it snap and where machine learning fits in.
+00:00:43 [W] Then we'll talk through the key components of a production machine Learning System.
+00:00:49 [W] Well touch on what mlrs is and then for the remainder of the talk will walk through the various steps involved from going from an experiment to continuous machine learning and production closing out with an overview of what this looks like for
+00:01:04 [W] So let's get started.
+00:01:04 [W] Snapchat is the fastest way to share a moment at snap.
+00:01:09 [W] We contribute to human progress by empowering people to express themselves live in a moment learn about the world and have fun together.
+00:01:19 [W] One of the ways we allow folks Express themselves is through augmented reality experiences. We call lenses.
+00:01:29 [W] In the app, these lenses can be unlocked directly through snapcode lenses links and a lenses splore.
+00:01:39 [W] Snapchatters can also discover these lenses using the scan feature by long pressing the screen while the cameras active scan brings up contextual lenses and tools that may be relevant to what the camera is seeing.
+00:01:55 [W] In this first example, we see a drink related lenses.
+00:02:02 [W] In the second example, we see a a lens that was built with a marker template being unlocked by scanning a poster where markers are images like this poster that can be recognized and tracked by to Snapchat camera.
+00:02:18 [W] To create 3D immersive experiences like the one shown here.
+00:02:22 [W] We see a drink related lenses.
+00:02:19 [W] In the second example, we see a a lens that was built with a marker template being unlocked by scanning a poster where markers are images like this poster that can be recognized and tracked by to Snapchat camera
+00:02:58 [W] When you create these augmented reality experiences in lenses Studio creators can specify scan triggers, which tells Snapchat what you'd like the lens to be related to in scan.
+00:03:10 [W] For example, if you add the sky scan trigger when submitting an astronaut lenses like this one in doing so when a snapchatter points the camera to Sky and Trigger scan it may open the corresponding
+00:03:31 [W] and as previously mentioned lenses built with the marker template can be unlocked and Snapchat directly through to camera snapchatters who encountered a marker in the wild can long press on a camera to initiate a scan and unlock
+00:03:46 [W] lens
+00:03:47 [W] under the hood scan is powered by Machine learning in both of these cases when scan is triggered.
+00:03:55 [W] We use machine learning approaches to automatically recommend and ranked the most relevant lenses to show to the user.
+00:04:03 [W] And in production if you followed the mli Ops methodology you end up with a system like this, which is a diagram from Google Cloud.
+00:04:16 [W] Some key components include continuous integration for building testing packet and packaging pipeline components.
+00:04:26 [W] An automated machine learning pipeline for performing your data engineering model training and model evaluation workflows.
+00:04:34 [W] Some feature store to feed data into your mlperf.
+00:04:40 [W] A prediction service powered by your actual machine learning model.
+00:04:44 [W] A continuous delivery pipeline for deploying your machine learning pipeline as well as your prediction service and lastly some mechanism for monitoring performance.
+00:04:56 [W] As we progress through this presentation, I'll provide more details on each of these steps and how you can ultimately get there based on our experience.
+00:05:05 [W] Everything said and done. We all have to start from somewhere.
+00:05:06 [W] Machine learning is experimental by nature and a starting point for many new machine learning applications is often experimental code in jupyter. Notebooks like this one.
+00:05:22 [W] So there's obviously a gap between having a proof-of-concept jupyter notebook and that big diagram. I showed you of a finely-tuned and Automated machine learning deployment.
+00:05:34 [W] For this we can use MLA Ops to guide us along the way.
+00:05:40 [W] Mli Ops is a set of best practices to test deploy manage and monitor mls in real world production.
+00:05:50 [W] On the right hand side. You see some of the Core Concepts to keep in mind while production I using a machine Learning System.
+00:05:58 [W] In order to understand these you'll first need to recognize there are key differences between traditional software systems and machine learning deployments.
+00:06:09 [W] For example machine learning isn't just about code machine learning is really about to combination of code and data to produce artifacts called machine learning models and in addition to
+00:06:24 [W] One also has to be aware of data changes as these impact the performance of your model and the reproducibility of your steps.
+00:06:29 [W] Additionally, the ecosystem surrounding machine-learning deployments has a lot of moving parts that are not always seen in traditional server deployments.
+00:06:38 [W] For example
+00:06:40 [W] data pipelines including etls as well as data labeling Pipelines.
+00:06:47 [W] Feature stores as previously mentioned and your actual machine learning pipeline which can often be highly customized for a specific use case.
+00:07:03 [W] Now that's a lot of stuff to keep in mind instead of trying to do this in one big bang.
+00:07:09 [W] You should instead opted to adopt a incremental process to gradually increase the level of Automation in your system as things mature.
+00:07:22 [W] Generally speaking.
+00:07:22 [W] These are the steps. We used to reach continuous machine learning for the things like unlocking lenses and scan.
+00:07:31 [W] experimentation on the MLM side
+00:07:22 [W] So let's walk through each of these steps and what you gained along the way.
+00:07:31 [W] Firstly you want to containerize all the things in this step.
+00:07:36 [W] You need to break up your experimental jupyter notebooks into modular code and containerized programs.
+00:07:43 [W] And once that is done you add it to your Source control system IE GitHub.
+00:07:51 [W] After the step changes to your algorithm and transform code will be no tract.
+00:07:57 [W] You'll also have software that is easier to write unit code unit tests for students. Your code is more modular.
+00:08:05 [W] And you'll more easily be able to reproduce things because you doc authorized all the things.
+00:08:16 [W] Step 2
+00:08:17 [W] in this step. You want to automate your machine learning process for this we use kubeflow Pipelines.
+00:08:28 [W] For the uninitiated this is what kubeflow looks like.
+00:08:33 [W] In kubeflow a pipeline is a graph describing a complete machine learning workflow.
+00:08:39 [W] This graph is specifies.
+00:08:41 [W] What components are on how do you relate to each other?
+00:08:45 [W] For the uninitiated this is what kubeflow looks like.
+00:08:48 [W] And kubeflow a pipeline is a graph describing a complete machine learning workflow.
+00:08:54 [W] This graph is specifies.
+00:08:56 [W] What components are on how do you relate to each other?
+00:09:01 [W] And each component or step in the pipeline launches one or more kubernative pods and acts like a function and that it has a name parameters return values and a body IE Docker containers.
+00:09:19 [W] In this scheme data is passed between parent components and children ones via serialized data.
+00:09:32 [W] using kubeflow to represent your mlperf
+00:09:39 [W] first you start off with some step that validates the input data to your pipeline.
+00:09:46 [W] Then we pass off to some component it extract features from the raw data or to feature store.
+00:09:54 [W] Then we pass these features along to component of actually trains a machine learning model.
+00:10:03 [W] after the model is trained and produce we can do some model evaluation like calculating accuracy mean average Precision recall intersection over Union or what other what other
+00:10:18 [W] Actually trains a machine learning model.
+00:10:23 [W] after the model is trained and produce we can do some model evaluation like calculating accuracy mean average Precision recall intersection over Union or what other what
+00:10:44 [W] Over a validation set that are relevant to your use case.
+00:10:50 [W] Then lastly you'll typically do some model validation against some held out test data.
+00:10:59 [W] This can take the form of checking if the model performs at some minimally acceptable level of accuracy prior to uploading it to wherever you store or register your models.
+00:11:20 [W] Over the course of step to you now have an automated way to kick off a run of your training pipeline.
+00:11:26 [W] To help enable reproducibility. You can store metadata about each run and model.
+00:11:34 [W] You can track changes to your entire mlperf sess by storing your kfp pipeline and Source control.
+00:11:42 [W] You end up testing more things into form of components like data and model validation as well as unit test over to model specification and integration test over your entire mlperf.
+00:11:55 [W] You can also log model performance for each run to understand if your model is degrading over time or perhaps if you goofed up on the algorithm side.
+00:12:12 [W] step 3
+00:12:13 [W] And it's our containerized and you have a pipeline that automates the mlperf sess we can move towards continuous integration.
+00:12:23 [W] In this step. You want to set up your favorite.
+00:12:26 [W] to see I told you to help you build code and run unit and integration tests.
+00:12:33 [W] On my team. We use a mix of Jenkins and drone to accomplish. See I
+00:12:41 [W] either way, you want to have some release step that publishes artifacts like
+00:12:48 [W] Docker images which we published two GCR Google Cloud registry or if you're an AWS, that would be ECR.
+00:12:58 [W] We compiled versions of our kubeflow pipeline specification. Yeah moles.
+00:13:03 [W] And we version kubernative configurations for two prediction service deployments.
+00:13:15 [W] In this step, you'll have unit and integration test automation at both the component and pipeline level.
+00:13:23 [W] As well as the artifacts required to deploy a server or training pipeline which will come into play in the next few steps.
+00:13:38 [W] In step four we start to talk about continuous delivery.
+00:13:41 [W] Want to orchestrate the deployment of your mlperf?
+00:13:22 [W] When You Reach This stage, you'll trigger automated deployments of the mlperf
+00:13:33 [W] This will let you automatically train new models whenever the mlperf S changes.
+00:13:41 [W] Additionally if you use a CD system, you'll have repeatable deployments for your mlperf.
+00:13:49 [W] And also have the ability to do things like roll back to previous versions straight from the UI.
+00:13:56 [W] So for this step we used Spinnaker.
+00:14:05 [W] For the uninitiated this is what Spinnaker looks like Spinnaker is a cloud native continuous delivery system, which makes your deployments fast safe and repeatable.
+00:14:19 [W] In Spinnaker, you define one or more pipelines to manage the deployments which consists of a set of stages?
+00:14:29 [W] A stage is an action for the Spinnaker pipeline tufin form like deploying a manifest running a job kicking off a sub pipeline.
+00:14:40 [W] so forth
+00:14:32 [W] deploying our mlperf
+00:14:37 [W] your initial configuration expects a set of artifacts as input in our case. This would contain the kubeflow pipeline llamo artifact and some configuration to help us pass in proper parameters when invoking
+00:14:52 [W] Then next you might have some smoke test to do non exhaustive test against your new mlperf.
+00:14:54 [W] Next is the main part of this pipeline running the mlperf stage.
+00:15:01 [W] Which does the actual deploying or submission of this pipeline?
+00:15:07 [W] For us this look like a small kubernative job that first submits a run of the mlperf.
+00:15:16 [W] weights for successful completion
+00:15:19 [W] then parse this the output to produce a Spinnaker artifact that can be passed around in subsequent stages into Spinnaker pipeline.
+00:15:29 [W] Lastly if you have a model server deployment Spinnaker pipeline, you can invoke that step directly at the end of this pipeline dough at this point in your Project Life Cycle.
+00:15:41 [W] You probably don't have that yet more on this in Step 6.
+00:15:48 [W] On some set schedule like daily weekly monthly or upon availability of new data.
+00:15:56 [W] The route you take here will depend on your use case and availability of new data.
+00:16:03 [W] We do this in Spinnaker by using built-in triggering mechanisms, like Crohn's observes and pubsub message triggering.
+00:16:13 [W] After completing this you'll automate the process of training new models upon the availability of new data.
+00:16:27 [W] In Step 6. We achieve continuous delivery for the model server or prediction service.
+00:16:34 [W] we did this in Spinnaker by setting up a pipeline which specifies how to deploy the model server and triggered on changes to to server configuration via continuous integration or
+00:16:49 [W] Model artifacts created by the continuous training Spinnaker pipeline discuss in the previous steps.
+00:16:56 [W] After this stage is completed you benefit from The Continuous deployment of new model servers and also make gains with respect to reproducibility.
+00:17:13 [W] The Spinnaker pipeline here should look similar to what you'd expect for a traditional server deployment so I won't go into great detail.
+00:17:22 [W] On this slide, you see a sample Spinnaker deployment that deploys a canary waits for manual approval then deploys to some production environment.
+00:17:38 [W] Lastly you'll want to invest in monitoring.
+00:17:42 [W] In this step you want to make sure that you have the proper Telemetry in place for your server?
+00:17:49 [W] Additionally, you'll need mechanisms to detect deviations in model performance.
+00:17:56 [W] For the former, you have The Usual Suspects of latency traffic errors and saturation.
+00:18:05 [W] For your model performance if it is hard to get direct feedback on your models predictive accuracy.
+00:18:11 [W] Waits for manual approval then deploys to some production environment.
+00:18:10 [W] Lastly you'll want to invest in monitoring in this step.
+00:18:15 [W] You want to make sure that you have the proper Telemetry in place for your server.
+00:18:21 [W] Additionally, you'll need mechanisms to detect deviations in model performance.
+00:18:28 [W] For the former, you have The Usual Suspects of latency traffic errors and saturation.
+00:18:37 [W] For your model performance if it is hard to get direct feedback on your models predictive accuracy.
+00:18:42 [W] You can use proxy metrics that track the results of acting on your predictions.
+00:18:48 [W] For example here you might measure if there are shifts in click-through rates.
+00:18:57 [W] After this step, you'll unlock the capability to determine if your model or mlperf S needs to be changed.
+00:19:11 [W] So cool.
+00:19:13 [W] Those are the seven steps we took to reach quote-unquote production grade machine learning.
+00:19:22 [W] At this point you will have achieved a new continuous thing continuous machine learning.
+00:19:31 [W] This diagram summarizes the journey we took.
+00:19:35 [W] from mlx parents in jupyter notebooks to continue integration using tools like Jenkins
+00:19:45 [W] continuous training using kubeflow to automate your mlperf s
+00:19:51 [W] continuous deployment through Spinnaker to Monitor and to monitoring metrics in your kubernative pods, which will then ultimately lead you back to doing more experiments and refining your process.
+00:20:09 [W] So cool.
+00:20:10 [W] Those are the seven steps. We took to reach quote-unquote production grade machine learning.
+00:20:20 [W] At this point you will have achieved a new continuous thing.
+00:20:25 [W] continuous machine learning
+00:20:29 [W] This diagram summarizes the journey we took.
+00:20:34 [W] From mlx parents in jupyter notebooks to continue integration using tools like Jenkins continuous training using kubeflow to automate your mlperf s
+00:21:52 [W] To screenshot does for future reference.
+00:22:02 [W] Okay.
+00:22:03 [W] Anyway, thanks for listening.
+00:22:08 [W] Again, I'm Kevin Delarosa signing off.
+00:22:12 [W] Have a great rest of your day. Thank you.
+00:22:24 [W] All right, cool.
+00:22:25 [W] Thanks everyone for attending the talk.
+00:22:30 [W] Looks like we have some time to answer questions.
+00:22:34 [W] So I'll go through these as best as I can and you know if you have additional questions, or I don't get to yours.
+00:22:42 [W] definitely reach out to me on slack or Twitter or you know, however you can find me I guess.
+00:22:48 [W] All right. So let's kind of go through each of the questions that I see, okay.
+00:22:54 [W] Um, first question is on your slides.
+00:22:58 [W] You said you break up the monolithic notebooks and put them into containers.
+00:23:02 [W] Do you rewrite notebooks and clean python libraries or do you use a tool like paper mill at the moment? We currently right clean libraries for me like the main reason was
+00:23:17 [W] Her however, you can find me I guess.
+00:23:19 [W] All right. So let's kind of go through each of the questions that I see, okay.
+00:23:26 [W] First question is on your slides.
+00:23:30 [W] You said you break up the monolithic notebooks and put them into containers.
+00:23:34 [W] Do you rewrite notebooks and clean python libraries or do you use a tool like paper mill at the moment? We currently right clean libraries?
+00:23:47 [W] For me like the main reason was there are some things that can be shared between the different the different components or different models.
+00:23:57 [W] So like some of these components are reusable so that that ends up working well for us though, you know, I've heard good things about these tools. So definitely something I'm going to check out.
+00:24:10 [W] Let's see. The next question does Spinnaker required kubeflow or can it be used with Homegrown Solutions?
+00:24:18 [W] Really you could use anything as long as you can like express it as a k8s manifest like it doesn't require kubeflow doll, like some of the steps in our pipelines definitely do not
+00:24:33 [W] Be used with Homegrown Solutions.
+00:24:36 [W] Really you could use anything as long as you can like express it as a k8s manifest like it doesn't require kubeflow at all, like some of the steps in our pipelines definitely do not
+00:24:52 [W] Cool. The next question was how efficient is k8s for running mlperf loads.
+00:25:00 [W] Yeah.
+00:25:02 [W] That's a good question.
+00:25:02 [W] Unfortunately, I don't have a point of comparison actually like for my team that we started about a couple years ago, and we've been on Cates and the since the beginning so I don't
+00:25:18 [W] I don't have a point of comparison to like not do working these workloads on k8s.
+00:25:22 [W] I think a couple people asked for code examples.
+00:25:27 [W] Yeah, unfortunately, I don't have any code examples to give you I did put some links to like the the
+00:25:38 [W] different tutorials or different resources like Spinnaker and kubeflow.
+00:25:43 [W] I think if you go through like there hello world or walkthroughs you should be able to get the gist of the but if there's a specific thing you're interested in like hit me up in slack.
+00:25:54 [W] Maybe I can find an example.
+00:25:56 [W] We'll see.
+00:25:58 [W] Let's see the next question.
+00:26:02 [W] What tool do you use for serving trained model?
+00:26:09 [W] At the moment.
+00:26:11 [W] Well, we have a few different kinds of models. But most of them we use TF serving so tensorflow serving mechanism.
+00:26:23 [W] I hear good things about Camp serving and we're you know looking into that because as we have more models that aren't in tensorflow because right now it's a little bit clunky for us to kind of compile it down and then put it
+00:26:38 [W] You're serving so be nice to have like a unified thing for us to use for serving.
+00:26:42 [W] Code. Yeah again, they don't have anything specific for this presentation see.
+00:26:49 [W] Next question.
+00:26:50 [W] Have you considered ever considered using spark machine learning toolkit?
+00:26:54 [W] Yeah, I love spark.
+00:26:59 [W] haven't had an opportunity to use it yet, but it is something that we think about for certain workloads, especially like things that are like more column or as opposed to like computer vision.
+00:27:15 [W] Let's see next question.
+00:27:19 [W] Which steps are the most challenging experience?
+00:27:22 [W] Are there any particular tricky things that you come across and took a bit longer to configure?
+00:27:28 [W] Yeah, that's a great question.
+00:27:32 [W] I think honestly the trickiest part was kind of having the mindset of writing code that is testable.
+00:27:46 [W] Because like I don't want to over generalize but I I've seen seen some stuff and I think that it's a different kind of skill set compared to like what some data scientists are.
+00:28:01 [W] Earlier wed so that is probably been the trickiest thing even though like that isn't even mlperf lated.
+00:27:55 [W] It's like totally like app development related.
+00:28:02 [W] but the other things were not too hard to configure like because I'm operating from like a
+00:28:09 [W] like a kubernative use mindset like a we start with the Manifest of the use that to trigger different things and we you know compile the kubeflow.
+00:28:19 [W] moles that I was like a thing that you know was a good insight to have so that we can reproduce things.
+00:28:28 [W] Yeah, thanks for the question.
+00:28:30 [W] Let's see the next one.
+00:28:31 [W] Do you have any courses about this?
+00:28:34 [W] I haven't seen any courses like if you reference my slides I saw some put some links to like different blogs and like websites that I found helpful
+00:28:49 [W] General concepts of mlrs, but it's definitely an emerging thing and I wouldn't be surprised if there are courses around this kind of topic.
+00:28:47 [W] Let's see next question.
+00:28:51 [W] Which do you use scheduled job on kubeflow Pipeline or spinning curve for continuous model training.
+00:29:01 [W] That's a great question.
+00:29:03 [W] started with the former two scheduled job and kubeflow pipeline, but we ended up more using
+00:29:13 [W] Like for somebody seems even more rudimentary like like a k8s crown job, for example, so yeah, we've kind of moved more in that model I think because like we can have the k8s
+00:29:28 [W] But we ended up more using.
+00:29:22 [W] Like for somebody seems even more rudimentary like like a k8s crown job, for example, so yeah, we've kind of moved more in that model I think because like we can have the k8s specifies.
+00:29:49 [W] The job should be run like out on what Cadence and like that will be in GitHub and then we can deploy that through ci/cd.
+00:30:00 [W] see next question thoughts on Ray
+00:30:04 [W] I wish I knew what Ray was so I can give you some thoughts.
+00:30:08 [W] Sorry. I don't I'm not familiar with what Ray.
+00:30:12 [W] Let's see next question how to convince the team to use kubernative H4 mlperf. We are currently using air flow and easy to how to convince to use CD to like Argo.
+00:30:27 [W] Yeah, I think that's that's really dependent on your organization. Like when I started a lot of our data engineering and ingestion was through air flow for our
+00:30:42 [W] slow and easy to how to convince to use CD to like Argo
+00:30:48 [W] Yeah, I think that's that's really dependent on your organization. Like when I started a lot of our data engineering and ingestion was through air flow for our
+00:31:19 [W] because a lot of our flows our vision oriented it was kind of easy to convince people to get into the crewmen that he's world and kubeflow world because like since these are all like
+00:31:34 [W] It's really easy to have this kind of short love processes and dependencies that you can like string together with the diag, but I like
+00:31:49 [W] Things but it wasn't too hard on my side. Let's see.
+00:31:56 [W] Next question.
+00:31:57 [W] Did you consider using kale or moving from moving notebook to K flow?
+00:32:02 [W] I'm gonna be honest. I just heard about Kale like recently and it is something I'm considering.
+00:32:09 [W] I'm trying to wrap my mind around how we do see I and that world, but I think it's very exciting very exciting technology.
+00:32:21 [W] Let's see.
+00:32:22 [W] I think we have a couple more minutes.
+00:32:24 [W] I'll try to answer a few more questions before we have the closeout.
+00:32:28 [W] Let's see baking models into the Container will increase side the size of image houses managed via S3.
+00:32:37 [W] So like for TF serving specifically, yeah, like basically we download the model into the the volume and then it's able to
+00:32:51 [W] It to do inference passes.
+00:32:54 [W] So like we don't actually bake the model into the Container per se more more like we bake URI 2.2.
+00:33:04 [W] 2. Let's see.
+00:33:06 [W] Do you have any plan to automate the manual judge on Canary release?
+00:33:11 [W] So like for TF serving specifically, yeah, like basically we download the model into the the volume and then it's able to to do
+00:34:15 [W] Once we have the right monitoring place, I think that's totally where you want to go.
+00:34:21 [W] Let's see.
+00:34:21 [W] Thanks for the presentation.
+00:34:23 [W] Do you have a single kubeflow cluster is a tens hundreds on my team specifically.
+00:34:31 [W] It's like on the order of tens and Howard are managed and mostly managed by like the sub T more like we have some people working on ranking.
+00:34:40 [W] We have some people working on visual search and and then we have like we've been using kubeflow for a while. So we have like actually different versions of
+00:34:50 [W] Blow four different clusters, so it's been many different versions different clusters.
+00:34:57 [W] Let's see when
+00:34:59 [W] Let's see.
+00:34:58 [W] Do you home brew your own feature store or use some open source solution right now, we home brew it.
+00:35:13 [W] Basically some metadata to database and like blobstore in GCSE.
+00:35:20 [W] Let's see if I can do one more question before going out this continuous training and deployment by Spinnaker retrain the pipeline to k8s.
+00:35:32 [W] The short answer is yes like it but it really depends on what your kubeflow pipe find does.
+00:35:40 [W] Anyways, I think we're just about out of time.
+00:35:43 [W] I want to thank you all for joining the the conversation also want to thank all the people behind the scenes for
+00:35:50 [W] Me I'll be available in just like Channel.
+00:35:53 [W] I think it's called to - Cube Khan - machine learning and yeah everyone be excellent. Have a great day.

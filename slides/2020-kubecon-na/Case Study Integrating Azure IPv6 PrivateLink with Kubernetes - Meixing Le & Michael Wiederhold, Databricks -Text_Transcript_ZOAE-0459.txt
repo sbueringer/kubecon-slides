@@ -1,0 +1,228 @@
+﻿Case Study: Integrating Azure IPv6 PrivateLink with Kubernetes: ZOAE-0459 - events@cncf.io - Wednesday, November 18, 2020 4:57 PM - 33 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello and welcome to this coupon talk where we will discuss our experiences at data Brooks integrating our platform with Azure private link over IPv6 Mike.
+00:00:09 [W] David Brooks and I'm presenting with macing Lee who is a senior software engineer who led the private Lincoln gration during this talk.
+00:00:18 [W] I will give an overview of the data Brooks architecture at a high level and talk about what private link is and why it's important to customers running production systems and Cloud environments after that may Shang will discuss some of the challenges we faced when integrating private link
+00:00:33 [W] How we eventually did our integration and then show a demo of how customers can access data Brooks over privately?
+00:00:39 [W] Before we dive into the data Brooks architecture first one to talk a little bit about data bricks and the platform we offer to customers.
+00:00:46 [W] Maybe you've heard about data Brooks and know a little bit about what we do, but if you haven't then you've probably at least heard of Apache spark Apache spark is a general-purpose analytics engine was created by the founders of data Brooks, and it's used for all kinds of
+00:01:01 [W] Analytics jobs ranging from bi workloads to machine learning while Apache Spark by itself is a great product it like all other distributed analytics engines can be time consuming to manage when you have large clusters.
+00:01:14 [W] There are also a lot of different types of software.
+00:01:17 [W] You need to manage outside of your analytics engine like notebook software experiment tracking software if you're doing machine learning and so on database realize this early on and built the software as a service platform that runs in the cloud to manage all this.
+00:01:31 [W] Luckily for you. This means that your data scientists can focus on what they're good at which is writing analytics jobs and not in maintaining infrastructure, which is not in their area of expertise since data Brooks was founded in 2013.
+00:01:44 [W] The platform has grown exponentially and is used by many Fortune 500 companies for mission-critical applications as use of this platform has grown so is data Brooks today. We have over 6,000 customers more than 1,500 employees
+00:01:59 [W] 300 of which are engineers and we have 350 million annual recurring Revenue.
+00:02:04 [W] So why is the date of birth so popular as I just mentioned we provide unified analytics platform that allows customers to be able to easily write analytics jobs to get value out of their data while the company originally started out as a company built around Apache
+00:02:19 [W] Are we have since started incorporating other types of analytics engines into our product like tensorflow so that you have a choice of analytics engines to run jobs on our platform is also multi-cloud and runs an AWS and Azure.
+00:02:33 [W] we provide built-in note booking and Reporting and allow customers to easily spin up and spin down spark clusters in a cost-effective way.
+00:02:41 [W] This allows data scientists data engineers and business users to focus entirely on the things they're good at and not have to worry about the
+00:02:48 [W] Details the underlying platform.
+00:02:51 [W] So how do we build this platform?
+00:02:53 [W] Well data Brooks consists of both the control plane and data point the control plane is where customers log into Data Brooks and it allows customers to manage users manage spark clusters create notebooks set up jobs to run periodically,
+00:03:08 [W] And so on the data Brooks the data plane is where the spark cluster is run and you may have noticed in the diagram that there's one control plan and a lot of data points.
+00:03:19 [W] There's a reason for this and it's because data bricks uses what's known as the in VPC model.
+00:03:24 [W] This means that the control plane runs in the data Brooks cloud account, but the data plane runs in customers quantity count the advantage of building your system this way is that a customer's data never needs to leave their account. This is particularly important.
+00:03:37 [W] Important for security sensitive customers are control plane is built on top of kubernative use and we leverage a variety of different open source projects such as Envoy and they'll flow.
+00:03:48 [W] koalas nginx console redis and no flow Prometheus core DNS Jaeger and so on.
+00:03:57 [W] We also write or services in Scala and python data Brooks also doesn't just operate a single control plane. We operate many control points all around the world and across multiple cloudevents.
+00:04:09 [W] In fact, we operate over 2,000 kubernative clusters worldwide which are accessed by over a hundred thousand users these control planes manage hundreds of thousands of spark clusters every day and launch millions of VMS to execute customer submitted spok drops.
+00:04:24 [W] This pork chops process exabytes of data in order to produce reports and other business insights that are used by customers.
+00:04:33 [W] All right.
+00:04:33 [W] So let's talk a little bit about private link.
+00:04:35 [W] What is private link?
+00:04:37 [W] And why do we integrate with?
+00:04:38 [W] Well, it turns out that even though customer data never leaves the customers cloudevents du Tu RN V PC model some security sensitive customers are still concerned about the results of their jobs or other potentially sensitive information stored in our platform being sent
+00:04:53 [W] Over the public internet even if all of it is encrypted during Transit, they want to be able to guarantee that communication to data Brooks never occurs over the public internet and also want to limit access so their data Brooks accounts are only accessible
+00:05:08 [W] People for specific endpoints in their Cloud Network in order to provide this level of security all major Cloud providers offer a service called private link.
+00:05:17 [W] At a high level private link has two components to it the private link service and a private link endpoint private link service is configured as part of the load balancer that allows traffic into your v-neck and ultimately to your application private link endpoint is
+00:05:32 [W] In data Brooks case set up in customers account and provides an IP address and DNS name. I can only be routed to from inside the customers Cloud Network as part of the privately gunpoint setup you specify a private link service with the endpoint sense traffic
+00:05:48 [W] Traffic between the private link endpoint private link service always goes over Cloud providers private internet giving customers a more secure way to access their Cloud resource without any communication ever leaving their Cloud accounts.
+00:06:02 [W] All right. So that's a brief overview of private link and I'll hand the presentation off now to measuring he'll talk about the challenges.
+00:06:12 [W] We Face a data Brooks integrating private link and how we solved those challenges will conclude the talk with the demo showing a date of births workspace being accessed over privately.
+00:06:24 [W] Thank you, Michael.
+00:06:25 [W] Hello, everyone.
+00:06:27 [W] My name is measuring our next hour share our journey to integrate towards Nashville private link as you can see in the diagram one if you want to use as a private link, if you do first publishing one.
+00:06:43 [W] Private thing in the point was in your virtual Network and connect the private endpoint to the private link service inside the service providers virtual Network in this case data breaks virtual Network and then you can send your traffic to these
+00:06:58 [W] Private to any point inside the RV net which is a local kind of ipv4 address.
+00:07:05 [W] And as a private link will take care of the traffic routing using Azure networking instead of the public internet and send the traffic to the private link service or inside the database the
+00:07:20 [W] That's how the traffic is more secure and more private.
+00:07:25 [W] So at data breaks we have several use case to integrate with other prodyna NG to benefit our customers the first use case which will folks mostly in this talk.
+00:07:39 [W] talk is that user to web application traffic so user can set up a private link and point inside their virtual Network and through
+00:07:49 [W] I think they can talk to the data products control plan while web application.
+00:07:54 [W] They can use the notebook there to launch clusters do or the data science work.
+00:07:59 [W] There are other use cases like data bricks control plan to data breaks like data plan communication can also be secure the through the private link feature.
+00:08:13 [W] So what is The Challenge on the infrastructure side to integrate towards private link?
+00:08:20 [W] So first of all, take a break see as our first party service on a track.
+00:08:25 [W] What does that mean?
+00:08:27 [W] So actually it's called address data breaks.
+00:08:29 [W] So it's up here as a knative servicing edger.
+00:08:33 [W] Also creating a data brakes work space is as easy as creating as a resource, for example Patrol machines and database manager. You just need to go through several clicks there. You can create a
+00:08:48 [W] Race Works workspace to account. So from other side, they provided two types of private links upon the models. First day is the third party offerings, which is available to all the other customers
+00:09:04 [W] And it's purely ipv4.
+00:09:07 [W] So the second the second type of support the model is called a past version of private link.
+00:09:17 [W] I definitely provides deeper integration with other Azure services.
+00:09:21 [W] So all the other like first party service on manager, they all use password in of private link. So even though it appears to the customer as a route it over.
+00:09:33 [W] Ipv4 like shown in the previous diagram you connected to your to the private link and the point in your be net which is a local ipv4 address, but actually the traffic karate the by
+00:09:48 [W] Networking is carried over IPv6 between these two minutes.
+00:09:53 [W] That's the password. We have privately as a first about a service on measure we have to use the password ring of private link.
+00:10:03 [W] So the challenge for us is basically there's a requirement you have to accept IPv6 traffic on the control plan on to make the private link traffic.
+00:10:18 [W] I work so from either side. They do have a lot of IPv6 support on most of their resources in terms of being that virtual Network or some lat load balancer vmss, which is
+00:10:33 [W] Too much in skill set this resource all supported your stackrox.
+00:10:37 [W] Are you can assign both ipv4 and IPv6 to this resource at the same time.
+00:10:42 [W] So the challenge for us is really our control plan.
+00:10:48 [W] So is as shown before I we completely running on top of kubenetes, which is purely ipv4 at this point.
+00:10:55 [W] Also the butler private link traffic coming as IPv6 traffic so we have
+00:11:03 [W] Except IPv6 traffic to our communities Services.
+00:11:09 [W] There are two high-level option to solve this problem.
+00:11:12 [W] The first is the proxy solution.
+00:11:14 [W] We can convert to the IPv6 to ipv4 traffic outside of kubenetes. Then just talk ipv4 to other community services on the other option is just the support IPv6 natively in communities
+00:11:29 [W] So the I'll give you six private link traffic can directly hit service running on two bananas.
+00:11:36 [W] Yeah, so a little bit about the background of running communities at data breaks. So I did a breaks we run all the control plane service on communities, but we are not
+00:11:51 [W] Using the manager community service. For example Akash on million because data bruxism multi-cloud.
+00:11:58 [W] Yeah, we want to be consistent across all different Cloud providers.
+00:12:02 [W] So we bake our own like a virtual machine images and we make sure these VMS cam bootstrapping to kubenetes clusters and we have a lot more control over that you can make sure it has the
+00:12:18 [W] Like a colonel OS version and that is for sharing and it's easier to support our own services in terms of the configuration.
+00:12:28 [W] We totally disabled IPv6 from the kernel level because we don't need that before supporting private link and see I plug-in we're using flannel.
+00:12:39 [W] The containerd runtime is Docker. The version were running is communities version where Ronnie is be 1060.
+00:12:47 [W] Teen the load balancer teenager is a little bit different from like a low balance alert settings doing a dress or TCP.
+00:12:56 [W] So basically, I'm sure there's one single load balancer and all the communities load balancer service is added as like a load balancer rules on the same node, Venezuela.
+00:13:10 [W] So we first explore the first option like haproxy solution of acetic kubernative cluster.
+00:13:19 [W] This solution is also used by some other like either internal service.
+00:13:24 [W] So the basic idea is simple within the same v-net, we can provision a dedicated load balancer which are accepted at IPv6 private evening traffic
+00:13:39 [W] Slow the balancer can send traffic to a backhander like vmss virtual machine gun skill set.
+00:13:46 [W] Then we can run the private link crops a on these VMS which will terminate to the IPv6 traffic proxy to ipv4 then again talking to the kubenetes cluster.
+00:14:01 [W] So the criminal is girls the load balancer also serving the public traffic which is activity for from rest of the users.
+00:14:10 [W] So this seems to be straightforward solution, but there are a lot of challenges actually. The first question is, how can we deploy this proxy do we
+00:14:25 [W] Variants as a virtual machine image because it's wrong on top of virtual machine skill set.
+00:14:31 [W] Yeah, do we deliver as a virtual machine image or containerd image?
+00:14:35 [W] It is completely outside of kubenetes.
+00:14:38 [W] So how do we actually deploy it?
+00:14:42 [W] We cannot use like a kublr city of commands?
+00:14:44 [W] Maybe we can run some darker commands if we're wrong as a container, or maybe we just deployed a virtual machine using the virtual machine image, but we don't have this support.
+00:14:55 [W] model it will be completely new kind of service we support and the other question is how how we monitor these surveys write the Matrix logins and
+00:15:11 [W] This kind of stuff.
+00:15:12 [W] We only have native support from communities.
+00:15:15 [W] We don't have such a use case like a virtual machine sculpture outside the communities and then provider metrics and muggings.
+00:15:26 [W] these are the problems to use this proxy solution then because of that. We also explore the second option which is to support communities natively with
+00:15:40 [W] The IPv6 so because we still need to serve ipv4 traffic and for the public like access which is not through private link. So we have to use the dual stack feature
+00:15:55 [W] In communities if we choose to have knative IPv6 support if we use that feature dual stack on the load balancer level we can accept the post IP V6 and V4 the
+00:16:10 [W] Overall architecture looks like a simpler which is good. However it this option has its own challenges.
+00:16:19 [W] The first the first item is like other stability concern on the version.
+00:16:26 [W] We're rounding 1.16 kubenetes the bureau's that feature is just a fire feature.
+00:16:33 [W] So dual stack is targeting to be beta in 1.20.
+00:16:39 [W] And so it's not a good idea to wrong one up to your neighbor a are featuring the production workload on second item is like this option seems to be an
+00:16:54 [W] All because we only need IPv6 support at her the front end maybe several services and like a courts will require IPv6 support but most of our communities
+00:17:09 [W] Other one not to require IPv6 at last it's going to be a huge engineering effort right about prototyping and testing to make sure everything works if we enable the dual stack feature in
+00:17:24 [W] yeah, but with you we did some investigation like a rounding that use that companies your first of all don't confuse with like IPv6 single stack future in communities,
+00:17:39 [W] How much are they entered our for being 1.9 and move the to Beta in 1.18?
+00:17:46 [W] Yeah, so the dual stack is different from the single stack feature and the the director o stack feature studied as offering 1.16.
+00:17:58 [W] But when we talking to the contributors, it seems like this feature is mostly stable right now.
+00:18:04 [W] reason it's not promoted to the beta.
+00:18:09 [W] Is mostly due to some pending discussion around the service apis.
+00:18:13 [W] Actually that will not affect our use case for the dual stack.
+00:18:18 [W] Yeah, and then once you enable that use Tech it well as on both IP V4 and V6 IP to literally every pot scrubbing enemies, but for the service level you need to have separate a service.
+00:18:34 [W] Um for like Hawaiian for ipv4 and no one dedicated service for IPv6.
+00:18:40 [W] Yeah through rounded your stack.
+00:18:43 [W] There's also some networking prerequisites.
+00:18:46 [W] So first of all, the kubenetes note the host level you must have that your stack support. Yeah. This is not surprising and Azure vmss already support these they can
+00:19:01 [W] Jules tech support second because I report and we'll have both ipv4 and IPv6 address.
+00:19:10 [W] So the containerd networking interface you choose the seam line must have supported your stack as well.
+00:19:16 [W] As we are using flannel actually friend of will not support jewels that feature the like a known thing I play games can better support to that your stackrox.
+00:19:30 [W] That feature proven attend Calico, but this case it's case-by-case different Cloud providers.
+00:19:40 [W] It's not guaranteed to work like multi clouds.
+00:19:44 [W] So after a week sprawl is to use deck possibility and communities.
+00:19:49 [W] Actually we go back to the proxy solution.
+00:19:53 [W] Looks like a proxy solution is that option in the short turns and we try to revisit our proxy servicemeshcon.
+00:20:01 [W] - yeah, can we combine the above two options together? Whether it's possible to move the proxy into the communities then if we do that we'll definitely get to the
+00:20:16 [W] Um department and the monitoring kind of for free.
+00:20:19 [W] Yeah, we know how to deploy communities workloads and we have knative like metrics longing in the communities.
+00:20:26 [W] Yeah.
+00:20:28 [W] So on the load balancer level it does support your stack. So basically even if we use one load balancer, it can support both ipv4 and IPv6 traffic so we can combine them into one the virtual machine skill set
+00:20:43 [W] Also supported your stack actually only the flannel on the community's seeing line Network and all supporting material static operator.
+00:20:53 [W] So is it possible to deploy the proxy as the like reports on communities, but give the Virtual Machine level networking to the pods?
+00:21:03 [W] Yeah.
+00:21:04 [W] There are definitely some feature called use host Network way to work for that your stack. Yeah, that's that sort of thing.
+00:21:13 [W] We're trying to explore we don't know whether it works or not.
+00:21:17 [W] Then we prototype it and luckily it works pretty well.
+00:21:23 [W] And so here comes to our solution.
+00:21:27 [W] Yeah, basically if you make it work and ruin, right, so when we first need to make sure IPv6 is populated everywhere at least as your cloud provider infrastructure, so first
+00:21:42 [W] IPv6 sound be Nats of nats hand on load balancer added iqv society and then create a virtual machine skill set.
+00:21:51 [W] We created with a special image that we enabled IPv6 in this virtual machine image, then you can have the dual stack which can be later on used by the proxy parts from the on top.
+00:22:07 [W] Yeah to provisioning the vmss which is dual stack. If you use Azure provider 2.0 which styra form you can use the term from resource.
+00:22:17 [W] Otherwise, you can always use AZ CLI to attach a IPv6 interface to the vmss.
+00:22:26 [W] Yeah, then we set a load balancer to only load balance traffic to these vmss.
+00:22:33 [W] which enabled IPv6.
+00:22:35 [W] So once the traffic ahead to the IPv6 IP on the load balancer, it's only go to these VMS as and the inside the kubernetes. We also have a dedicated notable for these vmss.
+00:22:47 [W] So that only the proxy workloads will come out will run you on this know the pool not interfering with other communities.
+00:22:56 [W] Um workloads.
+00:22:59 [W] Yeah, so then we deploy the private link proxy, which is V6 to Vie for proxy as a general communities deployment to that dedicated knowledgeable.
+00:23:11 [W] Yeah, we set it to the host Network game yet. It actually gets both like a ipv4 and IPv6 interface.
+00:23:21 [W] is just a nginx proxy. Listen on the auto focus.
+00:23:26 [W] Three.
+00:23:27 [W] Use host networking and enabled products carry policy.
+00:23:31 [W] Yeah, just make sure your specify the policy to allow the courts to use Force Network.
+00:23:37 [W] Then they are make sure the load balancer rules correctly configured to send the traffic to these proxy port. And also make sure you do the proper white listing on the private link traffic
+00:23:52 [W] So that's before a V6 traffic again coming to your communities.
+00:23:59 [W] And then yeah the proxy works on so we got a lot of benefit from this solution.
+00:24:06 [W] So first of all, it's a straightforward easy to troubleshoot then it's the department is managed by Community is it's very easy if we want to update the proxy and it's it's deployed
+00:24:21 [W] As stateless department. So as the traffic load increase is very easy to go up just increased upon the replica or can no more traffic next item is like we definitely get to the
+00:24:36 [W] When that is knative are monitoring and logging.
+00:24:38 [W] Yeah at last this solution will also work for other use case.
+00:24:43 [W] For example, our data plan through can do blend traffic using factoring.
+00:24:48 [W] Yeah. This is some screenshots as a demo.
+00:24:52 [W] So we provisioning the this private link know the pool inside communities cluster, which is a special vmss except telegram both V4 and V6 traffic. So when you deploy the
+00:25:06 [W] proxy port yeah, I just make sure I have the hose networking and make sure it's scheduled only private link an old poop if we look at the network on the product label
+00:25:21 [W] We exactly into the port you can see both ipv4 and IPv6 IP.
+00:25:26 [W] Yeah on the virtual machine and the pods level.
+00:25:29 [W] It's completely private IP and public IP is only available on that as your load balancer level.
+00:25:36 [W] So it's the same like network interface if you look how now host VM.
+00:25:43 [W] VM. So on the Azure load balancer site if we look at to the IPL were converging the a
+00:25:51 [W] IPv6 for this purpose and then it works when we set up with a private link. If you you are wasting your user like a v-net you look for this URL it will
+00:26:06 [W] Return you a local IP address. You just need to connect that to this local IP address.
+00:26:12 [W] Actually, it will show the Azure data brakes work space and yeah things got work. Your traffic is routed as through the private link.
+00:26:21 [W] Yeah to recap.
+00:26:22 [W] Yeah, not necessary to integrate with as your private link, but if you need need any like a IPv6 traffic support being on like ipv4 communities. Yeah then
+00:26:36 [W] You can you can use this approach basically unable the dual stack always IPv6 everywhere on the cloud provider in floor level, then you can set up with the V6 to be for proxy.
+00:26:50 [W] You can just deploy it as a regular communities the comments just to use the host networking then you can receive the IPv6 traffic light you can proxy to be 4 and then the robot will
+00:27:05 [W] The way to your communities.
+00:27:07 [W] Yeah, this is a I think a great way to support IPv6 traffic with ipv4 communities if you don't want to use the dual stack feature yet.
+00:27:20 [W] So yeah, we deliver that this as a data breaks private link is in private preview now, and it's also available in a jerk of calm.
+00:27:31 [W] This concludes our cubicle talk.
+00:27:34 [W] Hopefully it's useful to you.
+00:27:36 [W] Thank you very much for joining our talk.
+00:27:38 [W] Feel free to ask questions.
+00:27:41 [W] Thank you.
+00:28:39 [W] Yeah, I think we can answer some of the questions in the chat window doc un's out window.
+00:28:48 [W] So basically we are not using AKs changing how we manage our community is totally from VM level.
+00:28:56 [W] Yeah, and the water is host Network. Basically.
+00:29:00 [W] a feature and of from Telco level so you can run your container and then you can specify the network interface.
+00:29:09 [W] Basically it done that that all the namespace your container. Well use.
+00:29:14 [W] Yeah, if you choose the host networking at used like a host networker namespace basically the name space used by your Virtual Machine level. Yeah.
+00:29:30 [W] So the sort of question the proxy port is using flannel as cm is so the proxy part actually.
+00:29:39 [W] Yeah, it's also using the flannel and it also within the kuma Nats customer. That's how we can deploy it and we can also get metrics yet.
+00:29:50 [W] But on the networking side, it's using the host networking.
+00:29:55 [W] So seeing eyes is the same.
+00:29:59 [W] I think for this particular container, it's not using a signal.
+00:30:05 [W] And what are the different values?
+00:30:08 [W] I'm not sure which values were talking about.
+00:30:17 [W] Yeah, I think we should cover this just lines to one thing to rewrite the whole reason of using host network is basically that it allows us to get access to an IPv6 interface, which is not available on the overlay
+00:30:32 [W] work that kubernative uses
+00:30:56 [W] Yeah, so the prophecy poddisruptionbudgets used to host networking.
+00:31:04 [W] Yeah, it's basically using the interface.
+00:31:09 [W] from the virtual machine
+00:31:12 [W] Whether it's using friend, oh, I don't think it's using the flannel IP anymore, but it's still can talk to some other workloads in cluster.
+00:31:22 [W] So yeah, I think probably it's still has the front or interface.
+00:31:30 [W] Yeah, but like basically from that point if you do some queries inside the cluster, it has the works for instance according as
+00:31:41 [W] Race ya butt.
+00:31:45 [W] Yeah, basically it's using virtual machine Network to getting traffic.
+00:32:01 [W] So the other thing is a little bit tricky, I think.
+00:32:08 [W] After we deployed this private link vmss, we can only like enabled Rose deck on the likely th0 interface on this VMS as like
+00:32:24 [W] Virtual machine right here to also have the cni-genie RO interface. But if we put IPv6 on that interface as well, then like workloads will not work.
+00:32:38 [W] Well in the communities cluster Yeah. So basically you only enable the dual stack on each, uh zero but not alike are seeing Rising on the VMS.
+00:33:00 [W] Okay, I think we're just about a time.
+00:33:02 [W] So I think we'll end the QA will continue answering questions Mission and I on the to - Coupe Khan - networking channel on Slack.
+00:33:15 [W] Thank you.

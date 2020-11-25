@@ -1,0 +1,260 @@
+﻿Kubernetes as a General Purpose Control Plane: Scaling on Kubernetes: QUHJ-7217 - events@cncf.io - Tuesday, August 18, 2020 8:19 AM - 78 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:05:36 [W] Welcome everyone. This is awesome.
+00:05:41 [W] Welcome everyone. This is Hassan token.
+00:10:47 [W] I'm a software engineer living in turkey and working remotely at a pound.
+00:10:54 [W] I have been working as a back-end engineer mainly focusing on our hosting solution for crossplane, which is an open-source cncf project that I will talk about soon.
+00:10:57 [W] In this talk, we are going to discuss the minimal control plane components by we want to use kubenetes as a general-purpose control plane will link on top of that.
+00:11:11 [W] I will present our solution to run multiple isolated control plane instances as tenants on a single kubernative cluster at the end. There will also be a quick demo that provides a practical example of the solution proposed.
+00:11:23 [W] I have been working as a back-end engineer mainly focusing on our hosting solution for crossplane, which is an open-source cncf project that I will talk about soon.
+00:11:37 [W] In this talk, we are going to discuss the minimal control plane components by we want to use kubenetes as a general-purpose control plane will link on top of that.
+00:11:39 [W] I will present our solution to run multiple isolated control plane instances as tenants on a single kubernative cluster at the end. There will also be a quick demo that provides a practical example of the solution proposed.
+00:11:42 [W] Okay, let me start with the term kubenetes is a general-purpose control plane. Kubernative is the most popular containerd orchestration tool today.
+00:11:48 [W] It's API and control plane is primarily built for managing containers.
+00:11:49 [W] However, thanks to its great extensibility. Story Humanities is getting more and more popular for managing any type of resource other than just containers.
+00:11:52 [W] So when we say kubernative as a general-purpose control plane, we mean using kubernative API and its control plane to manage resources that are not living inside the cluster but external runs.
+00:12:06 [W] Cross plane is a very good example for this and the underlying reason triggering us to think about the solution that I will present in this talk.
+00:12:20 [W] Crossplane is an open-source cncf project and it allows you to provision and manage infrastructure resources directly from kubenetes API.
+00:12:29 [W] It extends kubernative API with custom resource definitions and allows you to keep the desired state of your infrastructure.
+00:12:36 [W] ER as a kubernative 3 source, for example with crossplane you can provision and manage and AWS S3 buckets are Google gke clusters and Azure postgres SQL server or and Alibaba RDS
+00:12:51 [W] And control plane is primarily built for managing containers.
+00:12:52 [W] However, thanks to its great extensibility story kubernative is getting more and more popular for managing any type of resource other than just containers.
+00:12:52 [W] So when we say kubernative as a general-purpose control plane, we mean using kubernative CPI and its control plane to manage resources that are not living inside the cluster but external ones,
+00:12:54 [W] Cross plane is a very good example for this and the underlying reason triggering us to think about the solution that I will present in this talk.
+00:12:57 [W] Crossplane is an open-source cncf project and it allows you to provision and manage infrastructure resources directly from kubernative API.
+00:13:00 [W] It extends kubernative say Pi with custom resource definitions and allows you to keep the desired state of your infrastructure as a kubernative resource. For example
+00:13:05 [W] with crossplane you can provision and manage and AWS S3 buckets are Google gke clusters and Azure postgres SQL server or and Alibaba RDS instance cross plane itself
+00:13:15 [W] Whatever resource you are interested in with crossplane.
+00:13:16 [W] But why kubenetes API why using kubernative to manage something that is not actually living inside the kubenetes cluster could make sense.
+00:13:25 [W] I believe the biggest advantage of using kubernative API is to be able to use the same API that we are using to deploy our applications which enables easy and knative integration between our application and whatever
+00:13:40 [W] On to manage, for example this way we will be using the same API both to provision our infrastructure and deploy our application.
+00:13:51 [W] crossplane already leverages one API for all concept by building models around infrastructure and applications a very good example of this is crossplane being ending lamentation of openebs occation model also
+00:14:07 [W] I am which is a team Centric standard for building Cloud native applications focusing on separation of concerns between app developers and improper ators. Kubernative.
+00:14:23 [W] API is easily extensible with custom resource definitions, and there are existing tooling to easily Implement our controllers without dealing with common needs like clink caching and even initial project scaffolding.
+00:14:36 [W] with its declarative approach kubernative Capi allows you to define the desired State and leave the rest to the controller's actively reconciling on your resource to bring the system into the desired State this
+00:14:51 [W] Horses as building blocks and combine them together with gitops style pipelines by using kubenetes API.
+00:15:06 [W] We will also be able to use existing Machinery like namespaces are back for access control garbage collection with finalizes and so on with well-defined API crude semantics we can just focus on the business logic
+00:15:16 [W] eight in our controllers
+00:15:19 [W] Okay, after this introduction now, I will make a quick definition of the problem that we are trying to solve in this talk and then I will continue with the solution and challenges that we have faced while implementing that solution.
+00:15:36 [W] Let's start with a simple question.
+00:15:39 [W] How do we typically run isolated instances of kubernative control planes?
+00:15:46 [W] Answer is simple.
+00:15:51 [W] We run a dedicated kubernative cluster which comes with its own control plane.
+00:15:55 [W] however, what if we need to run this control planes at scale, for example, imagine we want to run millions of these then running a dedicated full-fledged kubernative cluster does not sound like a good idea since
+00:16:12 [W] interested in its API and control plane
+00:16:16 [W] So before moving on to the solution.
+00:16:22 [W] Let's define our problem as running isolated instances of kubernative control planes at scale that kubernative is being used as a general purpose control play.
+00:16:35 [W] Let's talk about the solution.
+00:16:40 [W] Here you can see a diagram of the kubernative cluster with all of its components that are worker components running on worker nodes and there are control playing components running on masternodes.
+00:16:56 [W] Do we need all of these components when we want to use kubenetes to manage external resources now, since we are not going to use kubenetes as a containerd castration tool we won't need worker nodes.
+00:17:12 [W] If there are no containers and workers there is nothing to schedule so we wouldn't need to schedule her as well.
+00:17:24 [W] Similarly.
+00:17:28 [W] There won't be any need for a network setup between containers which means we can remove cook proxy and Cube DNS.
+00:17:33 [W] I think a VM and edging it as an uneven odds, exposing service and points and provisioning volumes for your applications.
+00:17:58 [W] All of these functionalities are required for contains. If there is no container, then there is no need for attaching a volume to eat so we can remove it as well.
+00:18:04 [W] Okay. This makes sense.
+00:18:10 [W] We just need kubernative API.
+00:18:15 [W] So we have a pi server and a pi server requires etcd for persistency.
+00:18:19 [W] But what about controller manager?
+00:18:20 [W] Do we need it as well controller manager contains core controllers that are shipped with kubernative. Let's have a closer look to decide whether we need them or not.
+00:18:31 [W] here you can see all the controllers available in controller manager as of kubernative 118
+00:18:39 [W] These are there are controllers like demon sects job garbage collector and service account token and for our solution, we won't need the ones that are related to container orchestration.
+00:18:53 [W] After removing those these are the required controllers that we will need to use kubenetes API and its control plane for managing external resources, but still to leverage existing Machinery that are not directly related
+00:19:11 [W] castration
+00:19:13 [W] so the controller manager binary has a flag to set the controllers that you want to activate which we will pass this set of our this set for our solution.
+00:19:25 [W] Coming back to our diagram.
+00:19:36 [W] These are the components that we really need to use kubenetes as a general-purpose control plane, which looks much more simple than a full-fledged kubernative cluster.
+00:19:42 [W] But we have a problem.
+00:19:49 [W] How do we run our operators or controllers which typically run inside the cluster is a contained.
+00:20:00 [W] Remember we want to extend kubenetes API with custom resource definitions and our controllers to reconcile on those custom resources to manage something that is external to the Clusters.
+00:20:08 [W] Just to make it clear.
+00:20:11 [W] Please don't confuse when I say operators or controllers.
+00:20:16 [W] I'm usually using these terms interchangeably actually referring to the same thing.
+00:20:20 [W] So let's also include our operator to the set of components that we need to run.
+00:20:26 [W] Okay, these are the components that we need to run for our control plane.
+00:20:36 [W] A nurse is the first step of isolation.
+00:20:45 [W] And also we want to run them at scale for example targeting millions of instances.
+00:20:58 [W] I guess we will need a container orchestration tool to manage that amount of containers.
+00:21:02 [W] Let's use the most popular Cuba containerd K straighten tool for this purpose, which is a gaming kubernative.
+00:21:05 [W] Before diving into the challenges that we have faced with this solution.
+00:21:13 [W] I want to spend some time on this slide to make the two definitions that we are going to refer in the following slides.
+00:21:22 [W] The first one is host clusters.
+00:21:27 [W] It is the kubernative cluster which is hosting our control plane instances.
+00:21:30 [W] The second one is tenant namespace, which is the dedicated namespace that we are deploying components of our control.
+00:21:37 [W] instances
+00:21:39 [W] And when we say tenant kubernative we refer to the kubernative Capi of our control plane.
+00:21:47 [W] Let's talk about the challenges.
+00:21:51 [W] Humanity's operators or controllers typically run inside the cluster that they need to interact with.
+00:22:08 [W] However in our case the operator strand on the host cluster, but need to watch the tenant API servers.
+00:22:10 [W] This introduces three problems that we need to solve connectivity authentication authorization and packaging.
+00:22:22 [W] To deal with the first two.
+00:22:28 [W] let's have a look how this is handled in a regular set up vacuum mirantis operator is deployed into the same cluster that it means to interact.
+00:22:36 [W] Kubernative provides necessary mechanisms to connect authenticate and authorize the process running inside the cluster against its API server, which is called as in cluster config.
+00:22:50 [W] On the right hand side. You see the source code from kubenetes Coke lines for initializing in cluster config the to environment variables kubernative service host and kubernative Service Port allows the operator to find the kubernative
+00:23:06 [W] Server and point for authentication and authorization kubernative generates a token for service account of the operator and automatically mounts that token to the pot at a predefined path.
+00:23:22 [W] We don't have to do anything for a regular deployment.
+00:23:28 [W] But in our case we need to adjust them to be able to configure against the tenant API servers.
+00:23:31 [W] We need to generate a service account token for a service account of the operator on tenant API servers and make it available to the operator poddisruptionbudgets clusters to achieve this first. We need to deploy service
+00:23:48 [W] I'm second token for a service account of operator on tenant API servers and make it available to the operator poddisruptionbudgets clusters to achieve this first. We need to deploy service account into tenant API servers
+00:23:50 [W] take a pi server, then service account token controllers in controller managers, which is one of the controllers that we kept enabled generates a token secret but inside the tenant API servers finally
+00:24:04 [W] Copy is token secret from 1002 host and mount to the operator pot at a predefined path expected by in cluster config.
+00:24:15 [W] Copy is token secret from 1002 host and mount to the operator pot at a predefined path.
+00:24:26 [W] We can adapt manifest of our operator put as shown on the right hand side
+00:24:27 [W] Deputy we overwrite the to environment variables kubenetes services and kubenetes service port for connecting to the tenant API servers and for authorization and Authentication.
+00:24:43 [W] we disable auto man service account token input spec instructing that we want to opt out from automatic token Mount and mount the token secret for the tenant API server instead.
+00:24:53 [W] Another problem related to running on host cluster but watching tenant API server is related to packaging a typical deployment package.
+00:25:11 [W] Let's say a help chart of a kubernative operator contains custom resource definitions are Veracruz for accessing those custom resources and deployment manifest of the operator itself.
+00:25:21 [W] However here we need to deploy those manifests into different API servers.
+00:25:28 [W] We want to extend Talent API server with custom resource definitions, but we want to run our controller ports on host clusters.
+00:25:42 [W] So the solution is packaging controllers and types separately on the right hand side.
+00:25:48 [W] We can deploy controllers charts to the host cluster and types charts into the tenant API servers.
+00:26:06 [W] Okay, next challenge is running etcd for tenant API servers etcd as the only persistent component of our control planes requires some special care which introduces some trade-offs
+00:26:23 [W] It is CD is the only persistent component of our control planes require some special care which introduces some trade-offs that we need to think of.
+00:26:25 [W] So we have three options to satisfy API servers etcd. Dependency. The first one is simple and straightforward that is to run a dedicated etcd per tent or etcd cluster in
+00:26:42 [W] Is to run a dedicated etcd per tent or etcd cluster in case of high availability is a requirement maintaining and operating etcd clusters for production requires some
+00:26:51 [W] For production requires some operational knowledge and work. And with this option maintenance cost would be much higher since we will have it pertinent. Another concern is etcd
+00:27:03 [W] We will have it pertinent another concern is etcd writes data to disk and recommends ssds in production, which would mean higher costs pertinent, especially when multiple
+00:27:12 [W] Which would mean higher costs pertinent, especially when multiple replicas needed.
+00:27:14 [W] The second option suggests running one shared etcd clusters on the host clusters isolate tenants via etcd prefixes users and roles.
+00:27:28 [W] this provides a cost efficient solution and requires less maintenance compared to the first option but comes with its own problems first etcd is not horizontally scalable, which means after some number of tenants
+00:27:39 [W] The limit for scalability the second problem is it is CD does not have any mechanism to isolate resource usage between users raking isolation between tenants in terms of resource consumption.
+00:27:55 [W] This is also known as Noisy Neighbor problem that resource-hungry tenant could affect other tenants on the same host cluster.
+00:28:03 [W] And last option is using kind together with an external horizontally scalable database.
+00:28:11 [W] Karen is and etcd shim that translates etcd API to other databases like my SQL or postgres coredns is an open source project by Rancher and mainly used by k3s, which is a lightweight kubernative sister.
+00:28:25 [W] Option we would need an external database and would still need to prove that this setup works well in production.
+00:28:34 [W] Another issue we need to deal with is accessing tenant API servers from outside the cluster.
+00:28:44 [W] This is actually not a real challenge, but still words mentioning for users accessing from outside.
+00:28:56 [W] We deployed an Ingress controller on the host cluster and created an Ingress rule in each tenant namespace by configuring Ingress as SSL pass through we could keep traffic encrypted all the way down to the tenant
+00:29:08 [W] agates
+00:29:09 [W] I also want to talk about security and isolation a bit since we ended up with a multi-tenant solution on the same host cluster.
+00:29:20 [W] Since our host is kubeedge kubenetes cluster already.
+00:29:25 [W] We could leverage what kubernative provides for isolation like putting tenants into dedicated namespaces defining Network policies to only allow required traffic inside the tenant and defining put security policies to
+00:29:39 [W] With limit ranges and resource quotas. We could Define resource constraints for tenants.
+00:29:46 [W] We have configured Mutual TLS between all system components and we are also running sandbox containers CG wiser, which limits the O's kernel surface accessible to the application by providing
+00:30:02 [W] Who's clusters can run multiple instances of our control planes? However, this is still limited because there are limits regarding the workload that the single kubenetes cluster could handle.
+00:30:22 [W] Since we are targeting millions of control planes, we need multiple hosts clusters, which means we need another entity who manages the host clusters and responsible for scheduling control planes.
+00:30:38 [W] that is another kubernative cluster which we call as scheduling cluster. All of these processes needs to be automated since we are talking about the hosting solution for our as a service infrastructure and
+00:30:50 [W] By activating system operators remember crossplane project allows you to provision infrastructure resources directly from kubenetes API, and we are using this to create required infrastructure for our
+00:31:06 [W] This API and we are using this to create required infrastructure for our host clusters, which plays very well with our provisioning operators.
+00:31:10 [W] Last topic that I want to talk about is backups of our control planes.
+00:31:20 [W] Backups are a little different than other day two operations that we are dealing with which I will not mention here because it is kind of truce our approach in a way that the cop controller operates on our tenant control
+00:31:35 [W] Just like your regular kubernative clusters. We are using Valero which is an open source project for backup restore of kubernative clusters, and it is also extending kubernative API with custom resource definitions and has
+00:31:51 [W] Acting on those resources. So with the setup shown on the left hand side, we can take backups of our control planes.
+00:32:00 [W] Easily taking backups of our control planes also enables migration between host casters which lets us to consider host cluster as ephemeral resources and simplifies operational work.
+00:32:14 [W] All I presented so far already implemented and running in production, which I will quickly show as a demo soon.
+00:32:28 [W] However, there are some feature were planned as well.
+00:32:32 [W] try to list relevant ones here.
+00:32:32 [W] First we are using etcd and really interested in using kind instead since it could help scalability and provide operational simplification. If could be used with the manage database.
+00:32:48 [W] we did some proof of concept work and it looks quite promising what but we still need to evaluate it regarding using it in production.
+00:32:55 [W] As of our control plane, we are running three components kubernative say Pi server controller manager and crossplane operators and we want to investigate whether we can combine them into a single binary at compile time.
+00:33:10 [W] Also making further optimizations which could help in terms of resource consumption last one using crossplane composition for provisioning our host clusters.
+00:33:22 [W] Crossplane composition is a recently introduced powerful concept that allows us to Define composite Resources by combining multiple resources as an E-Type as mentioned.
+00:33:39 [W] We are already using crossplane to provision our infrastructure. But currently we have a dedicated operator who Provisions host clusters by orchestration by orchestrating infra resources and deploying applications as
+00:33:51 [W] We want to replace this with the crossplane composite resource, which should which could simplify our code base?
+00:33:59 [W] With that it's time for a demo.
+00:34:06 [W] I have two quick demos first from terminal.
+00:34:15 [W] I will provision my local kind cluster as a host cluster and create to control planes as tenants second.
+00:34:18 [W] I will show the things in action by creating a dedicated control claim from the UI of our service.
+00:34:24 [W] Okay, let's start with the first demo, which is running on my local can cluster as a host cluster and deploying multiple tenants on this host cluster on top.
+00:34:46 [W] You can see the flow of of the demo and I will run to comments basically one is set up post that sh
+00:34:54 [W] Maybe I should just start because it takes some time and set up clothes start sh is creating a kind cluster and then deploying the required system components for the first cluster, which is etcd system
+00:35:09 [W] First cluster on top, you can see the flow of of the demo and I will run to comments basically one is set up post that sh, maybe I should just start because it takes some time
+00:35:11 [W] CD in etcd system namespace and short manager in certain manager namespace we are using one shared etcd for tenants and for the purpose for the for this
+00:35:25 [W] And we are using certain manager to provision. The required certificates for Humanity's control plane components basically a pi server control plane and also the admin client
+00:35:41 [W] so once this house cluster is ready, we will create two tenants on this horse cluster one is and we will name them as tenant one and tenant to and then
+00:35:57 [W] Component that is shown as in yellow called Tennant Creek debug.
+00:36:06 [W] I will get into each tenant and show that actually each tenant has a dedicated cluster view independent or isolated from from the others.
+00:36:20 [W] So let's let's wait a little bit more until this hose cluster set up in ashes.
+00:36:25 [W] Okay, now certain manager is ready and etcd is being installed.
+00:36:39 [W] Okay now our host cluster is ready.
+00:36:40 [W] Let's have a quick look what we have.
+00:36:42 [W] We have short manager and etcd system namespace and let's check the etcd system.
+00:36:51 [W] Yeah, we have one node etcd clusters or it is it is running here.
+00:37:00 [W] So now I will going to create two tenants.
+00:37:02 [W] tenant one and then 1002
+00:37:07 [W] okay, so let's
+00:37:23 [W] see, they have API service controller managers with only the required controllers activated as we discussed in the presentation and we
+00:37:42 [W] Plugging ports, which is configured against Lieutenant API Service as shown on the top image.
+00:37:52 [W] Okay.
+00:37:55 [W] Now we have everything running.
+00:37:57 [W] Let's get into the cannon. Skip debug pot.
+00:37:58 [W] And yeah here as you can see we have a completely different cluster View and let's let's just create a namespace here
+00:38:14 [W] Twan
+00:38:16 [W] yeah, I have the intelligent one namespace now switch to the other tenants.
+00:38:25 [W] and as you can
+00:38:29 [W] to and
+00:38:33 [W] Let's see. What we have here is again the same components.
+00:38:39 [W] And keep CTL exact can 10 cutie bug.
+00:38:45 [W] And as you can see, we have a completely different cluster view, then the other tenants or the the host cluster itself. So this is
+00:39:00 [W] And of the first demo the source code for this demo is available. If you want to check it is available in GitHub under my GitHub profile.
+00:39:17 [W] Now, I'm going to continue with the next demo which is actually showing things in action in production.
+00:39:26 [W] So this is our company website and
+00:39:30 [W] This is our dashboard for our service here. The environment is environment corresponds to the dedicated control plane that I have described so far.
+00:39:45 [W] So when I go and click the create an environment button behind the scenes, they are operators or our controllers are working.
+00:40:00 [W] Provision a dedicated control playing instance for us.
+00:40:07 [W] Also installing crossplane this takes some time. So I will
+00:40:13 [W] let's wait for it.
+00:40:17 [W] Okay, now our environment is ready and let's try to connect to it.
+00:40:26 [W] so
+00:40:33 [W] I have already exported my ex access token.
+00:40:40 [W] Okay, now I should be able to see a dedicated cluster view.
+00:41:05 [W] Yeah here you can see my last review and this is not a real cluster. Like I have no notes actually even know permission to view and let's check if the
+00:41:13 [W] Extended the control playing of kubernative already.
+00:41:21 [W] Yeah here you can see we have already deployed our custom resource definitions for cross flane so I can use this clusters or this control plane as a general-purpose control plane.
+00:41:33 [W] Also extend crossplane Itself by deploying a provider.
+00:41:38 [W] Basically deploying a provider means deploying the custom resource definitions for this providers and also deploying the controller's acting on those custom research definitions.
+00:42:02 [W] So once this provider is deployed we should be able to see the NIV custom resource definitions on our control plane so we can we can go and provision the actual resources after that.
+00:42:16 [W] So, let's see.
+00:42:16 [W] If we have like GC P dot cross plane that I owe you once now yeah here you can see the gcp resources custom resources definitions.
+00:42:32 [W] So now I can go and create for example a gke cluster using this control plane our like say a sub Network a bucket on gcp Etc.
+00:42:45 [W] So this is the nobl9
+00:42:47 [W] Of My Demo, so I'm now ready for any questions if there are.
+00:42:54 [W] Please sources custom resources definitions.
+00:43:04 [W] So now I can go and create for example a gke cluster using this control plane our like say a sub Network a bucket on gcp Etc.
+00:43:05 [W] So this is the end of my demo.
+00:43:05 [W] now ready for any questions if there are.
+00:43:06 [W] Okay, if there are any questions.
+00:43:07 [W] Right now on Q gen a box.
+00:43:11 [W] I don't see any questions that I didn't answer yet.
+00:43:15 [W] yeah, one question is how quickly can you migrate a tenant from one host to another so migrating one host one tenant to one host to another is like
+00:43:50 [W] yeah, one question is how quickly can you migrate a tenant from one host to another so migrating one host one tenant to one host to another is like
+00:43:54 [W] Our baking up using bolero and then we are restoring you again using better route to another post cluster and hit it takes around like two or three
+00:44:06 [W] Longer than that's and possibly it is the restoration time of failure because we don't have any like thoughts volumes Etc in the back up. It is a very quick process.
+00:44:22 [W] Can you elaborate on provider how you manage it?
+00:44:28 [W] I couldn't exactly get the question.
+00:44:37 [W] So I had the question is.
+00:44:42 [W] Can we use this host kubernative cluster as devops provisioning clusters for its tenants?
+00:44:54 [W] yeah, actually if you if if in your devops pipeline, you need to like test your controllers and you really don't need a real kubenetes cluster with containerd orchestration capabilities, then yes, you can just create a
+00:45:09 [W] Create your talents and then deploy a test and like verify your will pipelines so you can use for those provisioning.
+00:45:22 [W] Why separate control planes to begin with couldn't you keep all resource instances in the same cluster yet?
+00:45:40 [W] The problem actually we need is we need a dedicated control plane.
+00:45:43 [W] So we need a full isolation, you know when you want to extend kubernative with custom resource definitions.
+00:45:50 [W] You need to install Ser d a customer source definition, which is the cluster scoped resource, so
+00:45:57 [W] You cannot deploy different versions of a custom resource definitions without interfering each other.
+00:46:07 [W] This is one thing another is like we can we are already leveraging the existing Machinery coming with kubernative like we are leveraging our back or we are using namespaces
+00:46:22 [W] That isolate inside a single control plane.
+00:46:28 [W] So for all of that, we need dedicated cluster view like we need cluster scoped access cluster Scott isolation Etc.
+00:46:41 [W] So we would either deploy a dedicated kubernative cluster pertinent, or we can be could simplify and just deploy what we really need to run out control plane.
+00:46:52 [W] I've are nodes are located to tenant clusters.
+00:47:03 [W] So tenant clusters does not have any notes. They don't they don't have
+00:47:08 [W] All the scheduling couple tees. They are just serving Humanity say pi and Cube and his control plane and it's all so we don't have any notes, but if you are asking about like how how
+00:47:23 [W] Tenant is running.
+00:47:30 [W] They are being deployed on host clusters and they are not visible to 10. So if you exact if you get into a tenant and like asked to attend on a pi server keeps ETL get pulse -
+00:47:40 [W] All links spaces you get nothing.
+00:47:43 [W] So there is no nodes.
+00:47:44 [W] There is no pot.
+00:47:58 [W] Which means there is no nuts, but the controllers are deployed on host clusters and you can like we are for further isolation and security. We are deploying tenant controllers separately.
+00:47:59 [W] So we are already over time.
+00:48:05 [W] So one last questions.
+00:48:07 [W] How does crossplane compared to the recently developer preview released of AWS controller on kubernative Project?
+00:48:23 [W] Yeah, as far as I know there are a lot of overlaps and to the best of my knowledge that are already some issues that are discussing this and
+00:48:31 [W] I hope the effort will be like merge at some point and you know cross plane is like open source, and it is for all Cloud providers.
+00:48:48 [W] So hopefully we can expect that effort will be merged with cross playing effort, which is already cncf project at some point.
+00:48:56 [W] Okay, so that's that's all the questions.
+00:49:04 [W] Thanks for all joining to the session. And if you have any further questions, please feel free to ask in coupon custom extent kubernative selection of
+00:49:15 [W] I can't answer that.
+00:49:17 [W] Thank you.

@@ -1,0 +1,511 @@
+﻿Tutorial: Using BPF in Cloud Native environments: GZMD-2351 - events@cncf.io - Monday, August 17, 2020 9:01 AM - 285 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:03:12 [W] And everybody thanks for coming to this tutorial about using BPF include knative environment.
+00:03:23 [W] My name is Alba.
+00:03:28 [W] I'm a co-founder and director at control clubs. We do constituion engineering around open source projects related to Linux on communities and our country clubs.
+00:03:40 [W] We are a team dedicated team focused on innovation in or open source projects on that were collaborating with other software company and obscene projects.
+00:03:47 [W] Hi, I'm Marga.
+00:03:54 [W] I also work at Kinfolk.
+00:03:58 [W] I'm an engineer in the flat car team flat car is container optimized OS which can be used to run inside kubernative if you want, but I'm also interested in other things.
+00:04:09 [W] So I show in dallben today for this workshop on BPF because I found BBF a very interesting tool for debugging applications.
+00:04:17 [W] Thanks. So I mentioned key found in Labs before I can f***. We had the built 100 person open Enterprise Cloud knative time stack. It included a flat cut cut in a Linux or
+00:04:35 [W] Mouse ask my guy mentioned and locomotive or communities top, but everything we do show in this talk is about things you can do with other Linux Distribution on other kubenetes
+00:04:51 [W] It's a generic technology is not tied to.
+00:04:56 [W] next slide
+00:05:01 [W] Yeah, so this is a Hands-On tutorial.
+00:05:13 [W] It's a workshop where we want you to follow along and do the the exercises the demos that we will show on your computer.
+00:05:19 [W] So we want you to please now clone this repo and and get started if you haven't already.
+00:05:30 [W] Hopefully you have done this already. But if you haven't we will cross our fingers that everything works out of the box and then you can
+00:05:32 [W] Ready, the workshop uses minikube.
+00:05:38 [W] You can also do these things with other kubernative distributions, but the we've optimized everything so that everything works out of the box or hopefully works out of the box.
+00:05:50 [W] So we recommend that you follow along using the tools that we provided for example for minikube. We are providing an image that already includes the kernel headers because for using these tools you need to
+00:06:02 [W] have the colonel headers. So yeah, and then you how to install the rest of the tools we will do this along with you all the different steps, but we want you to do this on your computer.
+00:06:16 [W] On your computer. You can also do it on a VM if you want to use a VM, there's a few caveats that you have to take into account, but you can't do it on a VM.
+00:06:29 [W] All right, so we will start with our first Hands-On tasks which is to get minikube running install it if you haven't installed it and for that I will share my screen.
+00:06:37 [W] Okay, so we have already cloned the Ripper In This Cloud native BPF Workshop directory.
+00:06:50 [W] Hopefully you have cloned it by now and we will go into the getting started directory that has a start minikube.
+00:07:00 [W] Sh script.
+00:07:02 [W] Let's have a quick look at the script to see what it does before executing stuff.
+00:07:09 [W] It's usually a good idea to check what things do.
+00:07:12 [W] So this creep downloads minikube then verifies the hash some zettaset, then it will ask it for confirmation because it will delete
+00:07:20 [W] Any mini Cube that you have running if you have it on your machine, and then there's two options either you pass this use driver known parameter, which is only if you are running on the inside of it for machine or you don't and then it runs with virtualization.
+00:07:36 [W] You want to run with your trolley station?
+00:07:40 [W] It's a better idea.
+00:07:46 [W] But if you are running this inside a VM you want to use the use driver known parameter?
+00:07:47 [W] Alright, we will now run this start minikube.
+00:07:54 [W] So this is now downloading the minikube image that we prepared for you with the with the headers and now it downloaded the image and now it will start
+00:08:05 [W] For you with the with the Heather's and now it downloaded the image and now it will start minikube and this can take a while.
+00:08:10 [W] So while this is running we will go back to the slides and go back to explain a little bit why we're here and why why this Workshop even
+00:08:22 [W] Go back to explain a little bit why we're here and why why this Workshop even is necessary?
+00:08:25 [W] Someone asked for the git clone URL again, so I will go back quickly to the URL the this is the git clone URL.
+00:08:42 [W] And one thing I wanted to mention on this slide was that we also have a slack channel for this tutorial. The slack channel is in the cube cons lock is to - Cube Kong - tutorials -
+00:08:51 [W] Also have a slack channel for this tutorial.
+00:08:52 [W] The slack channel is in the cube con slack is to - Cube Kang - tutorials - BPF. So in the channel, feel free to ask questions or like answer each other inside
+00:08:58 [W] Free to ask questions or like answer each other inside that slack Channel.
+00:09:01 [W] All right.
+00:09:05 [W] So while minikube is installing, why are we even here? What what's what's all this about?
+00:09:10 [W] So this is about debugging applications and in particular debugging applications inside kubernative debugging in general is hard but be bugging inside kubernative is even harder because like everything is running
+00:09:22 [W] All the pots are communicating with each other and how do we even figure out what's going on?
+00:09:33 [W] The BPF tracing tools are really good to help us figure out what's going on.
+00:09:37 [W] But the problem is that ppf tracing tools that already exists out there.
+00:09:44 [W] We're thought to be run on a machine and investigate what's going on inside the machine.
+00:09:48 [W] So the tools that we will demonstrate today Inspector Gadget acute CTL trays are
+00:09:50 [W] Plugging this gap of like how do we run the super useful BPF tools inside kubernative or with kubernative and to explain a little bit more about that.
+00:10:06 [W] Alvin will tell you more about BPF and how ppf works.
+00:10:07 [W] Thanks.
+00:10:11 [W] So ppf Stanford Berkeley packet filter, maybe you know about that if you had on this talk, but I will give a bit more context.
+00:10:26 [W] So it takes is for quite a while initially. It was for TCP dump that was used to socket filter Network traffic on a wall socket.
+00:10:37 [W] So that tcpdump can be performant on can you can specify filters on
+00:10:41 [W] Execute the filter actually inside the canal.
+00:11:04 [W] So instead of TCP done getting all the network traffic in user space in the tcpdump process and then filtering there instead of that.
+00:11:10 [W] It creates a vpf eater. But it in a journal on the canal will only wake up the TCP time process or pneumocystis necessary for the packets you want that was the initial use case in
+00:11:20 [W] listen to you he developed to a lot of more use case their use case for networking were different socket filter or you can do traffic shaping use case for security where you can have seccomp
+00:11:36 [W] Pink use case for security, right? You can have seccomp where to filter the system calls we want to do or more recently on Linux security modules and lastly there are use case for
+00:11:45 [W] I'm always slightly on Linux security modules and lastly there are use case for tracing.
+00:11:47 [W] So that's more what we are focusing today where we can use ppf for cons to hook into twist parents are get pops or you put pants on.
+00:11:56 [W] So I can explain a bit more into details.
+00:12:01 [W] what EPF is this extended version of BPF?
+00:12:12 [W] So the workflow looks like that at the beginning you're right BPS program usually in a language like a see you can cope a lot with Salonga lvm into a your BPF by code then this BPF by God
+00:12:20 [W] in the canal with the ppf system column and then the first thing the canal will do will it will verify the BPA program to see if it is safe, but it means it will make sure it's not possible for the ppf program to access any random memory in the
+00:12:35 [W] Safe cover up your data or anything. So it's not like an invalid elsewhere is dangerous using BPF program doesn't risk coaching you canonical.
+00:13:06 [W] A different layer and this PDF or gun can make use of BPF helper functions to execute some some things outside of the clothes
+00:13:21 [W] a different layer and this bof organ can make use of BPF helper functions to execute some some things outside of the clothes sandbox
+00:13:24 [W] I'm concept called BPF Maps.
+00:13:28 [W] BPF maps are kind of like a global variable that are accessible from the your ppf program on accessible from user space applications.
+00:13:41 [W] that's the mechanism for prepare for guns on your user space application to communicate together through this BPF Maps.
+00:13:44 [W] So there are varieties of tracing tools on Linux that use BPF.
+00:13:56 [W] I listed some of them here on the left side.
+00:13:57 [W] There is BPF dress which has a custom language to write your BPF programs.
+00:14:03 [W] There are busy see tools.
+00:14:06 [W] BBC is really useful repository with a lot of example how to use BPF.
+00:14:11 [W] that's a good starting point to learn vpf to see the collection of tools on try to execute them.
+00:14:19 [W] Pop to read how it's done by reading the sauce.
+00:14:27 [W] Now other tools that twist Loop we will talk about it today and other one, but most of those tools are more designed to run on one computer.
+00:14:32 [W] So it's not really cloud native with something you can do on the job and this level for that.
+00:14:38 [W] There are tools like keeps it real dress. That's a gypsy telepresence on kubernative.
+00:14:46 [W] it will use BPF trace on the worker nodes.
+00:14:47 [W] The collection of choice on try to execute them to read how it's done by reading the sauce.
+00:14:56 [W] Now other tools that twist Loop we will talk about it today and other one but most of those tools are more designed to run on one computer. So it's not really cloud native with something you can do on the job and
+00:14:57 [W] Use those tools at the community level as well.
+00:14:59 [W] Right.
+00:15:12 [W] So now we will move on with the next Hands-On tasks, which is installing Inspector Gadget.
+00:15:13 [W] Hopefully your minikube installation is done by now.
+00:15:26 [W] And if if you run into any problems remember asking on the slack channel, it's Cube con tutorials BPF to keep calm tutorials.
+00:15:28 [W] BPF a few people are already asking questions there remember to ask questions there. Okay. So the next
+00:15:33 [W] Handsome thing that we will do is there's another script which is called get Inspector Gadget which first checks that you have Cube CTL installed and that it's working and then checks whether you have it already
+00:15:48 [W] First checks that you have Cube CTL installed and that it's working and then checks whether you have it already installed like you could already have Inspector Gadget on your machine.
+00:15:54 [W] And so it doesn't do anything in that case and then tries to install it with crew if you have crew install because that's the recommended way, but if you don't have crew install it downloads the latest release for you and installs it in
+00:16:07 [W] The latest release for you and installs it in the same path as cube ctls.
+00:16:11 [W] So let's now execute that in this machine.
+00:16:23 [W] It was already installed. So I didn't do anything but in your machine, it's probably now downloading and installing the gadget but this is now just installing the plug-in and what we want to do is to now install a pod in
+00:16:32 [W] Installing the gadget but this is now just installing the plug-in and what we want to do is to now install a pod in our cluster.
+00:16:37 [W] So first we will check that it actually works by running tube CTL Gadget help and we went we get the help we see that it has a bunch of sub comments that we can use and we will
+00:16:48 [W] We see that it has a bunch of subcommands that we can use and we will show a few of those sub comments in this Workshop.
+00:16:57 [W] And now that we know that it's running we need to deploy a gadget.
+00:16:58 [W] So how do we deploy a gadget?
+00:17:02 [W] There's this very handy Cube CTL Gadget deploy command that we will first inspect before we run it this generates a llamo that says all the different.
+00:17:11 [W] Aunt has a service account cluster role binding and Demon said that will need to be created to run our Gadget portworx.
+00:17:37 [W] It's containerd creating.
+00:17:49 [W] So it's creating it will take a little bit until it's done with everything. We can check maybe down.
+00:17:52 [W] Yeah, so now it's running so we have the pot and it's deployed in our cluster and we can maybe check the logs Cube CTL logs Cube system.
+00:18:08 [W] It will take a little bit until it's done with everything. We can check maybe down.
+00:18:19 [W] Yeah, so now it's running so we have the pot and it's deployed in our cluster and we can maybe check the logs Cube City logdna.
+00:18:20 [W] And then this is kubernative up catch it.
+00:18:21 [W] And yeah, we see that it launched and everything was successful, which is great news.
+00:18:28 [W] All right, so we have Inspector Gadget in our cluster.
+00:18:29 [W] What can we do with it?
+00:18:31 [W] Let's go back to the slides.
+00:18:33 [W] The first Gadget that we're going to look at is called Network policy advisor.
+00:18:48 [W] It's the use case for this gadget is when you shine a project and it turns out your project has a lot of puts a lot of services they talk to each other they transmit data,
+00:18:55 [W] First gotcha that we're going to look at is called Network policy advisor.
+00:18:57 [W] It's the use case for this gadget is when you shine a project and it turns out your project has a lot of puts a lot of services they talk to each other they transmit data,
+00:18:57 [W] Not Network policy.
+00:19:00 [W] So everything is open and if something malicious was going on. There's like no security whatsoever.
+00:19:12 [W] And this is a bad idea and you want to deploy Network policy, but you have like no idea of the architecture.
+00:19:13 [W] You are new to the project.
+00:19:17 [W] How do you even start thinking about this architecture?
+00:19:24 [W] And if you care about this idea of like it's not a good idea to start putting the security at the end. I'll one actually has a talk later.
+00:19:27 [W] today almost like right after this Workshop called pods security as an afterthought where he will cover these issues and more and so this is the problem in this is what network policy can help us
+00:19:41 [W] Then we will see what this means with an example in particular. We will use an example that was generated by Google which is microservices demo with a bunch of different services for like
+00:19:56 [W] An e-commerce site so it has a database. It has check out Service shipping service like it.
+00:20:10 [W] They just like they are all dummy services, but it can help you give you an idea of what a micro service application looks like in kubernative and we will use this example to try out the network policy advisor.
+00:20:19 [W] All right. So with that I will share my screen again.
+00:20:27 [W] And we will change to the zero one directory in this directory. We have a llamo file and a readme in the yellow file.
+00:20:43 [W] There's a bunch of different things so we can for example grab for the different kinds of resources that are there.
+00:20:58 [W] We see that there's a bunch of deployment bunch of services. If we try to make sense out of this it would take a long time.
+00:21:00 [W] So instead of doing that we are going to use the network policy advisor. So we will do cute CTL Gadget Network policy monitor because we first put it in monitor mode
+00:21:15 [W] We will say namespaces and this is important.
+00:21:21 [W] It has to be plural.
+00:21:21 [W] Otherwise, it doesn't work and then we will output this into a file called Network Trace top block.
+00:21:35 [W] So we are starting a monitor in the demo namespace and we are saving this in the network Trace DOT log file now, I will split the screen and in this other syseleven.
+00:21:46 [W] Side of the screen let's change again to this directory.
+00:21:55 [W] I will actually start the deployment. So first I will create the name space create nice space demo, and then I will apply the llamo file.
+00:22:05 [W] Okay, all these pods are now getting created. It will take a while for all the parts to get created.
+00:22:22 [W] We will now see that it says containerd creating for most of them. We can check that our networked raised DOT log.
+00:22:29 [W] Should be getting input soon, but maybe not yet because all the containers are creating. But okay, it's getting input.
+00:22:41 [W] Pods are now getting created. It will take a while for all the parts to get created.
+00:22:46 [W] We will now see that it says containerd creating for most of them. We can check that our networked raised DOT log.
+00:22:47 [W] Should be getting input soon, but maybe not yet because all the containers are creating. But okay, it's getting input.
+00:22:48 [W] This is good now. We will let this run and in the meantime, I'll stop sharing and go back to the slides and I'll tell you a little more about what the network policy advisor does.
+00:22:54 [W] So first this word they commenced and remember they are all documented in the GitHub repo so you can go to the GitHub repo to
+00:23:00 [W] Check them out and take a little bit more explanations about them.
+00:23:03 [W] And then this is a diagram of what's going on with Inspector Gadget.
+00:23:19 [W] So Inspector Gadget is a cube CTL plug-in. So the first thing that happens when you type Cube CTL space Gadget is that it turns into a cube CTL - Gadget which is the the executable and it only talks to the kubernative.
+00:23:24 [W] To tell space Gadget is that it turns into a cube CTL - Gadget, which is the executable and it only talks to the kubernative.
+00:23:27 [W] Say Pi it doesn't talk to the node.
+00:23:27 [W] where the the pots are running it everything. It does. It does through the kubernative styra pi. So the first thing we did a little bit earlier was to deploy the gadget part and that was done through the governor to say pi and then we
+00:23:42 [W] Check poet to install a DPF program. In this case in the network policy advisor case. It was the the ppf program to monitor what was going on in the network and all of that is done through the kubernative.
+00:23:58 [W] Say Pi inside. The node. Our Gadget part is the one that talks to the colonel. It creates the vpf program necessary for whatever action we are asking of it and then it feeds this program into the kernel and
+00:24:12 [W] API inside the node. Our Gadget part is the one that talks to the colonel. It creates the vpf program necessary for whatever action we are asking of it and then it feeds this program into the kernel and
+00:24:14 [W] Or explain more about what's going on in that stage.
+00:24:21 [W] But this is the basic idea of what's Happening of what happened right now. When I type Network advice Network policy monitor.
+00:24:28 [W] All right, and this is the get the log that we are generating.
+00:24:34 [W] I show a little bit of what the law was looking like when I started generating it and it has basically two types of injuries, except and connect and these
+00:24:44 [W] Are like the TCP actions of accept and connect and it stores the IP is that were involved the port's the pods and all this information?
+00:24:57 [W] Of course, this log is very verbose and it has a lot of information and it wouldn't be nice to Parts it as a humanlike.
+00:25:05 [W] It's hard to make sense of all of this information.
+00:25:10 [W] So of course, there's a sub comment that helps us make sense of this information. So the reports have
+00:25:14 [W] Well parsec slog and generate a real fire, which is a basic Network policy file it it's not the idea that you should use this yellow file and deployed in your caster and forget about it.
+00:25:28 [W] You should look at it and think if you want to add things or remove things, it's it's just a basis, but it's very helpful to have it to not have to think of all these policies on your own.
+00:25:40 [W] You just use this llamo file and deployed in your caster and forget about it.
+00:25:45 [W] You should look at it and think if you want to add things or remove things, it's it's just a basis, but it's very helpful to have it to not have to think of all these policies on your own.
+00:25:47 [W] All right, so hopefully our pods have deployed by now and we have we can generate the report.
+00:25:51 [W] Let's stop this Tale.
+00:26:07 [W] And yeah, there's one that crash oops because the recommendation service crash Loops because it requires like a service account and we don't have any service accounts, but
+00:26:10 [W] Running so with that we can actually stop the monitor.
+00:26:17 [W] with Ctrl Z and we can instead call the report and for this we will pass - - input
+00:26:34 [W] We generated which was Network traced out blog and then redirect this to network policy dot llamo.
+00:26:48 [W] So this will generate a llamo file with the network policy.
+00:26:52 [W] Let's close the other window and we can now look at the yamal file.
+00:26:58 [W] And this is going to be complex because the service is complex. But basically you can see that there's Ingress and egress for each of the different Services involved
+00:27:14 [W] Tables that they much the boards that are used Etc. So as I said, this is basically a basis of what you want to then customize for your actual service.
+00:27:29 [W] All right, that was it for the network policy.
+00:27:39 [W] And now I'll burn is going to show you a few more interesting gadgets.
+00:27:42 [W] Thank you.
+00:27:47 [W] So now I will talk about twice Loop which is the next Gadget using vpf that we talked about. So to summarize I have this sentence.
+00:28:00 [W] It's about tracing calls in cgroup using BPF on over y double ring buffer.
+00:28:04 [W] prefer that sounds quite complicated. So I will go through that and show what it does.
+00:28:09 [W] So the use case I want to show there is something similar to stress. So I really like to use twice as a developer to develop my applications, but when I use it
+00:28:25 [W] This is have an address us some problems is he can be slow?
+00:28:36 [W] It means it's not possible to use it for all my pots in production all the time because that would make everything too slow and although some time.
+00:28:44 [W] I have the use case where I have some unexpected crisis and then when something has crashed is too late to use stress because the process is not there anymore.
+00:28:51 [W] The body is not there anymore.
+00:28:53 [W] So there is nothing to use dress on so here the come.
+00:28:59 [W] The ready to use something like a flight recorder.
+00:29:04 [W] So to use BPF to work up the system codes used by applications, but instead of printing them all the time just store them in a ring buffer.
+00:29:15 [W] So that will be our inventory report that constantly record the events on each user of a writable wrinkle fill. That means that when the buffer is full it's just override the older students and so on.
+00:29:27 [W] In this way we can use that to debug later.
+00:29:30 [W] So if I compare stress on twist, hope that's quite different stress use the system called be traced to be able to capture the data twice Loop use BPF on transplants with stress.
+00:29:45 [W] Groups under stress it's a can be slow because for every events it's need to have some context switch between the recipe on the transfer for every system calls on twist.
+00:30:12 [W] Loop doesn't work like that. It has a ring wafer that is only written on it. So that just copying something in memory without actually having any context switch between processes but stress is has
+00:30:25 [W] It is second dose on reliable. It cannot lose events.
+00:30:33 [W] So you when you see the logs from stress you necessarily see everything. It doesn't forget about meta or something twist Loop work in a second this way and can use event in some case.
+00:30:43 [W] So but it's good enough to debug most of the case.
+00:30:53 [W] So even through is not it doesn't guarantee that you get all the bomb itself everything.
+00:30:53 [W] So if I go into a bit more detail.
+00:30:58 [W] twice group similar interface to twice in give information about system calls, but it uses ppf for Graham on the twice Francis under that means that every time a system call is executed on your system
+00:31:14 [W] You process it will execute this transplant and executed the ppf program on the first thing this bof program will do will check which continuities about so it can in this example use cgroup to look at the cgroup idea to know which container it is.
+00:31:29 [W] Kind of no use them on namespace STD and then depending on the content now it can direct the execution to another BPF will run one for each different container that has been configured.
+00:31:45 [W] between output the data about the system call in to a ring buffer for each container on this ring buffer is written on overwritten in Loop, but is never read unless the user explicitly
+00:32:01 [W] like somebody if they want to debug your application the application if you can squash for example
+00:32:08 [W] that in this case the data is all three by the demon set.
+00:32:17 [W] Well twist Loop is running on the user can see it with strimzi tailgated twist Loop.
+00:32:22 [W] So now it's time for another Hands-On tasks.
+00:32:25 [W] I will share my screen again.
+00:32:26 [W] Here it is.
+00:32:33 [W] I will go back to the Parent Directory.
+00:32:35 [W] Except charactery and here there is a we me that you can read from GitHub.
+00:32:44 [W] I will run commands tikv.
+00:32:51 [W] So we have this little Gadget.
+00:32:53 [W] Let's look come on.
+00:32:54 [W] What it does is that some sub-command on one of the subcommittee is to list the trace that is recording.
+00:33:09 [W] So I will you consider get that question list and it it's a bit like a complete really need to specify a Russian default or by default. It uses distance past.
+00:33:21 [W] - rocket cycle see all the names faces on here. I see quite a lot of pots that Mark has executed in a previous example from the dinner demo namespace.
+00:33:37 [W] Let me go to the top.
+00:33:39 [W] And we can see that those Trace is from about that has terminated farming in Segovia. For example, try this one, but it is stressful but still have a record from them three teas are ring buffer with the last system calls that
+00:33:55 [W] And then to see what's happening.
+00:34:00 [W] So I will take the trace ID here.
+00:34:01 [W] And I will you give Stella Gadget which look sure this.
+00:34:09 [W] Sit here.
+00:34:14 [W] with cgroup show here. I get the last fuel system calls that were executed by this body before it has been so I can go a bit higher
+00:34:28 [W] critics commands
+00:34:31 [W] other access controls on the Java process
+00:34:37 [W] Okay.
+00:34:40 [W] the second thing I can show here is I will run.
+00:34:48 [W] example we have run poddisruptionbudgets will it is executing multiplication and then saving the result into this file and then attempting to with this file, but because
+00:35:06 [W] Tripped it might not work as expected. So, let's see that.
+00:35:11 [W] copy paste this from
+00:35:15 [W] Katella
+00:35:17 [W] so here is I get an error message it cannot read that file.
+00:35:27 [W] So in this case, I will use transferred again to attempt to develop that and to achieve the result.
+00:35:40 [W] this
+00:35:45 [W] See that even if my father has terminated.
+00:35:50 [W] I still have the twist.
+00:35:56 [W] So that's this multiplication pot down a narrow. I can even delete it.
+00:36:00 [W] And when you stated I'll still have face.
+00:36:08 [W] I mean here I can.
+00:36:11 [W] distress
+00:36:17 [W] I'm sorry it is. So maybe I can ask the audience to see something.
+00:36:28 [W] What do you see?
+00:36:29 [W] What's happening here?
+00:36:30 [W] this
+00:36:37 [W] see that even if my brother has terminated I still have the twist.
+00:36:38 [W] So that's this multiplication part that done an error. I can even delete it.
+00:36:40 [W] And when you stated I'll still have face. I mean here I can.
+00:36:41 [W] distress
+00:36:44 [W] I'm sorry it is. So maybe I can ask the audience to see something. Do you see what's happening here?
+00:36:46 [W] Okay, so we will go through that here. It's a it's opening attempting to opening this file, but this file doesn't exist and if I look a bit above
+00:36:56 [W] We'll see another.
+00:36:59 [W] Yep on this line, but this is a different file.
+00:37:10 [W] That's why when I went to this file.
+00:37:14 [W] I try to read a different file. That's why it is at work.
+00:37:16 [W] I can we can also see here this weird we can call on the white is same color as the BC program that receive on a standard input the multiplication to perform and to write Downs are so in this case. The answer is
+00:37:32 [W] okay, so we will go so that here it's a it's opening attempting to opening this file, but this file doesn't exist and if I look a bit above
+00:37:34 [W] She'll see another.
+00:37:34 [W] Here on this line, but this is a different file.
+00:37:36 [W] That's why when I went to this file.
+00:37:36 [W] I try to read a different file. That's why it doesn't work.
+00:37:37 [W] I can we can also see here this weird we can call on the white is same color as the PC program that receive on a standard input the multiplication to perform and to write Downs are so in this case. The answer is
+00:37:43 [W] Treat yourself.
+00:37:48 [W] I will stop showing my screen.
+00:37:51 [W] Lennox Ryder, so here there are the commands that are executed gives you tell Gadget to a sub list.
+00:38:10 [W] Then this one had done show if the pot is still running. You can actually elotl see the last assistant calls the time but if the body's been destroyed then the a be a pi Server doesn't know about it anymore, but you have to use this.
+00:38:18 [W] Come on to be able to see that.
+00:38:22 [W] Okay.
+00:38:24 [W] And the more Gadget Inspector Gadget and a lot of them are really using tools that are inside the BCC opposite URI.
+00:38:40 [W] So Inspector Gadget is kind of laying on the shoulder of BCC to do a lot of things.
+00:38:43 [W] There are a lot of example here where instruct for example come from BCC exact scope as well on Seurat the Snoop tools that are detecting when there is a new executive.
+00:38:57 [W] System Corner opens group detecting when there is a new open system called to open a new file and so on.
+00:39:04 [W] I will show a bit later some example with XX. Nope.
+00:39:09 [W] So on this PC Tools, like execs no pain of his paper. Usually the year user experience.
+00:39:23 [W] We want is to Press sports in general with user don't really care about specific process ID when we work at the kubernative L. We don't want to know about the PID or exactly which node it is running on we want to use
+00:39:35 [W] Looks like the part of a community syllables or namespace and so on other when we aggregate information from different process from different pots, and we want to regret them. I create them using kubenetes levels in summary we want.
+00:39:51 [W] And we want to work with them. I could get them using kubenetes levels in summary. We want user experience like keeps it here where developers don't need to Association and odd. They don't need to know about the internal details about the
+00:40:00 [W] We're developers don't need to Association and odd. They don't need to know about the internal details about the ideas and so on.
+00:40:02 [W] So to come up with that we have this user experience with for example the exact duplicate where we specify which part of to twist using one
+00:40:19 [W] to twist using one of those filters you can filters by communities for bands like this or using namespace out of the pot name of the node
+00:40:31 [W] - Parris all the prodyna name of the node or if you have pots with several containers inside one part, you can also select which continued on you want to use.
+00:40:39 [W] All those bands you can use one or several of them and you can make combination or just run if you want to.
+00:40:46 [W] We'll go to next slide.
+00:40:59 [W] And so this kind of filtering simply complicated to do because when you use gives you tell Gadget exact.
+00:41:05 [W] So for example, they might be zero or one or more part to trace and that's all this set of pots to trace a change with time because what can be created or destroyed over time it because it's a didn't make system on so different Twitter kind of difficult part 2.
+00:41:18 [W] Press on that charge of your time. So make it difficult to implement.
+00:41:21 [W] In this example, it is all see Gadget.
+00:41:28 [W] This can also come from openshift.
+00:41:30 [W] That's the CLI tools for opentracing.
+00:41:41 [W] So how does it work here?
+00:41:51 [W] It works with a component that run in demand set called the gadget was a manager and this demon running on not only does simple grpc API with 4 meters.
+00:41:59 [W] Sure of new containers every time a new containerless started it knows about it because of containerless called every time there is a new twist sir XX know for example, that is started. It news by this method
+00:42:18 [W] I've got an air we must contain elements are called by the oci hooks.
+00:42:26 [W] So I will explain a bit.
+00:42:27 [W] What is here hooks when you have a kubernative cluster, the pods are started by the kubelet.
+00:42:34 [W] So the container one time and organic cotton on time in the on my for example execute on see and I'll see you on the other cotton event. I'm having this Asia hooks where you can execute arbitrary scripts or commands.
+00:42:49 [W] Every time I hit start a new container every time it stop it through that mechanism.
+00:42:58 [W] execute a command that will call the grpc method to the gadget is a manager so that it knows about all the containers on their communities levels.
+00:43:05 [W] On the other side.
+00:43:11 [W] We have a cute little Gadget when it takes a good Gadget.
+00:43:14 [W] will run it on the on the gadget poddisruptionbudgets.
+00:43:35 [W] That intermissions. So there is one BPF map for every Tracer that will contain the list of parts that need to be addressed by this dresser on if that information change it will automatically update the ppf map accordingly.
+00:44:03 [W] Or later when this BCC for Perl script executes, for example execs loop from the BCC project. It will use a VPN for Graham the in this case installer capable and it will use the
+00:44:20 [W] F map in order to know whether it should dress this containerd or not.
+00:44:25 [W] Okay.
+00:44:28 [W] So now it's time to share my screen again.
+00:44:35 [W] So I will go up to the next directory.
+00:44:47 [W] As your child I reasoned with me a file that you can wait on GitHub as well and I will show two things here.
+00:45:02 [W] The first thing is I will execute this exact Snoop Gadget to filter to get the information on one specific order.
+00:45:18 [W] Sorry.
+00:45:23 [W] Okay, so here are executed exactly Loop for all the parts in a different space with this level.
+00:45:48 [W] But if I look at that rhythmic quality no parts with a tribal, so it doesn't print anything.
+00:45:56 [W] next thing I will start a new product with that label and I will use this command curl something by Bosch, which is maybe a bit of
+00:46:12 [W] Auntie pattern but useful for this demo
+00:46:14 [W] So I will running this part into in the interactive bottle.
+00:46:21 [W] I'm sure what it does here.
+00:46:22 [W] So first, it has to download the shadow realm Edge because I use the Fedora Docker image. Once it executed it run some script, but at the bottom thanks to XX.
+00:46:39 [W] Nope. I can see which commanded run so MKT are happy mmm on so on so just finished executed but exact Snoop captured everything.
+00:46:48 [W] I think this is a PM with this European package and so on.
+00:46:57 [W] I can stop that.
+00:47:01 [W] and the second
+00:47:05 [W] that's are going to remove I want to show on this one. Maybe you can do together at the same time.
+00:47:20 [W] His deploy nginx application. So let me show you what it contains edited a complete map with the files for our website,
+00:47:37 [W] Which is it containerd coughing map with the configuration tool nginx.
+00:47:46 [W] So you see nginx configuration and then a deployment file which has three replica of nginx and it will use the configuration from that specified above and the
+00:47:59 [W] In the computer lab is destroyed by okay.
+00:48:05 [W] That's the driver.
+00:48:07 [W] So it creates the config mlops the deployment on the services so you can access this nginx from outside of the communities cluster.
+00:48:26 [W] So the services in this case we use minikube. So I will use this minikube service command in order to
+00:48:30 [W] We could be in this directory.
+00:48:39 [W] So I use this minikube come out, you know, there are two proxy requests for this URL. So if I Colonel Reese we are get something.
+00:48:52 [W] You can already use Firefox or another brother if here I get for you, but then I want to other use.
+00:49:05 [W] Please hello Dot txt file at a party no coming up on hope to get it.
+00:49:11 [W] Unfortunately, I got the for fire because there is a bug in my deployment dinner and here I want to use Inspector Gadget Open Snoop in order to debug that on see what's happening.
+00:49:27 [W] So I will give one minute for you to try they don't.
+00:49:34 [W] and we'll use
+00:50:10 [W] We use I will show how to use Inspector Gadget Open scope to debug this so typically get put in here.
+00:50:26 [W] I see there are three deployments.
+00:50:29 [W] Sorry sweet pot from a deployment in means that every time I do a curl command.
+00:50:37 [W] I'm not quite sure which part it will reach, but if I drew shoulder
+00:50:41 [W] As he thought of them as this a prequel nginx Lebon so I can use this filter. In fact a gadget to filter on the bus with that level.
+00:50:56 [W] Snoop
+00:51:06 [W] I would say only the namespace different and the reason I say come on the label equal nginx.
+00:51:18 [W] You got another running at the beginning and look at the output.
+00:51:29 [W] Let's see what happen when I do well.
+00:51:29 [W] Here. I got a far far and I see that at the same time.
+00:51:34 [W] I see that nginx attempted to open this path. / it is asserting nginx flash HTML such a DOT txt.
+00:51:46 [W] And it fell it return the or minus 1.
+00:51:47 [W] Which means it felt to open this file.
+00:51:50 [W] So that keeps a hint what's happening in the time to read this file, but we can check here free. When we install this coating map nginx data.
+00:52:05 [W] data. We map content this file.
+00:52:06 [W] But maybe we mounted it at the wrong place throwback.
+00:52:10 [W] Give her a hint please complete map is mount in this volume the nginx brush problem.
+00:52:17 [W] Let's see.
+00:52:23 [W] It's mounted in such vast elotl UW. W at nginx expected to have it in this path.
+00:52:28 [W] So that's a mistake.
+00:52:29 [W] He doesn't match the configuration of nginx, and we have a multi development.
+00:52:36 [W] so I can use scripts ETL edit nginx with lemon is that
+00:52:47 [W] And find this month or 3. Let's start with
+00:52:56 [W] Okay, so now I should have cleared start nginx parts from the father.
+00:53:09 [W] See that kubernative c stopping the old parts and scrunching new one.
+00:53:16 [W] And let's see what happens if I do curl command again.
+00:53:22 [W] It's done. I get this good reply.
+00:53:29 [W] It's he's getting I don't get a 4/4 anymore.
+00:53:39 [W] Okay, so at me stop.
+00:53:45 [W] We'll go to the next slide on past the slide to manga.
+00:54:00 [W] Alright, so up until now we've been looking into Inspector Gadget, which was one of the tools that we said we would look into and now we will look into another one, which is called Cube CTL Trace qtl trays is a wrapper around
+00:54:16 [W] BPF trees and BPF trays is a command that lets you create BPF expressions using a domain specific language so that it's easier so that you don't have to write the C program and compile it and
+00:54:31 [W] Install it. So all of that is done by the ppf to land the thing you need to write our WPF Expressions.
+00:54:38 [W] They are a bit complex.
+00:54:50 [W] So I'm going to show a few vpf expressions and it you might get a little bit scared. But once you see a few examples, it becomes easier to understand what's going on.
+00:54:53 [W] So this is what the vpf syntax looks like. This is just the ppf trace command and we will talk about Cube CTL trays after we understand altinity.
+00:55:00 [W] Little bit what BPF trays Expressions look like so as this slide is showing BPF expressions are divided into three parts the probe the filter and the action. The probe is the thing we want to trace so in this example
+00:55:15 [W] Well here we are saying we want to trace the kernel function called do Nana sleep. So anytime that kernel function is called our Tracer will get activated. The filter as the name says it basically
+00:55:30 [W] Us to filter the tracing event for some criteria in this case the process I did needs to be higher than 100 and the action is what we want to do whenever this
+00:55:46 [W] Probe after the filter gets hit. So this is the most complex part of the syntax this ad sign with square brackets means that it's creating a hash map and the key in that hashtag
+00:56:01 [W] Hash map called cam is basically the command name that was executed.
+00:56:11 [W] So the command ended up calling this dude do not know sleep. Kernel function will be there. It could be Bosh. It could be LS and whatever is calling this kernel function in the end
+00:56:21 [W] That would be the command and the plus plus is that basically we want to count an increment and so at the end when this is finished running we will have a table with all the commands that were executed and how many times they called
+00:56:36 [W] Do not know slip on the next slide.
+00:56:40 [W] We will see a couple more one-liners like this instead of using the kernel function that we saw in the previous slide.
+00:56:54 [W] This one's are using Trace points Trace points are points that Colonel maintainers module writers have identified that are good places for debugging and there's a lot of Trace points and you can use
+00:57:03 [W] BPF tool to inspect what trades points are available in your kernel and the good thing about Trace points is that they tend to be more stable.
+00:57:18 [W] There's no guarantee that a kernel function will not change its name or the parameters. It takes or the returns values, but Trace points are kind of stable.
+00:57:27 [W] they could still change but less and so when there's a trace point for something that you want to trace it's a good idea to go for that.
+00:57:33 [W] And in this case, we are both both examples are showing siskel's. So this is the trace phones for assist called is starting in the first example.
+00:57:45 [W] We are using a similar hash-table that it's just counting how many times each command executed different Cisco in the second one.
+00:57:58 [W] It's using a little bit more complex.
+00:57:59 [W] it counting all of the Cisco's that were called regardless of which command
+00:58:04 [W] All of them and then once per second, it's printing that number and clearing the stock. So that it in the end like what will happen.
+00:58:18 [W] Is that once per second it will print how many Cisco walls were called that second and so these are just a couple of examples in the website that is pointed there and it's also in the GitHub repo.
+00:58:30 [W] More examples there's a huge reference that you can consult and in in our exercises.
+00:58:37 [W] We will see a few more examples.
+00:58:42 [W] But of course like this is super flexible and you can do a lot of things but you don't need to understand all of it just to start trying some things out.
+00:58:52 [W] So if you get an idea of what's going on, then then you can start using it and you can like mix and match things from different examples.
+00:58:58 [W] so that was ppf trays. What about Cube CTL trilio?
+00:59:00 [W] Trays so qtl trays is the way of running BPF Trace command inside kubernative.
+00:59:09 [W] It doesn't have this handy namespace selection or up label selection.
+00:59:21 [W] You need to tell it either the node or the pot and the pot needs to be like the specific pot. So it can be just like pods that start with this. You have to give it a specific part for it to run and you can give it I'll
+00:59:30 [W] Either an inline expression or a file.
+00:59:37 [W] So if you're ppf script turns out to be very complex.
+00:59:40 [W] You probably don't want to have like a three-line liner.
+00:59:48 [W] Then it makes sense to have a file where you can add comments and make it a little bit more readable.
+00:59:49 [W] Okay, and now we will actually see this in action as we mentioned earlier.
+00:59:59 [W] It's a good idea to follow along with the GitHub repo because everything is documented there. If you are not sure what we are executing check out the comments that we documented there.
+01:00:13 [W] All right.
+01:00:16 [W] Is this still running?
+01:00:17 [W] I think so, right?
+01:00:18 [W] Yeah, so let's stop this nginx deployment.
+01:00:29 [W] Yeah, let's now switch 204.
+01:00:36 [W] Okay.
+01:00:40 [W] Yeah, alright. The first thing we will do is create an alias.
+01:00:57 [W] So the tricky thing about both Inspector Gadget and keep CTL trays is that they need to have access to the colonel headers. And this is why we gave you a minikube ISO that has the headers and and that why we are using
+01:01:07 [W] It's like special things. It was trying to like simplify getting the headers because if you don't have the colonel headers, then you can trace and so cute. CTL trays doesn't have the compression the decompression mechanism
+01:01:22 [W] To access the kernel Heather's in our minikube instance. And that's why we need to give it a different container where it will have the sexy.
+01:01:32 [W] Executable and so I'm going to copy and paste you if you are following along you should copy and paste from the GitHub repo this Elias.
+01:01:47 [W] So what I'm doing here is I'm copying the I'm creating an alias that is called Cube CTL traits run that basically calls qtl trains run with the so long parameters, and then every time I will call
+01:01:56 [W] City El Tres run it will pass this parameters so that it can access the kernel headers.
+01:02:02 [W] Okay, so we have the Elias. And now what we need to do is know the node name in our case. The No Name is minikube, but if you're running
+01:02:15 [W] On a different platform if you're running inside of him.
+01:02:23 [W] It may have a different name.
+01:02:27 [W] So we need to know that now name where we want to run the expression.
+01:02:31 [W] And so now I'm going to copy and paste this expression.
+01:02:37 [W] So what I'm saying here is I want to run this dress in my node called minikube and it's going to be a Cisco trays and what I'm doing here. It's a little bit different than the one I showed in the side what it's doing.
+01:02:45 [W] Is it tracing all the Cisco calls?
+01:02:54 [W] And then it's creating a hash table with the probe which means the Cisco as the entry and then it's counting how many times it's called?
+01:03:00 [W] Okay, so we're going to create a hash table that has all the Cisco that were called and how many times those skulls were called.
+01:03:08 [W] Oh, sorry. I forgot to actually install kiss ETL trays. So here there's this cat keeps it helped raise script which looks very much like the Inspector Gadget script that will install the plug-in for
+01:03:27 [W] Of course, you can install it yourself.
+01:03:33 [W] This is just a handy way to save time and it's installing.
+01:03:37 [W] Yep.
+01:03:39 [W] Now it's done now.
+01:03:40 [W] Let's try the other command again.
+01:03:44 [W] Okay, so it says that it created a trace and we can actually least whichever traces it has right now.
+01:03:52 [W] It will have only one Trace but as we try things out this list will get
+01:03:56 [W] longer with all the different traces that gives you the entrees is collecting and to actually interact with the trays. We will attach to it.
+01:04:09 [W] I will copy and paste this one.
+01:04:16 [W] I could also copy and paste this one, but it's annoying because it's mixed together with the No Name so
+01:04:18 [W] Okay, I'm attached to the trace and now the kind of traits that I executed only print something at the end.
+01:04:33 [W] So in order for me to see anything, I need to tell it to finish and then it will print something so I will press control Z.
+01:04:36 [W] And okay. So if this happens it means it didn't work if it's a signal killed. It means that it got killed before it managed to bring the table and we need to try again.
+01:04:50 [W] So I'm going to try again.
+01:04:55 [W] So this is the trace I want to run.
+01:04:56 [W] It says it's created and now I want to attach to it.
+01:05:02 [W] And now I'm going to press control C again.
+01:05:12 [W] And this time it printed the table.
+01:05:20 [W] I'm not sure what the other thing is clearly a bug but I'm not sure what the bag is.
+01:05:21 [W] Let's not worry about that right now.
+01:05:25 [W] Anyway, it printed a table. We see that there's a bunch of different siskel's that are being called. We see ya lot of differences called.
+01:05:37 [W] I'm interesting in the right Cisco like what is being written like I stopped everything. There's nothing really going on in my cluster. So why is anybody writing anything?
+01:05:45 [W] So I want to see what why why there's a right call. So for that I will I will edit my previous Trace.
+01:05:59 [W] And instead of having a star here. I will check the right Cisco and instead of counting / probe because this will only be right.
+01:06:12 [W] I will count per command.
+01:06:13 [W] So I will see which commands are writing and to avoid this having to like start the trace and then attach myself. I'll use the - - attach command.
+01:06:25 [W] And this will just let me stay attached when I run it.
+01:06:29 [W] So now the trace is created it attached one probe to the kernel. So it's now Gathering data of which programs are writing stuff and I will now stop it and it should
+01:06:45 [W] Into table.
+01:06:46 [W] Yeah, so we have a table or for bunch of different things that were printing kubelet writing kubelet is the one that's writing the most at CD is also writing a lot and yeah, we could inspect why any of those
+01:07:01 [W] Writing but I mean, yeah, they are writing stuff.
+01:07:07 [W] But let's check for example out of those.
+01:07:10 [W] Let's check.
+01:07:10 [W] One of them so to check one of them.
+01:07:17 [W] Remember I said that there was this Filter part like up to now the examples I showed had no filter. So now I would add a filter and in the filter. I will say I want to check if the command is called DNS.
+01:07:30 [W] So if the command is called the ns4 then this will match and now I don't want to count stuff. I know that it's writing and its its core the nsmcon.
+01:07:41 [W] What we like count what I wanted to actually see.
+01:07:44 [W] what is it writing? So to do that I will do a printf.
+01:07:49 [W] and then to the printf I'm going to pass the arguments of the trace point and
+01:08:01 [W] from the argument. I'm going to select the buffer.
+01:08:05 [W] So with this what this will do is it will print every time coordinates writes anything. It will print what it is that it's running that writing.
+01:08:18 [W] Okay, and so we see that it's responding to http requests and to most of this request it responds responds 404 not found. So there is some service probably aliveness check that is trying to check if it's working
+01:08:36 [W] And it's responding for a format file, which is kind of interesting. But anyway, we see that this is what Cardenas was writing.
+01:08:46 [W] Alright, so that was like the basic usage of cube CTL trays.
+01:08:54 [W] We are now moving on to the next example, which will use one of the files that we have here the Bosch Red Line.
+01:09:06 [W] So in this fashion Red Line file, we have a script and as I mentioned because it's longer we have comments and we can format it so that it's easier to read and so this
+01:09:16 [W] This is an example that traces bash commands and here what we see is that it has the special variable called container PID that is the is replaced eventually after a
+01:09:31 [W] Cool, cause it gets replaced by Cube CTL trays for the PID of the container that is executing this the probe that we want too much.
+01:09:46 [W] Why does it need to get replaced because here the trace that we are using the probe is called you red probe is a user space function.
+01:09:59 [W] And so it needs to access the executable The Bash executable that we are going to trace here it needs to actually
+01:10:03 [W] We access the file and to access the file. It needs to have the right.
+01:10:10 [W] I knowed and to be able to find the symbol for the red line function.
+01:10:18 [W] And so that's why we have to put this container bit here and then give CDL trays will replace it.
+01:10:19 [W] Okay, let's let's see it in action.
+01:10:22 [W] We are closely running out of time.
+01:10:26 [W] So I need to hurry up a little bit.
+01:10:28 [W] first thing I'll do is I'll split the screen.
+01:10:33 [W] Mean and in this side of the screen, I'm going to start a test poddisruptionbudgets.
+01:10:44 [W] Yeah, okay, and it's working.
+01:10:50 [W] I haven't even to image and I have a batch command in it. And now on the other pot and the other part of the screen, I'm going to
+01:10:57 [W] Attached to that part and execute the Bosch red line so like this, so I'm going to do a cube CTL Trace Run and I'm going to pass the file that I showed and then instead of the node like I showed before I'm
+01:11:13 [W] Into attached to the Pod and keep it running.
+01:11:17 [W] So my Trace is created is waiting for tracing bash command. And then on the other side of the screen, I will try things whatever I type here will get printed.
+01:11:32 [W] So and even if I type a command that doesn't exist, it will get printed because this is basically what we're doing. We're tracing what the red line function returns.
+01:11:47 [W] Okay, you might ask yourself.
+01:11:49 [W] Okay. This doesn't seem particularly useful. Why would I want to trace what bash commands are getting executed?
+01:11:59 [W] Maybe it's useful for someone trying to hack my system but not for me to debug anything. So let's now actually debug or well
+01:12:05 [W] See how we good to bug in an actual kubernative application.
+01:12:12 [W] So for that I will stop this trays.
+01:12:15 [W] And I be one of the other things that we have in this directory is this caturday? Llamo that has a deployment of a cutter day application and I will apply this
+01:12:32 [W] gods of the yellow
+01:12:33 [W] okay, it applied and now this is an application that serves website with cats in it.
+01:12:52 [W] And so I will to order in order to use it. I need to use a minikube service redirection. So I

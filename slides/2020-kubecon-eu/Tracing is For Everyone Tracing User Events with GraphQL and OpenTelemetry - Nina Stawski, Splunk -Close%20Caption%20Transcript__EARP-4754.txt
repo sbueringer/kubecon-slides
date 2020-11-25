@@ -1,0 +1,502 @@
+﻿Tracing is For Everyone: Tracing User Events with GraphQL and OpenTelemetry: EARP-4754 - events@cncf.io - Tuesday, August 18, 2020 11:45 AM - 52 minutes
+
+Participant: wordly [W] English (US)
+Participant: wordly [W0] English (US)
+
+Transcription for wordly [W]
+
+00:00:03 [W] Hi everyone.
+00:00:06 [W] My name is Nina stuff. Ski, and I met your jets plonk.
+00:00:09 [W] My talk is about tracing in.
+00:00:12 [W] I truly believe that racing is for everyone and I will explain you how to trace user events with graphql and opentelemetry so you're probably asking what our UI engineer is doing it.
+00:00:24 [W] keep going and what does UI has have to do with tracing?
+00:00:30 [W] Well anything happens with your product UI is the first thing that the customer see your eyes the first thing that fails and the customers are always complaining that this button is not working
+00:00:46 [W] Not working to stop is not working.
+00:00:51 [W] So UI is always blamed first. No matter what happens if things are not completely failing but they are a little bit slow. For example, it's also really hard to track especially to figure out whether it's a
+00:01:03 [W] Or something in a back-end something with the microservices.
+00:01:11 [W] So having some tools that help you do that is really useful.
+00:01:13 [W] Of course, we have front-end analytics the most popular as Google analytics, but sometimes it's not enough you have to go dig in into logs. You have to go look at microservices.
+00:01:27 [W] You have to sometimes write custom JavaScript Snippets just for you to figure out where the issues happening and while you I struggling with trying to figure out what
+00:01:41 [W] And where the issues are back into Engineers already have really good tools at their disposal in Ops also have been looking forever logs at different different.
+00:01:56 [W] Is that help you figure out where they choose but for you? I well you don't console.log you look at your Google analytics you look at your inspector to see the performance, but it's all a little bit disconnected.
+00:02:12 [W] And finally, finally the products are getting more complex and front end is not just a service anymore front end can be broken down into different microservices built with different languages
+00:02:28 [W] Order to debug issues. If you have multiple different languages within your front-end application, maybe they are stitched together in something is slow, but you don't know what and yes.
+00:02:44 [W] So, how can we make it work better?
+00:02:52 [W] How can we trace it better?
+00:02:52 [W] And so this is an example of a stock that I use at my daily life. We have an application that is basically stitched from angular and react and we use graphql in Apollo libraries to make sure
+00:03:08 [W] Graphql seamlessly works both in angular and react and in the back end and another tool that we use is this Amazing Project called opentelemetry,
+00:03:24 [W] It's only so it's in better now.
+00:03:30 [W] It's only about a year old slightly more than that, and I got to tell you a little bit about it before I go into a little bit more into how to use it.
+00:03:41 [W] So opentelemetry is a combination of two projects that existed before opentracing and open senses and together.
+00:03:56 [W] They provide a set of tools that are uniform that are provided in one place that lets you collect your traces and metrics about your application again, it's usually used in the back end.
+00:04:08 [W] um and
+00:04:11 [W] A good thing. There is also a project called opentelemetry GS.
+00:04:20 [W] So I was some time ago.
+00:04:21 [W] I was really excited.
+00:04:25 [W] Do you find out that there is already a library that lets you use it.
+00:04:29 [W] It's mostly geared towards node users, but you can also use it in the browser so far.
+00:04:35 [W] It's been kind of disjointed so you can use it in your UI and then you can use it in your backyard but correlating the traces.
+00:04:42 [W] He's a little bit of a pain still.
+00:04:48 [W] it's very exciting.
+00:04:49 [W] Right and two big areas where opentelemetry gives you tools are traces in metrics.
+00:04:58 [W] And traces is a series of events that relate together the represent an end-to-end event flow through a distributed system and you can also apply it to the UI in some way. So for back end is usually a request
+00:05:14 [W] Microservices this might be your request that goes from your UI and you're requesting user info going through a middleware. That query is another service that queries the database and the whole thing end-to-end is a trace
+00:05:30 [W] Could also speculate that for you.
+00:05:36 [W] I you can create traces that are a little bit bigger than that.
+00:05:41 [W] And finally metrics is a numeric date.
+00:05:47 [W] Finally metrics is a numeric representation of data measured over intervals of time.
+00:05:54 [W] for example a number of requests permanent and so
+00:06:00 [W] in a traditional approach UI is just one micro service.
+00:06:06 [W] Here it is.
+00:06:14 [W] But UI is just much more than just a service. You can have a lot of user actions that happen. You can users can go through the page for a long time before they
+00:06:21 [W] Click something that triggers the back end and it's very good to be able to track that.
+00:06:28 [W] Users do a lot on the modern application Pages.
+00:06:36 [W] There might be not just one but multiple back in calls in as I already mentioned performance issues are really hard to track especially with multiple you is multiple back and comb calls and to be able to
+00:06:48 [W] She is so far.
+00:06:53 [W] Your engineers had the same tools at their disposal as back end and Ops five ten years ago, right you go to the logs.
+00:07:01 [W] You try to figure out what is going on.
+00:07:03 [W] And so, how are we trying to solve this problem right now?
+00:07:10 [W] again opentelemetry help
+00:07:16 [W] So, how are we trying to solve this problem right now?
+00:07:23 [W] Well opentelemetry helps not just back into engineers in our labs and data scientists. It helps you are engineers.
+00:07:31 [W] So let's switch to our sample application that I'm building to be able to correlate some traces from UI and the back end and to simplify it a little bit.
+00:07:47 [W] I want to use both angular and react I will just use react I will use graphql in a bowl of libraries to simplify things a little bit and opentelemetry and our application will
+00:08:00 [W] UI with some actions something would happen in the UI and we will capture this actions using the browser then we will send this actions to the graphql
+00:08:16 [W] We will basically look at the spans and we record this information and we send it after that to the Zipkin collector and will collect races in Zipkin.
+00:08:30 [W] And if you want to follow along or do it at your own time, here is the link to the repo.
+00:08:42 [W] It will also be there at the end of the slides.
+00:08:47 [W] So feel free to go ahead and take a look.
+00:08:47 [W] All right into the wild.
+00:08:52 [W] Let me share my screen now I have to
+00:08:56 [W] And in that report that I just shared I have two applications that will go through.
+00:09:10 [W] So let me start my terminal.
+00:09:11 [W] And there are two parts in that repo. There is a front-end application that's built in react in there is a back-end application.
+00:09:22 [W] So for front-end, it's a react and typescript and I have this used Telemetry hook that I built that's gonna be posting traces into
+00:09:34 [W] Two places actually one is we want this traces to end up in Zipkin to be able to see them there and another one is will be exporting the traces in to the backend.
+00:09:49 [W] And to be able to do something with them in the back end and then finally have my back-end application is just JavaScript single page.
+00:10:05 [W] That's gonna basically that's running Apollo server.
+00:10:07 [W] I'm graphql server and on a new request it would actually retrieve my
+00:10:14 [W] Spence that I'm sending using headers. So there is a special header called graphql currents pants and you can see
+00:10:25 [W] my application
+00:10:29 [W] that's graphql that I'm going to send graphql current spans to the back end.
+00:10:39 [W] And so on every query that comes to the back end. I will retrieve these through headers and I will create span with Spanish tributes that contain Trace ID and a parent ID.
+00:10:55 [W] So we will post them to zip can as well so we would be able to correlate those.
+00:11:01 [W] So now let's start my application. So let's start back and first
+00:11:09 [W] alright, it should be ready.
+00:11:20 [W] Let's check it and I once be actually yeah, let's check if it works.
+00:11:21 [W] Yes, we have our graphql there.
+00:11:30 [W] There will be no traces because we're not sending anything from the front end. And then we are started now. We gonna start our UI application.
+00:11:38 [W] And as you can see, it's a simple one.
+00:11:44 [W] There's just a number of buttons and there is a button that will send some requests to the backend and the button and parents pan will just rub up all spans and the UI and will not send anything to the back
+00:11:58 [W] So here we are trying to capture user actions. And of course, it doesn't have to be button clicks it cannot it can be anything. But let's try that here. I click four buttons and I clicked my
+00:12:15 [W] Spence so actually my second should have received this pants and my you I should have received should have sent us pants too.
+00:12:31 [W] Okay, so we got our spans in the back end.
+00:12:35 [W] Let's take a look.
+00:12:36 [W] All right and tags here are is the traces and parent IDs that are propagated from the UI. Let's go and see if we got our UI traces.
+00:12:52 [W] doesn't it doesn't always work as expected, but let's
+00:13:01 [W] let's see.
+00:13:03 [W] Okay, let me start the yayoi.
+00:13:06 [W] All right.
+00:13:16 [W] Actually to be able to post any traces from the UI.
+00:13:24 [W] I need my course enabled.
+00:13:27 [W] This is what I think that would work for the first time.
+00:13:29 [W] So, let's try again clicking a few buttons and doing get finished spans.
+00:13:38 [W] So now we actually got this response from a UI. Let's look at them.
+00:13:40 [W] All right.
+00:13:45 [W] All right.
+00:13:46 [W] Actually to be able to post any traces from the UI.
+00:13:47 [W] I need my course enabled.
+00:13:47 [W] This is what I think that would work for the first time.
+00:13:47 [W] So let's try again clicking a few buttons and doing get finish Spence. So now we actually got this response from a UI. Let's look at them.
+00:13:49 [W] All right.
+00:13:51 [W] We got our button ID so we can provide metadata.
+00:13:52 [W] There is a tree sidey in a span ID here.
+00:13:52 [W] Same same in here.
+00:13:53 [W] Okay, so let's go back.
+00:13:56 [W] And click again.
+00:14:03 [W] So this happened less than a minute ago. And this is corresponding back in traces.
+00:14:04 [W] That are actually has a parent ID.
+00:14:14 [W] Electricity so let's take a look at the parent ID.
+00:14:23 [W] So let me write it down somewhere.
+00:14:24 [W] 600 it's basically just
+00:14:33 [W] create a new new place to put my ID.
+00:14:37 [W] Okay and go back.
+00:14:45 [W] and Luke with MIUI traces
+00:14:48 [W] and you can see that they are identical. So we we can connect this data and we can basically correlate the UI.
+00:15:09 [W] And the back end.
+00:15:11 [W] And you can see that they are identical. So we we can connect this data and we can basically correlate the UI and the back end.
+00:15:17 [W] So let's go back from screenshare to the slides. And again, you can take a look at the GitHub repo.
+00:15:24 [W] It's a little bit more comprehensive than what I showed right now in you can basically share this information with multiple different ways.
+00:15:35 [W] So what I did is I assign tags to my spans that that's with parent ID, and I provided this parent ID in my
+00:15:43 [W] Can't that I picked up from my spend sent from a UI.
+00:15:52 [W] UI, you can create more tags you can send in actions so you can do a lot more with this information.
+00:15:58 [W] So yeah, what we can do we can track user actions and we can go through maybe different users in areas that we are looking into so in the UI it's easy to
+00:16:14 [W] All you have some flows in the UI that you users need to follow and you want to connect them to the back end at certain points.
+00:16:27 [W] You could do you could provide these pans and store them and it will be a lot more detailed than just having this UI item on on your
+00:16:40 [W] then you can also try to track this actions in track back and requests together and provide this information are in have back into in the UI be a part of the same Trace you can
+00:16:57 [W] What's going on in the you are in your UI sewing Zipkin with so that there is some timing already available for this pants and it will help with performance,
+00:17:13 [W] If you have multiple front dance.
+00:17:16 [W] And finally, if anything caused an error, you can look not just at multiple different services not just multiple logs. Not you don't have to so lowly. Try to look into Chrome
+00:17:32 [W] Did you figure out what backends are working and what doesn't work for you?
+00:17:38 [W] You can export this traces into one of the multiple Solutions that's available now on the market and basically just visually see where issues are happening and how they
+00:17:52 [W] impacting your user experience
+00:17:55 [W] So it's not just the UI now and of course, this is a limited set of libraries. This this is a UI with opentelemetry that gives you so many more possibilities than before.
+00:18:12 [W] So that's it.
+00:18:16 [W] Thank you very much.
+00:18:21 [W] There are some there is more details in a GitHub repo.
+00:18:24 [W] This is a short link or you can go through its github.com. Nina Starsky opentelemetry graphql.
+00:18:29 [W] In this is how you can contact me.
+00:18:43 [W0] hi everyone, my name
+00:18:46 [W0] all right.
+00:18:53 [W0] Hi everyone. I hope you enjoyed the talk.
+00:18:56 [W0] I can see there are a few questions already in there is one I'll answer right now and then I'll look at the other ones.
+00:19:07 [W0] So someone's asking what is a span.
+00:19:13 [W0] Well, you can think of a span as a unit of work that has some data attached to it.
+00:19:16 [W0] So let's say we have built a website that has a book catalog and we're syseleven.
+00:19:19 [W0] Searching for a book or something.
+00:19:24 [W0] So retrieving book and for from this catalog from the UI kind of the information about this action would be your Trace but your request on the way of retrieving this
+00:19:36 [W0] Has a book catalog and we're searching for a book or something.
+00:19:37 [W0] So retrieving book and for from this catalog from the UI kind of the information about this action would be your Trace.
+00:19:39 [W0] But your request on the way of retrieving the sand for might go through multiple multiple different Services right?
+00:19:40 [W0] there you I sent an API call to your back-end.
+00:19:44 [W0] might need to authenticate it might need to
+00:19:48 [W0] Call a service that will actually return you this book in for the service in turn will call the database to get info about the books in so kind of it.
+00:20:02 [W0] It takes a few hops on the way.
+00:20:05 [W0] So each of these hops is a span and each of these pants might have some information attached to it.
+00:20:09 [W0] So how long did the operation take how what what?
+00:20:17 [W0] Else happened to me be name of a service anything. Actually you can you can actually also add this tags manually as you so we did with when we post the traces to Zipkin from a back end we added some more
+00:20:32 [W0] What what else happened to me be name of a service anything? Actually you can you can actually also add this tags manually as you so we did with when we post the traces to Zipkin from a back end. We added some
+00:20:33 [W0] This hopes on the way is a span and the whole thing is a trace.
+00:20:40 [W0] right? Let me take a look.
+00:20:41 [W0] All right. So let me share if people are asking about the repo.
+00:20:53 [W0] Let me move to the last slide.
+00:20:54 [W0] So there is a short link and a long link both back-end and front-end are in the same repo so you can use that.
+00:21:05 [W0] Cole
+00:21:08 [W0] so one more question, let me actually make sure I have too many questions going in.
+00:21:22 [W0] All right.
+00:21:32 [W0] let's start from the top to use the same Trace ID for the so Kevin Lee was asking you the same price ID for the ice puns and back-end service pants.
+00:21:44 [W0] We're going to be better for the UI to publish.
+00:21:47 [W0] It sounds pants instead of sending them via their request header instead having the you I propagate the trace context to the backend server.
+00:21:53 [W0] This is a good question.
+00:21:55 [W0] This is actually what we attempted to do in this combination of
+00:22:01 [W0] And I was also sending them as headers to the backend and I used those to basically tag with the trace ID tag my traces that I bought from the back end the challenge
+00:22:19 [W0] Traces that I bought from the back end of the challenge with the UI is of course you need to you when I run it on the local I run the course plug-in and I'm just posting my traces, but you need to authenticate.
+00:22:30 [W0] Kate you need to make sure it is secure it's harder to do from from the browser. You can still absolutely do that, but it will require a bit more work.
+00:22:40 [W0] All right, one more question.
+00:22:46 [W0] So okay Hamish Roberts and hopefully I'm reading your name, right?
+00:22:58 [W0] It's asking you have to manually correlate the your actions in the back and traces.
+00:23:02 [W0] Well, we were doing that manually, of course, but you can do some automation on top of that.
+00:23:13 [W0] So if you use the same tags on the UI traces in the back in traces, there are solutions out there that let you basically filter by this tags and see these traces together.
+00:23:17 [W0] So you don't have to do manually every time but again in this small test repo we were doing it manually, of course.
+00:23:27 [W0] All right, Nicolas Bianchi's asking whether opentelemetry sets of libraries or just a standard it is it is actually both.
+00:23:39 [W0] It's a standard and it's also a set set of libraries for different languages that are implementing the standard and if you go to GitHub / opentelemetry, you can learn more about that.
+00:23:54 [W0] Save all that.
+00:24:04 [W0] It's actually open till I'm dressed pretty exciting.
+00:24:05 [W0] It's open source and any contributions matter, so even if you've been like if you've been thinking, oh, maybe I want to do something for an open source project, or maybe you just interested in tracing take a look at opentelemetry and
+00:24:19 [W0] Any contribution even dogs anything it matters?
+00:24:29 [W0] It helps grow the project that helps take it forward. It helps make it more useful for people.
+00:24:32 [W0] So contribute.
+00:24:35 [W0] All right.
+00:24:38 [W0] Daniel middle is asking, how can I extract this data from tracing to a more dashboard oriented information?
+00:24:49 [W0] Well, there is a lot of different solutions out there that
+00:24:50 [W0] Let you basically as you collect your data visualize it in a more comprehensive way than just in second.
+00:25:04 [W0] Well, I'm I'm from Spike. So we have our own opentelemetry implementation.
+00:25:09 [W0] That's that shows you pretty comprehensive dashboards and lets you identify issues within your system pretty quickly and well, there's other Solutions out there, but of course, I'm from Spike. So take
+00:25:20 [W0] Good Splunk microservices IBM.
+00:25:25 [W0] All right in the real world, so Vignesh rajasekhar and hopefully I'm pronouncing her name.
+00:25:40 [W0] All right is asking in a real-world application. How do you pick which requests to trace since monitoring? Everything might not be performant and not necessarily not always necessary.
+00:25:49 [W0] Depend on each individual application and each situation kind of well, yeah that true answer it depends.
+00:26:06 [W0] It depends on of course.
+00:26:08 [W0] It is it is also somewhat similar to what you would Trace with Google analytics may be right you have you can specify some certain user scenarios that are important for you and then you can attempt to trace those so
+00:26:24 [W0] Look at it from the point of view.
+00:26:28 [W0] Okay, what would I track what user scenarios what user actions would I track with Google analytics and then kind of apply it to what what you track what you trace with opentelemetry.
+00:26:42 [W0] Visual I just yeah, it's hard to say.
+00:26:48 [W0] All right.
+00:26:50 [W0] Finally question really was coming by Torah says, what is it asks?
+00:26:58 [W0] what is the difference between front-end and back-end?
+00:27:00 [W0] So I'm calling front end.
+00:27:04 [W0] Basically the UI side your your application that user interacts with and I'm using back end as a basically Collective description of all the services my or microservices
+00:27:16 [W0] this is that are behind that this UI is contacting or like every this Big Blob behind it and your UI not necessarily contacting all the backend Services right
+00:27:31 [W0] In an example as I explained earlier with a book catalog your you I would talk to the authentication Service. It would talk to some back-end servers that has that will return
+00:27:47 [W0] Back into the servers that has that will return you a booking for in then this back in service in turn also can contact the database.
+00:27:54 [W0] kind of you have this in it's a simplistic view of a UI engineer by having basically front end separately in the back end as this blob of info.
+00:28:06 [W0] All right.
+00:28:09 [W0] And raise trout is asking in our own environment.
+00:28:16 [W0] We generate our own correlation idea The Edge and then we pass it to Downstream Services of jumped one second to Downstream services for the time being we used as to correlate logs across multiple microservices.
+00:28:28 [W0] is it possible to use a correlation ID as the trace ID as far as ISO in opentelemetry G as you can provide
+00:28:44 [W0] ID of so when you create a span you can provide some metadata about that and one of the items that it can inherit is a trace ID, but for that you need to send a span that already
+00:29:00 [W0] Was spawned the your only option for the trace ID is sending it as a tag at least so far. Well again, it's an open standard.
+00:29:13 [W0] It's all open source, if it doesn't work for you feel free to contribute and suggest the updates.
+00:29:25 [W0] basically in your case, what you could do is you could send your correlation ID as a span tag, or if you already have your spans with a correlation ID.
+00:29:31 [W0] As a trace ID. I assume you don't but if you did you could provide the span as a parent span for all the spans that you're creating in it would inherit them automatically.
+00:29:41 [W0] All right, Vincent Des Bois again.
+00:29:49 [W0] Hopefully I'm reading your last name right asking whether graphql back-end already pre Rich pre-integrated to opentelemetry or did I have to instrument that you're myself?
+00:30:00 [W0] So in this case?
+00:30:02 [W0] I didn't remember it myself but you so there is two ways. You can talk to your graphql back end right you can.
+00:30:13 [W0] You can establish a websocket connection or you can basically send HTTP requests and for HTTP request.
+00:30:28 [W0] Socket there is no plug-in yet, but it's in development.
+00:30:35 [W0] So hopefully soon you will be able to use that for this example that you saw in the TOC.
+00:30:44 [W0] It was all manual instrumentation.
+00:30:48 [W0] So I basically just get did it manually.
+00:30:49 [W0] All right.
+00:30:53 [W0] P use but area is asking other any performance impacts that you might be aware of for opentelemetry Java instrumentation.
+00:31:05 [W0] I'm not familiar with opentelemetry Java instrumentation. If you meant to ask about JavaScript, of course, if you're collecting your traces in the UI side and you're especially if you're posting it
+00:31:17 [W0] Kin or somewhere else. It will impact your performance somewhat, so there is always a trade-off.
+00:31:29 [W0] But yeah you well, there is always a trade-off so it is kind of preferable for now to post your traces from the back end and that's why
+00:31:38 [W0] also part of the stock happened because well as you so I'm basically just sending my traces through headers to the back end and then back in has a lot more resources to connect
+00:31:54 [W0] Through headers to the back end and then back in has a lot more resources to connect and collect this traces and post-test races.
+00:31:58 [W0] All right.
+00:32:01 [W0] Let's see.
+00:32:06 [W0] I do not see any more questions.
+00:32:18 [W0] So if you have some you can post them here or I will also be in slack in a cloud knative computing Foundation slack at the channel to keep coredns observability
+00:32:27 [W0] Situated directly so I'm happy to answer any further questions.
+00:32:33 [W0] Thank you, everyone.
+
+Transcription for wordly [W0]
+
+00:00:03 [W] Hi everyone.
+00:00:06 [W] My name is Nina stuff. Ski, and I met your jets plonk.
+00:00:09 [W] My talk is about tracing in.
+00:00:12 [W] I truly believe that racing is for everyone and I will explain you how to trace user events with graphql and opentelemetry so you're probably asking what our UI engineer is doing it.
+00:00:24 [W] keep going and what does UI has have to do with tracing?
+00:00:30 [W] Well anything happens with your product UI is the first thing that the customer see your eyes the first thing that fails and the customers are always complaining that this button is not working
+00:00:46 [W] Not working to stop is not working.
+00:00:51 [W] So UI is always blamed first. No matter what happens if things are not completely failing but they are a little bit slow. For example, it's also really hard to track especially to figure out whether it's a
+00:01:03 [W] Or something in a back-end something with the microservices.
+00:01:11 [W] So having some tools that help you do that is really useful.
+00:01:13 [W] Of course, we have front-end analytics the most popular as Google analytics, but sometimes it's not enough you have to go dig in into logs. You have to go look at microservices.
+00:01:27 [W] You have to sometimes write custom JavaScript Snippets just for you to figure out where the issues happening and while you I struggling with trying to figure out what
+00:01:41 [W] And where the issues are back into Engineers already have really good tools at their disposal in Ops also have been looking forever logs at different different.
+00:01:56 [W] Is that help you figure out where they choose but for you? I well you don't console.log you look at your Google analytics you look at your inspector to see the performance, but it's all a little bit disconnected.
+00:02:12 [W] And finally, finally the products are getting more complex and front end is not just a service anymore front end can be broken down into different microservices built with different languages
+00:02:28 [W] Order to debug issues. If you have multiple different languages within your front-end application, maybe they are stitched together in something is slow, but you don't know what and yes.
+00:02:44 [W] So, how can we make it work better?
+00:02:52 [W] How can we trace it better?
+00:02:52 [W] And so this is an example of a stock that I use at my daily life. We have an application that is basically stitched from angular and react and we use graphql in Apollo libraries to make sure
+00:03:08 [W] Graphql seamlessly works both in angular and react and in the back end and another tool that we use is this Amazing Project called opentelemetry,
+00:03:24 [W] It's only so it's in better now.
+00:03:30 [W] It's only about a year old slightly more than that, and I got to tell you a little bit about it before I go into a little bit more into how to use it.
+00:03:41 [W] So opentelemetry is a combination of two projects that existed before opentracing and open senses and together.
+00:03:56 [W] They provide a set of tools that are uniform that are provided in one place that lets you collect your traces and metrics about your application again, it's usually used in the back end.
+00:04:08 [W] um and
+00:04:11 [W] A good thing. There is also a project called opentelemetry GS.
+00:04:20 [W] So I was some time ago.
+00:04:21 [W] I was really excited.
+00:04:25 [W] Do you find out that there is already a library that lets you use it.
+00:04:29 [W] It's mostly geared towards node users, but you can also use it in the browser so far.
+00:04:35 [W] It's been kind of disjointed so you can use it in your UI and then you can use it in your backyard but correlating the traces.
+00:04:42 [W] He's a little bit of a pain still.
+00:04:48 [W] it's very exciting.
+00:04:49 [W] Right and two big areas where opentelemetry gives you tools are traces in metrics.
+00:04:58 [W] And traces is a series of events that relate together the represent an end-to-end event flow through a distributed system and you can also apply it to the UI in some way. So for back end is usually a request
+00:05:14 [W] Microservices this might be your request that goes from your UI and you're requesting user info going through a middleware. That query is another service that queries the database and the whole thing end-to-end is a trace
+00:05:30 [W] Could also speculate that for you.
+00:05:36 [W] I you can create traces that are a little bit bigger than that.
+00:05:41 [W] And finally metrics is a numeric date.
+00:05:47 [W] Finally metrics is a numeric representation of data measured over intervals of time.
+00:05:54 [W] for example a number of requests permanent and so
+00:06:00 [W] in a traditional approach UI is just one micro service.
+00:06:06 [W] Here it is.
+00:06:14 [W] But UI is just much more than just a service. You can have a lot of user actions that happen. You can users can go through the page for a long time before they
+00:06:21 [W] Click something that triggers the back end and it's very good to be able to track that.
+00:06:28 [W] Users do a lot on the modern application Pages.
+00:06:36 [W] There might be not just one but multiple back in calls in as I already mentioned performance issues are really hard to track especially with multiple you is multiple back and comb calls and to be able to
+00:06:48 [W] She is so far.
+00:06:53 [W] Your engineers had the same tools at their disposal as back end and Ops five ten years ago, right you go to the logs.
+00:07:01 [W] You try to figure out what is going on.
+00:07:03 [W] And so, how are we trying to solve this problem right now?
+00:07:10 [W] again opentelemetry help
+00:07:16 [W] So, how are we trying to solve this problem right now?
+00:07:23 [W] Well opentelemetry helps not just back into engineers in our labs and data scientists. It helps you are engineers.
+00:07:31 [W] So let's switch to our sample application that I'm building to be able to correlate some traces from UI and the back end and to simplify it a little bit.
+00:07:47 [W] I want to use both angular and react I will just use react I will use graphql in a bowl of libraries to simplify things a little bit and opentelemetry and our application will
+00:08:00 [W] UI with some actions something would happen in the UI and we will capture this actions using the browser then we will send this actions to the graphql
+00:08:16 [W] We will basically look at the spans and we record this information and we send it after that to the Zipkin collector and will collect races in Zipkin.
+00:08:30 [W] And if you want to follow along or do it at your own time, here is the link to the repo.
+00:08:42 [W] It will also be there at the end of the slides.
+00:08:47 [W] So feel free to go ahead and take a look.
+00:08:47 [W] All right into the wild.
+00:08:52 [W] Let me share my screen now I have to
+00:08:56 [W] And in that report that I just shared I have two applications that will go through.
+00:09:10 [W] So let me start my terminal.
+00:09:11 [W] And there are two parts in that repo. There is a front-end application that's built in react in there is a back-end application.
+00:09:22 [W] So for front-end, it's a react and typescript and I have this used Telemetry hook that I built that's gonna be posting traces into
+00:09:34 [W] Two places actually one is we want this traces to end up in Zipkin to be able to see them there and another one is will be exporting the traces in to the backend.
+00:09:49 [W] And to be able to do something with them in the back end and then finally have my back-end application is just JavaScript single page.
+00:10:05 [W] That's gonna basically that's running Apollo server.
+00:10:07 [W] I'm graphql server and on a new request it would actually retrieve my
+00:10:14 [W] Spence that I'm sending using headers. So there is a special header called graphql currents pants and you can see
+00:10:25 [W] my application
+00:10:29 [W] that's graphql that I'm going to send graphql current spans to the back end.
+00:10:39 [W] And so on every query that comes to the back end. I will retrieve these through headers and I will create span with Spanish tributes that contain Trace ID and a parent ID.
+00:10:55 [W] So we will post them to zip can as well so we would be able to correlate those.
+00:11:01 [W] So now let's start my application. So let's start back and first
+00:11:09 [W] alright, it should be ready.
+00:11:20 [W] Let's check it and I once be actually yeah, let's check if it works.
+00:11:21 [W] Yes, we have our graphql there.
+00:11:30 [W] There will be no traces because we're not sending anything from the front end. And then we are started now. We gonna start our UI application.
+00:11:38 [W] And as you can see, it's a simple one.
+00:11:44 [W] There's just a number of buttons and there is a button that will send some requests to the backend and the button and parents pan will just rub up all spans and the UI and will not send anything to the back
+00:11:58 [W] So here we are trying to capture user actions. And of course, it doesn't have to be button clicks it cannot it can be anything. But let's try that here. I click four buttons and I clicked my
+00:12:15 [W] Spence so actually my second should have received this pants and my you I should have received should have sent us pants too.
+00:12:31 [W] Okay, so we got our spans in the back end.
+00:12:35 [W] Let's take a look.
+00:12:36 [W] All right and tags here are is the traces and parent IDs that are propagated from the UI. Let's go and see if we got our UI traces.
+00:12:52 [W] doesn't it doesn't always work as expected, but let's
+00:13:01 [W] let's see.
+00:13:03 [W] Okay, let me start the yayoi.
+00:13:06 [W] All right.
+00:13:16 [W] Actually to be able to post any traces from the UI.
+00:13:24 [W] I need my course enabled.
+00:13:27 [W] This is what I think that would work for the first time.
+00:13:29 [W] So, let's try again clicking a few buttons and doing get finished spans.
+00:13:38 [W] So now we actually got this response from a UI. Let's look at them.
+00:13:40 [W] All right.
+00:13:45 [W] All right.
+00:13:46 [W] Actually to be able to post any traces from the UI.
+00:13:47 [W] I need my course enabled.
+00:13:47 [W] This is what I think that would work for the first time.
+00:13:47 [W] So let's try again clicking a few buttons and doing get finish Spence. So now we actually got this response from a UI. Let's look at them.
+00:13:49 [W] All right.
+00:13:51 [W] We got our button ID so we can provide metadata.
+00:13:52 [W] There is a tree sidey in a span ID here.
+00:13:52 [W] Same same in here.
+00:13:53 [W] Okay, so let's go back.
+00:13:56 [W] And click again.
+00:14:03 [W] So this happened less than a minute ago. And this is corresponding back in traces.
+00:14:04 [W] That are actually has a parent ID.
+00:14:14 [W] Electricity so let's take a look at the parent ID.
+00:14:23 [W] So let me write it down somewhere.
+00:14:24 [W] 600 it's basically just
+00:14:33 [W] create a new new place to put my ID.
+00:14:37 [W] Okay and go back.
+00:14:45 [W] and Luke with MIUI traces
+00:14:48 [W] and you can see that they are identical. So we we can connect this data and we can basically correlate the UI.
+00:15:09 [W] And the back end.
+00:15:11 [W] And you can see that they are identical. So we we can connect this data and we can basically correlate the UI and the back end.
+00:15:17 [W] So let's go back from screenshare to the slides. And again, you can take a look at the GitHub repo.
+00:15:24 [W] It's a little bit more comprehensive than what I showed right now in you can basically share this information with multiple different ways.
+00:15:35 [W] So what I did is I assign tags to my spans that that's with parent ID, and I provided this parent ID in my
+00:15:43 [W] Can't that I picked up from my spend sent from a UI.
+00:15:52 [W] UI, you can create more tags you can send in actions so you can do a lot more with this information.
+00:15:58 [W] So yeah, what we can do we can track user actions and we can go through maybe different users in areas that we are looking into so in the UI it's easy to
+00:16:14 [W] All you have some flows in the UI that you users need to follow and you want to connect them to the back end at certain points.
+00:16:27 [W] You could do you could provide these pans and store them and it will be a lot more detailed than just having this UI item on on your
+00:16:40 [W] then you can also try to track this actions in track back and requests together and provide this information are in have back into in the UI be a part of the same Trace you can
+00:16:57 [W] What's going on in the you are in your UI sewing Zipkin with so that there is some timing already available for this pants and it will help with performance,
+00:17:13 [W] If you have multiple front dance.
+00:17:16 [W] And finally, if anything caused an error, you can look not just at multiple different services not just multiple logs. Not you don't have to so lowly. Try to look into Chrome
+00:17:32 [W] Did you figure out what backends are working and what doesn't work for you?
+00:17:38 [W] You can export this traces into one of the multiple Solutions that's available now on the market and basically just visually see where issues are happening and how they
+00:17:52 [W] impacting your user experience
+00:17:55 [W] So it's not just the UI now and of course, this is a limited set of libraries. This this is a UI with opentelemetry that gives you so many more possibilities than before.
+00:18:12 [W] So that's it.
+00:18:16 [W] Thank you very much.
+00:18:21 [W] There are some there is more details in a GitHub repo.
+00:18:24 [W] This is a short link or you can go through its github.com. Nina Starsky opentelemetry graphql.
+00:18:29 [W] In this is how you can contact me.
+00:18:43 [W0] hi everyone, my name
+00:18:46 [W0] all right.
+00:18:53 [W0] Hi everyone. I hope you enjoyed the talk.
+00:18:56 [W0] I can see there are a few questions already in there is one I'll answer right now and then I'll look at the other ones.
+00:19:07 [W0] So someone's asking what is a span.
+00:19:13 [W0] Well, you can think of a span as a unit of work that has some data attached to it.
+00:19:16 [W0] So let's say we have built a website that has a book catalog and we're syseleven.
+00:19:19 [W0] Searching for a book or something.
+00:19:24 [W0] So retrieving book and for from this catalog from the UI kind of the information about this action would be your Trace but your request on the way of retrieving this
+00:19:36 [W0] Has a book catalog and we're searching for a book or something.
+00:19:37 [W0] So retrieving book and for from this catalog from the UI kind of the information about this action would be your Trace.
+00:19:39 [W0] But your request on the way of retrieving the sand for might go through multiple multiple different Services right?
+00:19:40 [W0] there you I sent an API call to your back-end.
+00:19:44 [W0] might need to authenticate it might need to
+00:19:48 [W0] Call a service that will actually return you this book in for the service in turn will call the database to get info about the books in so kind of it.
+00:20:02 [W0] It takes a few hops on the way.
+00:20:05 [W0] So each of these hops is a span and each of these pants might have some information attached to it.
+00:20:09 [W0] So how long did the operation take how what what?
+00:20:17 [W0] Else happened to me be name of a service anything. Actually you can you can actually also add this tags manually as you so we did with when we post the traces to Zipkin from a back end we added some more
+00:20:32 [W0] What what else happened to me be name of a service anything? Actually you can you can actually also add this tags manually as you so we did with when we post the traces to Zipkin from a back end. We added some
+00:20:33 [W0] This hopes on the way is a span and the whole thing is a trace.
+00:20:40 [W0] right? Let me take a look.
+00:20:41 [W0] All right. So let me share if people are asking about the repo.
+00:20:53 [W0] Let me move to the last slide.
+00:20:54 [W0] So there is a short link and a long link both back-end and front-end are in the same repo so you can use that.
+00:21:05 [W0] Cole
+00:21:08 [W0] so one more question, let me actually make sure I have too many questions going in.
+00:21:22 [W0] All right.
+00:21:32 [W0] let's start from the top to use the same Trace ID for the so Kevin Lee was asking you the same price ID for the ice puns and back-end service pants.
+00:21:44 [W0] We're going to be better for the UI to publish.
+00:21:47 [W0] It sounds pants instead of sending them via their request header instead having the you I propagate the trace context to the backend server.
+00:21:53 [W0] This is a good question.
+00:21:55 [W0] This is actually what we attempted to do in this combination of
+00:22:01 [W0] And I was also sending them as headers to the backend and I used those to basically tag with the trace ID tag my traces that I bought from the back end the challenge
+00:22:19 [W0] Traces that I bought from the back end of the challenge with the UI is of course you need to you when I run it on the local I run the course plug-in and I'm just posting my traces, but you need to authenticate.
+00:22:30 [W0] Kate you need to make sure it is secure it's harder to do from from the browser. You can still absolutely do that, but it will require a bit more work.
+00:22:40 [W0] All right, one more question.
+00:22:46 [W0] So okay Hamish Roberts and hopefully I'm reading your name, right?
+00:22:58 [W0] It's asking you have to manually correlate the your actions in the back and traces.
+00:23:02 [W0] Well, we were doing that manually, of course, but you can do some automation on top of that.
+00:23:13 [W0] So if you use the same tags on the UI traces in the back in traces, there are solutions out there that let you basically filter by this tags and see these traces together.
+00:23:17 [W0] So you don't have to do manually every time but again in this small test repo we were doing it manually, of course.
+00:23:27 [W0] All right, Nicolas Bianchi's asking whether opentelemetry sets of libraries or just a standard it is it is actually both.
+00:23:39 [W0] It's a standard and it's also a set set of libraries for different languages that are implementing the standard and if you go to GitHub / opentelemetry, you can learn more about that.
+00:23:54 [W0] Save all that.
+00:24:04 [W0] It's actually open till I'm dressed pretty exciting.
+00:24:05 [W0] It's open source and any contributions matter, so even if you've been like if you've been thinking, oh, maybe I want to do something for an open source project, or maybe you just interested in tracing take a look at opentelemetry and
+00:24:19 [W0] Any contribution even dogs anything it matters?
+00:24:29 [W0] It helps grow the project that helps take it forward. It helps make it more useful for people.
+00:24:32 [W0] So contribute.
+00:24:35 [W0] All right.
+00:24:38 [W0] Daniel middle is asking, how can I extract this data from tracing to a more dashboard oriented information?
+00:24:49 [W0] Well, there is a lot of different solutions out there that
+00:24:50 [W0] Let you basically as you collect your data visualize it in a more comprehensive way than just in second.
+00:25:04 [W0] Well, I'm I'm from Spike. So we have our own opentelemetry implementation.
+00:25:09 [W0] That's that shows you pretty comprehensive dashboards and lets you identify issues within your system pretty quickly and well, there's other Solutions out there, but of course, I'm from Spike. So take
+00:25:20 [W0] Good Splunk microservices IBM.
+00:25:25 [W0] All right in the real world, so Vignesh rajasekhar and hopefully I'm pronouncing her name.
+00:25:40 [W0] All right is asking in a real-world application. How do you pick which requests to trace since monitoring? Everything might not be performant and not necessarily not always necessary.
+00:25:49 [W0] Depend on each individual application and each situation kind of well, yeah that true answer it depends.
+00:26:06 [W0] It depends on of course.
+00:26:08 [W0] It is it is also somewhat similar to what you would Trace with Google analytics may be right you have you can specify some certain user scenarios that are important for you and then you can attempt to trace those so
+00:26:24 [W0] Look at it from the point of view.
+00:26:28 [W0] Okay, what would I track what user scenarios what user actions would I track with Google analytics and then kind of apply it to what what you track what you trace with opentelemetry.
+00:26:42 [W0] Visual I just yeah, it's hard to say.
+00:26:48 [W0] All right.
+00:26:50 [W0] Finally question really was coming by Torah says, what is it asks?
+00:26:58 [W0] what is the difference between front-end and back-end?
+00:27:00 [W0] So I'm calling front end.
+00:27:04 [W0] Basically the UI side your your application that user interacts with and I'm using back end as a basically Collective description of all the services my or microservices
+00:27:16 [W0] this is that are behind that this UI is contacting or like every this Big Blob behind it and your UI not necessarily contacting all the backend Services right
+00:27:31 [W0] In an example as I explained earlier with a book catalog your you I would talk to the authentication Service. It would talk to some back-end servers that has that will return
+00:27:47 [W0] Back into the servers that has that will return you a booking for in then this back in service in turn also can contact the database.
+00:27:54 [W0] kind of you have this in it's a simplistic view of a UI engineer by having basically front end separately in the back end as this blob of info.
+00:28:06 [W0] All right.
+00:28:09 [W0] And raise trout is asking in our own environment.
+00:28:16 [W0] We generate our own correlation idea The Edge and then we pass it to Downstream Services of jumped one second to Downstream services for the time being we used as to correlate logs across multiple microservices.
+00:28:28 [W0] is it possible to use a correlation ID as the trace ID as far as ISO in opentelemetry G as you can provide
+00:28:44 [W0] ID of so when you create a span you can provide some metadata about that and one of the items that it can inherit is a trace ID, but for that you need to send a span that already
+00:29:00 [W0] Was spawned the your only option for the trace ID is sending it as a tag at least so far. Well again, it's an open standard.
+00:29:13 [W0] It's all open source, if it doesn't work for you feel free to contribute and suggest the updates.
+00:29:25 [W0] basically in your case, what you could do is you could send your correlation ID as a span tag, or if you already have your spans with a correlation ID.
+00:29:31 [W0] As a trace ID. I assume you don't but if you did you could provide the span as a parent span for all the spans that you're creating in it would inherit them automatically.
+00:29:41 [W0] All right, Vincent Des Bois again.
+00:29:49 [W0] Hopefully I'm reading your last name right asking whether graphql back-end already pre Rich pre-integrated to opentelemetry or did I have to instrument that you're myself?
+00:30:00 [W0] So in this case?
+00:30:02 [W0] I didn't remember it myself but you so there is two ways. You can talk to your graphql back end right you can.
+00:30:13 [W0] You can establish a websocket connection or you can basically send HTTP requests and for HTTP request.
+00:30:28 [W0] Socket there is no plug-in yet, but it's in development.
+00:30:35 [W0] So hopefully soon you will be able to use that for this example that you saw in the TOC.
+00:30:44 [W0] It was all manual instrumentation.
+00:30:48 [W0] So I basically just get did it manually.
+00:30:49 [W0] All right.
+00:30:53 [W0] P use but area is asking other any performance impacts that you might be aware of for opentelemetry Java instrumentation.
+00:31:05 [W0] I'm not familiar with opentelemetry Java instrumentation. If you meant to ask about JavaScript, of course, if you're collecting your traces in the UI side and you're especially if you're posting it
+00:31:17 [W0] Kin or somewhere else. It will impact your performance somewhat, so there is always a trade-off.
+00:31:29 [W0] But yeah you well, there is always a trade-off so it is kind of preferable for now to post your traces from the back end and that's why
+00:31:38 [W0] also part of the stock happened because well as you so I'm basically just sending my traces through headers to the back end and then back in has a lot more resources to connect
+00:31:54 [W0] Through headers to the back end and then back in has a lot more resources to connect and collect this traces and post-test races.
+00:31:58 [W0] All right.
+00:32:01 [W0] Let's see.
+00:32:06 [W0] I do not see any more questions.
+00:32:18 [W0] So if you have some you can post them here or I will also be in slack in a cloud knative computing Foundation slack at the channel to keep coredns observability
+00:32:27 [W0] Situated directly so I'm happy to answer any further questions.
+00:32:33 [W0] Thank you, everyone.

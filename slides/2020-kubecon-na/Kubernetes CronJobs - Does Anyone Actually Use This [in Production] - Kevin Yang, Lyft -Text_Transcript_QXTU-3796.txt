@@ -1,0 +1,255 @@
+﻿Kubernetes CronJobs - Does Anyone Actually Use This [in Production]?: QXTU-3796 - events@cncf.io - Thursday, November 19, 2020 3:47 PM - 35 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi, my name is Kevin and welcome to my coupon talk today.
+00:00:04 [W] We'll be talking about kubernative cron jobs.
+00:00:07 [W] Has anyone actually uses thing in production?
+00:00:08 [W] Well, the short answer is that yes people do at lift.
+00:00:14 [W] Currently and in this talk, we'll talk a little bit about what it's been like, but before we get too far into that, let me start by introducing myself.
+00:00:25 [W] My name is Kevin Yang and I currently work on the compute platform team at lift where we work on building out our kubenetes kubernative environment that powers all blissed services and compute needs.
+00:00:42 [W] This has been a multi-year journey and there's been a lot of things that we've learned along the way and that we're excited to share with the community. If you're interested in getting contact with me, my Twitter and email links are posted in the slides.
+00:00:57 [W] All right, let's get into it.
+00:00:47 [W] So what is this talk in this talk? I'll tell you some stories about Grand job failures that we've experienced operating a chrome platform using kubernative is at lift along the way.
+00:00:59 [W] I also try to surface and poke holes at some of the flaws of prawn jobs that we've seen from both the technical perspective, but more importantly the user experience will discuss kind of how we move how we smooth out some of these rough edges to deliver a better experience
+00:01:14 [W] Is that use our platform and finally we'll discuss some of the broader lessons that we learn operating you such a platform using communities and what this might all mean for you.
+00:01:19 [W] So why should you care? Well, maybe you're like us and you run a kubernative platform at your company and you might have dozens or hundreds or even thousands of developers that from compute workloads on your communities
+00:01:35 [W] Maybe you use cron jobs directly.
+00:01:31 [W] Maybe you run, you know, lots of crying jobs just like we do or maybe you're just looking for some info on distributed cron scheduling repeated schedule tasks platforms, and you want to see what
+00:01:46 [W] Cron scheduling repeated schedule tasks platforms and you want to see what kubenetes has to offer.
+00:01:49 [W] Well, regardless of all these things one of the main things that you should care about is what the user experience looks like for people who use kubernative use cron
+00:02:04 [W] Things that you should care about is what the user experience looks like for people who use kubernative use cron jobs in particular we found that lifts are, you know, one particular point in one particular workloads type in
+00:02:19 [W] We found that lifts are you know one particular point in one particular workloads hype internet? He's that doesn't count as much love as some of the others and I think there's a lot that we can learn from kind of dissecting the issues and
+00:02:34 [W] Taking out.
+00:02:35 [W] Well, how could we can make it better? But first let's start with some story time.
+00:02:43 [W] It's generally good practice to have observability for your grand tasks to make sure that you're alerted when they fail at lift developers do so most commonly by emitting metrics in their application code and use our alerting system
+00:02:58 [W] when those issues happen
+00:03:01 [W] So let's imagine you're a developer out lift and you're just paged for a Cron job failure.
+00:03:08 [W] it is your job to investigate what's going on?
+00:03:12 [W] So, you know a little thing or two about cron jobs and communities and you use some tools to start inspecting what the status of all these different objects are.
+00:03:22 [W] So first you might do a keep cuddle get Cron job, maybe look at defense as and then from there you can see that the Cron job has spun up a job object and from the Java object you can see that spun up
+00:03:37 [W] Actually run your application code.
+00:03:36 [W] Well, the problem is, you know, you're probably at the point now where you're looking at these kubernative objects and you just got page for failure. And by the time of you actually look at it the pause already gone those of you
+00:03:51 [W] viewer actually look at it the pause already gone those of you who have some experience working with communities know that this is far too common and a pretty big annoyance when trying to debug issues with applications like
+00:03:59 [W] Lions when trying to debug issues with applications on communities because pods are ephemeral often times. It's hard to look at them because they've already been terminated.
+00:04:11 [W] So you can't look at any part of vents.
+00:04:14 [W] You don't know what the status of your containers are. So what can you do?
+00:04:20 [W] Well, I guess you could look at your application logs if they're you know, log somewhere out to a lot of pipeline but more often than not you're kind of stuck and you have to kind of wait for the next time the cron runs
+00:04:35 [W] Meanwhile, he might have asked your Ops Team and the platform Engineers are probably scratching their head as well.
+00:04:40 [W] You know, there's nothing that they can do either and so you really have to wait until next time the grand runs catch in the act.
+00:04:50 [W] Or Worse the Cron job failed too many times in a row.
+00:04:53 [W] Maybe this happened overnight and you just got page for the morning and now we'll start it all and you have to go into communities and explicitly tell the job to run.
+00:05:03 [W] This is a pretty pretty annoying thing to have to do and certainly something that we run into the lift several times.
+00:05:14 [W] Now here's a different scenario that happened. Once we had an incident that took down our chronic vitamin for several days and took a lot of time and Engineering after to debug and figure out but there's a lot of interesting things going on here that helped
+00:05:29 [W] Learn more about what's going on with Grand Theft under the hood and will help show case some of the drawbacks and technical issues that impact Cron job performance.
+00:05:36 [W] So this started out this instance started out with a lot of use reports started coming in.
+00:05:43 [W] We saw a lot of users that are starting to report issues with their prawns failing to run intermittently.
+00:05:53 [W] And now anyone who has worked at a company large enough to handle the support request knows that there's varying levels of detail that users provide, but we have some do we get some users who actually put a lot of effort into some investigation and that kind of
+00:06:08 [W] Eventually cause the issue so one a suit user actually filled out the ticket form and attach some of the investigative work that they've done specifically they showed us this chart which is a chart of log
+00:06:15 [W] And every time Dacron runs log some messages and for the time so I didn't run there's obviously no logs admitted. And so we saw a chart that looks something like this where you know, there are several iterations of their Cron job that emitted their logs and
+00:06:25 [W] You know, there are several iterations of their Cron job that impeded their logs and show that their application code is executing but every so often there'd be a hole or Gap where there are no logs emitted which indicated that their application code didn't
+00:06:39 [W] Can go to the Run.
+00:06:42 [W] Now as a platform engineer, we looked at that and you know, we thought is this something that happens on all Chron's or just a few crowns and sure enough. Most of the Crown's that ran on our platform worked fine.
+00:06:55 [W] They do not have any such issues but there were some crowns where we saw the same kind of log indicator that showed that application code was not running. So what gives
+00:07:11 [W] At this point we started looking into what is actually happening with the crown jump controller under the hood. And one of the things that we did was looked at the log level of the cube chronic you control our manager which runs the Cron job controller.
+00:07:27 [W] Some background on the konjac controller the way that it works.
+00:07:32 [W] Is that a runs a sink the World operation every 30 seconds.
+00:07:37 [W] And so what this does is essentially there's one big loop in the code that lists all cron jobs every 30 seconds and iterates them iterates through them one by one doing whatever reconciliation whether that is invoking the
+00:07:52 [W] Sort of bookkeeping or what not.
+00:07:49 [W] So when we're looking at this Loop, we started noticing something interesting by printing out the logs of the contact controller, which was that in our Crown environment. We had about 200 to 300 cron jobs at the time.
+00:08:05 [W] Which was that in our current environment we had about 200 to 300 con jobs at the time for the first 20 or so iterations of the loop.
+00:08:14 [W] That is the first 20 a cron jobs that are processed.
+00:08:16 [W] We saw that they were all processed pretty quickly the time to process them was really low and
+00:08:26 [W] You know the consequential was behaving as expected.
+00:08:31 [W] Where we started seeing some issues was after the 20th iteration.
+00:08:37 [W] We saw that the times are nearly 10 times slower.
+00:08:40 [W] It's a process Chron's for the remaining 200 plus crimes that were in the list.
+00:08:45 [W] So what my explain this well it was rate limiting.
+00:08:51 [W] what the Cron job controller does in sync operation is actually, you know, send some API requests to the API server using the do pliant that the Cuban troller manager uses and what we noticed was that
+00:09:07 [W] Plus crimes that were in the list.
+00:09:07 [W] So what my explain this well it was rate limiting.
+00:09:14 [W] What the Cron job controller does in sync operation is actually, you know, send some API requests to the API server using the do pliant that the Cuban troller manager uses and what we noticed was that
+00:09:43 [W] She rate limiting those bogging down the grand jury controller.
+00:09:48 [W] Sure enough the defaults for the for the coupon rate limit lines up with the lubrication times. We're seeing so it turns out when you run, you know, 200 or more cron jobs, you know
+00:10:05 [W] So it turns out when you run, you know, 200 or more cron jobs, you know those times that up and you start seeing Loops that take longer than 30 seconds.
+00:10:15 [W] And hence. You start seeing cron jobs get backed up as the crotch of Winchell is bogged down by rate limiting.
+00:10:21 [W] So what's this mean for our applications are cron jobs.
+00:10:26 [W] Well, a lot of her cron jobs had this field called starting deadline second set.
+00:10:32 [W] And with this field does is essentially tells the Cron job controller to stop trying to run it if it has been delayed by, you know, the starting deadline seconds duration.
+00:10:44 [W] And so what we would see in an application is that right before the Quran was supposed to run say T1.
+00:10:52 [W] That's the last time that the Cron job processed the Contra controller process that prawn job now the cron Drive controller Loop took, you know, it's a long
+00:11:02 [W] Three seconds and so by then they starting down nine seconds already expired.
+00:11:06 [W] And so the next time the crunch a controller inspects that Cron job in terms of determines if it has to run well it's easy to starting down nine seconds has already expired.
+00:11:16 [W] And so therefore it doesn't exist invoke it and so this is why our applications are cron jobs. Sometimes saw that they had missed their schedule because deep down the crown chakra control Loop had taken too long to process and had
+00:11:32 [W] schedule time
+00:11:34 [W] What did these experiences tell us?
+00:11:36 [W] Well, we learned that cron jobs can fail in many surprising ways.
+00:11:40 [W] That we did not know about before the first of which is the too many Miss starts condition, which is where if a Cron job as field too many times in a row, then the communities Machinery ends up giving up entirely on trying to run them and requires human
+00:11:55 [W] Start to conjure up again. Next we saw that API client rate-limiting can be a factor Wendy crunch up introvert. Does this ink developer Asian? It requires a lot of client calls to the API
+00:12:02 [W] And these can get rid limited and impact the speed at which the crown jump controller can process and synchron jobs.
+00:12:09 [W] This combined with starting to align seconds can lead to some disastrous effects where cron jobs get missed entirely.
+00:12:18 [W] So aside from the technical issues.
+00:12:20 [W] We also saw that cron jobs in general are quite difficult to monitor understand and debug.
+00:12:26 [W] There's not a lot of observability that ships with crown does by default and you have to know a lot about the system and the underlying behaviors of kubernative in order to debug these understand what's going on as we saw through instance
+00:12:41 [W] There's not a lot of observability that ships with condos by default and you have to know a lot about the system and the underlying behaviors of kubernative.
+00:12:49 [W] He's in order to debug these understand what's going on as we saw through instance. It took a lot of effort and learning from the kubernative seem to be able to understand what's going on here and be able to root cause the incidence
+00:13:06 [W] And further Cron job does League a lot of abstractions from pods and jobs.
+00:13:11 [W] There are a lot of knobs to configure especially regarding retries and concurrency behavior. And it's a delicate balance to strike or it's not surprised your developers and your users.
+00:13:23 [W] We also saw that the others are quite difficult to recover from in the example of the on called I got beige.
+00:13:30 [W] Well, it would be nice if they could just rerun the Cron job if it had failed, you know, maybe there's a service depended on in their application from a platform engineering perspective.
+00:13:41 [W] We really don't have a great way of understanding the performance of the platform. You know, we got a lot of user reports of issues, but it'd be nice if we could be alerted on these.
+00:13:52 [W] And not have to rely on users to tell us that something is broken.
+00:13:58 [W] So what do we do about this?
+00:14:02 [W] One of the things that we did was enhance the observability of cron jobs on Earth kubenetes platform by introducing Trace points at various stages in the Crown's life cycle.
+00:14:15 [W] From a platform engineering perspective.
+00:14:17 [W] We really don't have a great way of understanding the performance of the platform. You know, we got a lot of user reports of issues, but it'd be nice if we could be alerted on these and not have to rely on users to tell us that something is broken.
+00:14:34 [W] So what do we do about this?
+00:14:37 [W] One of the things that we did was enhance the observability of cron jobs on Earth kubenetes platform by introducing Trace points at various stages in the Crown's life cycle.
+00:14:48 [W] So this can be things like, you know, Wendy crunch controller decides to invoke the Quran when the application code actually starts when the application code finishes whether it was
+00:15:31 [W] Application code finishes whether it was retried or X is X such that successfully and at each of these points we emit metrics so we can know some details of the performance like
+00:15:47 [W] How long did the Cron job take to actually start running application code from when it was expected to run or the runtime of the application container itself and the exit codes.
+00:15:58 [W] These are all things that our developers want to know and want to be alerted on but didn't want to have to write and maintain themselves.
+00:16:05 [W] And so as a platform we were able to have all these metrics built right in by default and have alerts created for any Cron job that was on board.
+00:16:16 [W] And our platform and this allowed us to get rid of a lot of bespoke alarming and metrics code from our applications. There are services.
+00:16:28 [W] Next was disaster recovery.
+00:16:30 [W] So we saw earlier that when a Cron job failed oftentimes an on-call didn't have really anything they could do about it.
+00:16:36 [W] So one thing we created was a run cron button, which essentially allows you to run across an ad hoc.
+00:16:45 [W] So this is useful for recovering from failures as well as testing out new cron jobs and debugging existing ones instead of having to wait around for the Quran to run. You can just hit the button and immediately see the effect.
+00:16:57 [W] Of your car on running and your application code doing its work.
+00:17:00 [W] Finally.
+00:17:02 [W] Times rho. Then kubernative stop trying to run it entirely and so by fixing this inner Fork we never had to deal with that situation again where we had to manually we invoke Chron's to get them started again.
+00:17:17 [W] So now you're probably thinking to yourself that seems like a lot of work to get kubenetes cron jobs to a usable State.
+00:17:24 [W] What does this all mean for me - I still try to use them.
+00:17:27 [W] Is this the only option there's a lot of nuance to picking Technologies like a distributor scheduled task Runner here are some things to consider before making the same decisions that we did at lift.
+00:17:40 [W] First ask yourself what dear users really need the primary feature you should have figured out for engineers using a complex form is observability based on our experience talking to dov's outlive. That was mostly want to know did it run
+00:17:55 [W] This fully and how long did it take?
+00:17:55 [W] I lift we built these metrics and alerts into our Chrome platform.
+00:18:00 [W] So all cron jobs get them by default these monitoring tools are essential to allow Engineers to self-service and be able to operate their workloads.
+00:18:09 [W] No matter the platform the allow people to have high confidence in the reliability of their grand without having to know kubernative use as intimately as platform Engineers do and really help scale the operations side of a large engineering org, but making it easier.
+00:18:23 [W] ER for people to debug issues on their own
+00:18:28 [W] Next you need to be able to run across an ad hoc to debacle recover from incidents.
+00:18:33 [W] No one wants to sit around waiting to catch a crown in the act and especially in today's microservices world failures can happen and we must be able to fill gracefully and make it easy to recover from failure because of this is essential that your Chrome platform
+00:18:49 [W] In tool that way say a downstream service is down and causes your ground up to fail.
+00:18:44 [W] At least the on-call is alerted using the alerts that we just mentioned and can rerun the job without having to wait for hours or even days for the Machinery to invoke the crown. Again. This is absolutely essential for say once a week cron jobs that do things like January
+00:19:00 [W] It's for your company another benefit of a tool like this is that it allows Engineers to develop new cron jobs and observe them running live in your staging and prod environment as much as we try to make configuration simple inevitably.
+00:19:07 [W] Environments as much as we try to make configuration simple inevitably there will be some trial and error involved when deploying new code for the first time.
+00:19:13 [W] There's nothing worse than having to wait to see your new code come into effect.
+00:19:16 [W] So having a tool be able to trigger your new code and be able to watch it, you know work for the first time is really helpful real helpful for developing the bugging you crowns.
+00:19:30 [W] So those are the user facing features that we focus on delivering with our Comm platform using kubenetes cron jobs that lived communities Cron job may not be the right solution for you.
+00:19:40 [W] Depending on what your environment is. Like if you're starting from scratch, how should you approach evaluating cross solutions for your company?
+00:19:51 [W] When evaluating crime platforms the first thing you should think about is the user experience doves really just want to write and ship code and be confident that if there's an issue they'll be notified and when the notified they can easily figure out what went wrong
+00:20:06 [W] Is like your sign from scratch? How should you approach evaluating cross solutions for your company?
+00:20:15 [W] When evaluating crime platforms the first thing you should think about is the user experience Deb's really just want to write and ship code and be confident that if there's an issue they'll be notified and when the notified they can easily figure out what went wrong and
+00:20:48 [W] So the very first thing they should do when picking prompt platform is talk to your users figure out what the Rook flows are like and what they need out of a crime environment because what users might want might differ a lot from might differ a lot from what
+00:21:03 [W] apart from engineer
+00:21:08 [W] But as a platform engineer, what should that experience be like so the major thing that platform users are concerned about is the performers of the platform.
+00:21:18 [W] How easy is to monitor the reliability of jobs on your Constitution.
+00:21:23 [W] You want to look at things like failure rate time.
+00:21:26 [W] It takes to start run the application code how well it scales as more and more cron jobs are added to your environment.
+00:21:33 [W] So these are all things that you want to think about, you know, are they built into your chronosphere?
+00:21:38 [W] Former idea to add some stuff in order to have those metrics and be alerted on them.
+00:21:44 [W] Features aside.
+00:21:45 [W] There are many hidden costs that you might not think about when using a new tool like kubernative cron jobs. Like how much do you expect your death to know about communities? And how much effort is it to train them?
+00:21:57 [W] How much are you willing to invest in smoothing out some of the rough edges of kubernative for example a lift.
+00:22:03 [W] already had a lot of infrastructure and Tooling in place for things like observability and reliability. So we only needed to plug in some modifications into them in order to reap the benefits.
+00:22:15 [W] And lastly along the way there will definitely be a lot of incidents.
+00:22:19 [W] How good is your learning culture and how resilient is the business to instance that will inevitably happen?
+00:22:25 [W] Be a lot of incidents.
+00:22:23 [W] How good is your learning culture?
+00:22:25 [W] and how resilient is the business to instance that will inevitably happen?
+00:22:30 [W] Hopefully the picture is starting to get a bit more clear as Engineers. We can often get pulled in too deep pulled in deep into the nitty-gritty of technical complexity evaluating tools and Technologies from a technical perspective is certainly valuable but more often than
+00:22:46 [W] But more often than not the challenging part is Bridging the Gap between human and Technology at the end of the day.
+00:22:54 [W] There will be other human beings using the tools you build an offer. So I think a lot about how humans interact with your systems.
+00:23:03 [W] So to conclude not all hope is lost recently a cap was merged for graduating cron jobs to GA and it's really exciting to see some progress being made in this area and I especially like how
+00:23:18 [W] There's a lot more concern around observability and Performing scaling of cron jobs. So kudos to the community scene and I'm definitely looking forward to playing around with the new Grand job API when it comes out.
+00:23:30 [W] But all things could be Renee's aside.
+00:23:32 [W] talk to your users have real conversations with engineers at your company and ask them what they really needed from your infrastructure.
+00:23:43 [W] And lastly kubernative use is no Silver Bullet, but don't be afraid to get her hands dirty anyways, and try to bring it closer to something that is usable in the real world.
+00:23:54 [W] And that's it.
+00:23:55 [W] Thanks for taking the time to listen to my talk on kubenetes cron jobs at lift.
+00:23:59 [W] If you're interested in working on challenging problems related to running kubernative that scale then feel free to send me an email and meanwhile check out our careers page at bol.com slash careers for
+00:24:15 [W] Is thanks.
+00:24:21 [W] All right, then. Thank you for coming to my talk here.
+00:24:29 [W] We'll do the Q&A session.
+00:24:30 [W] I'll try to work my way through all these and make sure that I repeat them out to the video so that recorded and stuff.
+00:24:38 [W] So yeah, just looking through here.
+00:24:41 [W] start off with so James Turley asks, is there a proper time zone support yet? I know we had some.
+00:24:50 [W] That would Dynamic rewrite the cron tabs at the beginning and end of daylight savings time and we found a bug in it every six months or so.
+00:24:57 [W] Yeah, it's off your questions ready to the time zone issue. The way that we do things at lift is the underlying compute instances.
+00:25:11 [W] So that's like easy to or or whatever are all saying to Via ntp to I think UTC time and
+00:25:20 [W] and so we basically just tell our develop right there con tabs relative to UTC time.
+00:25:29 [W] Machines having different time zones, cool.
+00:25:27 [W] Let's see.
+00:25:32 [W] Yep, someone asked how we had a similar problem where I work. We eventually found the work queue depth of I'm guessing the job controller the metric of the work you depth that Prometheus collects from the job controller
+00:25:48 [W] Due to a bad Cron job does running very often.
+00:25:46 [W] Yep.
+00:25:48 [W] That's definitely a very common issue that we've seen out lift.
+00:25:53 [W] There's you know with this kind of Machinery like it's very easy for something to just spew out and kind of spiral out of control whether it like never gets collect garbage collected or you know, there's some sort of like
+00:26:08 [W] something to just spew out and got to spiral out of control whether it like never gets collect garbage collected or you know, there's some sort of like application bug and maybe have concurrency policy set to allow this something that
+00:26:20 [W] and maybe have concurrency policies had to allow there's something that can be addressed in like a few different ways very cheaply with just like a a, you know, an alarm on the word cued up
+00:26:36 [W] A you know an alarm on the word cubes up. You can look at number of likes a job Spire namespace or jobs per, you know, some other label type and you know, if that gets hairy or out of outline something to alarm on so that's
+00:26:51 [W] And something to alarm on so that's the cheapest thing that you can do to prevent that from happening.
+00:26:59 [W] Someone asks is this Upstream now 100ms starts or just your version?
+00:27:05 [W] I believe this question is referring to a patch that was authored by one of my colleagues Valerie.
+00:27:13 [W] Whoo, where is essentially got rid of the exit condition.
+00:27:20 [W] after a Cron job has failed like a hundred times in a row, then it would just like stop scheduling entirely. I believe that this is
+00:27:28 [W] The patch isn't actually in upstream and we'll talk about Upstream in a second. But we do have it in the fork that we run.
+00:27:39 [W] It's a public fork in the lift GitHub organization.
+00:27:43 [W] And that is what we run in our kubenetes clusters at the moment in terms of Upstream.
+00:27:50 [W] There's actually as I kind of alluded to at the end there there's some movement and kept that
+00:27:58 [W] Is for graduating cron jobs to GA and I believe that with the new design that this is no longer an issue so flee when that comes out actually it was just being by one of the maintainers that
+00:28:13 [W] Came out and I believe that this is no longer an issue being fixed. So kudos to the kubenetes team and yeah looking forward to playing with it. Next question
+00:28:27 [W] Points infrastructure you added something that was incorporated into communities or is a proprietary solution within lift.
+00:28:25 [W] Yeah. Great question.
+00:28:27 [W] There's a blog post that I authored on the left block that goes a little bit more into detail about how we used for have actually implemented these Trace points, but the tldr on it was that there are a few
+00:28:42 [W] Whew thumb key things everyone to know about the way that he was making scheduling decisions or rather controller decisions on when to invoke cron jobs or not.
+00:28:50 [W] And so we in our communities for Keda 'd some code there to essentially a track like what does injuries aren't what decisions are being made and and you know by proxy when they're being
+00:29:05 [W] And so those are kind of emitted on the kubenetes like EK objects themselves via annotations and we consume them via some proprietary, I guess or internal code, but
+00:29:21 [W] Like the governor's API to collect events and information.
+00:29:24 [W] Cool. Next question. How did you manually add custom metrics into the Cron job life cycle was this done application Level or mixed with Community Support.
+00:29:36 [W] So yeah, this is a really good question.
+00:29:38 [W] There's a lot of different ways that one can go about like adding in metrics.
+00:29:45 [W] The approach that we chose was to essentially leverage kubenetes as much as possible and and that mess with
+00:29:54 [W] User space or application code that decision was kind of made because for reasons like maintainability and ease of like roll out and stuff we found on the path. Sometimes you mess
+00:30:10 [W] Application code you never know like every other single thing that a user might do and so we don't want to enforce any sort of like of well as our scripts or anything like that and quote user space
+00:30:24 [W] At the API level within kubenetes itself.
+00:30:21 [W] So there are a lot of different like kind of techniques that were involved here one was like, you know, when the jobs actually get created we add like an annotation for example, and then like later on as we observe.
+00:30:37 [W] If you have like a former on cron jobs are jobs, you can kind of consume those timestamps or annotations as Jobs go through life cycles.
+00:30:47 [W] Cool another question about Upstream.
+00:30:49 [W] So, yep, like I said, they're in our public lift cooking rice for AG if you're interested in but Upstream is working on some much greater changes to the design of cron jobs that incorporate a lot of the
+00:31:04 [W] Again and changes that we've had to make and our Cron job setup.
+00:31:08 [W] Cool awesome.
+00:31:17 [W] Okay.
+00:31:17 [W] So question is asked if you were using communities and asked to introduce some kind of crowns with no prior baggage. Would you still use kubenetes cron jobs?
+00:31:28 [W] Yeah, so I think it's a really good question. And one of the main things are main piece of discussion or main discussion points that I kind of wanted to bring up with this talk and in Q Khan, so I think that
+00:31:44 [W] A lot to kind of think about when it comes to like, you know, should you actually use kubernative use for cron jobs?
+00:31:46 [W] So this comes this comes from like a few things. So, you know, what were you doing before for us? We were using just like bare metal ec2 instances and you would just write like a Unix crontab and run
+00:32:01 [W] Perhaps like you're coming from a place that already has distributed cron solution.
+00:32:01 [W] And so, you know, the the cost of my great might be, you know high or low depending on how much you've invested already.
+00:32:11 [W] I think the one of the main things is, you know, how much operational experience do you have with communities? And and how much are you willing to kind of look into and and deal with issues that might come up with it?
+00:32:25 [W] Because as we noticed, you know, when initially we were, you know, having our first tense a cron jobs in communities, like, you know, it might not be much of an issue.
+00:32:34 [W] But you know, as you know, we got more and more customers using it we start rolling to scaling issues and that's where you know, the the long tail the last 20% of the effort ends up being a percent of the work.
+00:32:49 [W] See, I think there's a lot to consider there and I'm definitely feel free to ping me on the cncf slack and we can kind of talk about some more trade-offs there because that's really the interesting part.
+00:33:15 [W] Okay.
+00:33:16 [W] here's a question.
+00:33:17 [W] See, I think there's a lot to consider there and I'm definitely feel free to ping me on the cncf slack and we can kind of talk about some more trade-offs there because that's really the interesting part.
+00:33:39 [W] Okay.
+00:33:39 [W] here's a question.
+00:33:41 [W] Okay web server ability tool did you use a lot of this is like Prometheus scraping metrics that get aggregated up through our metrics pipeline.
+00:33:52 [W] So nothing super fancy here.
+00:33:54 [W] Do you know of any existing tools are Frameworks that include some of the features you listed out of your talk.
+00:34:01 [W] both of you run jobs and Rise metrics. Um, not that I know of
+00:34:06 [W] Sure, there are some out there especially Integrations, but nothing that I'm aware of.
+00:34:17 [W] Question the problem you mentioned about having more than 200 jobs taking project when she'll reconciliation log in three seconds is a solved or not.
+00:34:24 [W] So I think this is a very light gray area of the limit whether it's like 20 seconds or I mean three seconds or two jobs.
+00:34:36 [W] it depends a lot on what kind of jobs are running as well as like, you know, just other kubenetes bottlenecks like, you know, perhaps Networks petabyte-scale.
+00:34:46 [W] I think that we address this by increasing some rate limits because we found that rate limiting on the client side of the kubenetes Cron job controller was actually contributing to the reconciliation time, but there are some
+00:35:01 [W] We address this by increasing some rate limits because we found that rate-limiting on the client side of the kubenetes Cron job controller was actually contributing to the reconciliation time, but there are some knobs that you can turn there.
+00:35:18 [W] All right, cool.
+00:35:19 [W] I think that's all the time that we have for Q&A. So definitely I'll be hanging around in the cube con operation. So I channel on the cncf slack to kind of continue the discussion from there
+00:35:35 [W] Operation select channel on the cncf slack to kind of continue the discussion from there.
+00:35:40 [W] And so feel free to continue asking questions and tagging along.
+00:35:45 [W] Yeah.
+00:35:46 [W] Thank you so much for coming to talk.

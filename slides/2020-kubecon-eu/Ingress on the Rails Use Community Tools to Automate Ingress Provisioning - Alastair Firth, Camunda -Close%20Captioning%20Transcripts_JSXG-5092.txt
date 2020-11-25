@@ -1,0 +1,291 @@
+﻿Ingress on the Rails: Use Community Tools to Automate Ingress Provisioning: JSXG-5092 - events@cncf.io - Thursday, August 20, 2020 7:37 AM - 49 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:03:34 [W] Hi, my name is Alistair first.
+00:03:37 [W] I'm a nursery in Berlin for come on dad today.
+00:03:39 [W] We'll talk about deploying the Ingress nginx.
+00:03:40 [W] Hi, my name is Alistair first time a nursery in Berlin for come on dad today.
+00:07:57 [W] We'll talk about deploying the Ingress nginx controller using Helm.
+00:07:58 [W] Hi, my name is Alistair first time a nursery in Berlin for commando today.
+00:08:04 [W] We'll talk about deploying the Ingress nginx controller using Helm.
+00:08:04 [W] Who are you?
+00:08:04 [W] Well, hopefully you're figuring out how to deploy Ingress controllers on kubernative is or you already have and want to see how other people are doing. It just a heads up. There's a lot of code in this deck. So if you're on a bad connection, and it's blurry, you might want to get slides from scared or GitHub and follow along.
+00:08:13 [W] So first what you want traffic comes into a TCP load balancer, then goes to some highly available nginx reverse proxies, which terminate TLS then hits you back end.
+00:08:24 [W] Okay, let's see if we're going to do it on the rails. If you pull up the dogs for deploying the controller. You can just copy paste these lines Helm install and then the name of your lease and then chart name. So this part is pretty easy.
+00:08:35 [W] Yeah, anybody who started here knows it's a bit more complicated than that. I guess that's why you're at my talk. So I hope I can help.
+00:08:43 [W] our use cases lots of single tenant back ends with their own URLs so means grpc and some use HTTP 1 1 we have multiple kubernative clusters in multiple regions the solution should allow layer for routing to a specific cluster like we did in 1998
+00:09:00 [W] I quoted in 1998.
+00:09:02 [W] We also want to be cloud provider agnostic frankly.
+00:09:07 [W] Not many providers support single little own multi-region grpc layers of and load balancing.
+00:09:09 [W] Anyway, I think there's only one you can buy some similar use cases include customer created see names pointing to a unique URL hosted by you like many web hosting providers or PR based environments for ci/cd or perhaps kubernative platform as a service for your company, so it does can
+00:09:23 [W] Or PR based environments for ci/cd or perhaps kubernative platform as a service for your companies that does can deploy new services autonomously.
+00:09:25 [W] Back to the rails obviously disclaimer.
+00:09:34 [W] I'm not endorsing these on behalf of anyone just saying they're in common use and to my knowledge the most widely used open source of solution.
+00:09:37 [W] They also have maintained Helm charts.
+00:09:38 [W] That's good for us.
+00:09:40 [W] Shout out to all the maintainers.
+00:09:41 [W] Thank you a thousand times over external DNS is a controller which Watchers ingresses and makes well external DNS records, sir manager is a controller which watches its own series and creates TLS certificates as kubernative Secrets.
+00:09:55 [W] These secrets can be referenced by ingresses.
+00:09:56 [W] Optionally it can also watch ingresses and so hpo one acne challenges which it puts in the already reference secret Prometheus operator is a controller which watches its own CRTs it deploys Prometheus alert manager and fauna as well as allowing you to store dashboards
+00:10:11 [W] an alerting rules in their own config Maps, which the app developers can own both to proxy is a separate service which can authenticate the user optionally requiring some Scopes like a particular email domain or Ghetto Team membership nginx can reroute incoming requests there and only
+00:10:25 [W] They're successful.
+00:10:28 [W] Before we dive in I think there are three main points when you're working on this firstly to playing everything and in particular managing secrets, for example, you might have multiple clusters in multiple regions for production, but different URLs and credentials for test environments keeping everything in sync and continuously
+00:10:44 [W] Without copy pasting. Everything can be tough.
+00:10:52 [W] The tooling is still stabilizing and I don't think anyone is convinced that we found the way to template this stuff. Secondly tracking Upstream improvements. Although the rate of change in this ecosystem is much slower than it was a few years ago.
+00:11:02 [W] It's still much higher than most enterprise software of the past and you pick out to dry by yourself. If you're more than about 12 months behind CV is get patched up released very quickly and one of the major benefits of this stack is being able to quickly and easily upgrade small chunks of your infrastructure to time.
+00:11:20 [W] Lastly every service. We've talked about comes up with a minimal feature set in a production scenario.
+00:11:22 [W] You need to set a lot of configuration other more and more of the recommended config could be found in the chart repos. You'll often be piecing together bits from blog posts and GitHub issues.
+00:11:31 [W] I want to spend most of our time on the last one. But first I'll explain how he sold the first two which aren't unique to the space at all.
+00:11:37 [W] Okay. So the solution we came up with for the first two points is pretty straightforward.
+00:11:46 [W] Basically, we use salts to encrypt all the secrets and add them to customize overlays.
+00:11:49 [W] We call Helm template on each chart with our standard values and add this output to a customized base.
+00:11:59 [W] Then we make overlays four different clusters environments to set things like the domains and inject Secrets like DNS provider access tokens, then we call customized build for each cluster and pipe it to Kudo apply.
+00:12:03 [W] It's pretty easy. Helm template could cuddle apply.
+00:12:10 [W] Of course, it's not easy.
+00:12:11 [W] That's why you're here. It's still a hundred times easier than it was a few years ago, though.
+00:12:13 [W] Is tweaking each component four different clusters the approach we take means that we have playing kubermatic manifests one per cluster and get the main disadvantage is the deployment pipelines are operators need to take take care of things. The helm hooks usually do like installing
+00:12:30 [W] Validating webcam on this might be an issue for you. If you're to play a lot of clusters in practice for us since it since its item potent the first bootstrap to play fails then we rerun it and it works.
+00:12:43 [W] It plays nicely with CD systems like Argo and Spinnaker and also allows an engineer to run Kudo dish.
+00:12:49 [W] Our app developers typically right controllers or customized manifests and not Helm charts.
+00:12:56 [W] So this keeps the pipeline similar manifest dips are valuable for seeing what will actually change when you update a home chart and you could get the same with multiple Helm values files all stacked up and then calling Helm dry run, but it's not visible in PR ever
+00:13:09 [W] If the pipeline similar manifest dips are valuable for seeing what will actually change when you update a home chart.
+00:13:10 [W] You could get the same with multiple Helm values files all stacked up and then calling Helm dry run but is not visible in PR ever by far the most valuable part when we set out on this path was that we didn't have to Fork Helm charts to expose a value
+00:13:16 [W] Valuable part when we set out on this path was that we didn't have to Fork Helm charts to expose the value.
+00:13:22 [W] However at this point most chart Support options, like extra our eggs are extra ends, so that might not be such an issue for you.
+00:13:25 [W] If you feel like you've already sold to playing charts where this doesn't apply to you because you have only one cluster just let your eyes glaze over for five minutes and we'll get back to the fun bits.
+00:13:33 [W] Okay, if we're alive I could probably see some people cringe that I've got screenshots of code in my presentation backstory. Is it my first group con I went and I heard about all these cool things each piece of software could do and then I spent the next year figuring out how to do them.
+00:13:48 [W] So the format of this presentation is basically me walking you through our production code and calling out line numbers and what they do, we're going to smash through all five Helm charts and the deployment pipelines and 35 minutes.
+00:13:59 [W] So buckle up so back to how we solved the deployment and secrets problem and
+00:14:03 [W] Upstream changes first part is a make file for each chart.
+00:14:17 [W] It looks a lot like what you do by hand to install the helm chart accepted line 22. We called Helm template instead of Helm install which produces manifests on standard out instead of installing them in the cluster and then it line 28 add them all to generated select customization dot llamo
+00:14:22 [W] This is home to L-3 change their exhibit.
+00:14:25 [W] We use basically the same make file for old charts, although line 30 changes a bit if they have some charts don't stress if you think this is crazy.
+00:14:34 [W] It's just context for the files.
+00:14:37 [W] We have moving forward and should be adaptable to whatever process you have.
+00:14:41 [W] If you don't have one, this is a pretty complete solution that works for all of these use cases.
+00:14:42 [W] So here's the base customization am alone the top left and you can see the directory structure is based on the right.
+00:14:52 [W] The entire entire chart is in generated charts.
+00:14:55 [W] So if you need to Fork the chart, you can just commit your fork here the base level customization here contains a namespace and a reference to the generated customization.
+00:15:03 [W] Don't llamo which we made with make generate. It could contain any other resources that aren't in the helm chart, but are all are the same on all clusters.
+00:15:13 [W] Now that we have this base we can include it in customized overlays four different clusters and environments in overlay.
+00:15:19 [W] We can layer customized manifests on top of each other and Patch them in a variety of ways or combine multiple resources.
+00:15:27 [W] Finally calling customized build on the overlay creates llamo that you can piped to Kudo apply.
+00:15:30 [W] On the right we've got the directory structure of our overlay.
+00:15:35 [W] This is specific to one cluster.
+00:15:37 [W] So in the resources section of our overlay customization, don't llamo.
+00:15:50 [W] Macy's operator needs and is also a nice segue into how we handle secrets.
+00:15:57 [W] Okay. So this is the alert manager secret customization, which is referenced by that overlay notice hashing is off. This particular secret name is hard coded by the operator.
+00:16:10 [W] However, the operator watches its changes. So changes are picked up.
+00:16:15 [W] Generally you can reference the secrets directly from the overlay and leave the name suffix hashicorp chinon, which will make everything that mounted the secret or config.
+00:16:23 [W] my pre-start customized supports adding secrets and number of different ways. This particular one is going to pick up everything in the file as a complete kubernative secret and give it a long
+00:16:28 [W] complicated name
+00:16:29 [W] Here you can see a portion of the alert manager Secret at references note that only the sensitive slack API URL on line 3 is encrypted sup support specifying a particular suffix to encrypt one cool thing about this is that are those manifest won't be Deployable.
+00:16:46 [W] They are valid you Emily, even when the secrets are encrypted that means customized builds them just fine and you can see the overall changes in PR is if you commit the Manifest for each cluster without exposing any secrets
+00:16:59 [W] Soaps uses a DOT stops dot llamo file similar to get ignore file to specify how you encrypt and decrypt secrets.
+00:17:09 [W] So the top file on line 4 and 6 uses two different KMS Keys depending on the encrypted file location that's important. If you want to control access to the secrets four different clusters.
+00:17:14 [W] Finally, we have another make file to decrypt all the secrets during deployment just before we apply the Manifest to the Clusters.
+00:17:21 [W] It's encrypted.
+00:17:22 [W] that means customized builds them just fine and you can see the overall changes in PR is if you commit the Manifest for each cluster without exposing any secrets.
+00:17:23 [W] Soaps uses a DOT stop stop. Yeah more files similar to don't get ignore file to specify how you encrypt and decrypt secrets.
+00:17:25 [W] top file on line 4 and 6 uses two different KMS Keys depending on the encrypted file location that's important. If you want to control access to the secrets four different clusters.
+00:17:27 [W] Finally, we have another make file to decrypt all the secrets during deployment just before we apply the Manifest to the Clusters.
+00:17:28 [W] This make file is wrapped up into a Docker file.
+00:17:29 [W] Which I'm showing you here because I hate hand-waving Vapor goat in presentations slides are online and hopefully they'll be in GitHub.
+00:17:31 [W] And then finally our deploy pipelines just call salts decrypt with that Docker image and then customize buildpacks cuddle apply. All of this looks pretty much the same for all the chart based repositories.
+00:17:43 [W] There are some alternatives for secret management, which is historically been considered insecure part of kubernative installations at city is much tighter than it used to be supporting TLS and encryption at Rest by default. And if you're running single tenant clusters, it's up to you to decide at these Alternatives provide any real benefit?
+00:18:00 [W] There are some alternatives for secret management, which is historically been considered insecure part of kubernative installations at city is much tighter than it used to be supporting TLS and encryption at Rest by default. And if you're running single tenant clusters, it's up to you to decide at these Alternatives provide any real benefit?
+00:18:01 [W] You play a pipeline logs or inadvertent commits of plaintext fault and sealed secret suppose wait until the secret is in the cluster to decrypt it and bolt doesn't put it in an CD at all that can be pretty hard to inject into some of the chart deployed stuff, but worst case you can decrypt it in your pipeline.
+00:18:17 [W] Providers also have a secret management solution now so your mileage may vary.
+00:18:28 [W] Okay, so to summarize we solved all the painful bits, we generate playing kubernative manifest for each Target cluster, which were safe to commit with Helm templates helps and customize and we deploy them with Kudo apply or whatever magic gooey like
+00:18:37 [W] Extreme changes, we just run our make file to pick up chart changes and check the dips in the Manifest either in get or with kubernative.
+00:18:49 [W] If you think this is ridiculous, that's okay. When I wrote this tool is Helm was cutting edge.
+00:18:52 [W] It's just background, but I hope it helps some of you now under the front of its using Cloud knative software to do stuff that used to be hard expensive or both just by setting some configure options.
+00:19:02 [W] How exciting is that?
+00:19:05 [W] Some of your kids probably never even bought an SSL certificate. Look at you.
+00:19:07 [W] This bill is going to be a whirlwind of code.
+00:19:14 [W] I'm not trying to impart any profound wisdom to show you useful options and how to set the first external DNS insert manager then a basic Prometheus operator deployment and it was to proxy to put in front of it.
+00:19:23 [W] it. Then finally the anger is controller itself.
+00:19:25 [W] First we need a quick overview of an example Ingress.
+00:19:30 [W] This is a service we have called accounts Ingress V1 is a bit of a weird resource because there are so many implementations of controllers.
+00:19:37 [W] It's a lot of stuff is happening in the annotations controllers, like Ingress nginx external DNS and cert manager will use a combination of the annotations and spective decide. What if anything to do when they see an Ingress resource.
+00:19:49 [W] There are three main sections here at 5:00 the annotations including the external DNS directives the
+00:19:54 [W] Overview of an example Ingress.
+00:20:08 [W] This is a service. We have called accounts Ingress V1 is a bit of a weird resource because there are so many implementations of controllers.
+00:20:08 [W] It's a lot of stuff is happening in the annotations controllers, like Ingress nginx external DNS and certain manager will use a combination of the annotations and spective decide. What if anything to do when they see an Ingress resource.
+00:20:10 [W] There are three main sections here at 5:00 the annotations including the external DNS directives, the claws to ensure only one controller tries to circleci.
+00:20:11 [W] Serve it forced https and an example of rate-limiting at 13 the routing to the backend inspector rules and at 19 to TLS configuration and spectro TLS.
+00:20:15 [W] You might notice we're missing the secret in the TLs section as because we're using a wild card as the default cert more on that later. But for now, let's jump right into Line 6 and 7 external DNS is the first controller. We look at it's going to create some DNS records on
+00:20:22 [W] We're missing the secret in the TLs section as because we're using a wild card as the default search more on that later. But for now, let's jump right into Line 6 and 7 external DNS is the first controller.
+00:20:23 [W] We're look at it's going to create some DNS records on cloud flare for us when it sees this Ingress here.
+00:20:26 [W] You see it working. It's created an a record pointing to our load balancer and a text that this particular external DNS zones.
+00:20:32 [W] If the Ingress is deleted it will delete both another copy of external DNS won't override it and less the txt record matches what it's looking for just a little side note that many providers limit the total number of Records you have cleft lip Pro is about 2500, so don't
+00:20:48 [W] Okay, so here the helm values we use as a base for that external DNS targeting cloudflare firstly online to the default is to watch Services as well.
+00:21:00 [W] We limited to ingresses for reasons.
+00:21:03 [W] I frankly don't remember on lines 11 and 14.
+00:21:10 [W] We set the provider specific stuff and we blank out the API key, so it's not set.
+00:21:12 [W] We'll set that later in a customized patch 17 and 18 logging is cheap and you really really want to know what's going on if this screws up so
+00:21:20 [W] Turn it up with Json logging everywhere.
+00:21:24 [W] We can for easy searching and metrics making my 19. We set the policy to sink as opposed to just absurd.
+00:21:32 [W] This means we'll actually delete unneeded records. If we own them according to the text record will set that around her and Patch 221 237. We set security stuff and resources 38, we enabled metrics and point and also to play servicemeshcon our custom resource, which will
+00:21:43 [W] It is operator.
+00:21:46 [W] easy.
+00:21:46 [W] I think you'll agree.
+00:21:49 [W] It really is easy this time no memes.
+00:21:55 [W] This is an overlay patch for the external DNS deployment which we apply with customized for particular cluster.
+00:22:00 [W] We're just overriding some end of ours firstly at 12.
+00:22:01 [W] We set the authentication info for cloud flare.
+00:22:03 [W] This is required.
+00:22:07 [W] But if you're using Cloud providers DNS, you can also just let it pick up the default credentials for GK. You need to Grant the nodes the scope to do that.
+00:22:12 [W] It's a similar process for other providers.
+00:22:14 [W] DNS providers are supported secondly on line 23
+00:22:19 [W] We need to set an owner ID.
+00:22:21 [W] This is a key, which should be unique per external DNS installation and will be used in that text record at 25.
+00:22:26 [W] We set it to main filter which correspond to the zones you have creds for multiple domains can be provided. But in this is a recurring theme domains are probably a good system boundary and you might want to consider your splits.
+00:22:36 [W] We create the secret referenced on lines 14 and 19.
+00:22:41 [W] Pretty much the same way. We made the alert manager one and four Club flyer. It's used by serve manager to so let's jump over there.
+00:22:47 [W] In our set up certain managers main job is to make sure we have a valid TLS certificate for each Ingress.
+00:22:56 [W] Just like the old kublr go. You can configure its ovhcloud One Acme challenge with let's encrypt reach Ingress and set of secret name.
+00:23:04 [W] Controller can be configured to watch a specific class. So you can run multiple Ingress nginx has or even mix and match with other angers controllers factor that magical certificate.
+00:23:24 [W] There are two custom resources which you need to provide for cert manager to get this working firstly cluster issue or on the left tells it how to solve challenges for wild cards.
+00:23:39 [W] We need to use DNA so one and we're using cloud player with the same credentials is external DNS.
+00:23:41 [W] Everything here is required, but also pretty self-explanatory on the right.
+00:23:45 [W] We have a request for a specific certificate which will be saved in the serve integer.
+00:23:50 [W] Namespace is a secret called wild card TLS because wild cards are only good one level deep. You need to provide any subdomains you want here?
+00:23:59 [W] If you change the subdomains later, you'll get a scary expiry email for the old certificate 90 days later.
+00:24:04 [W] So set a calendar reminder to ignore that email obviously, sir manager needs to be installed before you can create these custom resources. So let's dig in.
+00:24:11 [W] For cert manager jet stack actually releases and manifest created using Helm template themselves.
+00:24:17 [W] So we just pulled that I think I had too much coffee when I upgraded as from 0 to 10 and I wrote this monstrosity.
+00:24:23 [W] Sorry just use the helm chart like all the other things or download the Manifest as it says in the comments hopefully customized 2167, which is now merged allows you to reference this in a customized so skip right over this over-engineered mess.
+00:24:37 [W] Girls from customized hopefully by the time you're reading this you can ignore the last lid and use a simple base customization. Anyway, once we have the static manifest somehow or another we touch them as usual.
+00:24:55 [W] Except there is nothing to patch because James is awesome. And it's all just custom resources to play the bass manifests the cluster issue and the appropriate wild-card search which are the to see RDS.
+00:25:07 [W] We just showed easy Thanks James.
+00:25:09 [W] OSU proxy is pretty straightforward way to secure your monitoring Services which supports 13 specific Health Providers plus all oid see implementations like opta and Dex we've set it up to make sure people are in our GitHub org.
+00:25:25 [W] Get her Borg.
+00:25:29 [W] This is the Griffon Ingress showing how the request is routed to the proxy first note that we use best HTTP host and include to excel as headers in the request.
+00:25:35 [W] We pause to gravano this set screw fauna create a user internally. If it doesn't already exist the rest of this Ingress looks like any other alternative is to use some sort of identity aware proxy in front from a cloud provider or SAS.
+00:25:50 [W] There are plenty of people making money deploying the next three slides.
+00:25:52 [W] This is the helm value file for os/2 proxy line to ensure.
+00:25:59 [W] It doesn't try to make its own secrets for we're setting up the Ingress placeholders to patch later 12, we can figure some logging and make sure it actually passes the old headers.
+00:26:08 [W] We need to send her to gravano 17 is the provider specific config and then continued on the right on 26.
+00:26:14 [W] 26. We've got the resources and on 36 an example of pot and the affinity for two replicas since this is an internal only service for us. It's a perfect candidate for preemptible nodes.
+00:26:27 [W] How we need to patch for OSU proxy or the domain names, but if you wanted to patch replicas or resources for a particular environment, you could do that here, too. Again. These patches are applied by customized per environment or whatever Helm template made.
+00:26:39 [W] Failed probes whenever all the secret in the middle is the plain text and at the bottom is what looks like what it looks like committed.
+00:27:05 [W] That's it for us to proxy.
+00:27:07 [W] You don't actually need one per cluster you can send requests to and it was to proxy located in a different cluster using its DNS name which external DNS kindly created for you and the request will be secure with TLS for your wild-card search.
+00:27:19 [W] I'll show you that in the monitoring section. You can also catch the responses if you like using Ingress annotations, but I won't go into that here.
+00:27:29 [W] So on the Prometheus operator frankly, this chart is amazing.
+00:27:31 [W] Not only does it deploy the operator.
+00:27:35 [W] It also deploys alerts and dashboards for coming Coop components.
+00:27:39 [W] One thing that is completely different from vanilla Prometheus set up is that you scrape services using a service monitor crd rather than an annotation on your services, the service monitor uses label selector to pick services and then the operator updates the Prometheus
+00:27:50 [W] It's dashboards in alerting rules can be deployed in any name space. So your application developers can keep them right next to the code.
+00:28:04 [W] This diagram is oversimplified. But if you've never seen a metric scraping before hopefully it gets the basics across.
+00:28:08 [W] What does Prometheus have to do with Ingress nginx, but with a few lines of config you get to amazing dashboards for the Ingress nginx repo you've got nginx performance latency throughput an error rates and
+00:28:19 [W] And they can be broken down by path service and controller class.
+00:28:28 [W] There's a fair bit to set up here and everyone is going to have different use cases.
+00:28:33 [W] I'm just going to cover the highlights of our config and you can find more at GitHub Link in the corner one caveat is that this config is for version 6 of the chart and it's a nine now so apologies for that.
+00:28:40 [W] There's no huge changes though. I'll just go through the helm values patches are applied the same way as other systems.
+00:28:45 [W] Line one is a workaround to form Force Helm to generate resources for older kubevirt ins in case the API has changed. Not sure what we're working around. But there you go on for we're setting Json logging five and six retention time in size slightly lower than
+00:29:00 [W] And then resources on 15, we're also running multiple replicas with anti Affinity, which is especially easy to configure with this chart 19 and 20, prodyna aren't needed anymore, but told the operator to look at ci/cd s regardless of their labels
+00:29:16 [W] We give it a physical volume 31. We configure session Affinity. So your values don't change as your browser for replica has partial data and finally on 33. We have the Ingress placeholder, which we catch as shown before alert manager
+00:29:31 [W] This this isn't the same file not much going on besides configuring the Ingress looking and storage most Helm charts have Storage off by default.
+00:29:44 [W] So they work for demos and see I know you probably won't persistence for production note of 54.
+00:29:47 [W] We again tell it not to create a secret.
+00:29:51 [W] We showed the alert manager secret which contains the routing rules earlier in this presentation.
+00:29:52 [W] They're found. It was tricky line 74 we're setting a bunch of M variables for all these override the gravano ini file, which is painted template. The end result is that anyone coming in through the Ingress has an account and explore access
+00:30:08 [W] Ford's but these won't be st.
+00:30:14 [W] Instead what we do is Coop port forward to be an admin when we create dashboards then export them to Json through the Griffon rui and saves him and get it's a bit of a pain but it means the dashboards are in get which makes them easy to sink cross stages of 114 is the directive
+00:30:26 [W] Looking all namespaces for dashboards finally on the right. We make sure operator logs are also Json back to dashboards.
+00:30:35 [W] The cleanest way to fetch dashboards with the operator is by URL. This also keeps it in sync with Upstream.
+00:30:43 [W] Of course, you might want to Fork it so that it doesn't break suddenly.
+00:30:48 [W] This is a not very well documented feature of the sidecar, but it's awesome.
+00:30:51 [W] You can also embed the dashboard completely as a config map online 7, you can see the label which the operator uses to decide what config maps to pick up and inject into gravano.
+00:30:59 [W] Similarly.
+00:31:01 [W] There's a CRT for recording rules at alerts. That's enough about monitoring.
+00:31:03 [W] On the nginx again, we're a bit behind the latest chart. So some of the things we've worked around might have been fixed up stream.
+00:31:12 [W] Here's the helm values for our grpc handling controller and we'll go through the highlights.
+00:31:19 [W] You can find a fully annotated values file in most of the helm charts complete with the default values all of these just overlay on that one line 2 to 4, we can figure in this is a deployment or the Damon set because will make load balancers instead of just publishing the node
+00:31:30 [W] Toriel's this controller will watch any Ingress with the class annotation of grpc on eight would publish the service which is required for external DNS to make a records with the correct IP 11 is the magic juice for wildcard certificates.
+00:31:45 [W] We're off to refer to a certificate in a different name space with this controller and this sets the TLs certificate for the default route. And any other Ingress is that don't set a secret name in the tailless section alternatives are to use something like kubevirt to sink the secrets across
+00:32:01 [W] Is or use HTTP or one acne certs, if you do use HTTP or one beware of rate limits at let's encrypt, of course, you can also have every application include their own certificate cri-o a 14. We change the status code returned if the client is
+00:32:15 [W] It's five four three.
+00:32:20 [W] Nobody likes wet. It's about that clients 15 to 19 are stacked driver compatible. Json access logs link the gist so you don't have to dig through everything again.
+00:32:28 [W] This is access logs.
+00:32:32 [W] There's no way I'm aware of to get nginx error logs into Json by config 22 to 25 are global settings.
+00:32:36 [W] for grpc in particular. The HTTP to Max request setting is increased from 1000, which is important for long-lived kudo connections, but may impact memory usage 26 uses the epsagon.
+00:32:46 [W] X-forwarded-for header for rate limit and caching buckets, which is really important for HTTP traffic proxy through cloudflare.
+00:32:54 [W] Otherwise your weight limit on edge.
+00:32:56 [W] See I saved you an incident.
+00:32:57 [W] Same file next on 27. We set up Andy Affinity done on 44 memory and CPU and from 50 to a horizontal part orders get lured from three to six replicas moving right along.
+00:33:11 [W] Finally at 64 we make sure this is exposed on a load balancer and the clients IP is preserved and at 68 we enable metrics and deploy the included servicemeshcon are for the Prometheus operator to pick up.
+00:33:26 [W] We don't have any patches for nginx.
+00:33:29 [W] We just run the production setup on all clusters and rely on the autoscaler.
+00:33:33 [W] However it you can conceivably want to patch the resource usage or even change some controller global settings in the config map. Most configuration options can be set in each individual Ingress as an annotation.
+00:33:41 [W] Nation
+00:33:47 [W] I promised him.
+00:33:51 [W] No.
+00:33:51 [W] Yeah, I promised them grpc specific stuff.
+00:33:59 [W] This is one tweak, which will return.
+00:34:03 [W] Okay.
+00:34:03 [W] Sorry about that.
+00:34:05 [W] I had some technical issues. Anyway, yeah, this is one tweak which will return grpc knative error codes for grpc ingresses.
+00:34:18 [W] This is just a section of the config which you can embed in your controller by putting it in the controller config map.
+00:34:24 [W] I highly advise keeping your HTTP to traffic separate from the HTC One traffic by deploying a second Ingress controller.
+00:34:25 [W] Also means an extra 30 books and load balancers, but it's worth it in production.
+00:34:28 [W] I think the downside of replacing the error codes like this is that the monitoring is going to break because the HP to spec is that the hdp one status code is 200.
+00:34:40 [W] Actually. I think the 2004 here is non-compliant. Anyway, it's an option.
+00:34:43 [W] So you might be wondering why we use nginx to proxy grpc at all.
+00:34:48 [W] Well, it's mature fast and fairly stable your own unlikely to see a problem that you can't search for and most operations Engineers have used it before there's lots of samples and things like adding an altar proxy or rate-limiting are well documented for us
+00:35:01 [W] Used to be one traffic by deploying a second Ingress controller that also means an extra 30 books and load balancers, but it's worth it in production.
+00:35:02 [W] I think the downside of replacing the error codes like this is that the monitoring is going to break because the HP to spec is that the hdp one status code is 200.
+00:35:03 [W] Actually. I think the 2004 here is non-compliant. Anyway, it's an option.
+00:35:06 [W] So you might be wondering why we use nginx to proxy grpc at all.
+00:35:07 [W] Well, it's mature fast and fairly stable your own unlikely to see a problem that you can't search for and most operations Engineers have used it before there's lots of samples and things like adding an altar proxy or rate-limiting are well documented for us
+00:35:11 [W] Amid 2019 it was a choice of running nginx for HP and a second less mature controller or getting it nginx to play nicely with grpc. What we have works pretty well for our use case. When we first started. We tried to integrate linkerd E2 to
+00:35:17 [W] Have works pretty well for our use case.
+00:35:19 [W] When we first started. We tried to integrate linkerd E2 to provide the request of a load balancing and even more monitoring.
+00:35:21 [W] But we ran into some nasty bugs as far as I know those have all been fixed over the last year. So our next initiative on this front is to re-evaluate that and also survey the state of the other inger's controllers.
+00:35:33 [W] Okay, that's it for this presentation quick recap.
+00:35:45 [W] We looked at how you can deploy all of this to multiple clusters with different values for each cluster using a combination of Helm and customize and secure your secrets with soaps.
+00:35:50 [W] We've now got automatic DNS records being created by external DNS based on Ingress annotations wildcard certificates from serve an injured accessible from all those namespaces Prometheus operator, scraping our angers controllers and showing us metrics and Griffon, uh for each individual
+00:36:00 [W] We looked at how you can deploy all of this to multiple clusters with different values for each cluster using a combination of Helm and customize and secure your secrets with soaps.
+00:36:02 [W] We've now got automatic DNS records being created by external DNS based on Ingress annotations wildcard certificates from Cervantes your accessible from all those namespaces Prometheus operator scraping are Ingress controllers and showing us metrics and ravana for each individual
+00:36:03 [W] Authentication in front of those metrics with OS and finally nginx with basic grpc set up and right limits.
+00:36:09 [W] I hope you've enjoyed the presentation again sludge should be on scared and GitHub along with some sample code. Please join me in the chat for any questions.
+00:36:15 [W] Hi guys.
+00:36:24 [W] Thanks for coming to the presentation.
+00:36:30 [W] I've actually answered most of the questions already which I realized might have been a mistake. But I've got a couple more from sorran by deploying plane manifests and not Helm charts. How do you deal with removing stale deprecated or old manifests
+00:36:40 [W] Great question.
+00:36:43 [W] I wish the answer was yes, as far as I know.
+00:36:49 [W] there are a couple CD operators that will do this. But the problem we have is that when you have cri-o S they really struggle to deal with this if you're deploying vanilla stuff.
+00:36:57 [W] Argo could be a good choice We just delete the namespace and rerun it and take a couple seconds of downtime.
+00:37:05 [W] Sorry, I don't have a better answer for you that Kudo used to support a prune or Purge option, but that's been deprecated and removed because it was just too hard to make reliable.
+00:37:19 [W] So good luck to the city builders who are trying to make a reliable version of that question from Tim.
+00:37:24 [W] How do you provision your load balancer for north-south haproxy?
+00:37:35 [W] I believe you would want to configure an external IP on your Ingress and then tell your load balancer about it.
+00:37:49 [W] I don't think that you be able to tell your load balancer about that from inside the cluster because it's going to be cloud provider dependent.
+00:37:50 [W] Let's see.
+00:37:54 [W] De Niro's can this be compared to what replaced replicated and ship is used to do track Upstream create customized tree apply patches on top.
+00:38:04 [W] Yes. Totally.
+00:38:06 [W] That I believe you would want to configure an external IP on your Ingress and then tell your load balancer about it.
+00:38:12 [W] I don't think that you'd be able to tell your load balancer about that from inside the cluster because it's going to be cloud provider dependent.
+00:38:12 [W] Let's see.
+00:38:12 [W] De Niro's can this be compared to what replaced replicated and ship is used to do track Upstream create customized tree apply patches on top.
+00:38:13 [W] Yes. Totally.
+00:38:13 [W] I went to that talk to it's on our notes as things to look into because it does indeed look like we built their own version of that in my defense we built that in July of 2019. So but yeah, this is totally a
+00:38:20 [W] Built their own version of that in my defense we built that in July of 2019.
+00:38:26 [W] So but yeah, this is totally a pattern that I think a lot of people in the community are struggling with and I'm really excited to throw away all of our home-built tools and replace them with something upstream and contribute their great question
+00:38:32 [W] Haan Ingress set up across several nodes to those IPS propagate to the DNS provider automatically.
+00:38:41 [W] Yes, so great question.
+00:38:44 [W] The Ingress setup is across several nodes.
+00:38:48 [W] So the pot anti Affinity is configured. So that nginx will be running on multiple nodes. The IP there is a cluster IP. And so kubevirt takes care of routing that if you want a chaiienge grass set up across multiple clusters.
+00:38:59 [W] It is a cluster IP.
+00:39:00 [W] And so kubevirt takes care of routing that if you want a chaiienge grass set up across multiple clusters. That's another question, which I guess aren't already asked.
+00:39:03 [W] And that's all I have so far for the questions. So I'll wait 15 seconds and see if any new ones come in.
+00:39:12 [W] Otherwise, I will be in slack.
+00:39:17 [W] I believe it's number two.
+00:39:18 [W] Coupon networking if anyone wants to join me over there.
+00:39:24 [W] I'll hang out there for the next half an hour in the cncf space bug.
+00:39:28 [W] Cheers. Thank you guys so much for coming and have a great day. Enjoy coupon.

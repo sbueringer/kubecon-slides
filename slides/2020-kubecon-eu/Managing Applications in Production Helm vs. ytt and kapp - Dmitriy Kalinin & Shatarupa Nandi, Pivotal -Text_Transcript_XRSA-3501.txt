@@ -1,0 +1,389 @@
+﻿Managing Applications in Production: Helm vs. ytt and kapp: XRSA-3501 - events@cncf.io - Thursday, August 20, 2020 11:06 AM - 208 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:06:10 [W] Be here.
+00:13:13 [W] Let's dive in into our presentation today.
+00:13:19 [W] We're talking about managing applications in production and specifically using come versus ytt. And cap to do so.
+00:13:22 [W] I am shuttle kubeedge work at VMware and I have been working on deployment and packaging for a few years now previously working related to Cloud Foundry and now on communities that's a picture
+00:13:39 [W] Glasgow back when traveling internationally was still a thing.
+00:13:44 [W] And I'm Dimitri.
+00:13:48 [W] I also work with Rupa on deployment group.
+00:13:53 [W] I've been bouncing around in VM and containerd castration for a while happy to be here.
+00:13:58 [W] So in today's talk will cover a few things.
+00:14:04 [W] We'll talk about what we really value in deployment tools and what we're looking for there.
+00:14:08 [W] We'll see how a deployment workflow goes on kubernative.
+00:14:18 [W] What are some challenges we faced with her in regards to this deployment workflow?
+00:14:23 [W] And then finally we'll talk about some insights. We've learned from deploying in production at various skills and talk about why we built ytt. And Kapp face.
+00:14:30 [W] On our experience managing these applications and production.
+00:14:33 [W] So what do we really want from deployment tools?
+00:14:39 [W] Well from our experience, but with large-scale production applications and smaller scale.
+00:14:49 [W] These are really the things that we've come to Value. So first is safety.
+00:14:51 [W] We want to be able to catch mistakes before they happen and especially so in production, we want reliability from our tools.
+00:15:00 [W] So we wanted to be predictable.
+00:15:00 [W] We want to know what is going to happen is what we expect to happen.
+00:15:05 [W] We want transparency.
+00:15:08 [W] We want transparency.
+00:15:09 [W] So we want to know what's going on with the tool what's going on with our deployments while it's going on and this kind of flows into the next point of De bug ability because we can use that information to fix things when things Intel inevitably go
+00:15:22 [W] And then finally we want speed so we don't want the tools to be slow.
+00:15:29 [W] We want to keep those fast feedback loops that we can make changes.
+00:15:31 [W] Once we have these things ultimately we want the deployment tool to be boring.
+00:15:42 [W] We wanted to get out of our way so that we can go about and do the things we actually set out to do.
+00:15:44 [W] so
+00:15:48 [W] Helm is widely used in the community today and so we looked at home because we saw lots of people having good experiences with it
+00:15:59 [W] And we use it to deploy a third party software. We wanted the same thing to deploy our own applications.
+00:16:09 [W] We wanted the same tools and workflows.
+00:16:18 [W] However, when we started using Helm be faced various challenges some due to the design choices that are made by home and some concrete box that we encountered and we'll discuss both of these categories in the stalk and describe why Helm wasn't the right choice for us.
+00:16:27 [W] Let's talk a little bit about the end-to-end deployment workflow. Now in our experience. This can really be broken down into these four discrete steps and thinking about each of these as coped kind of smaller jobs to be done such as authoring configuration
+00:16:41 [W] He's in the stock and describe why Helm wasn't the right choice for us.
+00:16:42 [W] Let's talk a little bit about the end-to-end deployment workflow. Now in our experience. This can really be broken down into these four discrete steps and thinking about each of these as coped kind of smaller jobs to be done such as authoring configuration
+00:16:45 [W] Taking bad configuration and packaging and distributing it then consuming that configuration customizing it to your environment and then finally deploying it and thinking about this in each of these steps makes it so that it's more transparent and we know what's
+00:16:57 [W] Step and it's safer so we can catch mistakes as they happen in every step rather than learning at the very end that something went.
+00:17:05 [W] Awry.
+00:17:06 [W] A hopeful terminology that we found that we'll use throughout this presentation is thinking about the configuration author and configuration consumer and for third-party software the author and consumer are different right? So we're consuming software that that is written by someone else.
+00:17:24 [W] Offer that we write and deploy to production ourselves.
+00:17:32 [W] We played both of these roads and ideally we would like the tools and workflows to be the same for both configuration authors and consumers and if we can think about these things, you know, these four steps a separate jobs to be done. Then we kind of started wondering can we
+00:17:43 [W] Tools and workflows to be the same for both configuration authors and consumers and if we can think about these things, you know, these four steps a separate jobs to be done. Then we kind of started wondering can we create clean API boundaries between these
+00:17:45 [W] A pi bond is between these so that consumers can pick and choose tools of their choice for each of these pieces and we'll discuss this approach more in this talk.
+00:17:55 [W] But first let's get started with authoring configuration.
+00:18:02 [W] So the main problem we're trying to solve is we want to be able to provide some mechanism such as a template to allow users to deploying software to customize it to their needs.
+00:18:12 [W] Now most templating tools out there including Helm are based on text templating and here's an example that you know is using Helm and will look very familiar to many of you in the audience.
+00:18:26 [W] One drawback with text including and and in this example is that I have to constantly think about constructing my own llamo and that is error prone.
+00:18:39 [W] So to have a safer too.
+00:18:44 [W] I'd like stronger guarantees that whatever I write always produces valid.
+00:18:50 [W] Yeah, Moe and I don't have to worry about the right indentation and coding values for real escaping.
+00:18:53 [W] like the tool to be able to take on those problems for me another drawback with this approach here.
+00:18:58 [W] Is that I've to think about configuration knobs validations, whatever else while also making sure that I'm constructing valid llamo and intuitively. I want to think about the data and its structure separately and then think about serializing
+00:19:11 [W] I'd like stronger guarantees that whatever I write always produces valid.
+00:19:12 [W] Yeah, Moe and I don't have to worry about the right indentation and coding values for real. No escaping.
+00:19:12 [W] I'd like the tool to be able to take on those problems for me another drawback with this approach here is that if you think about configuration knobs validations, whatever else while also making sure that I'm constructing valid llamo and intuitively I
+00:19:14 [W] final step
+00:19:14 [W] now in this example, we're doing the same thing as what you saw above or before but with ytt. And you'll notice that I'm writing Vitality Amo the entire time so I can focus on the values that I'm templating instead of thinking of constructing that Gamble.
+00:19:31 [W] And the data values called annotations here is provided by a configuration consumer and its associated with the particular yamanote by ytt.
+00:19:42 [W] Now, let's see an example that highlights the advantage of using data structures instead of text in this example.
+00:19:56 [W] We want to build a config Mac with the host port and a lowercase output name notice in the config function at Arrow one.
+00:20:03 [W] I'm returning a Mac consider containing these key value pairs not text.
+00:20:14 [W] This enables me later to serialize this map to Json when converting or when inserting it into the config map at Arrow 3.
+00:20:18 [W] Since this is a simple example.
+00:20:20 [W] I'm just directly taking this map and converting it to to Json but you can imagine performing other more complex operations on the map to the key point being that sense. It's a map I can modify it and transform it and take advantage of that
+00:20:33 [W] three
+00:20:33 [W] since this is a simple example.
+00:20:34 [W] I'm just directly taking this map and converting it to to Json but you can imagine performing other more complex operations on the map to the key point being that sense.
+00:20:35 [W] It's a map I can modify it and transform it and take advantage of that structure instead of treating it as text.
+00:20:37 [W] Note that you don't always have to manually serialize all data structures next to Arrow to you'll see I'm using the output of the labels function and ytt will serialized output of this function to yeah more for you.
+00:20:49 [W] Taking this concept of using functions and thinking and data structures all bit further.
+00:21:00 [W] We realized that actually complaint can be viewed as one big function.
+00:21:05 [W] There are some parameters on which the templates run and there's a resulting structure.
+00:21:08 [W] You can either modify the structure further or if you're done.
+00:21:12 [W] You can see realize it to llamo and then get the rendered configuration to make things easier for the configuration consumer. We have found that useful to have parameters or data values.
+00:21:23 [W] follow a particular schema
+00:21:24 [W] now in our templating adventure is one thing the encountered often is that we were in situations where we wanted to install open source software or install third-party software. In this case. We wanted to install a cni-genie Alico the instructions and calicos website mentioned
+00:21:41 [W] I think structure you can either modify the structure further or if you're done.
+00:21:43 [W] You can see realize it to llamo and then get the rendered configuration to make things easier for the configuration consumer via found that useful to have parameters or data values follow a particular schema.
+00:21:45 [W] Now in our time cutting Adventure is one thing the encountered often is that we were in situations where we wanted to install open source software or install third-party software. In this case. We wanted to install a cni-genie Alico the instructions and calicos website mentioned
+00:21:49 [W] Seifer configuration Yah, Mo file and then changing the number of replicas based on your environment and I could use customized overlay to do this, but I wanted something which we could do within this templating to
+00:21:56 [W] Paradigm that we showed before and this is ytt overlays are helpful overlays with ytt.
+00:22:12 [W] Provide you with a way to patch existing llamo and so you'll see on Arrow 1 we get the Calico tyfa llamo and then we apply the llamo or by the overlay on
+00:22:19 [W] Yeah, Moe, and then we apply the llamo or by the overlay on Arrow to and then finally an arrow 3 you'll see there's a change of because which is the overlay for applying to change your clock has also been
+00:22:27 [W] Also been generated Within ytt.
+00:22:30 [W] So now let's talk a little bit about the execution environment of this functions that we are running prioritizing safety you wanted to make sure that the environment did not have access to entropy Network disc the office environment or time this way the
+00:22:48 [W] It is always the same and ytt is reliable as a tool.
+00:22:55 [W] It also makes ytt.
+00:22:56 [W] Stateless. Now, you may wonder if you don't have access to these things.
+00:23:02 [W] That means you cannot use you cannot generate secrets on client side or Generate random strings. And that's true. We recommend generating secrets and storing any other state on the cluster itself.
+00:23:13 [W] And this is what all of this looks like in action.
+00:23:21 [W] So if you were to use ytt, you could have your templates in a config directory or any other directory of your choice and then apply values to it and then ytt would render the llamo for you, which you can then use with the deployment tool of your choice in this case.
+00:23:34 [W] Let's talk about packaging and distribution now that we figured out how to write our configuration.
+00:23:45 [W] So what is a bundle there is no formal definition of a bundle as far as we know.
+00:23:57 [W] However, the way we look at it is there needs to be some kind of a bond between a set of configuration and a set of images that that configuration uses now as all of you know, Helm
+00:24:10 [W] Component it's in it's two people distribute charts over Helm repositories.
+00:24:23 [W] You know, I think it's it's a tgz that gets put in a server somewhere more recently though Helm has been encouraging people to use registry as the storage for Helm charts, right?
+00:24:33 [W] So what you do is you take the the helm chart you run the command with Helm and that Helm chart suddenly becomes an
+00:24:40 [W] image inside that registry rate and ultimately somebody else can pull it down and use it right now Helm itself does not actually care about what images you're using within the configuration, right?
+00:24:55 [W] So it's really just the top part of what Helm is doing its dealing only with the configuration image for our own use cases.
+00:25:06 [W] We actually need something more specific because you know in a lot of our environment
+00:25:11 [W] We need to bring down the images that are being used by the configuration into customer Registries to support cases like firewalled environments or air-gapped environments.
+00:25:25 [W] We need the factually a way to keep track of what are the sap images that are being referenced by the configuration.
+00:25:34 [W] And so we see bundle as one thing that combines the two together.
+00:25:39 [W] Digest throughout that way. The customer is absolutely sure that they're installing the software that they originally wanted to install even after it gets copied between various registries.
+00:25:51 [W] So how does this look? Well this looks something like image package push with the set of files.
+00:26:02 [W] This could be any set of files could be ytt.
+00:26:03 [W] Templates playing llamo.
+00:26:04 [W] maybe even a help chart source and ultimately its image package pull from you know, different location to download the bundle and maybe in between those two commands you do end up using image package copy command to
+00:26:18 [W] one repository to another
+00:26:21 [W] well now that we're done with packaging and distribution customizing configuration is our next step in our journey.
+00:26:33 [W] We've seen out there a lot of Helm chart authors run into a problem that we call Api mirroring over time consumers of the charts request to have various
+00:26:48 [W] As be added to the helm charts and that becomes a big problem for the authors write because various users may need to have various use cases satisfied and ultimately the set of values the template
+00:27:03 [W] Maybe even two thousands of options that's not something that we like and we don't think that's a scalable approach.
+00:27:14 [W] So let's let's throw that out.
+00:27:22 [W] Ideally the way we look at solving this problem is saying that there is a percentage of configuration.
+00:27:29 [W] That's very common to everyone right and that should be passed in as values to the templates. Right? So now weíll use or ytt data values once the templates that is job and Returns the data structure back to us.
+00:27:36 [W] Should be able to use to like customize or ytt. Overlay to apply certain set of changes to that llamo and finally spear out the ammo for the following steps.
+00:27:49 [W] Why did you overlays the feature of ytt?
+00:27:55 [W] So it's convenient to have the various functionality that you can do in your templates to be also done within the overlays. So we think combining the templating and overlaying approach is
+00:28:06 [W] one tool is a very flexible and effective approach.
+00:28:17 [W] So this how overlay typically looks like. It has a part about describing how to find the particular Yama document to modify within a stream of documents.
+00:28:19 [W] So in this case, it will find the single deployment.
+00:28:23 [W] Why did you will raise an error if it finds more or less?
+00:28:26 [W] I'm a document that's been found.
+00:28:39 [W] And in this case, we're setting a priority class name to important.
+00:28:44 [W] So here's maybe a more complicated example, we needed for our Dev environments to shrink their footprint. So we wanted to say find any of the deployment demon set stateful sets if they
+00:28:56 [W] Ahead and for each one of those containers remove the resources section and remove the liveliness probe resources Readiness probe and so on and so forth. So we had to cut this overlay short for the slide very convenient.
+00:29:12 [W] And so this is how it ends up to be looking at a command line you combine you extend that ytt.
+00:29:22 [W] Invocation to include additional files and those files may include overlays. And so you're able to specify your templates your data values your over.
+00:29:27 [W] Plays only one command.
+00:29:29 [W] So that's that's it for customizing configuration. Let's take a look at deploying.
+00:29:37 [W] Deploying step ultimately boils down to taking configuration and putting it into a cluster. We've had some challenges doing deploys in the repeatable manner we've faced
+00:29:54 [W] Errors and various cases that were surprised by but of course, we also had successes.
+00:30:07 [W] And so this is one of the examples example errors that we've seen sometimes occur.
+00:30:09 [W] that was pretty hard to debug. We've also had somewhat of a lack of a confidence about the operations that will take place because Helm was not quite transparent about the changes that I was going to make the cluster and even if there were options,
+00:30:22 [W] You know tweak how the deploy would happen.
+00:30:27 [W] It was still not quite clear. If this tweak like a force flag would actually have some unintended consequences.
+00:30:37 [W] So we thought well, there's got to be a more lightweight way to make us comfortable do the deploys.
+00:30:44 [W] And so we wanted to write a tool that really focuses on safety reliability and transparency.
+00:30:51 [W] So how do we actually see deploying?
+00:30:53 [W] To kubernative work. Well, we wanted to build up on the basic kubernative concept of labels, right a collection of resources that has the same label.
+00:31:04 [W] We see it as a kubernative application.
+00:31:08 [W] Nothing else really on top of that and of course over time as you want as you changing your application. Some resources will be removed some updated some created may be tweaked in other ways.
+00:31:20 [W] And so we wanted that to happen for all of our applications.
+00:31:23 [W] Consistently so let's actually jump into them and take a look at how is it actually possible with this tool that we've made so here I'm going to type in capital S to
+00:31:38 [W] Hands on my cluster. This cluster does not have currently any applications.
+00:31:45 [W] So let's actually add one.
+00:31:51 [W] We're going to call it app and we're going to give it an initial llamo.
+00:31:55 [W] So what do we see on the screen over here is that cap will tell us before doing any kind of a change to the cluster. What's actually going to happen?
+00:32:04 [W] We're going to create a deployment.
+00:32:06 [W] We're going to create a service and then we also going to wait for those.
+00:32:09 [W] Sources to reconcile so let's press yes now at the same time. Let's take a look at that configuration configuration is very simple is just basic service basic deployment.
+00:32:24 [W] We do have this environment variable that we call Hello message that has a particular value.
+00:32:25 [W] We're using existing Docker image, so nothing out of ordinary.
+00:32:36 [W] So few seconds later cap tells us the deployment has reconciled, right? So at some point it so that the container was creating the potential became ready.
+00:32:40 [W] And cap succeeded over here, right?
+00:32:50 [W] So this notion of having a clear log of what's happening to your cluster while it's happening is very appealing to us a summary of the changes.
+00:32:56 [W] Nothing out of the ordinary so few seconds later cap tells us the deployment has reconciled, right? So at some point it so that the container was creating the potential became ready and cap succeeded over here, right?
+00:33:11 [W] Gives us a little bit of a boost of yes, we're actually doing a right thing. We're not deleting production cluster.
+00:33:19 [W] Maybe when we're at when we meant to update a staging environment.
+00:33:23 [W] So let's actually take a look at this application it is
+00:33:26 [W] it is if you notice here six resources, even though we only deploy to resources, right so cap has capability based on those labels to actually track some of the resources that cluster creates, right as you can see over here the owner the owner column specifies cap
+00:33:43 [W] As different owners for different resources, so we cap only created deployment and service.
+00:33:50 [W] That's somewhat convenient.
+00:33:52 [W] We cannot even see it in the preview where some of the ownership references are being accounted for and so deployment owns replica set owns a pot and even
+00:34:03 [W] for some of you who don't use some of the other external logging tools.
+00:34:10 [W] It might be useful to be able to just say cap logs - F - Shake app and actually see a live look from all of the pods within that application.
+00:34:17 [W] Of course, you can also use other tools because the pods are labeled you can use other tools to track the logs in bulk.
+00:34:30 [W] So let's go ahead on a second step over here and apply a change to the application.
+00:34:32 [W] That's what you believe. Are we here for
+00:34:37 [W] So I will go ahead and throw in this - see flag.
+00:34:39 [W] It will show the changes that it's about to make as a nice colorful diff.
+00:34:44 [W] It's telling us that we're going to create a new service the service got renamed from Simple app to simple up node.
+00:34:50 [W] We're actually changing a deployment a little bit.
+00:34:54 [W] We have value being switched to a config map reference.
+00:34:57 [W] We have a config map that we're going to reference and then finally we have the deleted service. So let's go ahead and apply that and
+00:35:06 [W] again, we'll see the progressive log.
+00:35:07 [W] I love you. Let's take a look over here for a second.
+00:35:17 [W] So we have the config map and we have the config map reference. Now some software cannot reload configuration off of disk as it's running now, even in some cases that may not be a good idea because you may not want to apply that configuration to the entire set of PODS that you might be running
+00:35:31 [W] It is so we have this feature in cap called version resources. It really it makes the resource immutable. So any change to the config map will turn to be a new resource.
+00:35:46 [W] So let's actually apply that and let's see what happens.
+00:35:56 [W] So we'll see you in our summary that we're creating a new config map that has a suffix version 1. We also deleting the of config map and we also have a change in the deployment because cap realizes that the config map is bof.
+00:36:02 [W] Being referenced it will update that reference.
+00:36:07 [W] So that update we'll go ahead and complete and just to prove.
+00:36:10 [W] But this feature works when we change the config map it shows you that hey, we're going to create the new config map with version 2.
+00:36:20 [W] that's the change from the previous version. Right?
+00:36:26 [W] And then the version will be also used in the deployment correctly as well.
+00:36:28 [W] Let's go ahead and apply that and we'll see that we'll see that the deployment kicks off now inhale this functionality really is up to the user of templates.
+00:36:40 [W] The template Arthur has to do a little bit of manual bookkeeping.
+00:36:55 [W] They have to say run the content of a config map to digest and add that configure that annotation on to the Pod.
+00:36:56 [W] Kapp realizes that the app config map is being referenced it will update that reference.
+00:37:02 [W] So that update we'll go ahead and complete and just to prove.
+00:37:02 [W] That this feature works when we change the config map it shows you that hey, we're going to create the new config map with version 2.
+00:37:04 [W] that's the change from the previous version. Right?
+00:37:05 [W] And then the version will be also used in the deployment correctly as well.
+00:37:05 [W] Let's go ahead and apply that and we'll see that we'll see that the deployment kicks off now inhale this functionality really is up to the user of templates the
+00:37:08 [W] Our template Arthur has to do a little bit of manual bookkeeping.
+00:37:16 [W] They have to say run the content of a config map to digest and add that configure that annotation on to the Pod.
+00:37:17 [W] We think that a first-class support for this kind of a feature is more in line with this how we use some were doing here.
+00:37:18 [W] So let's go ahead and so I've made an update to be on
+00:37:19 [W] Whoa, all right.
+00:37:19 [W] And so what is in 3A in 3A, we're adding a new resource a job.
+00:37:23 [W] It's a dummy little job that supposedly call does the DB upgrade?
+00:37:25 [W] that's not of course happening in real life what we're doing a sleeping for 5 seconds.
+00:37:30 [W] So let's go ahead and do that.
+00:37:35 [W] So we'll say three a we'll get our nice summary over here.
+00:37:36 [W] And then we'll apply that do know that immediately.
+00:37:41 [W] We actually see logs from this job in line with in the deploy progress that again goes back to the transparency of what's happening in the deploy.
+00:37:48 [W] Right?
+00:37:53 [W] And this is because of the little annotation that we added over here telling cap. Hey, please show this logs in line.
+00:37:57 [W] So OK we have this job now.
+00:37:58 [W] It's doing a database migration. Let's go ahead and actually apply change to it and we're going to change just a tiny little bit over here. We're going to change the job.
+00:38:06 [W] To save from done to finished.
+00:38:10 [W] Let's go ahead and see what happens oof.
+00:38:16 [W] So a big error this error is coming directly from kubernative API.
+00:38:21 [W] We actually want to format it in a better way, right?
+00:38:24 [W] We use some were to linger.
+00:38:32 [W] So let's go ahead and so I've made an update to be llamo.
+00:38:32 [W] All right, and so what is in 3A in 3A, we're adding a new resource a job.
+00:38:33 [W] It's a dummy little job that supposedly called does the DB upgrade?
+00:38:34 [W] that's not of course happening in real life what we're doing a sleeping for 5 seconds.
+00:38:34 [W] So let's go ahead and do that. So we'll say 3A.
+00:38:36 [W] Say we'll get our nice summary over here.
+00:38:36 [W] And then we'll apply that do know that immediately.
+00:38:44 [W] We actually see logs from this job in line with in the deploy progress that again goes back to the transparency of what's happening in the deploy.
+00:38:45 [W] Right?
+00:38:46 [W] And this is because of the little annotation that we added over here telling cap. Hey, please show this logs in line.
+00:38:46 [W] So OK we have this job now.
+00:38:46 [W] It's doing a database migration. Let's go ahead and actually apply change to it and we're going to change just a tiny little bit over here. We're going to change the job.
+00:38:48 [W] To save from done to finished.
+00:38:50 [W] Let's go ahead and see what happens poof.
+00:38:51 [W] So a big error this error is coming directly from kubernative API.
+00:38:52 [W] We actually want to format it in a better way, right?
+00:38:52 [W] We we try to pull out individual pieces in the list of the error reasons. One of the reasons why I can actually see this is that we have Spectrum palette and Spectrum palette field is immutable, right so we cannot change it. So this is one of the interesting things about kubernative.
+00:38:55 [W] Some resources may decide that something is not allowed to be changed. Right and they're potentially some other way to cope with that maybe to recreate a resource for poddisruptionbudgets. For example before kubernative 115.
+00:38:59 [W] That was the case could nap date had to delete create so we actually have a feature that we think is more is more resilient to production usage. We think that
+00:39:06 [W] a user should have to annotate a particular resource and state that it is safe to recreate.
+00:39:14 [W] So this is somewhat of a different decision Point compared to just adding a for slack for all of the resource potentially right because who knows maybe some resources will fail with an area and they may have to get recreated if the resource for whatever reason is invalid.
+00:39:28 [W] Let's go ahead and apply that yellow with our annotations and know that actually cap tells us that hey there's a possibility that this will be replaced.
+00:39:35 [W] And so we see our log again.
+00:39:39 [W] We see that job is successfully updated really recreated in this case and it finishes great.
+00:39:45 [W] All right, so we've got we've got one more example over here. So we have this job, but the problem is job is running at the same time as the
+00:39:59 [W] All right, so we've got we've got one more example over here.
+00:40:01 [W] So we have this job, but the problem is job is running at the same time as the deployment being updated right now for some applications.
+00:40:03 [W] That's perfectly okay. Some applications. Don't may want to actually do a DB migration before the application.
+00:40:08 [W] Let's say starts right now. There's various ways how to deal with this kind of thing. You may create a unique container, but we think
+00:40:14 [W] think a more first class feature is deserved in this case.
+00:40:22 [W] So what we're doing here actually is we're annotating job to be able to be scheduled as an update before the deployment and the deployment is also annotated to say.
+00:40:34 [W] Hey, I am the deployment right now. This is not specific to jobs and deployments.
+00:40:36 [W] This could be applied to any resources.
+00:40:38 [W] So let's go ahead and actually try that out.
+00:40:41 [W] So we'll we'll see what the difference here. So one we're changing config map which will trigger the deploy.
+00:40:45 [W] And you can see over here deploys changing what else to changing the job so it will actually run.
+00:40:52 [W] Let's see what happens.
+00:40:55 [W] So as you can see, we got a job running over here.
+00:40:58 [W] We've got some logs coming out.
+00:41:00 [W] We're waiting. We're waiting for it to succeed.
+00:41:03 [W] Okay succeeded and then finally after it succeeded.
+00:41:04 [W] We actually have a deployment update Running and then it finishes.
+00:41:08 [W] So the ordering here is really another special feature to cap. It is quite similar to namespace and ciardi features within cap ordering of those.
+00:41:21 [W] It's the same system cap just exposes and lets you use it yourself.
+00:41:29 [W] And as an example, if we take a real out their app cert manager, we can actually see how it all works out.
+00:41:40 [W] So the here's a few Resources with a single llamo file.
+00:41:45 [W] You don't have to split your CDs or whatnot and you just let it go and cap will go ahead and deploy certain manager and in a second or two.
+00:41:57 [W] All the pods should come up and capital tell you certain manager is installed.
+00:41:59 [W] There it is.
+00:42:04 [W] All right, so let's switch back to our presentation.
+00:42:06 [W] So what the clean Epi boundaries on small building blocks?
+00:42:14 [W] This is all beginning to to look good.
+00:42:14 [W] But ultimately we set the goal of deployment tools is to make it boring to get out of here way and how can we get there?
+00:42:23 [W] How can we create a simple deployment experience?
+00:42:25 [W] We'll see some examples here.
+00:42:32 [W] So this is some client-side deployment examples. If you're using C lies in the first example, we use ytt.
+00:42:43 [W] For templating and then cut off or for deploying it in the second example, we use all of the tools that we've showcased here.
+00:42:46 [W] So we use image package to pull down a bundle and then use ytt.
+00:42:52 [W] To template it with the appropriate data values and then use cap to deploy and then in the final example, we continue to use
+00:42:58 [W] Examples if you're using C lies in the first example, we use ytt.
+00:43:01 [W] For templating and then cuddle for for deploying it the second example, we use all of the tools that we've showcased here.
+00:43:01 [W] So we use image package to pull down a bundle and then use ytt.
+00:43:02 [W] To template it with the appropriate data values and then use cap to deploy and then in the final example, we continue to use Helm to template maybe some third-party software that is shipped with hometown.
+00:43:03 [W] Bullets and then use cap to deploy. And so with this you can kind of see how as we've talked about before it really allows you to break down that deployment into these different pieces giving you a little bit more visibility into
+00:43:14 [W] And then use keptn deploy.
+00:43:15 [W] And so with this you can kind of see how as we've talked about before it really allows you to break down that deployment into these different pieces giving you a little bit more visibility into what's going on at each piece.
+00:43:16 [W] And see Li bais experience as I showed before is is helpful. But really what we want is for this to happen behind the scenes almost in a boring way.
+00:43:33 [W] So ideally you want this happening on your cluster.
+00:43:35 [W] You want some kind of continuous delivery mechanism, especially if you're running in production, and that's exactly what we have with this tool called CAP controller.
+00:43:44 [W] So cat controller provides an AB c-- Rd and that's what's here on the screen and it tells you
+00:43:49 [W] Very clearly the tree various things it's doing so what is it going to use for the fetch stage?
+00:43:58 [W] What strategy is it going to use and it supports various strategies.
+00:44:01 [W] What is it going to use to template and again different strategies there? And then finally, what is it going to use to deploy in this case cap?
+00:44:10 [W] So in the fetch stage right with various strategies here, we can either use image package to get a bundle. We could use humph Edge to go fetch some Helm charts or you can use
+00:44:22 [W] Packet with a git repo and so this is where you can kind of use it to do gitops like workflow and any changes to the market repo cap controller will watch on and make changes appropriately similarly for the template.
+00:44:34 [W] Here, but you could also use Hub Chaplet.
+00:44:38 [W] So what's next with these tools if what we presented here these ideas they resonated with you.
+00:44:53 [W] You can learn more on k14, sio try to use Kapoor ytt.
+00:44:56 [W] On get ytt. Iot get cap iot.
+00:45:02 [W] We are always available and chatty on vacay for Tina's spok channel on kubernative.
+00:45:04 [W] So come talk with us.
+00:45:04 [W] share how you template and deploy today all of these projects that we should are open source and the rest.
+00:45:10 [W] K14 us to link is open source as well and we welcome contributions to any of these projects and we love hearing how you use these tools.
+00:45:22 [W] It really makes us happy.
+00:45:24 [W] happy. So to come chat with us if you hope you found this talk valuable and thank you for your time.
+00:45:28 [W] Hello, everyone.
+00:45:40 [W] I hope everyone is doing well. And hope you enjoyed the talk.
+00:45:45 [W] We'll do a little bit of live Q&A now so one I'll start off with right around cook on time. Best time to do this. We chose to Rebrand.
+00:45:54 [W] Questions. The first one we have here is any comments about tools like polygamy or CD CD Cates?
+00:46:15 [W] Yeah, so it's a quite an interesting landscape out there.
+00:46:27 [W] There's various tools that kind of a bring together various portions of the of the workflow, right? So polluting for example combines the configuration and deployment in one tool, you know, so that's how in for example, but there's also
+00:46:38 [W] Yeah, so it's a quite an interesting landscape out there.
+00:46:39 [W] There's various tools that kind of a bring together various portions of the of the workflow, right? So polluted for example combines the configuration and deployment in one tool, you know, so that's how in for example, but there's also other
+00:46:40 [W] Separate the configuration from the deployment.
+00:46:45 [W] We thought that it's an interesting experiment to separate the configuration from the deployment and you know their benefits, right? So, for example, you're able to kind of a reason about the configuration.
+00:46:56 [W] Wordly from the act of Deployable radio may be able to work with it in different ways that you would be able to with when the configuration and deployment kind of split together or it's combined together
+00:47:12 [W] We met before Pulu me, you know, the the problem is there is to expose the real programming language.
+00:47:23 [W] I think it's a very interesting proposition One Challenge I see is that is how do you actually contain your configuration?
+00:47:34 [W] Right. So, I mean some of the examples out there might be a your configuration will take a file and load it from a file system, or maybe it will go ahead and let call out to something else right and to me that feels
+00:47:43 [W] Feels a little bit too open right you what if you end up downloading malicious configuration that's doing all kinds of things to your computer right now. You could be running them in containers and whatnot.
+00:47:58 [W] But I think there is a there's a guess a certain benefit to making sure your configuration is, you know, hermetically running in a very very constrained environment and we'll see maybe that would be one of the options that probably means up doing
+00:48:08 [W] If you end up downloading malicious configuration that's doing all kinds of things to your computer right now. You could be running them in containers and whatnot.
+00:48:11 [W] But I think there is a there's a guess a certain benefit to making sure your configuration is, you know, hermetically running in a very very constrained environment and we'll see maybe that would be one of the options that probably means up doing
+00:48:12 [W] With Frameworks, so I containing the programming language.
+00:48:15 [W] cool
+00:48:19 [W] Did you want to add anything else to meet tree?
+00:48:22 [W] No, I was I was looking at this other question East Kapp useful for ci/cd. What do you think?
+00:48:32 [W] Yeah, that's a good question.
+00:48:38 [W] So this is actually good good segue into cap controller since the question came in right around then cap controller is what one of the things were experimenting with for a CD type of workflow
+00:48:49 [W] CID so you can use it for fetching configuration from from get and updating based on based on that we built it to to have that higher level abstraction like the
+00:49:04 [W] CID as opposed to going with some lower level Primitives like task or pipeline just so you have more knowledge and it's more geared towards being a CD tool.
+00:49:16 [W] Maybe to add even though we've also use you know cab directly in your let's say Jenkins or Concourse or other ci/cd stems right to you know, converge your application right because cap, you know tries to compare
+00:49:35 [W] Raishin, you're giving it and what the configurations on a cluster you don't have to really worry about, you know, cleaning up all the resources and whatnot.
+00:49:51 [W] So it does become very convenient as like a thing to use in a in your CI deployment step.
+00:49:53 [W] Yeah, since we're chatting about cab, maybe let's do this question.
+00:50:01 [W] How is Cap participants in the cluster?
+00:50:03 [W] So one of the one of the things that we struggled with back in the helm V2, right is that there is there's certain components of how they were running on the server, right?
+00:50:20 [W] Kappa was designed from ground up to be extremely minimal in the state that it requires.
+00:50:26 [W] In fact, it doesn't really keep any state except the uniquely generated label that it uses to apply to all of the resources, but there is even
+00:50:34 [W] Functionality and cap if you look at some of the documentation that says you don't even have to use the application names you could just use labels directly, right?
+00:50:49 [W] So somebody else may be deployed some software under a particular label and you can use cap to expected to converge it, you know to manage it.
+00:50:55 [W] it. So I guess maybe in summary cap uses a single config map for app that stores the generated unique label if you lose that config mlops.
+00:51:04 [W] I can always create one that just contains the generate unique label.
+00:51:11 [W] cool
+00:51:16 [W] Yeah, there's some follow-up questions Dimitri about I think some of the things we were discussing earlier around.
+00:51:25 [W] What's the advantage of separating out configuration from deployment and really what we mean by that is yes, you certainly need the Manifest and the configuration to deploy, but it's more separating out and clearing a
+00:51:38 [W] As a deployment tool as long as you have, you know standard kubernative.
+00:51:54 [W] Zmo as your configuration, that's all you care about. You don't care how that llamo was constructed or what tool was used to create it to create that Yamamoto if it was created by hand or a different templating tool or if it was from
+00:51:59 [W] He was used to create it to create that Yamamoto if it was created by hand or a different templating tool or if it was from customized.
+00:52:02 [W] So that's kind of what we mean, which gives you the flexibility to use different tools for different things.
+00:52:10 [W] But it also creates these clear separation in that if something goes wrong, you can very quickly try to figure out whether that's in the templating realm whether that's in customization whether that's in deployment, so it's about creating those boundaries.
+00:52:21 [W] he's
+00:52:22 [W] Somebody asked is this ga?
+00:52:32 [W] Yeah, this is a really good question.
+00:52:41 [W] We've actually been talking about it all but internally on the team as well.
+00:52:44 [W] We are using it in quite a bit of workloads within within VMware and we do rely on it quite a bit.
+00:52:54 [W] So one of the open source projects CF for kids if you're familiar with the cloud Foundry Foundation is using all of these tools for for templating deployment packages.
+00:53:04 [W] We are also planning to use it in some other stuff right now.
+00:53:11 [W] We are still in Pre 1.0 releases.
+00:53:19 [W] However, we haven't we are saying backwards compatible and aren't making too many Breaking changes.
+00:53:22 [W] We are discussing.
+00:53:23 [W] No, it's but then but then VMware and we do rely on it quite a bit.
+00:53:30 [W] So one of the open source projects CF for Kate's if you're familiar with the cloud Foundry Foundation is using all of these tools for for templating deployment packaging.
+00:53:32 [W] We are also planning to use it in some other stuff right now.
+00:53:33 [W] We are still in Pre 1.0 releases. However, we haven't we are saying backwards.
+00:53:34 [W] Impossible and aren't making too many Breaking changes.
+00:53:35 [W] We are discussing.
+00:53:35 [W] What's the plan to go 1.0 but if you are using it and want to use it in a ga capacity, please come chat with us on the k14 of slack for that matter for any of these questions that we don't get to it within time.
+00:53:39 [W] we'd love to answer them on the k14 has Slack
+00:53:40 [W] Maybe let's do this question.
+00:53:50 [W] How does ytt compared with Humvee 3 so it's kind of an interesting to look at the helmet Helm is a the ant went to write a tries to do configuration.
+00:54:02 [W] In time, we'd love to answer them on the k14 has Slack.
+00:54:02 [W] Maybe let's do this question. How does ytt compared with Humvee 3?
+00:54:03 [W] so it's kind of an interesting to look at the helmet helmet is the ant went to write a tries to do configuration deployment and packaging so you don't necessarily compare ytt to the helm
+00:54:09 [W] It's your idea to really compare it with the maybe the configuration option or maybe you take this whole tool suite and you compare it with helmet reads directly. So specifically for ytt. I'm helmet 303 did not change how it's doing tempering.
+00:54:24 [W] So the the same kind of a points made throughout the talk, they still apply right. We prefer ytt.
+00:54:35 [W] Because it directly deals with data structures.
+00:54:39 [W] That's that's kind of the sticking point for that comparison in general.
+00:54:42 [W] I would say ytt. And Kapp compared with Helm V3. I think it's really if you are looking for similar things that we're looking for in terms of kind of a transparency stability resiliency, then I think it's just
+00:54:57 [W] Just more a question of what challenges I guess. Are you having with Helm be three yourself, right?
+00:55:06 [W] Because like we said that when you have people have Success With It Dimitri, we are at time. I'd love to answer a lot of more of these questions.
+00:55:15 [W] So please follow up with us either on the k14 as slack or on Coop con app Dev.
+00:55:21 [W] There's a channel for the conference and we'd love to chat more there.
+00:55:22 [W] Thank you everyone.
+00:55:23 [W] Hope everyone's doing well. Bye.
+00:55:27 [W] Bye-bye.

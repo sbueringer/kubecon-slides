@@ -1,0 +1,244 @@
+﻿Migrating Transactions Worth Billions of $ to Service Mesh With No Downtime: FZER-0084 - events@cncf.io - Tuesday, August 18, 2020 7:00 AM - 87 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:02 [W] Hey all today we are here to talk about how we migrated go pay to a servicemeshcon architecture.
+00:00:11 [W] Let's start with a little bit of introduction about ourselves.
+00:00:12 [W] So I am Mahindra and I have been at go check for more than three and a half years. Now.
+00:00:22 [W] Those are coastal a pretty small company when I joined and I got this amazing opportunity to work during the hypertrophy years back when I joined go check with the Unicorn today. It is the first ever dikon company in Indonesia. I worked on multiple things over here including setting up data leak a few data science.
+00:00:33 [W] Projects and most recently on introducing a servicemeshcon group a architecture.
+00:00:37 [W] Hey everyone.
+00:00:46 [W] I am Cheryl. I have been working at Google for around 4-5 years now till recently.
+00:00:51 [W] recently. I used to be in the group 18 where minor and I were co-workers before go before working in group. A I had worked on the writing products of Kovac.
+00:00:57 [W] Okay, let's talk a bit about go check for a minute.
+00:01:06 [W] So as to give you all a bit of context about the challenges that we face so go check is a super up in Southeast Asia.
+00:01:14 [W] We do everything from right hailing to food deliveries and a whole bunch of other utilitarian services and tying. All these sources together is the payment some of the company called go pee so last year at coupon Barcelona or colleagues Akash and Abhishek they spoke
+00:01:24 [W] Go pay from virtual machines to kubernative.
+00:01:33 [W] And this was the last slide of their top where the mentioned that the next steps for us.
+00:01:34 [W] Watch the motor servicemeshcon Q texture.
+00:01:39 [W] And here we are today to talk about how we migrated go pay to a servicemeshcon.
+00:01:40 [W] So let me give you a quick overview about what go pee is and little bit and a bit of little bit an idea about the scale at which we operate. So go pay is the leading digital payment provider in Indonesia.
+00:01:55 [W] We have the largest monthly active users since the end of 2017 in 2019.
+00:01:59 [W] We processed seven point eight billion dollars worth of transactions.
+00:02:07 [W] As of today gup-a is accepted across 300,000 plus online and offline Merchants as a payment method
+00:02:11 [W] We have Integrations with 28 plus Ranch electrocutions, which includes all the major Banks and other entities.
+00:02:18 [W] We process more than a hundred million transactions every month.
+00:02:24 [W] And for Android users in Indonesia. Go pee is the first every money payment option on Google Play Store.
+00:02:26 [W] This is a bit about our business.
+00:02:29 [W] Let's talk a bit about our scale from the technical point of view.
+00:02:31 [W] So go pee has a few hundred developers and we have multiple kubernative clusters running various types of workloads.
+00:02:36 [W] We have around hundred and fifty plus microservices making more than a hundred and thirty million internal API calls or developers do more than hundred developments every week and a Services communicate using rushed as well as grpc protocols the primary languages
+00:02:51 [W] So, this is Argo line Java version and Ruby.
+00:02:55 [W] So let's talk a bit about how our architecture was before. We introduce the servicemeshcon.
+00:03:44 [W] The applications where some workloads was running on kubenetes and some was on VM.
+00:03:50 [W] SoCal experimental bit more about how our service Discovery mechanism works.
+00:04:00 [W] So we would be mostly still use console for service Discovery and every node deployed has a start-up and shutdown hook which would register the node or new console to or deregister the no dog from console to enable service
+00:04:10 [W] So any client calling a service would basically call console to look up the service industry and to get the nodes of a service and then make a call.
+00:04:26 [W] So now this logic of periodically fetching nodes from console from a service industry was baked into client libraries.
+00:04:38 [W] So for example, if service B is calling service a the client library of service a would have this entire logic of service Discovery and also loodse.
+00:04:41 [W] At balancing bacon into the client Library. So this way of doing service discovery made it easy for us to migrate workloads from vm's to communities as workloads on Parts could just register themselves on the service Discovery
+00:04:56 [W] so one issue with the setup is if for whatever reason for poddisruptionbudgets turd from the service industry in console after being either stopped or killed it is still discoverable and hence might receive traffic
+00:05:12 [W] The potential issue could be skewed distribution of traffic across the nodes of a nap since distribution of traffic is applying second sir.
+00:05:27 [W] So as a way of working around this problem, we started using NY as a reverse proxy for our applications and we used to call revista.
+00:05:40 [W] Luke all NY in this configuration as a fronting and why
+00:05:43 [W] so now anyway was a good fit for us because it was one of the first out there to support grpc and the instrumentation is very comprehensive.
+00:05:55 [W] So what would happen is your the XDS server for NY would look up the service registry for service a in console and fetch all the nodes of service.
+00:06:03 [W] Hey.
+00:06:08 [W] And then once all the nodes are fetched and why would then basically add these nodes of service a to its Upstream?
+00:06:12 [W] And then let's say in this scenario service be is dependent on service a so now service be instead of connecting to the nodes of service a directly would then look up the call console service
+00:06:28 [W] Reverse proxies of service a and then forward requests to the reverse proxy of services and then service is reverse proxy or front again voice would then in turn proxy these requests and also take care of Distributing the load evenly.
+00:06:45 [W] so over time there was an issue with this setup where we had accrued quite some amount of tech dead and one of those challenges was basically for every
+00:07:01 [W] Grpc, definitely, we would need a friend again.
+00:07:06 [W] Why set up to be deployed?
+00:07:08 [W] Another challenge was that basically the invoice versions drifted over time?
+00:07:17 [W] So for example, we would have some versions of NY running version 1.6 while some were running version 1.12.
+00:07:27 [W] So this also meant that it was becoming harder to update our XDS cluster which fetches the nodes of a service from console because changes in the NY confit contract would make it.
+00:07:32 [W] That much more difficult to Great the XDS server.
+00:07:43 [W] Also this sinking mechanism between the XDS server and sinking notes from console all the way to the Upstream clusters in anyway, I had an issue where we noticed a little bit of
+00:07:52 [W] also, another thing that we had discussed earlier there was there was a systemic issue if a pod is not
+00:08:00 [W] free service degradation and also a downtime in between because of this issue.
+00:08:12 [W] So another overhead I sort of skipped our missed out on girls. Basically if there's any patches or upgrades in the service another client libraries that we had mentioned earlier
+00:08:30 [W] Deployed across the free and it is a very tedious work and even if one patch somewhere gets missed out it could lead to issues.
+00:08:42 [W] So another issue with this entire setup.
+00:08:59 [W] not really a problem as a chore, but basically a design drawback was that we did not have a very nice system of doing calories because we did not have proper traffic splitting.
+00:09:10 [W] So what we had is a canary setup was basically a pod that was designated as a canary and then we used to deploy changes on this part first and then roll out
+00:09:26 [W] designated as a canary and then we used to deploy changes on this part first and then roll out the changes in their assigned to the rest of this to the rest of the nodes and this is not an ideal
+00:09:32 [W] Into the rest of this to the rest of the nodes and this is not an ideal way because the proportion of traffic being sent to the canary pot is dependent on the is dependent on the ratio of the
+00:09:42 [W] Is dependent on the ratio of the replica sets. So that was another issue that we faced.
+00:09:49 [W] And to add on top of this we had a lot of business expansion plans. Also so group is definitely expanding to new countries, and we had a lot of requirements coming in now different
+00:10:05 [W] It will data localization and processing requirements and more often than not this means that we would need to have a data center or a cloud provider in every region in every country in some from so most of the services and
+00:10:21 [W] Always have to be deployed across all of these regions certain Services catering to Regional needs need to be deployed in that particular region, but traffic will flow across regions and across data centers.
+00:10:36 [W] So some things like automated certificate management Mutual TLS defining ingress/egress gateways and managing them and defining firewall rules become a necessity and first class problem to solve.
+00:10:50 [W] Are also planning to introduce quotas for traffic across regions and try to do some rate limiting.
+00:10:58 [W] So now considering all these things.
+00:11:06 [W] We decided that we thought that a servicemeshcon read in architecture because it solves IT addresses some problems and give us gives us a lot of good features and good tooling to work with a servicemeshcon easily handle
+00:11:22 [W] Load balancing and service Discovery and solve that and a problem for us.
+00:11:28 [W] It would also help us with a deprecating console for service discovery.
+00:11:45 [W] Now one issue that we have is basically with kubenetes coming in. A lot of new applications are deployed on kubenetes without actually sinking with console.
+00:11:52 [W] So that means now console is no longer the single source of Truth for service registry or service discovery.
+00:11:55 [W] servicemeshcon obviously gives us better Telemetry about what's going on in our between our services and
+00:12:05 [W] it also provides better.
+00:12:09 [W] traffic speaking capabilities, which means that now we can build more sophisticated deployment strategies and better Canary strategies using the traffic speed capabilities.
+00:12:18 [W] And it eliminates the issue of Maintenance of different versions of NY in our architecture because now that the NY is deployed as a sidecar the management is easier than having to keep track
+00:12:37 [W] When three of invoice and manually checking if they're updated or not.
+00:12:42 [W] And you have all these wonderful features of servicemeshcon. Also something that we needed.
+00:12:55 [W] So these are all the reasons why we thought that servicemeshcon solve our problems.
+00:12:57 [W] So
+00:13:01 [W] Just before we move on to the next section.
+00:13:08 [W] I'd be just want to do a quick recap about water issues where and what why we decided in servicemeshcon best for us.
+00:13:18 [W] So we had issues with client libraries and service discoveries and the load balancing logic believe baked into the client libraries and keeping the client libraries and the front again o is updated most tedious task and we faced issues because of
+00:13:29 [W] Or because of other issues with invoice and this setup needed to be replicated across regions. So which means there was that much more overhead of setting up of the intra and so we wanted a minimalistic in Pryor.
+00:13:45 [W] So now that we had made this decision we had to come we were at this critical juncture where we will decide what servicemeshcon use there were many options available to us, and we
+00:14:02 [W] Requirements for murder or considerations from a servicemeshcon needed to think about and after thinking about this we decided that issue is the best fit for us and there were a couple of
+00:14:19 [W] We will talk about right now which influence this decision for us.
+00:14:26 [W] One of those factors is we wanted to servicemeshcon uses NY as the data plane because of our prior experience and expertise in maintaining and developing Android.
+00:14:38 [W] We also had a couple of custom filters written on top of enjoy which we would ideally want to avoid putting
+00:14:43 [W] and we didn't of course one to handle the control plane for the servicemeshcon.
+00:14:58 [W] And yeah, I guess that's another reason why we chose is to is back then back when we were making this decision.
+00:15:14 [W] We had a lot of options available to us, but this sort of maturity and sort of Rich features which features at that. We wanted primarily for policy-related and rate limiting features the former servicemeshcon P
+00:15:25 [W] best supported by Steel
+00:15:28 [W] Alright, so now that we decided we want to introduce the next thing for us was to come up with a new architecture.
+00:15:47 [W] One thing that we could have done else. We could have taken a bit of downtime introduced you've migrated all the services over there and then we could have brought everything up but downtime is something that we obviously cannot afford it would have costed as millions of dollars so
+00:15:56 [W] All the services over there and then we could have brought everything up but downtime is something that we obviously cannot afford it would have cost us millions of dollars.
+00:15:59 [W] So we had to do it gradually one step at a time with zero downtime.
+00:16:00 [W] That means that for a while both the old architecture and the new one with the servicemeshcon have to coexist.
+00:16:06 [W] So we decided on a certain set of requirements for introducing a servicemeshcon.
+00:16:12 [W] that should be seamless integration of services inside the mesh with the ones that are outside.
+00:16:25 [W] So let's say we want to migrate service a to skew there may be fewer the services calling the service a those services that are calling the service a they should be able to do so seamlessly without making any changes on their side.
+00:16:31 [W] That means that for a while both the Old and the new that needs to be seamless traffic flow. So
+00:16:36 [W] We basically narrowed it down to three requirements for traffic flow.
+00:16:42 [W] One thing is that the traffic should seamlessly flow within the servicemeshcon.
+00:17:06 [W] What's that are not on is Theo moving hundred percent of traffic at one shot at whatever cost a major downtime in case of unforeseen situations.
+00:17:17 [W] We also wanted a robust rollback strategy in case something goes wrong.
+00:17:19 [W] Seamless integration was the key to our success.
+00:17:34 [W] Now, let's go through each of these scenarios about how the traffic would flow.
+00:17:35 [W] Let's start with the first one with in servicemeshcon.
+00:17:56 [W] And this information about the virtual service and destination rules of service be will already be present in the site calls for service a because those sidecars are constantly talking to sto control plane.
+00:18:11 [W] So what this means is any time service a wants to call service be the sidecar of a based on the rules that are has will call the site cause of service be as simple as that on the screen here.
+00:18:23 [W] We have shown that we have shown dotted arrows that connect service a porch to kubernative service Discovery. This is
+00:18:27 [W] A stranger represented. This is how we are deprecating consul for service Discovery and we are reducing kubernative service Discovery in an indirect fashion via is Cleo.
+00:18:36 [W] Moving on to the next case from now on is the environment to is to environment.
+00:18:49 [W] As simple as that on the screen here, we have shown that we have shown in dotted arrows that connect service airports to kubernative service Discovery.
+00:18:58 [W] This is just a string to represented.
+00:18:58 [W] This is how we are deprecating consul for service Discovery and we are reducing kubernative service Discovery in an indirect fashion via is the
+00:18:59 [W] moving on to the next case from now on is the environment to is the environment.
+00:19:02 [W] So let us say service a is an excu and service be is still not migrated and service wants to call service.
+00:19:02 [W] K. So be still using conservation Discovery and we didn't want to make any changes on B's side.
+00:19:05 [W] So what we did was on the consul server.
+00:19:06 [W] We added an entry for the Ingress Gateway for service a so be would call conceal it would get the details of the Ingress gate.
+00:19:12 [W] and then it would make a call to the Ingress Gateway, which is inside is the you and the Ingress Gateway will then redirect the traffic to the powers of service a
+00:19:17 [W] third case where service a which is inside is still needs to call some service that is outside of the mesh.
+00:19:27 [W] So services that are outside of the mesh.
+00:19:30 [W] We're still not using kubernative service Discovery in a robust manner.
+00:19:37 [W] So we still had a loop with the older system which is concealed.
+00:19:39 [W] So in case there is B is outside service a will call concealed service Discovery.
+00:19:46 [W] It will discover where the pods are and then it would directly make a call to the powers of servicemeshcon.
+00:19:48 [W] Be apart from these Services.
+00:19:52 [W] We also have a lot of stateful workloads which are on vm's like say for example, Kafka or
+00:19:57 [W] Or postgres red is rabbitmq, etc. Etc.
+00:20:04 [W] So for all the steak will workloads.
+00:20:09 [W] we have service entry Insight is the these service entries are again sink into the sidecars of a through a steel control plane. So every time a has to call Kafka through the service enter information that it has it would make a direct call to Kafka VMS.
+00:20:20 [W] So in case there is B is outside service a will call concealed service Discovery.
+00:20:21 [W] It will discover where the pods are and then it would directly make a call to the powers of service be.
+00:20:21 [W] Apart from these Services. We also have a lot of stateful workloads, which are on vm's like say for example, Kafka or
+00:20:22 [W] Or postgres redis rabbitmq, etc. Etc.
+00:20:23 [W] So for all the states will workloads.
+00:20:23 [W] we have service entry Insight is the these service entries are again sink into the sidecars of a through history of control plane. So every time a has to call Kafka through the service enter information that it has that would make a direct call to Kafka VMS.
+00:20:26 [W] So this is how the traffic would flow in all the three scenarios.
+00:20:27 [W] So just to recap what we discussed we chose is knew we wanted seamless roll out and roll back and staggered rollout option primarily had three cases to handle during the rollout within the mesh from inside the mesh and from outside the mesh and we used existing service
+00:20:39 [W] The British do to make the rollout seamless.
+00:20:43 [W] Now we would like to cover some of the challenges we faced during the rollout now the requirements for the rule out made this exercise quite complex already and we will do this for all the services in a fleet.
+00:21:05 [W] We decided to eventually move to a model where service owners would be able to migrate the services with minimal support.
+00:21:16 [W] We also decided to begin with a bare minimum servicemeshcon traffic splitting capabilities.
+00:21:25 [W] So this means we do not have circuit breaking retries rate limiting or Kudo management or identity management and which will be less so in the first phase of this rollout
+00:21:36 [W] We worked closely with the teams owning the first few applications that were selected for the rollout.
+00:21:51 [W] So this ensured that we could also introduced a CEO Concepts to the devs and walk them through any changes in the infrared deployment processes at this stage.
+00:21:58 [W] We had something like an informal internal checklist for migration and deployment and we use the initial roll outs to gather feedback about this checklist and to make it more comprehensive.
+00:22:07 [W] in the next phase we use this internal checklist to draft documentation and Define the standard operating procedures for the migrations and the deployment processes in this stage the taken in for automation for these two rollout was
+00:22:25 [W] Will and we will testing to see if our documentation and the processes were reversed.
+00:22:39 [W] So we also actually handed over a documentation to developers and asked them if they could migrate their apps to still themselves and but at this stage, we also had an understanding that we would be available
+00:22:46 [W] Goes for any questions or for any support as their documentation and processes were not completely tested yet.
+00:22:53 [W] Now moving on to the third phase of migration.
+00:23:01 [W] This is the last phase and here the documentation in the processes.
+00:23:05 [W] We're also battle-tested and the migration was mostly running on autopilot. And we use the time freed up because of all the Automation in documentation for any billing more features of sto.
+00:23:17 [W] Now coming to the Automation and documentation that we used.
+00:23:31 [W] So we created hell charge that supported is to resources and automatic injection of sto side cars Etc. And
+00:23:33 [W] We also added support for rolling back to Rolling back from the servicemeshcon or rolling onto the servicemeshcon the helm charts and made it really easy for the developers to roll back or rule out as in when they saw
+00:23:49 [W] Was convenient or comfortable for them?
+00:23:52 [W] in addition to this we noticed a couple of
+00:23:58 [W] points of friction and points of failures and we identified and we route automation scripts for validating any sorts of any sort of introduction of new resources issue resources into a CI Pipelines.
+00:24:14 [W] and I think this is a screenshot of the table of contents of our documentation that we created specifically for issue where we covered topics from the beginning and in increasing order of difficulty,
+00:24:30 [W] People could gradually get themselves more comfortable with this.
+00:24:36 [W] Okay.
+00:24:45 [W] So now that we had the issue of control pain in the data plane set up. We had to ensure that the monitoring and alerting is as robust.
+00:24:52 [W] So internally, we have a Prometheus and Griffon abased set up for monitoring and alerting that we use for a lot of things.
+00:24:58 [W] So when we set up is through we ensured that all the Matrix they go to the internal Prometheus that we have already set up for storing The Matrix for a long-term thing. We are using cortex and also for horizontal scalability of Prometheus.
+00:25:10 [W] We created separate dashboards on Griffin are for control plane as well as data plane.
+00:25:14 [W] What kind of Matrix we have on this dashboard.
+00:25:15 [W] I just talked about it in the next slide and these default dashboards. They were available.
+00:25:21 [W] So the moment service gets migrated to skew The Matrix for that particular service starts coming on to those dashboards. Also some default alerts or setup which directly goes to the respective teams.
+00:25:32 [W] And if the entire flow is present on is Theo if all the services in that one particular flow is honest here than there is a amazing so with graph we should isolation which shows traffic flowing from Service A to B to C. And wherever is a topic is going
+00:25:45 [W] Chose the red green and yellow lines that shows service liquidation or any error rate or Services. All good in that case.
+00:25:56 [W] It's green.
+00:26:00 [W] So talking about some Matrix that we have on a dashboard for the control plane. Obviously one things that we one thing that we measured is the XDS didn't see this ensure that the control plane and side and the data plane like how
+00:26:11 [W] Are these two planes to sink the error rate for XDS resource usages for control pain pods any certificate related errors how many sidecars are out of sync with the control plane side color version drift so you can
+00:26:26 [W] Still control plane, but data pane can upgrade over time.
+00:26:33 [W] So what we do is once we have great the control plane to a newer version of SQL.
+00:26:36 [W] SQL. We leave it to the developers to update the data plane. And we keep matric to check how many of those services are still not a graded. So in case you have to send reminders to the respective teams.
+00:26:45 [W] For the data plane.
+00:26:49 [W] We use the four golden signals of monitoring latency traffic errors and saturation.
+00:26:53 [W] These are all standard signals that are there.
+00:26:55 [W] Some of the challenges that we faced one thing was obviously getting the developers comfortable with the new environment a new Concepts.
+00:27:09 [W] So we held a whole bunch of internal workshops and sessions to talk about is Theo answer any questions that the developers would have been rolling out is to you we made one mistake fortunately not in production was that we install is still controlled plane using Helm, but then when we were making some
+00:27:19 [W] We did it using SQL CTL and just screwed up the control Penn State we weren't able to figure out what exactly was wrong.
+00:27:27 [W] We reached out to the community all the metrics and dashboards look good, but things aren't working as expected and eventually someone from the community pointed out that you should either use Helm or SQL CTL for installing SQL. Don't mix and match the two things.
+00:27:41 [W] fortunately strs deprecated support for Helm all together in the newer version. So I don't think anyone else would face this error again.
+00:27:52 [W] Also understanding service entries we found it a bit confusing initially, but thanks to the community. We now have a much clearer understanding of how service entries work.
+00:27:58 [W] Using linbit deploy.
+00:28:02 [W] We were using Grim deploy a lot looking back.
+00:28:10 [W] It would have been better to use Helm with the templating tool rather than using tiller and using it to deploy or actual project.
+00:28:12 [W] So just to recap about what we discussed so far there were three phases of rollout improvements in each phase targeted towards empowering the cell. So this migration we uh staggered migration to discover any issues of limitations created documentation and a guide for migration and
+00:28:28 [W] validations in CIP lines
+00:28:31 [W] So the current state of migration is that we are in Phase 3 migration and any new services that are coming on developers.
+00:28:40 [W] Just go deploy it on is the on their own and we have started adding more features like mpls rate-limiting multi cluster control plane, etc, etc.
+00:28:49 [W] None of this would have been possible without active support of the SQL Community.
+00:28:56 [W] They are the ones and get active support is the reason why we are here today and in particular we would like to thank neeraj and Shri Ram without whose support full ND were about migrating group a to still wouldn't have been successful.
+00:29:09 [W] So with this we would like to end this session and open the floor for Q&A. Thank you.
+00:29:15 [W] Hello Shelly start with the Q&A.
+00:29:31 [W] Hello.
+00:29:42 [W] yeah, it seems like this one issue, but this is
+00:29:57 [W] of metric and how the servicemeshcon acted resources usage performance or latency
+00:30:06 [W] free video editing them
+00:30:13 [W] Sorry, there was some connection issue I wasn't able to give the bubbly.
+00:30:19 [W] And how the servicemeshcon?
+00:30:29 [W] Okay. So in terms of latency, we didn't notice any significant increase in the overall latency the role of slight increase but that is something that we can live with in terms of resources.
+00:30:44 [W] There is one more container in the pot. So we obviously have to assign resources to that but overall because they were also using Printing and Y which were on VM at actually resulted in a reduction of resources for us.
+00:30:58 [W] Little slight increase but that is something that we can live with in terms of resources.
+00:30:59 [W] There is one more containerd in the pot. So we obviously have to assign resources to that but overall because they were also using fronting and Y which were on VM at actually resulted in a reduction of resources for us.
+00:31:00 [W] So it's definitely the wind when where we can move out from printing annoyed and death Brigade conceal and move all the configuration to the sto Sidecar.
+00:31:09 [W] Another question is how can you manage DMZ applications?
+00:31:18 [W] I did not hear that question.
+00:31:30 [W] So, how do you manage VMS?
+00:31:31 [W] How can you manage DMZ application?
+00:31:36 [W] I'm not sure what DMV applications are.
+00:31:42 [W] Did you evaluate performance servicemeshcon?
+00:31:51 [W] Yes, but look at the performance and we didn't see any significant degradation and the overall topic. So does all good and in addition to this. We also had staggered rule out so
+00:32:09 [W] Some person portion of the workload running on the mesh and they're not on the mesh in we could compare things side by side and we did not notice anything significant in some cases where there were issues that could be solved
+00:32:25 [W] the resource limits on their pods
+00:32:28 [W] next question was there any case of failure during the migration? If so, how did you handle it?
+00:32:39 [W] We did his yeah.
+00:32:49 [W] Yeah sure. We did face failures fortunately none of them because of still as such it was more about issues because our because you are introducing a servicemeshcon our environment
+00:33:03 [W] Issues around version mismatch of versions of grpc and things like that. So because we had a rollback option as soon as we saw some issue which could not be trashed quickly
+00:33:19 [W] Roll back traffic from the servicemeshcon do the previous setup and that duration before rolling bag gave us an opportunity to collect enough data to learn more about it and fix it.
+00:33:35 [W] So yeah, that's mostly how we deal with it.
+00:33:37 [W] right
+00:33:40 [W] And then I think we have time for one more question.
+00:33:47 [W] So when you install the sto on production, did you encounter with any traffic down time?
+00:33:50 [W] No, not really.
+00:33:57 [W] That wasn't any kind of down time at all.
+00:33:59 [W] The traffic was moving seamlessly because of what we just discussed in the talk.
+00:34:02 [W] Yeah, there is be. We're sorry it just one bit. I want to add there to that question is we were a little smart in introducing servicemeshcon and we had some asynchronous
+00:34:20 [W] Operator events or silver architecture which is where we introduced it first shown any sort of issue would not actually impact live traffic and then we introduced it to a real-time components.
+00:34:32 [W] So other things thank you so much, and I think we do want to offer so please join us there to continue the conversation.

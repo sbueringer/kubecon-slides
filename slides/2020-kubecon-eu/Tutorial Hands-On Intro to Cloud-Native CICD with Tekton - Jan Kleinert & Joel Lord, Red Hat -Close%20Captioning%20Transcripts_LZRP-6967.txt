@@ -1,0 +1,671 @@
+﻿Tutorial: Hands-On Intro to Cloud-Native CI/CD with Tekton: LZRP-6967 - events@cncf.io - Monday, August 17, 2020 10:53 AM - 195 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:01:35 [W] Hello everyone and welcome to this Hands-On lab with tekton.
+00:01:43 [W] Let me start by sharing.
+00:01:47 [W] So I think you've got my slides up and running. So you should see the first time with pre-requirements. If you have just a few minutes, the links are also in the slack channel. So if you want to take a look at these if you want to if you already have installed minikube, that would be perfect.
+00:02:01 [W] There's also the community's playground that you can use.
+00:02:08 [W] So this will spin up a granese cluster that you can try and use for a few seconds here for you for an hour.
+00:02:09 [W] I think and there's also the tekton command line that you will need.
+00:02:13 [W] There is also a vs code extension which you can install if you'd like to give it a try.
+00:02:21 [W] Well, I guess we're ready to get started now.
+00:02:27 [W] Let me find my size. So welcome to our the Hands-On interactive Cloud native ci/cd with tekton.
+00:02:30 [W] My name is Joe Lord. I work as a developer advocate for the red hat openshift platform and I came from to this world with a lot of experience as a software developer.
+00:02:39 [W] So it was kind of interesting for me to learn about all this ci/cd and everything working in.
+00:02:43 [W] Inside the the Greenies bester's I really like this tekton tool and I'm really happy to talk about it today and I'll let you introduce yourself Jen.
+00:02:53 [W] Alright great. So I'm Jan clinard. I lead the openshift developer.
+00:03:02 [W] And we want to make sure that we have plenty of time for the Hands-On exercises.
+00:03:12 [W] So we'll go ahead and get started.
+00:03:13 [W] So back over to you Joel definition to Define ci/cd.
+00:03:23 [W] I've looked up the red hat website and found the following definition, which I thought really encapsulates what it's all about. So ci/cd introduces ongoing Automation and continuous monitoring throughout the lifecycle of applications from the integration testing phases to delivery and deployment.
+00:03:36 [W] The acronym ci/cd has a few different meetings CIA is or pretty much always refers to continuous integration, which is the automation process for developers successful.
+00:03:52 [W] See I'm in is new code changes to an Apple regularly build test and merge to a shared repository.
+00:03:55 [W] a solution to a problem of having too many branches of an app and development. Once that might conflict with each other the ci/cd part refers to continuous delivery and or continuous deployment which
+00:04:07 [W] are related Concepts that sometimes get used interchangeably. Both are about automating further changes first stages of the pipeline, but there are sometimes used separately to illustrate just how much automation is happening containerless delivery usually means
+00:04:22 [W] Application are automatically bug tested and upload it to a repository where they can be deployed to live production environment by the operations team.
+00:04:37 [W] It's an answer to the problem of poor visibility and Communications between death and business teams to that end. The purpose of continuous delivery is to ensure that it takes minimal efforts to deploy new code.
+00:04:44 [W] And I'll let you pick it up from here 10.
+00:04:51 [W] All right.
+00:04:51 [W] thanks.
+00:04:54 [W] So now that we've established what we mean by ci/cd.
+00:04:56 [W] Let's talk about Cloud native ci/cd cloudevents such an overloaded term.
+00:05:01 [W] So we'll talk about what we mean by it in this context.
+00:05:07 [W] So containers what we mean. There is that cloud native ci/cd supports applications that run in containers and that are orchestrated by kubernative in must be serverless, so it can needs to be able to run and
+00:05:16 [W] On demand without the need for a central CIA engine to be maintained or taking care of and then finally devops.
+00:05:31 [W] So what we mean there is that these systems are built with devops practices in mind and they allow teams to own their delivery pipe lines alongside the applications without having to rely on like a sinner since Central Center of Excellence
+00:05:38 [W] Just delivery pipe lines on other teams behalf.
+00:05:45 [W] So it kind of gives them that that ownership and freedom and flexibility.
+00:05:48 [W] So really when it comes down to it with Cloud native ci/cd, we want to be able to build test stage deploy everything all of that with all of these characteristics in mind.
+00:05:56 [W] Next slide there it is.
+00:06:01 [W] I'm looking at my own screen.
+00:06:03 [W] So there's many options available for your projects to choose from Jenkins. Jenkins X beniker you may have heard of these. There's also a lot more and you could take a look at the continuous delivery Foundation. We've got the link their CD
+00:06:16 [W] So there's many options available for your projects to choose from Jenkins. Jenkins X beniker you may have heard of these there's also a lot more and you could take a look at the continuous delivery of foundation.
+00:06:18 [W] We've got the link their CD Foundation to learn about those anymore.
+00:06:19 [W] So the one project that we're going to focus on today, though is the one with the cutest logo tekton is a powerful flexible open source framework for creating Cloud native ci/cd systems.
+00:06:36 [W] So it integrates into kubernative use and allows developers to build test and deploy across different Cloud providers or on-premises systems.
+00:06:43 [W] it gives you a lot of flexibility there if we look at all the existing tools, whether it's tekton or some of the others that we mentioned they all have a few things in common.
+00:06:51 [W] So for example, they you probably have inputs like your code you perform some kind of task on that input and then you have an output which might be something like an image that's been that can be deployed.
+00:07:06 [W] So tekton was built with all of that in mind, right?
+00:07:10 [W] So it provides us a set of tools that are composable declarative reproducible and Cloud native in order to make it easy to build these pipelines. So the way that tekton does this in such a kubernative knative way is that
+00:07:21 [W] It adds a few cri-o is or custom resource definitions into your kubernative cluster and then you can use those pieces those building blocks to put your ci/cd pipelines together and I will turn it over to Joel to talk about that some more like a
+00:07:35 [W] Blocks that tekton provides us with so first first, there are steps tasks and pipeline. So I step is one of those operations that you can perform on your code.
+00:07:48 [W] So say you're building a node.js application.
+00:07:49 [W] It might be running some unit tests.
+00:07:54 [W] That would be a step or validating that in the code follows the the coding standards that you have in place.
+00:07:55 [W] That would be another step.
+00:07:59 [W] So tekton will perform each step inside a container that you provide for that node.js application. You can run a rail base Universal image with node.js installed on it.
+00:08:05 [W] So steps are the most basic tasks or most basic building block in tekton.
+00:08:11 [W] Now it's ask is a collection of steps. So as you can see in that diagram we have task 8, which is a collection of three steps that are performed in order tekton runs those tasks inside a kubernative spot, which allows you to have a shared environment when you're designing a series of steps
+00:08:27 [W] For example, you can mount it volume in a task.
+00:08:33 [W] That would be shared across each step for a specific task.
+00:08:39 [W] So tasks are specified as custom resources in your kubernative cluster.
+00:08:40 [W] And finally we have the pipeline.
+00:08:44 [W] pipeline is a collection of tasks that can be executed in a number of different ways in this diagram the pipeline will start by running fast a then we'll run both task B and C in parallel. And once those two tests are successfully completed task D will run.
+00:08:55 [W] Tekton provides developers with a lot of flexibility on how and when those tasks should be executed.
+00:09:07 [W] You can even specify conditions that a task must run in order to meet in order to trigger the next one. So pipelines are also specified as custom resources in your Goonies cluster.
+00:09:12 [W] So now that you can perform operations, we will need something to operate on you might want to output something at the end of your pipeline as well.
+00:09:23 [W] So this is where inputs and outputs will come into play each task and pipeline will have their own inputs and outputs.
+00:09:30 [W] The nice thing about the reusability of tekton pipelines. Is that once you write a pipeline for building testing packaging an application you can use that same Pipeline with a different input
+00:09:38 [W] For example, you could use a git repository just like this example and on which you would perform a bunch of operations or a bunch of tasks. And then you would output an image at the end just like in this diagram, but you could reuse that exact same
+00:09:53 [W] From code base if needed resources can be many different types.
+00:10:01 [W] They could be a real get repositories pull request images clusters storage Cloud events and a few more so there are also specified as custom resources.
+00:10:08 [W] Finally, we have task runs and pipeline runs as the name implies.
+00:10:15 [W] There are specific executions.
+00:10:19 [W] So a test run is a specific execution of a task.
+00:10:22 [W] You can run tests outside of a pipeline to help you see the specifics of a single task if you need to that's what we'll do in a few minutes and the pipeline run similarly is the specific execution of a pipeline.
+00:10:34 [W] So your task runs and pipeline runs are also what binds together your tasks and biplanes with the resources.
+00:10:38 [W] So those runs can be triggered manually as you will see or On Demand by using tekton triggers.
+00:10:44 [W] A pipeline describes the activities that take place during the execution via tekton tasks.
+00:10:55 [W] So pipeline. However does not contain the specifics of the git repository image repositories openshift and kubernative cluster in order to keep the pipeline decoupled and reusable across environments. These coordinates are provided to the pipeline during execution through
+00:11:07 [W] So one could could during the execution provide different sets of pipeline resources to execute the same pipeline against different git repos.
+00:11:15 [W] So you can see here an example of such a pipeline where we start or where are we built a Java application and you can reuse that for all of your job application with different inputs and outputs of the end.
+00:11:27 [W] And it's up to you Jen.
+00:11:32 [W] Okay. So now that we've kind of introduce these Concepts to you. We are going to take a look at what this looks like in practice so you can go to this URL here to get started.
+00:11:45 [W] I'll leave this open that sorry.
+00:11:48 [W] Yes.
+00:11:49 [W] I'm not in control of that.
+00:11:49 [W] That's right.
+00:11:51 [W] So you can go to this URL here to open up up the tutorial in your browser.
+00:11:57 [W] It's github.com Joel Lord / Hands-On - tekton tear
+00:12:03 [W] And once you've been running what we're going to do is walk some.
+00:12:12 [W] Simple explanatory examples of what a pipeline and task things look like and then we'll move on to a real world example.
+00:12:21 [W] So Joel if you could go ahead and stop sharing your screen, I'll switch over to sharing mine for this next part.
+00:12:28 [W] Hopefully you can see my screen now. And what I'm going to do is bring up my terminal and then shrink this browser window a little bit.
+00:12:49 [W] So that we can follow along together.
+00:12:53 [W] Okay.
+00:12:56 [W] So as we mentioned at the very beginning there's a few requirements that will get you set up so that you can follow along with us. If you choose if you are minikube, that would be a great option. If you don't you can go to this.
+00:13:12 [W] Is a new tab Keda Kota kubernative playground just to show you what it looks like you click this orange start scenario button, and it's going to spin up a kubernative environment for you.
+00:13:27 [W] It may take a minute. If all of you are doing it at the same time, but once you have that up and running you can work in this top panel that you kind of see grayed out here in the back and execute any of the commands that were talking about there and I'm going to close it out so I don't take up any
+00:13:39 [W] Sis, but again, if you have minikube, that's that's a good way to go.
+00:13:47 [W] So you'll also need the tkn command line tool.
+00:13:51 [W] There's instructions here on how you can go ahead and install that depending on your operating system should only take a few seconds and then optional you don't need this for what we're doing today.
+00:13:59 [W] We'll be demonstrating it for you.
+00:14:01 [W] But if you want to get the vs code tekton extension, you can get it from this link.
+00:14:04 [W] All right.
+00:14:09 [W] So with tkn installed and some kind of environment second.
+00:14:13 [W] Let me just run Cube CTL version make sure my clusters up looks good.
+00:14:16 [W] Okay.
+00:14:20 [W] So the first thing that we're going to do is install tekton on our cluster. We've gotten this set up for you here with this command that you can run that will install that for us.
+00:14:31 [W] So I'm just going to copy and paste so that I don't whup Miss type anything.
+00:14:34 [W] If you are using the kubernative playground and you're on a Windows machine you made have to do control shift V in order to paste.
+00:14:46 [W] So if you find yourself having some trouble that might be what you need to try Okay, so that applies a bunch of resources into the cluster. It gets tekton pipelines installed for us.
+00:14:58 [W] So the next thing that you'll need to do if you haven't already is clone this repository that we're working in and then CD into that Hands-On tekton directory. I am already in
+00:15:04 [W] Are so we're good to go.
+00:15:07 [W] The hello world task. So as Joel may have mentioned earlier tasks run they exist inside of a pod and you can use these tasks to perform different operations.
+00:15:25 [W] They can really do many things that may or may not even be related to you know, building and deploying an application there that flexible but typically you would use them for things like compiling an application or running unit tests are tasks that we're going to use here
+00:15:37 [W] Play going to Echo out hello world to us.
+00:15:44 [W] So, you know, this is this first section that we're going to do here is really kind of getting you used to the concepts in a hello world kind of way rather than using this as you would with an application, which will do at the end.
+00:15:55 [W] So let me show you over here. I have this 0 1 - hello Dottie mlperf
+00:16:08 [W] and is Task.
+00:16:10 [W] It's got a name of hello, and then there's the spec here which has the steps for our task. So as Joe mentioned a task is made up of one or more steps. So our step same as what you see here is say hello.
+00:16:24 [W] We use this red hat Universal base image and then we're just running this command here.
+00:16:28 [W] Alright, so let's try it.
+00:16:35 [W] We've got it set up so that you can copy and paste these if you're in that Hands-On tekton directory.
+00:16:36 [W] This should just work for you, but we're running.
+00:16:38 [W] You've got to apply - chef and passing in that 0 1 - Hello dot, um will file.
+00:16:44 [W] And the message we get back is that that task was created next. We're going to run TK and tasks start to start it.
+00:16:53 [W] TK and tasks start were using the show log flag so that we can see the logs as they are generated and then you pass the name of the task, which is hello.
+00:17:19 [W] So it'll take a minute here while we wait for the logs to come back to us.
+00:17:28 [W] But we should see when it completes. Is that hello world message.
+00:17:33 [W] And hopefully if you're following along you're seeing similar Behavior.
+00:17:44 [W] Got a little bit of slowness here at the moment, but we'll give it a second as it as it returns.
+00:17:55 [W] There we go.
+00:17:57 [W] So now we have our response back which is Hello World, which is what we expected. So what I'm going to do now is stop sharing for a moment and pass it over to Joel. He's going to show you how to add parameters to a task.
+00:18:10 [W] So I've stopped sharing now.
+00:18:12 [W] Then I'll take this task that judge is created and I'll try to pimp it up just a little bit.
+00:18:25 [W] So we have a test that says hello world.
+00:18:27 [W] So let's try to change that to make it a little bit complex.
+00:18:32 [W] Our response back, which is Hello World, which is what we expected.
+00:18:38 [W] So what I'm going to do now is stop sharing for a moment and pass it over to Joel. He's going to show you how to add parameters to a task. So I've stopped sharing now.
+00:18:39 [W] Then I'll take this task.
+00:18:39 [W] that judge is created and I'll try to pimp it up just a little bit.
+00:18:40 [W] So we have a test that says hello world.
+00:18:41 [W] So let's try to change that make it a little bit complex.
+00:18:42 [W] So when you create tasks and bike Lanes, you'll probably want to pass some parameters to it.
+00:18:44 [W] It could be things like, you know, we want to run a specific test Suites or we want to use a specific node version. But in this case, we'll just try to enter a person to person named for who to we for who can say hello to
+00:18:50 [W] So as part of my task here in this spec part of my task actually right here, I can add a parameter and because I have the vs toad extension installed.
+00:18:59 [W] I'll have a lot of potential auto-completion so I can automatically add a parameter.
+00:19:06 [W] I'll give it a name of a person we can we won't give it a value for now.
+00:19:10 [W] I'll just give it a description.
+00:19:12 [W] It is the name of the person to greet and we will add a default value so that we can still output.
+00:19:21 [W] hello world if we want to and we will specify a drink just to make sure type just to make sure that the users will be providing us with the right type of parameter.
+00:19:36 [W] One thing that I can see I just forgot was that actually specify that I'm adding a parameter right here. So we now have our parameter and if I try to execute this, oh, I'll just change our hello world.
+00:19:42 [W] Here, so instead of outputting helloworld. We will output one of the programs and we'll just use the person parameter. So will output the value of this parameter here.
+00:19:52 [W] if I go ahead and apply this to ask
+00:19:56 [W] His name would be the person to greet and we will add a default value so that we can still output.
+00:20:08 [W] hello world if we want to and we will specify its drink just to make sure for a type just to make sure that users will be providing us with the right type of parameter.
+00:20:10 [W] that I can see I just forgot was that actually specified that I'm adding a parameter right here. So we now have our parameter and if I try to execute this, oh, I'll just change our hello world.
+00:20:14 [W] World here. So instead of outputting hello world.
+00:20:16 [W] We will output one of the programs and we'll just use the person parameter so will output the value of this parameter here.
+00:20:18 [W] but if I go ahead and apply this to ask
+00:20:22 [W] and it should already be a zero to that program for you. If you clone the repository and then I can use tekton again to use on task and I will start the hello task and let's
+00:20:23 [W] You use on a task and I will start the hello task and let's show the logs Vlog now, you can see that I'm asked for the value for that parameter.
+00:20:25 [W] I can say Joel and in just a few seconds.
+00:20:26 [W] We should be able to see Hello Joel instead of the deep the default hello world that we have if I leave it empty. I can still use the default value automatically and the same will be done automatically for you in your chronosphere.
+00:20:37 [W] Rooney's bester if you're not using directly the command line here.
+00:20:41 [W] All right, so that's nice.
+00:20:46 [W] So why don't we try to make this a little bit more complex now and add some multiple steps to our operation. So I've told you already a task can be composed of multiple steps and they can each share a as same environment.
+00:20:58 [W] So let's add a setup first task which will write something into a file.
+00:21:03 [W] So we'll call this first step.
+00:21:05 [W] Right?
+00:21:05 [W] Hello.
+00:21:07 [W] And we will use the same image. So the universal base image from a red hat.
+00:21:13 [W] And I can also specify a script so instead of a single command. I can add a script I can type this in.
+00:21:22 [W] I'll just create a small batch script.
+00:21:23 [W] There it is.
+00:21:28 [W] I can use a batch grip.
+00:21:35 [W] We will just Echo something just so that we can see the progress here preparing preparing greeting piping is hard.
+00:21:44 [W] So and then we will hello our parameter, but instead of just outputting it to the standard output will put this in a text file somewhere.
+00:21:53 [W] Just create a small batch script.
+00:21:54 [W] there is
+00:21:54 [W] I can use a batch grip.
+00:21:55 [W] We will just Echo something just so that we can see the progress here preparing preparing greeting piping is hard.
+00:21:56 [W] So and then we will hello our parameter, but instead of just outputting it to the standard output will put this in a text file somewhere.
+00:21:57 [W] Now we will sleep you seconds just to actually see those steps one after the other and I will Echo done.
+00:22:00 [W] Now for our say hello path, we will change this a little bit but here we'll still you.
+00:22:10 [W] Well, actually, let's use a different image.
+00:22:13 [W] So we'll change that to a note 14 image and we will also use a script here.
+00:22:17 [W] Look for clean will use a script.
+00:22:25 [W] Is all right and let me just copy and paste right here.
+00:22:33 [W] So what we're doing here.
+00:22:34 [W] Is actually picking a different script. So in this case, we're actually running a nodejs trip and we will be reading that file from / tekton /home slash.
+00:22:45 [W] Hello text so you can see here that I've used the home folder.
+00:22:51 [W] folder. So I'll be writing something in that for home folder and then I'll be reading from it in that second step that I'm doing I can see that I have a few errors instead of trying to debug that. Oh, actually I can probably debug it.
+00:22:59 [W] And there it is hot.
+00:23:04 [W] So I have my test ready now so I can go ahead and apply this.
+00:23:07 [W] Actually, you have it as 0 3 in the demo folder.
+00:23:13 [W] Now I've reconfigured my hello test again so I can run tekton.
+00:23:19 [W] It's actually picking a different scripts on this case.
+00:23:24 [W] We're actually running a no chase trip and we will be reading that file from / tekton /home slash.
+00:23:25 [W] Hello Tex, so you can see here that I've used the home folder.
+00:23:25 [W] folder. So I'll be writing something in that for home folder and then I'll be reading from it in that second step that I'm doing I can see that I have a few errors instead of trying to debug that. Oh, actually I can probably do bug it.
+00:23:26 [W] And there it is, huh?
+00:23:27 [W] So I have my test ready now so I can go ahead and apply this.
+00:23:28 [W] Actually, you have it as 0 3 in the demo folder.
+00:23:29 [W] Now I've reconfigured my hello test again so I can run tekton ask her.
+00:23:30 [W] hello, and we will show the logs as get again Sherlock is I can use a fuse Jen design.
+00:23:31 [W] There you go.
+00:23:38 [W] Hello, Dan. So now what is happening is that we have that first bash script that will be running if we'll start by telling us it's preparing the greeting.
+00:23:41 [W] It's writing to a file now it's done and we can see that we have our second step right here and we can see
+00:23:44 [W] How they are you can see the name of the tented the step and we can see the actual output. So they are now sharing this shared volume. So you can write some things in a single step and reframe it as long as they're all inside the same task and
+00:23:59 [W] We'll be running if we'll start by telling us is preparing the greeting.
+00:24:00 [W] It's writing to a file now.
+00:24:00 [W] it's done and we can see that we have our second step right here and we can see how they are.
+00:24:01 [W] You consider name of the tented step and we can see the actual output. So they are now sharing this shared volume. So you can write some things in a single step and read from it as long as they're all inside the same task.
+00:24:02 [W] And I'll stop sharing and back to you Jen.
+00:24:05 [W] Okay.
+00:24:10 [W] Alright, so I'm back here.
+00:24:19 [W] I actually was following along with Joel and I'm waiting for my logs to be available here.
+00:24:25 [W] So I'll give it a second and then if it's taking a minute, I'll just stop that move on.
+00:24:32 [W] What we're going to cover next is pipeline. So we've talked about tasks. Now you talked about how you can add multiple steps into a task deal with parameters.
+00:24:34 [W] But many times you're not going to just have one task and pipelines.
+00:24:43 [W] What they really do is give us that opportunity to have multiple tasks run to accomplish whatever it is that you're trying to do.
+00:24:49 [W] So, let's start by doing some kind of really generic task that's going to Echo in whatever it receives from his parameters.
+00:25:00 [W] So the parameters are say what which is what we should say and then there's this pause duration for how long to wait before, you know providing that
+00:25:05 [W] Response back we're going to use that task in order to build art our pipeline.
+00:25:20 [W] So you can see here that the name of this task is say something and that's important because we're going to refer to that say something task in our pipeline by its name.
+00:25:26 [W] So when we look at the pipeline here, and I'll pull it up and Bs code so that you can see it a little bit better.
+00:25:27 [W] So here's our tasks. The one that we were looking at over here the say something task with our say what and positive rotation parameters and then the step here is going to Echo out to go to sleep for
+00:25:45 [W] Duration, and then Echo out whatever you told it to say, so then our pipeline.
+00:25:53 [W] Is here and so pipeline also has a name and then it is made up of tasks.
+00:26:03 [W] So in this case two tasks our first task takes in.
+00:26:11 [W] You know, we give it a pulse duration of 2 and then we say what is going to say is hello is the first task and the second one is going to say and this is the second task so fairly straightforward.
+00:26:21 [W] We're going to use that task multiple times, but use it in different ways with different input
+00:26:24 [W] So let's try it out.
+00:26:27 [W] Well minimize here.
+00:26:32 [W] I don't trust myself to Live code today.
+00:26:34 [W] So I that's why I'm showing it to you that way instead.
+00:26:35 [W] So if you pay in pipeline start saying things and we'll do show log look show - log.
+00:26:46 [W] Spelled it wrong again.
+00:26:50 [W] So no - they're just show log.
+00:26:54 [W] Right? Right because we didn't actually apply these llamo files yet.
+00:26:58 [W] So let's do that first got a little ahead of myself.
+00:27:00 [W] First we need to ply the task create those and now we can create that pipeline.
+00:27:08 [W] Now we'll be able to run it.
+00:27:15 [W] Ask that we have and then tkn pipeline LS does the same thing for Pipelines?
+00:27:22 [W] Alright, so now if we go back and then Pre-K and pipeline starts a things should know about this pipeline now it exists.
+00:27:31 [W] All right. So now that's running for us.
+00:27:37 [W] So let's wait and see what the output looks like.
+00:27:37 [W] Before we move on to talking about the different ways.
+00:27:44 [W] Okay, so this is interesting.
+00:27:46 [W] This may look like yours or yours might be different. But in my case the second task is actually the one that outputted output first followed by the first task this happens. Sometimes the
+00:27:59 [W] Reason that it happens is that tekton trust is start them all at the same time so they can run in parallel.
+00:28:13 [W] But if you need more control, if you need it to be the case that one thing doesn't start running until another thing finishes because you have those types of dependencies.
+00:28:16 [W] That's when you can use this run after parameter that we talked about in the tutorial. So let's look at how we can modify this pipeline to run these tasks in order but also to add in
+00:28:28 [W] Now and then some other task that run sequentially because that's mitts more closely what you might actually have in a real life situation.
+00:28:41 [W] So we will go to the S code once more and look at this.
+00:28:45 [W] Pipeline I'm going to minimize this so we can see a little bit better.
+00:28:50 [W] Make this bigger.
+00:28:51 [W] Alright, so for our say things in order pipeline again, we're still referring back to our say something task several times four times. In fact, so we have four tasks in the pipeline now, we've named them first a second saddest.
+00:29:06 [W] Third task and fourth task.
+00:29:10 [W] Here's here's how they're set up.
+00:29:13 [W] So this first one is very similar to what we had before.
+00:29:16 [W] We're giving it. The pulse duration of to its says hello.
+00:29:21 [W] This is the first task but then here's what we have different for our second per second task here.
+00:29:29 [W] It's going to say happening after task one in parallel with task 3 and task 3 is saying happening after Task 1 in parallel with Test 2 and the way that we make that work is we use the
+00:29:38 [W] After field here and for both the second and the third task were saying run after the first task see here run after first tasks run after first task. So that means neither task two and task three
+00:29:51 [W] It is until the first one completes and they will be executed in parallel. And then finally, we have a fourth task which says happening after task two and three that has a run after set to Second task and third test.
+00:30:07 [W] So this one the fourth task will not execute until both task two and task three or complete.
+00:30:16 [W] Okay. So, let's see if it behaves like we've set it up.
+00:30:17 [W] Back to the terminal going to do clear so that you can all see my screen maybe a little bit better. So
+00:30:27 [W] That 0-6 pipeline order file.
+00:30:33 [W] We were just looking at let's apply that.
+00:30:34 [W] Okay should see that new pipeline exist now right here is I things in order so that's good don't need to any new task since we're using the task. We had already used in the past. So now we'll do PK 10
+00:30:50 [W] Let's start say things in order order and will be show log.
+00:30:59 [W] If we set that up correctly, we should see the first task then we should see two and three start then when they're done.
+00:31:11 [W] We just see the fourth one.
+00:31:12 [W] So here we go.
+00:31:12 [W] Hello. This is the first task.
+00:31:14 [W] Now this third and second one I running we didn't specify a specific order for two and three so we kind of just get whatever happens and then there's the fourth task which happened after those two completed.
+00:31:36 [W] So that's just a very quick way of showing how you can have within a pipeline.
+00:31:42 [W] Some tasks can run sequentially others can run in parallel up parallel and you have a lot of control over how to set that up and specify when things should run.
+00:31:48 [W] All right. So at this point, I'm going to stop sharing my screen and hand it back over to Joel to talk a little bit about resources.
+00:31:56 [W] Perfect.
+00:32:00 [W] Thank you Jen just before I move on to a resources.
+00:32:06 [W] Once again, I have the tekton extension that is installed in the and I'm using vs code right here and just to kind of show little bit what gent is presented.
+00:32:15 [W] Plan and you can see that I have access to all the different pipelines that I have in my cluster all the different tasks that we've created so far as well as if you had that I already had so so you can see everything in there very quickly, but the one feature that is very
+00:32:36 [W] I want to show you is the pipeline preview here. So you can see right here that you have the first task running followed by both the second and the third in parallel. And then finally you had to the fourth task which would only happen if all of the
+00:32:51 [W] Asks were successful.
+00:32:57 [W] So it's a very visual way to kind of see all those those different tasks. And and those are those pipeline service especially when they're getting a little bit more complex.
+00:33:03 [W] All right, so I'll move on WE to add the next part. I want to introduce resources now.
+00:33:20 [W] So we've already said that pipelines can do multiple operations. But really what they do is that they will typically perform something on a either an input and then they will while they will perform something on an input and typically they would provide us with an output
+00:33:25 [W] So we can go to the pipeline resource example.
+00:33:30 [W] And you can see here that I have a task that will count the file.
+00:33:38 [W] So it'll just take a can get repository as an input and it will just count the number of files inside that git repository so you can see here in my spec that I have a resource section and I have one input.
+00:33:51 [W] And here I'm telling while this the name for this input will be repo it'll be an input of type get so it could be multiple things as I've mentioned in the introduction and our Target path.
+00:34:04 [W] Where is will our git repository get cloned will be in the code folder now for my cast my first step is to count.
+00:34:13 [W] So I'm giving it the name count.
+00:34:15 [W] I'm using the Rel Universal base image again and using it bash script and I'll just Echo the number of files in-toto.
+00:34:21 [W] Now move on to create my actual pipeline. The pipeline will have a single tasks and if a single task and it will take a resource as an input.
+00:34:34 [W] So it will be the git repository.
+00:34:38 [W] I'll give it a 10 the task count task or a file name my task count ask and I'll give it an the the files to be run. So this is in reference to the tasks that I've just created in the right here.
+00:34:50 [W] And now I have my input so everything should be good. And finally, I'll need to actually create that resource.
+00:34:59 [W] So I'll create a new object of kind of pipeline resource the name for this will be git repo which is the same as we have right here.
+00:35:05 [W] And it will be a git repository and a default value will be the actual get Rebus three you're using for these examples right here.
+00:35:21 [W] So when I go ahead and apply this and this is the den 1075 Point resource, so you can see that everything was configured.
+00:35:30 [W] So now if I try tkn pipeline, which one was it?
+00:35:34 [W] How do I call it?
+00:35:35 [W] I forgot. All right, it was called count.
+00:35:39 [W] latika and pipeline count
+00:35:43 [W] fart and let's show logs show log.
+00:35:50 [W] so when I go ahead and apply this
+00:35:52 [W] and this is the den 107 pipeline resource so you can see how everything was configured. So now if I try tkn pipeline, which one was it?
+00:35:54 [W] How did I call it?
+00:35:54 [W] I forgot.
+00:35:55 [W] All right. It was called count the tkn pipeline count.
+00:35:55 [W] Parts, and let's show logs show a log.
+00:35:56 [W] I'll get there eventually he can I blame.
+00:36:01 [W] right.
+00:36:02 [W] There it is.
+00:36:05 [W] Okay.
+00:36:08 [W] So now you can see that I have the option to pick different get recovery different resources.
+00:36:17 [W] So in here I have the git repo that is already created for me or I could create a new get resource if I wanted.
+00:36:26 [W] So if I want if you want to run this exact same Pipeline on a different git repository to count the number of files and data buses. Are you could create a new get resource here?
+00:36:28 [W] Let's go ahead and use the default one.
+00:36:30 [W] And I forgot the show log parameter, but you can see that we get this useful logs and the name of the actual pipeline run here so I can run this.
+00:36:43 [W] command. You can see that my git repo was cloned so we can see successfully cloned here. And then I have my task that was performed on it and the actual count of the file and the output that I specified in my bash grip right here
+00:36:57 [W] and then I have my task that was performed on it and the actual count of the file and the output that I specified in my batch group right here so I can see that I have 59 piles in this git repository, which is a lot doesn't seem like that much
+00:37:03 [W] My my file explorer right here.
+00:37:07 [W] Alright, so those are nice.
+00:37:11 [W] We saw a lot of different examples. We've seen different ways to share resources.
+00:37:18 [W] We saw different ways to perform tasks operator operations and so on.
+00:37:21 [W] There's there's another thing that I forgot to mention about pipeline resources is that they're still in Alpha.
+00:37:31 [W] So tekton are just released the beta version just a few months ago. But pipeline resources are still Alpha The Core theme still questions whether they should stay in the spec or not in the latest version of tekton. They also introduced the workspaces.
+00:37:43 [W] So those are added to share file systems between the different tasks of a pipeline.
+00:37:49 [W] So I've shown you how to share a file system between the different steps of a task. But you can also use workspaces to share file systems between the different tasks.
+00:38:03 [W] I've added an example here and we can take a quick look at it because I think we still have plenty of time. Yeah, perfect.
+00:38:05 [W] So in my workspace example, you can see here that I created a persistent volume.
+00:38:12 [W] So it's a little bit more lengthy to actually use workspaces.
+00:38:19 [W] But if you're familiar with kubernative is this should be fairly straightforward.
+00:38:28 [W] So first we start by creating a persistent volume, then we start a persistent volume claim just to get this persistent volume and I'll give it a name.
+00:38:29 [W] It's I'm specifying the workspace that will call output and I can use that output as with a string extrapolation right here.
+00:38:44 [W] So I'm using here.
+00:38:47 [W] I'm telling it might ask to Echo.
+00:38:47 [W] Hello into the workspace that output that path.
+00:38:52 [W] So instead of using the home folder that I used in the previous example. I'm actually using the workspace here.
+00:38:56 [W] The other task does pretty much the same thing as we did earlier. So it just reads the output of that file or just
+00:39:03 [W] gives us the output of that, you know of that file so we can see that we're actually reading from the workspace again.
+00:39:10 [W] In our pipeline definition. This is where we will specify the pipeline that we want to use.
+00:39:16 [W] In each one of our tasks will also need to specify the pipeline to be used or the workspace to be used inside this task.
+00:39:26 [W] So we can see it in the retest as well. And of course I'm making sure that I'm running the recast right after the right one.
+00:39:35 [W] if I go ahead and apply this
+00:39:39 [W] this one is doesn't have a number just call workspace.
+00:39:43 [W] Perfect, and the pipeline is workspaces test.
+00:39:52 [W] use tkn pipeline starts
+00:39:59 [W] Work so I'll give it a name pipeline workspace.
+00:40:08 [W] And I'll just use the default and we'll just didn't seem like it work.
+00:40:21 [W] Actually. It shouldn't be using a empty directory.
+00:40:23 [W] Let's just try this again.
+00:40:24 [W] We'll be using a PVC and name of my pvc was tkn PV. C--
+00:40:31 [W] All right, so we're spaces are not fully working yet.
+00:40:37 [W] They're a little bit more complex to use than resources are and I can't figure out I think it's my sub path right here.
+00:40:49 [W] So they are there in the spec. They're still pretty much an alpha as well.
+00:40:50 [W] So sharing different resources between the different tasks in a pipeline is still is still in Alpha mode, but most of the rest that we've shown you today is in bed on should change that much.
+00:41:02 [W] Alright, so that was a lot of content that we've seen so far, but none of that really makes sense, right?
+00:41:10 [W] You're probably not gonna Echo hello world in your pipeline.
+00:41:13 [W] What we want to do here is ci/cd.
+00:41:17 [W] So what we really want to do is to take a git repository perform some operations on it and then, you know provide us with an image that we can that we can use
+00:41:24 [W] Inside of our kubernative sequester. So what I'll try to do here is to look at that Pipeline. And in this section, I'll have a pipeline that will use a node.js project. It will run a linter to make sure we don't have any linting issues so that the code follows the coding standard of
+00:41:40 [W] Also runs unit tests and to validate that the code is working and if both the lengthening and the passing of the testing pass, it will create a noches image push that to Docker using s2i and building.
+00:41:53 [W] So the first thing that we will do is to actually I'll just go and jump into my real world example here and we can take a look at our pipeline preview. Once again, so against AI does the linting then the testing and finally it will
+00:42:10 [W] Then deploy that image using s2i.
+00:42:12 [W] Alright, so the first task will be to to run npm to do and this first task will do an npm install followed by a Linton linting process so we can start by creating an object
+00:42:31 [W] Skype kind we will have various parameters.
+00:42:42 [W] So the first thing we'll be at the path to the application inside get so say you have a git repository that has the application in a specific folder. In this case.
+00:42:44 [W] We have an application in the app folder.
+00:42:48 [W] I'll want to be able to specify that as a parameter.
+00:42:49 [W] Secondly, we will have an action which will be another parameter.
+00:42:54 [W] What's the operation that we want to perform by npm? So with the default one will be start.
+00:42:59 [W] and we will have here our
+00:43:05 [W] First Step which will be the npm install and we'll use the git repository resource here.
+00:43:14 [W] We'll have our mpm install which will run on a node 14 image and it will run a batch command.
+00:43:20 [W] So we will repo we will see the into the repository / the path context.
+00:43:24 [W] That was one of our parameter right here.
+00:43:25 [W] So it's specified dot as default, but it will be app in our context and then it will run npm install.
+00:43:32 [W] And the Second Step I call it npm lint here.
+00:43:35 [W] But you can see that I'm using the action that was passed as a parameter. So it will actually run npm lint or npm run lint in this case.
+00:43:44 [W] The second task will be an STI task. So it will actually take a repository and build an image out of it.
+00:43:54 [W] So it will take a bunch of different parameters.
+00:43:57 [W] He'll take a username and password from Docker Hub. I will need a image name as well.
+00:44:00 [W] Use a registry in this case. We'll use Docker dot IO as a image name.
+00:44:08 [W] In order to that perform. This task will have multiple steps will have a generate step which we'll use as to I we will then build that image using an image that we take from quite in this case and then we will push that image to to Docker hub.
+00:44:24 [W] We'll have a shared volume between all of those different different tasks in here so you can see how to mount a volume as well.
+00:44:34 [W] And finally, we have our pipeline.
+00:44:40 [W] So our pipeline will take all of those different parameters that we need.
+00:44:43 [W] So first of all the username then the password for Docker Hub as well as an image name to produce.
+00:44:48 [W] I will have the one resource.
+00:44:53 [W] I'll have an input right here.
+00:44:55 [W] And then I have all of my tasks.
+00:45:00 [W] So first of all, my linting the second one will be the testing so I'm reusing that I'm reusing that same tasks that I've created in the first part right here so you can see the task reference is npm. So it's the same task. But in this case I'm using a run tests.
+00:45:11 [W] Instead of rental in so you can see how you can reuse those different tasks as part of the same pipeline here.
+00:45:17 [W] And finally, we have our build and deploy task which will take care of creating that image at the end.
+00:45:28 [W] And of course, we will run it after lint and test.
+00:45:29 [W] Okay. So first thing I'll need is to actually find my Docker Hub password.
+00:45:41 [W] So just bear with me for one second and I'll leave that out of this screen if you don't mind.
+00:45:43 [W] All right, there it is in Docker Hub.
+00:45:53 [W] You can actually use API Keys as a password, which is very useful.
+00:45:54 [W] I sleep when I started to you. So in doctor have you can create a new access token right here.
+00:46:11 [W] We'll call it cute gone.
+00:46:12 [W] And this is my personal password, which I probably shouldn't share with everyone but I'll remove it as soon as we're done right here.
+00:46:28 [W] So if I go ahead and apply this file, you see the L by demo / 208 so we have our real world example.
+00:46:33 [W] I'm Ray to start this with tkn. The name of the pipeline was app deploy for something specific pipeline app deploy and start
+00:46:43 [W] And pipelines part of people have a hard time putting those in orders for some reason. It doesn't make sense in my brain, but there we go. Okay, so we're using the same repository here.
+00:47:03 [W] The parameter for user will be Joe Lord, which is my Docker Hub username.
+00:47:11 [W] My password is the one that I just copied from Docker Hub. The image name will be coupon.
+00:47:13 [W] And let's see and let's take a look at those logs right here.
+00:47:16 [W] Let's see and let's take a look at the logs right here.
+00:47:25 [W] All right, so we can see that it already cloned my repository successful initialized so far doing good too nervous to see if this will actually work. Alright, so we have our linting that just work. We have our testing we can see that our tests passed.
+00:47:34 [W] Seems like the linting also pass we weren't really fast.
+00:47:39 [W] So that's good.
+00:47:43 [W] Let's see if it can actually create that image now, so we'll just wait a few seconds.
+00:47:48 [W] This process can be a just a little bit longer, but you can see that it's going on right now. So it's creating our dockerfile. And now it's I believe it's actually pushing that Docker file is building it.
+00:47:57 [W] Right storing signatures were getting closer and closer.
+00:48:07 [W] Let's see if we can actually deploy an application today.
+00:48:12 [W] Well, not deploy because it will be on Docker Hub, but it's we're getting close.
+00:48:13 [W] All right, copying all the files.
+00:48:23 [W] So now we can see our dockerfile being processed.
+00:48:26 [W] This is actually a long time for standing in front of a laptop not just for listening at the silence.
+00:48:49 [W] So it's almost ready.
+00:48:52 [W] Let's give it a few more seconds. It's still building right here.
+00:48:54 [W] This is actually a long time for standing in front of a laptop not just for listening at the silence.
+00:48:57 [W] So it's almost ready.
+00:48:57 [W] Let's give it a few more seconds. It's still building right here.
+00:48:57 [W] right now pushing
+00:48:57 [W] So we're just copying everything over to Docker hub.
+00:49:09 [W] Now once this is done, of course, this will be simply deployed on Docker Hub as the latest image.
+00:49:19 [W] Now, you can add different things to your pipeline as well.
+00:49:23 [W] So if you're using openshift, for example, you could add you could use OC to take that image and then send that to your question as well.
+00:49:28 [W] So we're not fully done.
+00:49:31 [W] We're not fully deployed here yet, but you can see here that my image was actually pushed just a few seconds ago to my Docker Hub to my to my Docker hub.
+00:49:42 [W] So my image was so we took our code we've deployed it are tested it deploy that into Docker Hub now, so in theory I could now do another operation to deploy that into my kubernative Lester just to see that this actually
+00:49:58 [W] That image and then send that to your cluster as well.
+00:49:58 [W] So we're not fully done.
+00:49:59 [W] We're not fully deployed here yet, but you can see here that my image was actually pushed just a few seconds ago to my Docker Hub to my to my Docker hub.
+00:49:59 [W] So my image was so we took our code we've deployed it are tested it deploy that into Docker Hub now, so in theory I could now do another operation to deploy that into my kubernative cluster.
+00:50:01 [W] Just to see that this actually works.
+00:50:04 [W] What if I would actually go ahead and I'll just go to my code here and I have it's a simple API that just adds numbers, right? So it just adds whatever two numbers that were passed in let's say I just
+00:50:13 [W] What if I would actually go ahead and I'll just go to my code here and I have it's a simple API that just adds numbers, right?
+00:50:14 [W] So it just adds whatever two numbers that were passed in let's say I just changed the result intentionally. I'll do return plus 3 here.
+00:50:19 [W] Now the theory and I haven't checked this code today, but in theory, this should not work as not won't be returning for it will return seven.
+00:50:34 [W] So if I try to run this task or this pipeline again, I'll use the same defaults.
+00:50:38 [W] So I'll need my password again.
+00:50:40 [W] So please bear with me.
+00:50:43 [W] As I try to find it.
+00:50:44 [W] Where's I keep losing where that one is security there is should have copied it somewhere. Actually. I think it's right here.
+00:51:03 [W] And huh?
+00:51:07 [W] Of course Jen, please remind me to delete that API key at the end of our end of our session. All right, and your name of the image will be to count again.
+00:51:18 [W] Now what will happen is that I will be running the application. It will all have of course. I forgot to do a git commit you changes get push origin Master.
+00:51:32 [W] you go.
+00:51:33 [W] All right.
+00:51:42 [W] We'll stop right there. So it won't it won't actually deploy the application to Docker Hub.
+00:51:54 [W] Just because one of the tasks fell before the actual deployment one.
+00:51:59 [W] So I think I've pretty much covered the real life example as well.
+00:52:03 [W] You have all of these code samples inside our GitHub repository which we will share again towards the end.
+00:52:06 [W] Generally you want to take it from here.
+00:52:11 [W] One thing I did want to share at the very end of that repo.
+00:52:23 [W] So let me scroll down before I share my screen.
+00:52:24 [W] Okay, so down here at the bottom.
+00:52:30 [W] We do have a few links one is to tekton dot dot which is just the main tekton website.
+00:52:36 [W] There's a lot of great information there.
+00:52:40 [W] The second link I think is really cool.
+00:52:43 [W] So this is a preview version of tekton Hub, which is kind of a catalog of reusable tasks and pipelines that you can use we're going to do QA and a minute and I did see a question come through asking I believe something.
+00:52:55 [W] Like what other options are there for building images other than S2?
+00:53:03 [W] I because this person had some Legacy, dr. Files you can find things like that on tekton Hub.
+00:53:07 [W] Things like that, but this is the tekton Hub.
+00:53:20 [W] I haven't filtered right now that I was referring to where you can find tasks and pipelines that you can use.
+00:53:29 [W] So if you created something that you think would be useful for a lot of other people you can also share it but to answer this person's specific question. If you filter here for image build, you can find a bunch of options.
+00:53:39 [W] So if you are using buildpacks, there's an option for buildpacks there. This is the s2i one that we were using.
+00:53:44 [W] But to show you what that would look like when you click on it.
+00:53:47 [W] You can click install and it will give you that.
+00:53:52 [W] keep going up.
+00:53:57 [W] I command that you need in order to be able to use that task and then there's usually also some good information documentation on how to use it.
+00:54:01 [W] So this is a really valuable resource that I think was only launched in beta maybe last week. So it's pretty new and is a great catalog to look at so just want to make sure you all saw those resources to and I'm going to
+00:54:14 [W] Give you that keep coming up. I command you need in order to be able to use that task and then there's usually also some good information documentation on how to use it.
+00:54:16 [W] So this is a really valuable resource that I think was only launched in beta maybe last week. So it's pretty new and is a great catalog to look at so just want to make sure you all saw those resources to and I'm going to
+00:54:17 [W] Screen so that Joel and I can do Q&A with the time we have remaining.
+00:54:20 [W] Okay.
+00:54:23 [W] Perfect.
+00:54:25 [W] All right.
+00:54:31 [W] so Joel, I'm going to I'll remind you now and then again when we're done don't forget to delete. All right.
+00:54:33 [W] thank you that right away actually winning number one.
+00:54:37 [W] Okay.
+00:54:38 [W] Well you're doing that.
+00:54:40 [W] I sorted through some of the questions while well Joel is doing the last section and I tried to enter enter answers hopefully made them public for some of the questions that are there.
+00:54:49 [W] through a couple of those now. Someone had asked what slack Channel we're going to be in after this it.
+00:54:58 [W] Is the so pound to - Cube Khan - ci/cd and that's in the cncf slack.
+00:55:07 [W] So that is where you'll find us in the ci/cd track Channel and slack.
+00:55:11 [W] that's a mouthful.
+00:55:16 [W] So if any questions, we don't get through now or any questions that you think of later, we'll be hanging around in there for a bit after this and checking back in on it over the next few days. Someone else asked.
+00:55:26 [W] Or the GitHub URL.
+00:55:29 [W] I posted it as an answer to one of these questions.
+00:55:31 [W] But again, it was github.com Joel Lord / Hands-On - tekton and then the other kind of
+00:55:39 [W] So that is where you'll find us in the ci/cd track Channel and slack.
+00:55:48 [W] that's a mouthful.
+00:55:49 [W] So if any questions, we don't get through now or any questions that you think of later.
+00:55:49 [W] we'll be hanging around in there for a bit after this and checking back in on it over the next few days.
+00:55:50 [W] Someone else asked for the GitHub URL.
+00:55:51 [W] I posted it as an answer to one of these questions.
+00:55:51 [W] But again, it was github.com Joel Lord / Hands-On - tekton and then the other kind of
+00:55:53 [W] Administrative question was asking how to get the slides either Joel or I will share a link to those on Twitter sometime later today.
+00:55:57 [W] So if you follow us on there, you'll be able to get those and I put our Twitter Handles in the links to one of these questions as well.
+00:56:04 [W] So let's look at some of the more, you know, topic-specific stuff Joel if it's cool with you I can kind of read through and we can just tag team if we know that
+00:56:07 [W] Oops track. Sorry, I'll look at the camera looking at my other screen here realize you're looking at my ear instead of my face.
+00:56:18 [W] So I'll go through and read and then we can figure out once we can answer now versus things. We might need to research and follow up on but let's see. So one question here.
+00:56:30 [W] So sometimes you need inputs from the infrastructure or platform provisioning and configuration.
+00:56:33 [W] How would you work with that?
+00:56:34 [W] In a way that says non-manual as possible.
+00:56:38 [W] So let's say if you needed to make sure I like something had been provisioned in your platform before moving on or something that needed to be an input.
+00:56:49 [W] I'm not for sure if I understand the question, but if I could choose what we did here was to use the tekton CLI a lot the other way to use it would be too too many you either use triggers
+00:57:05 [W] Moving on or something that needed to be an input.
+00:57:05 [W] I'm not for sure if I understand the question, but if I could choose what we did here was to use the tekton CLI a lot the the other way to use it would be too too many you either use triggers
+00:57:07 [W] maybe that's because it's because in our examples we had to manually enter all of our parameters here, but that's because we were using a CLI, but if you use different things like tekton triggers, for example, you'd be able to reconfigure those parameters and it would
+00:57:23 [W] Automatically so I'm not sure if that actually answered the question or not.
+00:57:28 [W] That's a good idea.
+00:57:32 [W] Yeah, we didn't mention triggers much with that opens up a whole nother set of potential automation that you can do it. So that would be good for this this person to look at you but very quickly you tekton triggers will just use the GitHub
+00:57:45 [W] Automation that you can do it, so that would be good for this the fittest person to look at you but very quickly you tekton triggers will just use the GitHub web looks or any web hook essentially and it will just create a task run or
+00:57:51 [W] Are many web hook essentially and it will just create a task run or a pipeline run for you automatically behind the scene.
+00:57:59 [W] So you have a little bit of configuration to do and you can look up tekton triggers, but that's pretty much what it does.
+00:58:02 [W] Okay, the next question, I think we ended up answering this one as the tutorial went on but there was a question about can steps run in parallel or all a sequential we did definitely walk through a process where we showed them
+00:58:14 [W] So you depending on if you can use run after if you want to make sure that something is completed before you move on.
+00:58:24 [W] But otherwise, if you have to test if you have two tasks, they would try to run in parallel task will run in parallel or sequential as you as you want them to run steps though our
+00:58:35 [W] Pass code run in parallel or sequential as you as you want them to run steps though. Our work our will be sequential so steps inside of a task will be one after the other but if you need to run more than one then you could probably rely on multiple
+00:58:43 [W] Need to run more than one then you could probably rely on multiple tasks and have them run in parallel.
+00:58:54 [W] Hey Cole, and I realize now that I was saying steps and thinking tasks in my mind. So I'm glad you are paying better attention to what I was saying then I was good.
+00:58:55 [W] good point.
+00:58:58 [W] Um, can you share the same container across steps in the same task?
+00:59:03 [W] I'm trying to um, that's a good question. I
+00:59:09 [W] I don't want to speak, you know, I don't believe that the container will be shared but there is some work space that is shared between the steps in the same tasks.
+00:59:23 [W] So that's kind of what we did in the multiple steps where we wrote Into the home folder and then the second container was able to pick it up.
+00:59:30 [W] So those will be shared as a shared volume, but I don't believe the container the actual container can be shared across multiple steps.
+00:59:39 [W] So it will be a new container every time I think I think
+00:59:42 [W] And I think so too, but we can always if whoever has asked that question pops into slack we can we can confirm in there.
+00:59:55 [W] next question was what happens to the image after the completion of tasks. I mean in your real world example, you ended up pushing the image, right? So that's one thing you can do with it, but
+01:00:06 [W] There any other scenarios you can think of the are worth?
+01:00:13 [W] Do what you want to do with it.
+01:00:24 [W] Once it actually it's completed. It will actually remove everything just like any containerd right when since when since deleted it will just destroy everything else with it.
+01:00:28 [W] So you actually need to do something with your image.
+01:00:35 [W] So in my case, I was pushing that through Docker Hub, you could push that into your your your current workflow or until your kubernative cluster.
+01:00:42 [W] can actually have one of the different types of resources is actually a cluster of so you could put in a cluster there as a resource and then put in your
+01:00:44 [W] Your your image your end damage or I cure output image inside that cluster if it's not the same one that runs or tekton Pipelines.
+01:00:53 [W] Let's see you next question here is their way of using secrets in tasks. And this is similar sort of similar to another question that was asking if if you could pass in parameters via a file or something like
+01:01:12 [W] So we did a lot of things with the command line. What are the other options that are available for things like Secrets or parameters?
+01:01:19 [W] No, just always paste it in front of 500 people.
+01:01:26 [W] that's supposed to be posting your password that differently Works know you can you can also use
+01:01:36 [W] I can't remember the name of the resource. But you can use a communities the same way you would use in any other Goonies to share your secrets there.
+01:01:46 [W] Okay, like config maps are I think Maps.
+01:01:47 [W] Thank you.
+01:01:48 [W] Good. Okay. I wasn't actually sure if that was the answer.
+01:01:55 [W] So I was waiting to to see what you said.
+01:01:56 [W] Okay, let's see.
+01:01:59 [W] We do still have a few more minutes.
+01:02:01 [W] So I'll look at some of these other ones that were marked in here.
+01:02:03 [W] Let's see that's similar to the other question about can steps run in parallel that we already answered.
+01:02:16 [W] I can think I look at this like it's wanna see that there's a few questions.
+01:02:22 [W] that see that one was there.
+01:02:28 [W] A lot of people are actually answering one of our colleagues Natalia. Is there answering many questions I can see so thanks Natalia.
+01:02:33 [W] Um one thing we didn't really talk about it all because we were using minikube and just kind of vanilla kubernative is here, but on openshift there is something called openshift pipelines.
+01:02:58 [W] It's just basically kind of like built upon tekton and part of excuse me part of what it offers is, you know, a graphic dashboard visualization of pipelines and tasks and pipeline runs and all of this.
+01:03:10 [W] So that is one way that you can do that if you happen to be using openshift
+01:03:13 [W] Vs code plugin shows you a lot of what's going on, and I don't even know what all the future plans are for it.
+01:03:23 [W] Other than than what we saw today?
+01:03:26 [W] Yeah, the vehicle is definitely my favorite tool when you're when you're dealing with tekton fast. There's a lot of visual representations and it's very easy to see everything that you have running in your cluster. So you can actually dig into it.
+01:03:41 [W] It'll actually show you the code for each one of those pipelines with tasks and so on so it's a yeah, there's I mean it's a relatively simple tool ultimately but it provides you with a lot of information in a very useful ways.
+01:03:54 [W] All right.
+01:04:00 [W] Let's see if you answer that one.
+01:04:03 [W] There's a lot of questions.
+01:04:04 [W] So I'm scrolling through Page by page here to see the ones we haven't already answered. I see a question on on slack and I don't know the answer to that one actually, but maybe maybe you do Jen.
+01:04:18 [W] So should the completed pods a be getting cleaned up.
+01:04:20 [W] up. Is there a property that governs a retention policy because it is true that you will see that you have all of your I'm completed pods when you if you do a tube CTL get poddisruptionbudgets.
+01:04:27 [W] They all show up as being completed, but I'm not sure if there's a way to clean them up or if they automatically get cleaned up after a while.
+01:04:35 [W] That's a great question.
+01:04:41 [W] I just ran keeps you tailgate pods myself here and see the same thing.
+01:04:42 [W] I don't know but we can try to look into that and follow up in slack because that's a good question.
+01:04:50 [W] I'm not sure.
+01:04:51 [W] Perfect.
+01:04:53 [W] We'll take a look.
+01:04:55 [W] Okay, cool.
+01:04:56 [W] How okay here's what here's a good question.
+01:05:02 [W] What happens when the pipeline fails?
+01:05:04 [W] How would you notify the Developers?
+01:05:06 [W] Like, you know where we know if something failed because we're sitting there running the command on the command line, but let's say you have this automated in some way or you know, the actual developers weren't the ones kicking this off. You know, our trigger is
+01:05:21 [W] Or would you typically build this into some other no existing pipeline framework that you have within your organization?
+01:05:31 [W] Yeah, that's a good question.
+01:05:33 [W] I'm not sure about that one as well by because I'm using openshift most of the time right the dashboard the right there is very useful so you can actually have a very, you know, a graphical view of everything and how it's going on.
+01:05:46 [W] So I'm not I'm not fully sure on how to actually I guess I guess you yeah, you could use conditions to
+01:05:54 [W] see what's going on in to create alerts based on what happened. If it's ask failed for some reason than you could probably use a condition to send an email to an admin or two earlier developer theme.
+01:06:07 [W] So there are there are ways where you could that you could do that as part of your pipeline.
+01:06:10 [W] I guess that's that is one way that I can see or just using a dashboard.
+01:06:13 [W] Yeah, and you do still have the logs but again that requires somebody to think to go check it so it doesn't quite so of the notification aspect.
+01:06:25 [W] Colonel see how do you
+01:06:26 [W] and I think we answered that one.
+01:06:28 [W] Sorry about that.
+01:06:29 [W] I have when you create a tekton S2.
+01:06:35 [W] I will that run on openshift the same.
+01:06:37 [W] Will it run the same as it did on minikube, for example, it's that's how I understand you correctly.
+01:06:49 [W] Tasks and pipelines should basically operate the same on any kubernative cluster. Like it shouldn't run differently or do something differently from one cluster when distribution of kubernative to another and
+01:07:07 [W] from one cluster when distribution of kubenetes to another and s2i works on us 2y is not as we I mean as we saw here is not open to specific either so
+01:07:15 [W] I think it should be the same but it's possible.
+01:07:19 [W] I'm not fully unless that's the question question by Steward on stock. So if you have any more if we didn't answer, please feel free to follow up on that question. But as far as I can tell all the examples that we've shown at least today at they do work on both open shifts and vanilla
+01:07:34 [W] This is a fun question Joel, but somebody wanted to know what font you're using.
+01:07:42 [W] And I think they met in your terminal happen to know there's some for whatever font you are using.
+01:07:51 [W] I don't know it by heart. But because I tend to do a fair amount of presentations.
+01:07:56 [W] I like to have funds that are relatively readable.
+01:07:59 [W] let me take a look references space mono and it's an open source.
+01:08:06 [W] Fun, so or maybe yeah some sort of open license at least so space model is the one that I'm using cool.
+01:08:20 [W] Someone asked about what vs code extension you were using to get the JAMA linting or the mlperf syntax feedback at the bottom of the window. Is that the GMO extension that's listed by red hat or do you have a separate different one?
+01:08:30 [W] I believe that in my that's the thing with vs code you end up with so many extensions that you're not sure which one is doing.
+01:08:37 [W] one, but I believe let me check if I have a llamo extension.
+01:08:42 [W] I know I don't have one.
+01:08:43 [W] So it's it was either the kubernative plication high or extension or the the pipeline one with probably be the one doing it as well.
+01:08:57 [W] I believe the one that I had when I had it, I believe that was the
+01:09:00 [W] the pipeline one that had that was showing me that error earlier.
+01:09:04 [W] Okay, cool.
+01:09:07 [W] See most of these are different flavors of questions.
+01:09:11 [W] We've answered already.
+01:09:13 [W] Okay.
+01:09:19 [W] You may have answered this.
+01:09:24 [W] So if so, just let me know if you if I feel the need to have a pipeline.
+01:09:31 [W] I could just have multiple steps in a task.
+01:09:32 [W] So what would be the situation that I should go and write a pipeline pipeline resources?
+01:09:43 [W] So I guess why not just put a whole bunch of stuff in a big task is the question here.
+01:09:44 [W] Yeah.
+01:09:46 [W] That's a that's a very good question. Actually the main reason for using a pipeline over a task is reusable.
+01:09:50 [W] LT so in the one example that I have shown and it maybe I can go back to it quickly.
+01:10:00 [W] And just removes like from there.
+01:10:05 [W] Yeah, I was paying attention in the real world example, and I went relatively quickly on this one, but you can see that I've created one fast gear which is and if you're familiar with node.js you'll see a lot of this like
+01:10:18 [W] Is a tool that you use all the time when building applications with node.js so you use it for performing just just about anything that you want on your application. So they run your tests to do your linting to install some dependencies.
+01:10:33 [W] So you always end up using that same that exact same tool.
+01:10:38 [W] So what I did here is one task that is called the npm and then I can share that either through the tekton Hub or to my whole team or to various places. And then anyone creating a pipeline canonical
+01:10:48 [W] Actually reuse that same task and just instead of using the default start can actually use it in different ways.
+01:11:03 [W] So in my pipeline if I go back to the actual pipeline, you can see that I have two tasks right here.
+01:11:07 [W] The first two first one is called length, and the second one is called test are both using that same task. The only difference being that the action that they are performing is run tests in one case and run linbit.
+01:11:18 [W] In the other case, I'm reusing that same tasks.
+01:11:23 [W] I don't have to rewrite a full task each time. So there's a lot of reusability that you can do right there.
+01:11:26 [W] All right about five minutes left, so we'll do maybe a couple more questions and then we'll head over to slack and feel free to drop questions that we can answer later if you
+01:11:48 [W] now also be at the red hat Booth I think just the to hang out a little bit and Twitter is always a great way to to find me a place for if you have any questions or follow-ups Joel with two underscores Lord and I believe it's the end of the
+01:12:03 [W] Repo or maybe at the beginning. I can somewhere in the GitHub repo. It gets me there. If it's not we're at it. Let's see.
+01:12:13 [W] See, there's one more stand out question here.
+01:12:19 [W] Their way to skip a task under certain conditions.
+01:12:26 [W] So you mentioned conditionals a little bit.
+01:12:29 [W] That's something you can set up.
+01:12:30 [W] That's a good question night. I should definitely look into that.
+01:12:35 [W] I haven't played a lot with conditions.
+01:12:42 [W] So yeah it when I tried it it didn't seem to work very well, but that was a few months ago and tekton involves very very quickly.
+01:12:47 [W] So it might be a little bit easier to use now.
+01:12:50 [W] definitely something that I want to dig into a little bit more, so, I'm not sure.
+01:12:52 [W] If it if it could do such a thing, so, I'm sorry.
+01:12:58 [W] I can't answer that question, but I'll definitely try to follow up. So in stock just that ping me whoever asked that question and I'll try to follow up today.
+01:13:03 [W] Alright cool. So let's start there. So many questions will never be able to get all of them here.
+01:13:12 [W] So I'm sorry about that.
+01:13:13 [W] We had about 11 like over a hundred questions.
+01:13:19 [W] So thank you all first of all for all the questions and for following along with us once more the the slack channel that will be in is to - Cube Khan - ci/cd over in the cncf slack there is also
+01:13:30 [W] Um a six - Cube Khan - Red Hat slack Channel and within the you know event platform if you go to I don't have it open right now, so I can't tell you exactly but I think it's the sponsor showcase under the first link
+01:13:46 [W] Diamond sponsorship, you'll find the red hat Booth.
+01:13:52 [W] We have a message board in there as well as a bunch of other resources tutorials demo videos thinking get some kind of virtual swag.
+01:13:59 [W] So you'll find us over there as well.
+01:14:00 [W] But thank you everybody so much.
+01:14:02 [W] Your time perfect.
+01:14:05 [W] Thank you very much.

@@ -1,0 +1,221 @@
+﻿gRPC Communication Patterns – A Deep Dive: DSNO-4759 - events@cncf.io - Thursday, November 19, 2020 3:47 PM - 37 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi everyone.
+00:00:01 [W] Welcome to coupon session on grpc communication patterns.
+00:00:05 [W] I'm consoling nursery and my colleague done a script will also joining me in conducting this session.
+00:00:11 [W] And we'll have a look at how they are implemented internally.
+00:00:19 [W] I'm sure most of you have heard of grpc O even use grpc in production. But if you are new to grpc, it's a modern interfaces communication technology that allows you to build a distributed applications so that
+00:00:34 [W] Microservices based application using grpc and promote consumers can consume it over the network as easy as making a local function call.
+00:00:33 [W] So grpc is based on a contract First Development approach where so that you come up with your own service definition using protocol buffers.
+00:00:45 [W] So that's where you define all your business operations of the of your application and then you can generate service.
+00:00:53 [W] identifying site skill stop code so that you can establish the communication over there grpc Channel.
+00:01:03 [W] So internally grpc uses binary messaging using protocol buffers and which runs on top of 32.
+00:01:14 [W] So grpc is an efficient strongly typed polyglot communication protocol that allows you to build the request response style synchronous communication as well as you can use duplicate screaming use messaging in grpc
+00:01:30 [W] So if you look at the applications of grpc, so it is often used alongside other Technologies such as restful services graphql and even technology such as
+00:01:45 [W] So most of the internal service communication can be built using grpc while this most commonly common to use Quest and graphql as extended facing communication. However, it is
+00:01:49 [W] Expose grpc service to your consumers directs directly using the Navy I get paid.
+00:01:55 [W] Now, let's have a closer look at the RPC flow of grpc.
+00:01:59 [W] So here we consider the same application that we discussed earlier.
+00:02:06 [W] So here we have the producting per service and the consumer application.
+00:02:10 [W] So let's have a closer look at how messaging or remote method invocation words in this particular useful.
+00:02:19 [W] So now we have this top code generated at the client side and the server side. So from the client application, I invoke the remote method in this case.
+00:02:31 [W] We simply involve the stubs get production method using my client application code and when you invoke that stuff is responsible for converting that message in fact encode that message and build the
+00:02:46 [W] Protocol buffer messy. So in this case, we create message headers to message figures. So obviously we are sending a post request to the service application and also as the path we have the name of
+00:02:58 [W] Remote method that we and also you have been such as contain paragraphs part of the message headers and as the massive payload, we have the encoded message.
+00:02:58 [W] So this is where we use protocol buffers to encode the language specific data structures into the protocol buffer wire form. Then the message is sent over the hdp to connection and
+00:03:13 [W] Service, I'd you can reserve a plantation looks at the path values and find the corresponding stop. Then it is sent over to the corresponding
+00:03:26 [W] Up, then it is sent over to the corresponding Stop & Stop, unpack the message and converts the message to the language specific data structures and involve the actual implementation of their remote function.
+00:03:37 [W] So in this case, the remote function is invoked at this point, and then the response is sent back from their service grpc service. So this response follows the same path as Speaker request.
+00:03:51 [W] Now if we look at how these things are implemented at the HTTP to level so suppose you have a consumer client application and a set of equation then client
+00:04:07 [W] Action, which means it creates a integrates crazy grpc channel. So on behind the scenes, it creates an HTTP to connection the once you have the grpc is channel you can send one no more
+00:04:21 [W] So I'm behind the scenes creation http/2 connection.
+00:04:22 [W] The once you have the grpc is channel. You can send one or more RPC request over the same channel 4 in this case.
+00:04:31 [W] These different our pieces are mapped to RPC calls our map to strimzi knative EP 2.
+00:04:37 [W] So here we have our PC for another PC free grpc V running on stream 3 and scream for the same applies for the response part as well.
+00:04:47 [W] And when it comes to message prints here, we are sending headers and data frames.
+00:04:53 [W] So it is this is where all the grpc it is our sin and data is the place that you syseleven.
+00:05:01 [W] involved in business specific payload of the RPC request
+00:05:07 [W] Now let's have a closer look at request and response messages and grpc.
+00:05:14 [W] So if you look at the rest request message here, we have the request headers and frame a message frame known as length perfect message.
+00:05:26 [W] So this is where you send all your business payload.
+00:05:30 [W] So this can be a single message or multiple message based on the message pattern that you're going to use and we will be exploring a lot on length prophetic message in upcoming slides and at the end of the road.
+00:05:44 [W] It's you have assembly end of stream flag for this is the this is a another frame a data frame similar to the m50x message, but it's an empty frame.
+00:05:54 [W] And data is the place that you send Builder business specific payload of the RPC request.
+00:06:03 [W] Now, let's have a closer look at request and response messages in grpc.
+00:06:10 [W] So if we look at the rest request message here, we have the request headers and frame a message frame known as length perfect message.
+00:06:22 [W] So this is where you send all your business payload.
+00:06:26 [W] So this can be a single message or multiple message based on the message pattern that you're going to use and we will be exploring a lot on length perfect message in upcoming slides and at the end of the road.
+00:06:40 [W] It's you have assembly end of stream flag for this is the this is a another frame a data frame similar to the encrypted message, but it's an empty frame.
+00:06:51 [W] So that marks the end of the request the request go.
+00:06:56 [W] And if you look at the response massive, you have the response headers and length perfect message again same same as the request path and to Mark the end of the response massive we use
+00:08:10 [W] Quest the request go
+00:08:13 [W] And if you look at the response message, you have the response headers and lymphocytes message again, same same as the request path and to Mark the end of the response message. We use we use
+00:08:28 [W] Z hey there frame this contains all the trailing headers which Mark the end of the string.
+00:08:36 [W] Now, let's try to understand some of the communication patterns and dive into the internal implementation of each and every pattern.
+00:08:48 [W] So let's start off with the unary or simple RPC.
+00:08:51 [W] So as you know, simple RPC is all about sending a single request to the service and you expect a single response from the self quick look at the implementation of this. So when finds in the single are
+00:09:06 [W] It's a call.
+00:09:07 [W] It sends a set of headers one length, prefix message and end of stream flag and empty data frame and in the response Park you have headers response headers. I learn creative message a single message
+00:09:23 [W] But this is very straightforward.
+00:09:25 [W] Now if we look at service training scenario, so here we have single request one are facing location, but you get multiple responses after multiple messages as the response.
+00:09:40 [W] So in this case request path is very similar to simple accuracy, but in the response part, you can see we are sending headers and multiple lengths perfect messages followed by a trailing trailing header.
+00:09:56 [W] The client streaming at the same thing. But in this case request as part of the request, we are sending multiple requests messages.
+00:10:08 [W] Therefore we have multiple links recognize ages followed by an industry. And as a response you get a single implicit method with elders and creative.
+00:10:20 [W] And if you look at more complicated scenarios, I guess y - y direction is filling our PC.
+00:10:27 [W] So in this case in y direction RPC, we send a stream of requests and stream of responsive. So you can understand this further by looking at this example here.
+00:10:39 [W] nice
+00:10:31 [W] So if you look at the implementation of this again, you can see there are there are multiple lenses if messages you have Heather and end of stream and in the response Park also, you can be headers and
+00:10:46 [W] Messy and when it comes to the implementation of both the client and the service side, you can look you can create your business Party by looking at the end of stream plaques in both requests path and
+00:10:55 [W] Now let's dive deep into request and response headers and then it will take you through the rest of the session.
+00:11:12 [W] Thank you for soon.
+00:11:13 [W] So in our previous slides we talked about how message flow in different messaging patterns in this section that we are going to look into deep into the request and the response messages
+00:11:29 [W] Here it is.
+00:11:27 [W] So when we talk about headers in grpc, there are two types of headers one is called definition headdress called definition headers, and the other type is custom header
+00:11:42 [W] Or definition headers of a defined headers support us by http/2. If you look at the table, there are bunch of older and definition headers.
+00:11:47 [W] Some are prefixed with sin: so those are called the circuit is so one of those headers are punished method. So in grpc the HTTP method always post
+00:12:02 [W] This part that contains the service name and this remote method and there are some others like authorizations and skills as well.
+00:12:08 [W] And the other type of headers are custom metadata.
+00:12:14 [W] Custom metadata is an arbitrary key value pairs, which is defined by the application Level.
+00:12:22 [W] They are so metadata. We use metadata normally to share informations about
+00:12:28 [W] Grpc call for example authentic authentication header six cetera.
+00:12:35 [W] So you can see there are couple of feathers which are prefixed.
+00:12:40 [W] used to being grpc - that is
+00:12:45 [W] Those headers are defined in grpc Co implementation. So grpc timeout grpc encoders are such those headers.
+00:12:55 [W] And so if you are defining custom headers, we you need to avoid this prefix in your custom metadata, and also in the content type we need to pass we have to prefix application slash grpc
+00:13:10 [W] been given error
+00:13:09 [W] The next thing we need to talk about is the length prefix messages by definition message framing is an approach.
+00:13:19 [W] We used to construct information such that the intended audience can easily extract that so in grpc the users message framing technique called length prefix frame.
+00:13:33 [W] Then prefix framing is an approach.
+00:13:36 [W] We that writes a size of the message before writing the message itself. If you look at the diagram B, so in right side, so you have we are generating the encoded by tarae that
+00:13:51 [W] the size of faith and indeed for bites
+00:13:42 [W] The append the size of that so in grpc 4 bytes are allocated to set the size of the message and the size is written as P Indian integer.
+00:13:54 [W] So and also you can see one by one in front of that.
+00:13:58 [W] PSI is 4 bytes that pick present compression fracture.
+00:14:03 [W] So if it is 0 that means this message is not compressed if it is 1 that means this method is compressed.
+00:14:11 [W] The compression algorithm is defined defined and pass in the request method request headaches.
+00:14:21 [W] So the other thing I need we need to talk about these that how we in-house grpc encode binary message by default grpc uses protocol buffers to encode this message.
+00:14:36 [W] For encodes the message based on the structures defined in this service contract.
+00:14:33 [W] So if you look at the look at the definition, so you can see you can see a protocol protocol definition. So in our example, we have order ID message and it has one field called
+00:14:48 [W] And from that message via they're generating the pilot message finally. So if you expect the binary, you can see there are different tag values tag value passed. So in our case we
+00:14:53 [W] Order message with fun-filled that means we have only one tag value pair. So the tag value pair is mapped to a message field.
+00:15:00 [W] So at the end of the message, we pass Ciro to indicate that it's the end of the message.
+00:15:07 [W] So when we go in deep to the tag and value pair, so the tag is derived using field index which is defined in the service when crack
+00:15:19 [W] And the by a kite the wire type is directly mapped to the field type.
+00:15:25 [W] So in our case, it is a string type that the string like map to length limit be limited.
+00:15:33 [W] that means the wire type relative is to so in from that we derived the tag value and the value of the field is encoded using different technique based on the wiretap.
+00:15:50 [W] In this case, it is string that means we are using utf-8 encoding to in co-develop if it is an integer day. We may use find it depending on the type of action.
+00:16:05 [W] The next major thing we need to talk about when it comes to grpc is error handling.
+00:16:11 [W] So errors are a first-class concepting grpc.
+00:16:14 [W] The field is encoded using different technique based on the wiretap.
+00:16:17 [W] In this case.
+00:16:20 [W] It is string that means we are using utf-8 encoding to encode develop if it is an integer then we may use find it depending on the type. That's it.
+00:16:33 [W] The next major thing we need to talk about when we come see grpc is error handling.
+00:16:39 [W] So errors are a first-class concepting grpc.
+00:16:43 [W] That means every RPC call.
+00:16:46 [W] The response will be either payload message or an error the error includes a status code, which is predefined and it is Unified across all languages and also
+00:17:10 [W] The response will be either payload message or an error the error includes a status code which is predefined and it is Unified across all languages.
+00:17:22 [W] And also we they passes status message which describe the error and also this errors are sent as a response trailing headers.
+00:17:34 [W] So I capture in the first table week. I capture those.
+00:17:40 [W] Headers comes in the trailing as failing headers one is grpc status and other one is grpc message in Korea.
+00:17:49 [W] So let's say the request computed successfully in that case the the grpc say this will be 0 that means okay if it is an error hooked up in the service side
+00:18:04 [W] Corresponding error is going as the grpc status and grpc message described. But error this is
+00:18:14 [W] So when it comes to error handling, there are a couple of days based practices. We follow the first one is we do not include there are details in the response payload in most cases.
+00:18:28 [W] So that means all the error details are always going through the training it is there are some of the situation we cannot follow this.
+00:18:41 [W] say you are using much training example, and you
+00:18:44 [W] He'll need to pass an error detail to the client without without stop industry in that case. You need to add header details in the response Pedro. Otherwise most of
+00:19:00 [W] Send the Errors By the training headaches.
+00:19:05 [W] The other thing is that service side when we are when we have an error.
+00:19:09 [W] It's better. We can return all the errors to the client colder.
+00:19:15 [W] So unless there's the internal state of compromise. In other cases. We can send it to the core most of the cases.
+00:19:27 [W] The other thing I need to have emphasized is the deadline deadline allows both client and services to know when to about the operations.
+00:19:38 [W] The clients are the one who initialize the call that so once the initial probably initialize client is setting the deadlines. So deadlines is normally set as absolute time which specify the time which we
+00:19:53 [W] So when the client in initialize the call the deadline informations also go inside inside the coil inside the request message as the header and when Nick events in come to
+00:19:59 [W] First look at what is the deadline param the according to the deadline param, they decide whether to proceed operation for about it and send an error to the client.
+00:20:02 [W] So if the service calling another service, it's bet.
+00:20:05 [W] It's it's important to propagate those deadlines information to the other services as
+00:20:13 [W] the interceptors are also a main point in grpc applications. The mechanism is to execute some common logic before and after the execution of the remote function.
+00:20:25 [W] We can apply both to the server and try inside and depending on the message pattern we use we need to use different interceptors like unary interceptors steaming interceptors Etc.
+00:20:40 [W] woman logic before and after the execution of the remote function we can apply both to the server and client side and depending on the message pattern we use we need to use different intercepts
+00:21:11 [W] For the main use of this interceptors are for the login scenarios and authentication scenarios or BB to capture some Matrix for those use cases we use.
+00:21:29 [W] When you come to the event from implementing Services the service versioning also plays an important role.
+00:21:37 [W] So let's say you have a service running and you need to update the service. So this is the services should strive to remain backwards compatible with the or khayat. So
+00:21:53 [W] Updated version in strategy that will allow us to introduce breaking changes to the grpc service.
+00:21:59 [W] So in grpc was this service version is done using the package name.
+00:22:05 [W] So we are pending the version number to the package name how it works is as we told earlier grpc whole is underneath a post request and the path of the path of the request
+00:22:21 [W] Teeth as we told you earlier grpc whole is underneath a post request and the path of the path of the request is derived using the package name service name and the method
+00:22:35 [W] In the package name service name and the method name.
+00:22:38 [W] So if you append the version to the package name, that means whenever the version number change that that will create a different context.
+00:22:49 [W] So the all client will not affect when we deployed both services in this day.
+00:22:56 [W] so that if the client needs to migrate to the new version, they need to get the correct version of the Proto definition and generate the stuff of
+00:23:13 [W] The final thing we need to discuss in this session is to extending service definition.
+00:23:18 [W] Let's say there can be situation.
+00:23:21 [W] We are we generate the application with different messaging patterns. You need to extend your service definitions and add some custom options in protocol buffer definition.
+00:23:34 [W] They provide us this facility to add custom options in different levels of contract. So it
+00:23:42 [W] To be service level it can be method level.
+00:23:45 [W] You can be filled levels Etc.
+00:23:48 [W] So so I captured a few of these at scenarios.
+00:23:53 [W] We may use it.
+00:23:55 [W] This contract it's a sweet. They are you can define a service options to provide the string or provide the URL and we can use that of custom options in knife inside our service definition
+00:24:11 [W] Likewise you can add custom options inside a method level and also in the field label as safe.
+00:24:17 [W] Okay, that's it.
+00:24:19 [W] We need to cover in this session.
+00:24:21 [W] So in this session, we mainly refers to the grpc of pandemonium broke and all the use cases and the source codes are in this GitHub repo.
+00:24:33 [W] so that we need to cover.
+00:24:39 [W] So thank you for listening.
+00:25:10 [W] So so there are a couple of questions related to this session.
+00:25:17 [W] So the first one so it is about using grpc between two containers.
+00:25:24 [W] They want to transfer large data set basically large fries.
+00:25:40 [W] So so there are a couple of questions with a typical session.
+00:25:46 [W] So the first one so it is about using grpc between two containers.
+00:25:54 [W] They want to transfer large data set basically large files.
+00:25:59 [W] So yeah, so we can use grpc streaming for lamenting that kind of use case. Basically you you have to Define
+00:26:09 [W] Define the types that you're going to use to transfer the data between the containment.
+00:26:17 [W] So as long as you have those types fine.
+00:26:57 [W] that is where you specify all the types and the contract details, but when you generate the stub code for both Services service and the client that is sort of a bridging
+00:27:18 [W] that is where you specify all the types and the contract details, but when you generate the stub code for both Services service and the client that is sort of a bridging
+00:27:33 [W] Then the client or server and the underlying protocol so they stopped ensures that you are using the appropriate for night.
+00:27:42 [W] you only aware of the context that we are working on a program of that nature constructed programmability book complex that will build yourself a plan.
+00:28:48 [W] so
+00:28:52 [W] so most of the side there are some questions on the slides. So these are available in
+00:29:23 [W] Sorry.
+00:29:27 [W] So most of the side there are some questions on the slides. So these are available in spell Doom for the event.
+00:29:35 [W] So if we go to go link, you'll be able to find a PDF copy of the slides.
+00:29:40 [W] there's another question.
+00:29:45 [W] Using grpc with a TDP to and typically s there is no there is no such constraint on using specific question.
+00:29:57 [W] But as long as your use case requires a secure communication equipments, why level security to build a secure Channel between two grpc applications and at the same time you can use
+00:30:13 [W] Using grpc with a TDP to and typically s there is no there is no such constraint on using specific question.
+00:30:25 [W] But as long as your use case requires a secure communication equipments, why level security to build a secure Channel between two grpc applications and at the same time you can use
+00:30:40 [W] Surprise or two or anything?
+00:30:42 [W] We've enjoyed JWT based programs been building.
+00:30:47 [W] It's a great communication.
+00:31:01 [W] So again, there's another general question on when we should use grpc.
+00:31:05 [W] So there's no hard and fast rule on. This is a must
+00:31:16 [W] Communication from a lot of benefits from using grpc, but the grpc ecosystem is still building around the technology space, especially the outbound
+00:31:32 [W] Outbound web and mobile application related clients. So therefore we are seeing a lot of internal communication will kill using grpc and facades such as a pi gateways
+00:31:47 [W] For services to expose grpc. I to rest or graphql the faces.
+00:31:57 [W] The next you want to take a couple of questions on error handling.
+00:32:08 [W] So that's one question for streaming in case of screaming if they are also correct all grpc handle.
+00:32:17 [W] They are s so in that case in cement scenario. We kind of like top the connection and then pass data is to the user.
+00:32:25 [W] So in that the base case we can follow is to obtain the errors in the payload itself.
+00:32:33 [W] So whenever there is a message.
+00:32:37 [W] It's a neighbor been processing the request message.
+00:32:40 [W] So we will pass it as a payload message.
+00:32:44 [W] In other cases like jewelry cases, we can send a message through the training headers so that we drop the interconnection and at the end of the training Keda see past errors to the user.
+00:32:59 [W] Taemin scenario we need to pass it through the payload.
+00:33:38 [W] Yeah, so there's a let the question on now using grpc different patterns of unity and the screaming patents and specific use case.
+00:33:53 [W] and buying tufin relies on this kind of generate requirement here. So so in general what we're saying is the most of the streaming patterns are relatively
+00:34:08 [W] The developers particularly. If you are from a rest or restful background used to do a lot of request response cycle communication, but when you're building more moreover
+00:34:24 [W] And based or streaming oriented applications, you can decorate your client or server side stream and I would say the bidirectional Straight even
+00:34:30 [W] Specific so that is you decide based on the business use case on went to Mark the end of stream book site.
+00:34:39 [W] So if you
+00:35:11 [W] There's a one-person where were the extension example tools import of purple photo to operator 3. So the x mark mostly grpc uses here for 33 sort of extension
+00:35:27 [W] after three, so purpose is not
+00:36:03 [W] so you can check the grpc ecosystem project simply because
+00:36:41 [W] For this pop and time prevented the Republic possibility that we're gonna show you so you can so we have a goal and Java implementation aspects.
+00:36:56 [W] Yeah, so I guess that's all the questions that we have.
+00:37:01 [W] So thanks a lot for joining the session if you have any further questions, let's discuss in this lecture.
+00:37:10 [W] Thank you very much.

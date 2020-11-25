@@ -1,0 +1,146 @@
+﻿Elephant on Wheels: Petabyte-scale AI @ LinkedIn: TEXN-2810 - events@cncf.io - Thursday, August 20, 2020 12:04 PM - 145 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:43 [W] Hi everyone.
+00:00:52 [W] Thank you for joining our presentation.
+00:00:54 [W] We are from LinkedIn and we are going to talk about how we run elephant on wheels how we have bridged and the world of our petabyte-scale Hadoop store and kubernative at LinkedIn for AI.
+00:01:06 [W] I am up and shahab I am a staff software engineer at LinkedIn.
+00:01:21 [W] My colleague Frank is a software engineer at LinkedIn together. We have implemented Cube to Hadoop to bridgecrew Burnett has with Hadoop.
+00:01:27 [W] In this talk, we're going to provide some background on LinkedIn petabyte-scale data store.
+00:01:45 [W] We're going to describe why and how we implemented Cube to Hadoop.
+00:01:49 [W] Then Frank will provide a demo of open-source Cube to Hadoop and we will reserve some time for Q&A at the end.
+00:01:54 [W] first some background on linkedin's data store
+00:02:02 [W] To spark or Tony and then they run on the arm.
+00:02:24 [W] We run one of the largest yarn clusters in the world with more than 6,000 nodes and with a very high growth rate in the cluster size side by side.
+00:02:31 [W] We have a kubernative cluster that users used to run deep learning jobs that access our petabyte-scale data store.
+00:02:34 [W] Now my colleague Frank will discuss why we needed keep to Hadoop to Bridge kubernetes and Hadoop.
+00:02:44 [W] Thank you Robin. As Auburn has mentioned in the previous slide Linton has traditionally been using Hadoop as its compute platform and we operate one of the largest Hadoop data lake in the world to enable LinkedIn jobs
+00:03:01 [W] He's means we first need to tackle the problem of accessing hdfs data from kubernative.
+00:03:09 [W] However, there is a gap in authentication between the two Services Hadoop uses Kerberos a three-party protocol built on symmetric key cryptography to ensure any clients accessing the cluster are who they claim to be
+00:03:25 [W] Whereas kubernative is on the other hand uses a certificate based authentication to control access.
+00:03:32 [W] For those of you who are not very familiar with Hadoop. Let's take a deeper dive into how delegation token works.
+00:03:42 [W] Let's take a look at the following diagram.
+00:03:50 [W] The user would normally log onto some Hadoop Gateway machine using their user ID and password. They would then get a Kerberos TGT ticket from the Gateway machine.
+00:03:56 [W] To access hdfs.
+00:03:59 [W] They send a request along with the TGT ticket to hdfs name node, the name node. Would then use the client provided TGT ticket to authenticate with the Kerberos server?
+00:04:09 [W] If the authentication succeeds name node will create a new delegation token and pass it back to the user.
+00:04:17 [W] Now any further communication between the user and the name node, no longer need to authenticate with the Kerberos server.
+00:04:24 [W] This really helps Hadoop data access scale as you can imagine. If every request requires that the indication against Kerberos the authentication process would soon become the bottleneck for the entire system.
+00:04:37 [W] The Kerberos server also serves many other authentication requests other than user data access request.
+00:04:45 [W] Be renewed for up to seven days AI modelers that LinkedIn uses hdfs data to train their models.
+00:05:00 [W] They gain access to data through hdfs using user account or headless accounts.
+00:05:10 [W] Now the cause of the Headless accounts are basically often times used to denote a virtual team that is working on a project that will share the exact same data within the entire team.
+00:05:15 [W] In order to allow for kubernative workloads to securely access hdfs. We built an open source that tool called Cube to Hadoop.
+00:05:33 [W] You can read about our blog post and find our code on the GitHub link below.
+00:05:33 [W] So what exactly is huge him to Hadoop and what does it do Kim to Hadoop is a tool that allows secure hdfs accents from kubernative and follows Hadoop authentication mechanism the
+00:05:53 [W] We built an open source that tool called Cube to Hadoop.
+00:05:54 [W] You can read about our blog post and find our code on the GitHub link below.
+00:05:55 [W] So what exactly is huge keep to Hadoop and what does it do Q to Hadoop is a tool that allows secure hdfs access from kubernative it follows Hadoop authentication mechanism the delegation
+00:05:57 [W] That we described earlier so that we know that it will scale to the same level as our Hadoop system is doing right now.
+00:06:01 [W] Many times the trading Jabs at LinkedIn runs for an extended period of time Cube to a dupe also takes care of renewing the delegation tokens to support those long running jobs.
+00:06:17 [W] It also integrate with ldap for fine-grained Access Control.
+00:06:21 [W] So that user can proxy as themselves or headless accounts.
+00:06:24 [W] It also generates audible logs so that they're fully compliant with GDP are requirements. That means admins can figure out
+00:06:32 [W] Access what data at what time?
+00:06:36 [W] There are three main components to cube to Hadoop. The main component is Hadoop token service.
+00:06:46 [W] It's named responsibility is to fetch delegation token on behalf of the user.
+00:06:52 [W] A second component is the cube to I do be in a container this in a container will reside in every worker that wants to have access to hdfs.
+00:07:04 [W] It sends a request to Hadoop token service for fetching delegation token.
+00:07:09 [W] The third component is the ID decorator.
+00:07:17 [W] It is used to write authenticated user ID as immutable notation within each pod so that the cube to Hadoop service knows whose delegation token to fetch.
+00:07:25 [W] How to understand Cube to I do it more let's look at a typical workflow.
+00:07:34 [W] A user will log on to some Gateway machine using their password and they will get a certificate.
+00:07:42 [W] Using the certificate the user can submit a job to kubernative Cluster.
+00:07:47 [W] Once the job is submitted the worker pods will be launched. And now that the word pause have been launched the init containers in those pods was start to send the request to a dude token service to get tokens.
+00:08:00 [W] The Hadoop token service then act as a Hadoop.
+00:08:04 [W] Superuser and we'll contact name node to fetch delegation token.
+00:08:09 [W] In Step In Step 6 after the token is returned to the any containers in a container will Mount those token locally onto the pod in a shared volume.
+00:08:21 [W] In Step 7.
+00:08:25 [W] All the workers will be able to access hdfs data securely.
+00:08:27 [W] during that time Hadoop token service will also monitor the status of every single job within the kubernetes cluster by placing a watch on kubernative API service if a job is terminated completed or succeeded
+00:08:43 [W] In service will cancel the delegation token. And if the job is running for longer than one day Adam token service will renew the delegation token.
+00:08:53 [W] Now, let's look at how authentication mechanism works for tube to Hadoop.
+00:09:02 [W] User was submitted job to kubernative Cluster and the kubernative is a cluster of kubernative API server internally actually tracks the user information.
+00:09:16 [W] They know who the authenticated user is.
+00:09:18 [W] That's the miss the job.
+00:09:21 [W] However, this information is not exposed to any public facing API is and therefore we created ID decorator that will decorate the username into the metadata field of a pod.
+00:09:32 [W] We will talk about ID decorator in more detail later.
+00:09:36 [W] Once the pods are launched the in it container will send a delegation token request to a dupe token service.
+00:09:52 [W] The Hadoop token service will parse out the source IP address from the in that container and use that IP address to authenticate.
+00:10:00 [W] It will authenticate with kubernetes API server to find the IP address of the pot. Any of the IP addresses are a match then we know that the pods are who they claim to be.
+00:10:04 [W] This way a pod that anyone else created cannot claim other people's delegation token.
+00:10:11 [W] That authenticated using pot IP address. It's not ideal but the official release of token request and token review API since kubernative 1.14. We saw a new opportunity to improve the authentication mechanism.
+00:10:28 [W] Specifically we can use those tokens to identify the requesters poddisruptionbudgets.
+00:10:44 [W] And the container will then make a get delegation token request to the Hadoop token service.
+00:10:51 [W] Using that token the Hadoop token service can authenticate with kubernetes API server using a token review API call?
+00:11:00 [W] The token review request will return a response that includes the pot name so that the kubernative Q2 Hadoop service will know whose delegation token to fetch.
+00:11:11 [W] This way it is the authentication mechanism is safer and faster now turn back to my colleague Robin to talk in more detail about ID decorator Robin.
+00:11:26 [W] Thank you Frank for Kube to Hadoop to provide the correct token to the correct user all resources need to have the identity of the creating end user.
+00:11:38 [W] This is how it works a user submits a job to the kubernative master a pi server.
+00:12:00 [W] I did a grated Mission controller will intercept this request and then decorate that particular request the CRT is request with the end users ldap account.
+00:12:11 [W] Next this request will be converted by the TF job operator into a pod submission request and go back to the submission request pipeline of the kubernative master in that submission request
+00:12:32 [W] Line, the IG decorator will again intercept it and decorate it with the end users ldap ID in this way it I did a curator ensures that every request and every resource
+00:12:46 [W] Ends up with the creating end-users ldap ID regardless of what service account creates it. So at the end of this this will result in the
+00:13:01 [W] part controller creating the Pod and that part still having the end users ldap ID, which I did cute to Hadoop can use to validate whether this is the correct user
+00:13:17 [W] To give the correct delegation token.
+00:13:19 [W] Next I want to talk about another type agnostic nature of ID decorator kubernative is a strength is support for multiple cre to scale
+00:13:39 [W] Port for all the different cri-o is in use in our cluster.
+00:13:47 [W] We wanted to make sure that we don't have to change either decorator code every time we introduce a new custom type to kubernative and we can keep using either decorator for any new custom
+00:13:58 [W] important to kubernative
+00:14:00 [W] to skip to support this idea decorative uses kubernative sysdig. Json path.
+00:14:09 [W] We've modified it a little bit the Jason Platinum limitation and it uses that to decorate the pot template in a type agnostic way.
+00:14:23 [W] So as long as the CRT comes with a pod template it will get correctly decorated.
+00:14:28 [W] So on this example here on the left. There's a TF job that gets submitted to kubernative and
+00:14:31 [W] That has particular that has a pot template inside it and then on the right is a specific kind of a specification in Jason of in llamo of what
+00:14:46 [W] Should be updated to insert users ldap ID. And therefore I decorated will use this configuration to find under the part template the metadata annotations section.
+00:15:02 [W] Of the TF job and decorate the users ldap ID there.
+00:15:11 [W] Now a larger question is why do we need Cube to Hadoop at all kubernative has secrets and we can use those to directly mounted delegation token that the user creates.
+00:15:31 [W] Why do we go through the circuitous route of having a service that sends the tokens back to the you back to the jobs that are running the shortcoming of using
+00:15:43 [W] Grits is that we have to now configure very fine-grained or back rules for every user in kubernative or every user on the namespace to make sure that no user can steal another users
+00:15:58 [W] And impersonate them.
+00:16:04 [W] Also. We need to make sure that there are special rules for administrators who could see delegation tokens.
+00:16:08 [W] And we also need to make sure that the there is continual lifecycle hooks or are calling jobs that actually go ahead and clean up the secrets after job finishes.
+00:16:24 [W] So all this becomes a big overhead and we feel that our Cube to Hadoop implementation doesn't encounter those overheads because it's fully secret Less in memory implementation.
+00:16:34 [W] This brings us to our production usage of Kube to Hadoop.
+00:16:48 [W] We do use it today for LinkedIn jobs, and we noticed that you did learning jobs and we have no encountered to War Stories. The first one is regarding
+00:16:59 [W] And there is regarding to regard related to cube to Hadoop use of pot Network to identify the pot. So because keep to Hadoop requires users to use pot network will notice that it
+00:17:13 [W] is the maximum Network throughput that the users going to use so this is a diagram of yeah users running synchronous distributed training with the host Network and here they can
+00:17:28 [W] Host Network and here they can consistently get line rate about nine hundred megabits per second for their synchron's distributed training when we switched over to the
+00:17:41 [W] And for Kube to Hadoop to get the pods IP the users Network throughput went down to around 140 megabits per second.
+00:17:54 [W] And this was far less than the 900 that they were getting before and it increased the time taken for training by a lot.
+00:18:00 [W] So this was our first war story and now I will switch over to Frank who will talk about our second war story.
+00:18:10 [W] Thank you Ivan for the past few months.
+00:18:15 [W] We have been collecting customer feedbacks on Cube to Hadoop and a major complaint has been the in it container launch speed.
+00:18:24 [W] We actually slow the entire container token fetch speed on purpose.
+00:18:28 [W] Let me tell you why the in it Container makes a fetch delegation token request to a dupe token service and as we discussed in authentication mechanism section the Hadoop token service use the in it.
+00:18:43 [W] Our source IP address to authenticate with the kubernative netease API server.
+00:18:46 [W] If the IP address is a mismatch or doesn't exist. The other thing the authentication would fail we would have seen from our experience.
+00:19:01 [W] You have to think the authentication would fail.
+00:19:11 [W] We would have seen from our experience what we've seen from our experience is that many times even though the unit container already successfully launches with an IP address that IP address hasn't been propagated to kubernative
+00:19:13 [W] servicemeshcon query to authenticate
+00:19:14 [W] therefore we purposefully set at 15 seconds delay before the first request from the in a container to a do token service to account for the propagation time. This temporary fix. However was not satisfying as our
+00:19:30 [W] Enjoying the Superfast launch speed of their kubernative jobs, and this takes it away.
+00:19:37 [W] Luckily.
+00:19:39 [W] There is a solution for both this issue and the hosted Network issue.
+00:19:44 [W] Arbonne has mentioned that is the token request and token review API that we've shown using tokens instead of IP addresses as Authentication.
+00:19:54 [W] We no longer need to bind ourselves to partner at work and thus we can support hosted Network jobs and says, we won't face the IP.
+00:20:00 [W] Yes propagation issue.
+00:20:04 [W] There's no IP address at all.
+00:20:05 [W] We would we could potentially speed up our in the container by a very big margin.
+00:20:10 [W] Finally there could be some potential future improvements for to to Hadoop, even though we haven't faced this issue it this is definitely a must if you want to scale.
+00:20:29 [W] We hope to let Chief to distribute the delegation tokens instead of every single worker fetching their own delegation token.
+00:20:35 [W] You can imagine with a popular deep learning job.
+00:20:38 [W] You can create up to hundreds if not thousands of containers for a single job.
+00:20:41 [W] If every container has to fetch delegation token at the same time.
+00:20:48 [W] It will be a huge load for both Cube to Hadoop token service and Hadoop name node. Therefore we want to create a mechanism such that only one container need to fetch the delegation token for the entire job.
+00:20:59 [W] And Hadoop name node. Therefore we want to create a mechanism such that only one container need to fetch the delegation token for the entire job.
+00:21:01 [W] Keep to Hadoop is entirely open source now and we were really encouraged the open source Community to contribute to this feature if you're interested in this project.
+00:21:08 [W] Finally, it has been a lot of theoretical talk and let's look at how cute to Hadoop Works in real life through this demo.
+00:21:18 [W] This concludes the presentation section now we'll open up for Q&A. Thank you.
+00:25:28 [W] So to all the attendees, I would invite you to join our slack channel number 2 Cube connection k8s.
+00:26:52 [W] Let me put it on the question answer.
+00:26:57 [W] Oh, I added into the question and answer section and also basically for everybody it's just like channel number is number 2 - 2 con - extent k8s,
+00:27:43 [W] Please join us there if you want to continue this conversation.

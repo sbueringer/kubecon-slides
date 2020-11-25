@@ -1,0 +1,237 @@
+﻿Speed Racer: Local Persistent Volumes in Production: KNOB-0986 - events@cncf.io - Thursday, August 20, 2020 8:21 AM - 376 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:03:10 [W] Hi everyone.
+00:08:19 [W] My name is Matt Schuyler.
+00:08:20 [W] And today I'm here to talk to you about using local persistent volumes and production.
+00:08:25 [W] This talk is kind of supposed to be everything.
+00:08:29 [W] I wish I knew about local volumes when getting started with them.
+00:08:37 [W] I found that there's a lot of great information out there about local volumes, but it's kind of spread throughout various places such as the kubernative stocks blog posts or external Repose and some hoping that this can kind of be a helpful holistic overview.
+00:08:43 [W] A little bit about myself.
+00:08:48 [W] Hi everyone.
+00:08:59 [W] My name is Matt Schuyler.
+00:08:59 [W] And today I'm here to talk to you about using local persistent volumes and production.
+00:08:59 [W] This talk is kind of supposed to be everything.
+00:08:59 [W] I wish I knew about local volumes when getting started with them.
+00:09:00 [W] I found that there's a lot of great information out there about local volumes, but it's kind of spread throughout various places such as the kubernative stocks blog posts or external Repose and some hoping that this can kind of be a helpful holistic overview.
+00:09:02 [W] A little bit about myself.
+00:09:03 [W] I'm an infrastructure engineer at chronosphere chronosphere is a hosted metrics and monitoring platform particularly built for large scale High throughput use cases. So you can imagine that we care a lot about disk performance performance cost trade-offs
+00:09:04 [W] About disk performance performance cost trade-offs and similar that we'll talk about later chronosphere is built on top of M3, which is an open-source metrics and monitoring platform that we are also maintainers of and before working at chronosphere
+00:09:13 [W] An SRE at boober where I worked on the in-house metrics team there.
+00:09:18 [W] So let's jump right into it what our local persistent volumes local persistent volumes are a feature of kubernative that combine to potentially familiar topics and they're both kind of right there in the name.
+00:09:31 [W] The local part of local persistent volumes refers to local disks.
+00:09:36 [W] Local disks are something that are offered in some form or another odd, most major Cloud providers. The general idea is that they are fast disks that are attached directly to the hosts the
+00:09:52 [W] One machine.
+00:10:00 [W] This is in comparison to typical remote storage offerings, which are usually offered as a service.
+00:10:02 [W] They go out over the network in this case since local disks are directly attached to the node you get significantly better performance and as well as more consistent performance. So the taillight and sees You observe will be more predictable.
+00:10:15 [W] In this case since local disks are directly attached to the node you get significantly better performance and as well as more consistent performance. So the taillight and sees You observe will be more predictable than with something like remote
+00:10:17 [W] Thing like remote discs that have to go out of the network.
+00:10:27 [W] However, since local disks are attached directly to the node the data only persists for the lifetime of the instance.
+00:10:34 [W] So this means that if you are instance is terminated or there's some sort of host maintenance you met you might lose all the data on that local disk.
+00:10:38 [W] However, although there's this downside of the data only persisting for the lifetime of the instance at the benefit is that because the disks are attached directly to the host you get this significantly better performance and at a reduced cost and
+00:10:55 [W] kind of what exactly that performance and cost differences are but because of all this local disks are better suited for kind of a newer range of use cases than the more General remote discs will also discuss that in more detail,
+00:11:10 [W] First let's just take a look how much better is the performance that we're talking about?
+00:11:15 [W] So these numbers examine gcps local ssds off less it local SSD offering since they publish their numbers pretty clearly and it's easy to take a look at them AWS and at sure both have similar if not better
+00:11:31 [W] Minutes and cost numbers that were talking about here.
+00:11:39 [W] So the same benefits kind of apply across multiple providers and if you're curious the Cockroach DB Cloud report kind of breaks down these storage characteristics across a variety more Dimensions
+00:11:49 [W] Looking at here, but even still so on gcp local ssds can offer between 7 and 12 times better read and write I up.
+00:12:05 [W] I operations per second compared to the fastest equivalent for most remote disc offering the throughput stats are also dramatically better so you can get over twice as much read throughput and
+00:12:16 [W] And foremost it remote disc offering the throughput stats are also dramatically better so you can get over twice as much read throughput and roughly 1.7 times write throughput compared to Any Given
+00:12:20 [W] Fully 1.7 times write throughput compared to Any Given persistent disk.
+00:12:23 [W] So because of this balance of iot performance and write throughput local SSD is typically are suited for more kind of random reading right use cases.
+00:12:36 [W] But in any case in any case these numbers are you know, obviously the performance here is significantly better than just using remote discs, but the real benefit of all this is that in addition to being a more performant look,
+00:12:46 [W] Cole discs are also much cheaper than pretend remote storage.
+00:12:56 [W] So in gcps case local SSD storage will cost eight cents per gigabyte.
+00:13:01 [W] Whereas remote disks. The fastest remote just offering will cost 17 cents per gigabyte.
+00:13:04 [W] The persistent volume as part of local persistent volumes refers to persistent volumes and kubernative use that you might be familiar with so local local processing volumes kind of combine these two topics, but first, let's take a look at
+00:13:21 [W] Some of the behavior characteristics persistent volumes in kubernative. He's
+00:13:27 [W] so in kubernative use a persistent volume is a resource that represents some sort of remote store or some sort of storage resource, you know storage that can be concretely mounted and forth with a pod and
+00:13:44 [W] You know storage that can be concretely mounted and fork with a pod and read or read to read from or written to and a persistent volume claim is the claim that binds a persistent volume to a given poddisruptionbudgets.
+00:14:03 [W] kubernative ensures that your pod is mounted with the store with the storage backing its persistent volume claim this typically happens by first attaching your persistent volume to a node that your pod is running on
+00:14:18 [W] Use it that persistent volume claim will bind it to some persistent volume resource.
+00:14:20 [W] kubernative insurers that your pod is mounted with the store with the storage backing its persistent volume claim this typically happens by first attaching your persistent volume to a node that your pod is running on
+00:14:21 [W] That attached persistent volume available to the poddisruptionbudgets.
+00:14:24 [W] However for a long time with persistent volumes there was kind of this assumption that storage could just move around with pods.
+00:14:34 [W] So say you're in poddisruptionbudgets a-and it had some persistent volume attached to it.
+00:14:47 [W] If node a failed kubenetes would take care of rescheduling your pod on to say no be and it would be able to attach that same persistent storage to the new pod to the same pot on a new node.
+00:14:52 [W] But local volumes kind of local disks rather kind of violate this assumption. So, you know, there's this assumption that storage could move along with the pods from node to node just like kubernative can kind of schedule your pod on any node.
+00:15:09 [W] This is kind of In conflict with some of these properties that we've talked about about local volumes where they're tied to the lifetime of in so in this case if the your poddisruptionbudgets, it has local storage attached to it and that node fails
+00:15:25 [W] Can't just move that disc two new node, as you can't just detach a physical disks attached directly to a host machine and move it somewhere else.
+00:15:38 [W] Similarly. You wouldn't actually want kubernative use just rescheduling your pod and even if it could if it was using a local.
+00:15:45 [W] umm, so this is you know outside of the case of node failures just in normal operations, if your pod was running on node a and had some local volume attached to it and your pod was suddenly rescheduled on to node B
+00:16:00 [W] I have lost all of its data as all that as all that data is stored on the local volume attached to no day. So if Cooper Nettie's rescheduled your pods suddenly, you've lost all your data.
+00:16:12 [W] So how can local volume work rather than solving just for the use case of local volumes the kubernative community solved more General problem came up with a more General solution and that's called topology aware
+00:16:29 [W] So what this means is whereas previously when a persistent volume claim was created persistent volume would be attached or would be provisioned pretty immediately after now when a persistent volume
+00:16:45 [W] It actually waits for the first pod that's going to use that use that persistent volume claim before deciding where to schedule both the Pod and the persistent volume.
+00:17:00 [W] So this means that the scheduler can take into account both the pods Affinity requirements as well as the storage is requirements and this helped not only with the problem of local volumes, but also with the problem of multi-zone
+00:17:12 [W] Of multi-zone storage and kubernetes even with remote storage. So previously there was a behavior where say you were running a regional kubernative use cluster and you schedule the pod in zone a your
+00:17:26 [W] Actually gotten provisioned in zone B, and then suddenly your pod wouldn't be able to use that storage because they were in different zones.
+00:17:39 [W] So by solving for topology aware volume provisioning kubernative solve for both this use case of multi Zone storage as well as local disks. And this is kind of something we frequently see in the kubernative community is rather than taking an
+00:17:49 [W] Thing just that narrow use case kind of figuring out a more General solution that works for multiple problems.
+00:17:58 [W] So under the hood persistent volumes are are now have a field called No, tufin D on them. And this is similar to the no definity terms.
+00:18:08 [W] You might see on a pod.
+00:18:14 [W] So this allows the persistent volume to express requirements for where it's scheduled. So in the case of a local volume, maybe it can only be scheduled on a certain node or in the case of zebrium.
+00:18:20 [W] Zonal storage, it can only be scheduled on nodes and it gives own.
+00:18:24 [W] So how do you get started using local volumes?
+00:18:32 [W] What are kind of some of those day one operations while to get up and running with local volumes in order to provision them.
+00:18:39 [W] There's a tool called the local static provisioner.
+00:18:45 [W] So with the local static provisioner, you take care of mounting discs at a certain path on your node.
+00:18:48 [W] You'll point the provisioner at that path and the provisioner will pick up all of the discs that are mounted and turn them into kubernative persistent volume resources.
+00:18:57 [W] Additionally, the provisioner will take care of life cycle tasks such as wiping the disk before and after its mounted or when the persistent volume or side wiping the disc when the persistent volume claim is deleted or the disk is first provisioned
+00:19:12 [W] Lifecycle tasks that mimic the behavior of you know new storage attached.
+00:19:19 [W] In order to first use local storage, you'll create a storage class dedicated to local storage.
+00:19:33 [W] So this just pretty much specifies a type of storage that you'll attach that you'll use with your workloads.
+00:19:39 [W] And then in your various workloads that you're using discs for in the persistent volume claim templates rather than just or rather than specifying a remote storage or not specifying a storage class. You'll just specify
+00:19:48 [W] You created dedicated for local disks.
+00:19:52 [W] And that's it.
+00:20:00 [W] You create a storage class you move all of your workloads to it and you have 10x faster storage at half the cost.
+00:20:03 [W] If only wouldn't that be nice.
+00:20:07 [W] Unfortunately because of some of these properties that we've discussed local disks do behave very differently than regular persistent volumes that you might be used to so safely using them requires more planning and kind of operational experience.
+00:20:19 [W] So what are some of these day two operations that you know, you might have to take into account these differences in behaviors?
+00:20:31 [W] The first one that we'll look at is what happens during node failures?
+00:20:34 [W] So one of the promises of kubernative he's is that nodes can fail and kubernative is will help your applications.
+00:20:42 [W] Be more resilient by rescheduling your workloads on different nodes and kind of abstracting away these failures for you additionally kubernative is will not just go randomly deleting your data as that that wouldn't really be helpful from like
+00:20:57 [W] What happens during node failures?
+00:20:57 [W] So one of the promises of kubernative is that nodes can fail and kubernative is will help your applications.
+00:20:58 [W] Be more resilient by rescheduling your workloads on different nodes and kind of abstracting away these failures for you additionally kubernative is will not just go randomly deleting your data as though that wouldn't really be helpful from like
+00:21:00 [W] Racing perspective or any perspective.
+00:21:09 [W] However, both of these behaviors combined means that if a node fails and that local persistent volume no longer exists the Pod using it will be stuck.
+00:21:14 [W] So this is because you know as kubernative won't just delete your data if a pod was using local storage that local storage is no longer available kubernative.
+00:21:26 [W] He's won't reschedule it because that would mean bringing up that same pod with local.
+00:21:27 [W] With without any data or sorry won't reschedule it without manual intervention.
+00:21:35 [W] So in order to allow this pod to be rescheduled you have to delete the persistent volume claim and then in that pod will be rescheduled with a new persistent volume attached to it.
+00:21:47 [W] And this means that unless you automate it.
+00:21:49 [W] This is a manual operation.
+00:21:54 [W] However, at the same time automating it means that you're automating kind of the deletion of data, so you kind of have to take some care with this.
+00:21:57 [W] another
+00:22:02 [W] kind of day-to-day operation that you'll have to take into account is how you handle backups and restore of your data.
+00:22:16 [W] So with remote discs, you might be used to a snapshot and restore which is a pretty popular kind of Disaster Recovery mechanism offer it on most Cloud providers.
+00:22:25 [W] With with all the data from that snapshot and this is kind of helpful, you know, if you were to accidentally corrupt your data or delete something kind of just being able to go back to any point in time and recover that data.
+00:22:47 [W] However, there is no snapshot functionality for local disks on any cloud provider.
+00:22:53 [W] Additionally, there's kind of as we talked about earlier since local disks are tied to the lifetime of an instance. There are few to no guarantees.
+00:23:02 [W] He's about the availability of that local disk.
+00:23:05 [W] So your most cloudevents documentation.
+00:23:11 [W] It'll talk about some of the caveats of using local storage. But the bottom line is that they all kind of say, you know, you can't really depend on that data always being there because if there is a node maintenance of or maintenance event on the host machine or
+00:23:23 [W] Mm wider maintenance event or node failure that local disk might be might no longer be available.
+00:23:39 [W] So this means that you are responsible for backing up any data that's stored on local disks one pattern that can help here is a sidecar pattern with you know for backups,
+00:23:46 [W] Some poddisruptionbudgets. I'd your app and copies all of your data up to an object store on some sort of regular interval or some other durable remote storage.
+00:23:58 [W] And finally, it's also worth talking about cluster upgrades.
+00:24:15 [W] So hopefully you're keeping your clusters up to date. But the way that cluster upgrades typically work on most Cloud offerings is that they're done by replacing nodes one by one with a node with the new version.
+00:24:20 [W] This is compared to say replacing we're rather than upgrading a single node in place.
+00:24:32 [W] Your cloud provider will just iterate over your nodes and kind of replace them with nodes with the new version.
+00:24:35 [W] However, this would be problematic to do with local disk. So you can imagine if you were using local volumes with your nodes and your cloud provider started.
+00:24:50 [W] just swapping out those nodes one by one you would also be deleting all of your local disk all of your local data one by one.
+00:24:56 [W] Additionally, even if you didn't really care about the data on disk say you were using local volumes for purely ephemeral use cases.
+00:25:12 [W] You would still have the problem where these pods were stuck and couldn't be rescheduled because as we mentioned previously unless you delete that volume claim finding that pod to that storage kubernative won't reschedule the pod.
+00:25:21 [W] So a safer solution here is to instead kind of preemptively evacuate your node pools.
+00:25:33 [W] So for example, if you were going to upgrade, you know day you might first manually or through some automation.
+00:25:41 [W] But once you've migrated pot your workloads that are using local volumes away from your nodes that are you're going to upgrade then you can either safely upgrade them or just tear them down.
+00:26:02 [W] So we've kind of talked about some of the things to consider when using local volumes and kind of these subtleties, but that doesn't mean you should just avoid them because our as we mentioned earlier if used properly you can get these dramatically.
+00:26:20 [W] Roof store, it is dramatically improve storage performance at a reduced cost.
+00:26:28 [W] So we're kind of going to look at some use cases or patterns for using local volumes that are a better fit given these given their characteristics.
+00:26:37 [W] So first, let's talk about something that might not be a good fit.
+00:26:48 [W] Local volumes are not a good fit for things like single primary instances of database or some other application.
+00:26:54 [W] For example, say you were only running one replica or one instance of my SQL on your in your cluster using local volumes, which arguably who wouldn't want to do with remote storage anyway, but
+00:27:06 [W] That was local volumes.
+00:27:11 [W] So say there was some sort of node failure and the now suddenly you're my SQL poddisruptionbudgets in sits a single instance. You would be failing all reads and writes to it
+00:27:23 [W] It's a single instance. You would be failing all reads and writes to it additionally, even if you were to delete that volume claim and allow that my SQL poddisruptionbudgets to a different node.
+00:27:32 [W] Suddenly. It would come up with a new empty disk and you would have lost all of your data.
+00:27:36 [W] So a benefit for using local volumes would be workloads that already have kind of like fault tolerance and replication built in the example of this would be Kafka which allows you to write your to set a replication factor and then handles
+00:27:54 [W] So in this case say you are a client running that was sending rights to Kafka. Those rights would be replicated across three instances on three different nodes with three different local volumes.
+00:28:10 [W] This means that even if one of your instances fail, your overall availability isn't impacted as there are still two replicas to store the data, but more importantly since when this instance fails you lose
+00:28:22 [W] Local disk when a new node or when a new pod comes up to replace it on a new node.
+00:28:30 [W] It will have an empty disk. But since the Earth since you're using an application that can handle copying data Kafka will stream the data that it's posted on from the root nodes that remained available and reconstructed
+00:28:44 [W] So overall you wouldn't have lost any data. Although you temporarily it was unavailable. But overall you wouldn't have lost any data and your overall application availability wouldn't have been impacted.
+00:29:00 [W] So generally speaking these workloads that are fault tolerant and handle replication for you will make it easier and safer will be easier and safer to run on local volumes. And again, especially if they handle this,
+00:29:15 [W] Fault tolerant and handle replication for you will make it easier and safer.
+00:29:17 [W] Well be easier and safer to run on local volumes and again, especially if they handle this, you know, some of the replication other Behavior under the hood, you won't have to build as much operational tooling on top of it
+00:29:24 [W] Replication other Behavior under the hood you won't have to build as much operational to link on top of it. There are few other use cases that can take advantage of local disks pretty well outside of just databases.
+00:29:32 [W] So some data processing pipelines can use disk as kind of a spillover cash for data. So in these cases where the data on disk is purely a film roll can be really helpful because again, you know, if you're using it for
+00:29:45 [W] Local cache and data processing you don't really need that storage like stored on a remote store and replicated for you because you can lose it any time.
+00:29:57 [W] Additionally.
+00:30:01 [W] There are some databases that can use certain paths for just incoming rights or buffering incoming rights and then have a or use a different storage path for long-term data storage.
+00:30:13 [W] for example, Cassandra can do this this and
+00:30:17 [W] so in this case you could do something like have incoming rights buffered to a local disk and use a remote disc for long-term storage.
+00:30:29 [W] Again, you wouldn't want to do this unless you were replicating the data across multiple instances, but this would mean that for that more performance sensitive use case of kind of committing incoming rights. You can just use the local disk and even if that
+00:30:41 [W] It fails and is rescheduled you only lost from that one instance a short period of time so or short period of data, so this is kind of a Best of Both Worlds scenario.
+00:30:52 [W] So to recap some of the themes we've talked about since local volumes present kind of a departure from typical operations that you're used to you really do have to consider the impact. It will have on both your workloads and your day-to-day operations
+00:31:10 [W] And you'll likely have a smoother experience getting started and running further and production. If you at least start with these workloads that are kind of like already fault tolerant or purely ephemeral as they'll require you to let build less operational
+00:31:25 [W] On top of that your cloud provider will likely document the behaviors that you should expect with local disks.
+00:31:40 [W] And this knowledge combined with how local persisting volumes and kubernative work is going to be pretty key to painting a better picture of what to expect and they entered a operations. So those are both two or both your Cloud providers
+00:31:47 [W] And some of the the kubernetes resources are good things to kind of absorb and in addition to some of the practices we've talked about here.
+00:31:58 [W] There was a really helpful best practices Doc in the local static provision or repo that gets into kind of more of the nitty-gritty details of mounting discs and everything.
+00:32:09 [W] These are just some helpful resources that I've referenced so far and I'll post these in these are these will be in the slides that are posted afterwards and that's about all I have.
+00:32:21 [W] Thank you all for joining and I hope that this was helpful.
+00:32:24 [W] Like I said, we I work at chronosphere and we have a virtual Booth here where we would love to talk further with you and you can come see a demo of the platform that I mentioned and if anyone is available, sorry, I'll be available later if
+00:32:37 [W] Let's talk about just local disks or any of the topics.
+00:32:43 [W] We've talked about or kind of has any further questions. And with that I will get into the QA.
+00:32:47 [W] Hi everyone.
+00:32:55 [W] Thank you so much for joining today and excited to answer some of the questions that you've all asked here.
+00:33:04 [W] So the first one is what do you think about using local persistent volumes with openfaas?
+00:33:10 [W] I'm using this for two years using them for four node postgres replication never failed performances. Great is this production-ready like able to replace external database as a service? You know, this is one of those things that is definitely a pretty subjective.
+00:33:21 [W] Question, you know is is it production-ready? So obviously everyone's use case is going to be different but definitely some things to consider are always, you know, when these things work well and when it's been working for a while and it's working great, you know,
+00:33:37 [W] That is obviously what you want but a lot of times that's not the most interesting modes that you'll run into.
+00:33:49 [W] So what you really want to know is how is this going to behave when it fails what if you lose, you know multiple nodes.
+00:33:56 [W] How is your how is something like postgres Panhandle failover?
+00:33:58 [W] Is that something you're going to have to do manually?
+00:34:02 [W] So I think that in any of these cases, you know when it's running smoothly it's great. But you want to know what the failure includes look like and then even out
+00:34:09 [W] Side just operational failures obviously things like, you know your ongoing backup strategy making sure you've been able to test that are also really important.
+00:34:21 [W] So definitely tough to say, you know, one way or another if something is production-ready, but those are the considerations you would want to think of the next question is is volume replication and synchronization between the selection of available
+00:34:32 [W] This is definitely a really this is a really interesting question.
+00:34:45 [W] You know, the this is something that you would you know, pretty much the benefits you would expect from like a remote storage on your cloud provider or you know, using some sort of like replicated storage your self
+00:34:51 [W] But just out of the box with kubernetes know there is no kind of like transparent way to replicate data between nodes.
+00:35:06 [W] So that's why you have to either use, you know, a database that handles this replication before you or you know, some sort of overlay storage.
+00:35:10 [W] Another question is can you list the databases that are compliant with local persistent volumes?
+00:35:22 [W] So this is you know, it's tough to say for sure exactly.
+00:35:33 [W] What what some are because you know, a lot of databases are they could be a good fit for local volumes, but they might not have you know, all of kind of the operational tasks that you have to be ready for
+00:35:37 [W] Or like out of the box.
+00:35:41 [W] So for example, we talked about Kafka is something like a good fit. But you know, it's not going to handle automatically replacing nodes or restringing data to failed Brokers for you.
+00:35:53 [W] So that's kind of something we have to build that automation on top.
+00:35:59 [W] I do think maybe cockroach DB has like automatic streaming between nodes when one failed and you don't have to manually manage membership, but I'm not entirely sure.
+00:36:07 [W] Sure about that.
+00:36:09 [W] This other question is can you read it reiterate? So if you delete the local PVCs, is that a way to evacuate the node?
+00:36:25 [W] Yes. So deleting the local PVCs is a is a prerequisite to allow a pod to be rescheduled.
+00:36:33 [W] You can technically Evacuate the node whenever you want and shut it down, but you're not going to see that pod, you know rescheduled on to a different.
+00:36:38 [W] Different node until you've manually deleted are broken that binding by deleting the PVC and lead the deposit self.
+00:36:47 [W] It's other questions is interesting.
+00:36:58 [W] What's the benefit of using local storage instead of ceph for example, on top of local disks this you know, this kind of gets back to what sort of like guarantees
+00:37:07 [W] people on top of local disks this this kind of gets back to what sort of like guarantees you want or what sort of automation you want around this
+00:37:11 [W] You know using local storage instead of stuff you're going to get much better performance than if you were using stuff.
+00:37:21 [W] I think that in general, you know, if you're running in a cloud environment where you have your where you have remote storage I did for you by your cloud provider.
+00:37:33 [W] you probably don't need to be using something like stuff on top of even with local disks because probably, you know, admittedly or Cloud spider can probably do
+00:37:43 [W] work storage better than you can sew both from a reliability perspective handling those operational tasks for you as well as just from performance since in a lot of cloud environments, you know, there's kind of like a special network
+00:37:56 [W] you probably do network storage better than you can sew both from a reliability perspective handling those operational tasks for you as well as just from performance since in a lot of cloud environments,
+00:37:58 [W] just for disk operations, but if you're running say on-prem or something, then you might get more benefits out of kind of the automation of stuff on top of local disks kind of providing that abstraction for you and kind of giving
+00:38:12 [W] Stuff on top of local disks kind of providing that abstraction for you and kind of giving you you know, one more way to automate this task.
+00:38:16 [W] This next question is a good one.
+00:38:26 [W] Is there a different as their practical difference between an empty der volume and a local persistent volume?
+00:38:29 [W] So it depends how you provision your node.
+00:38:41 [W] So for example, if you're running on gke you will be the boot. Your empty der volumes will always get provisioned on the boot disk of the host and the boot disk of the host is always either a remote HD hard disk
+00:38:44 [W] Disc or a remote SSD. So in either of those cases, you're not able to take advantage of local volumes with computer Vault or with empty der.
+00:38:59 [W] However, if you are running if you provision your nodes yourself, you might be able to have you know, the kubelet either proper mounting amount empty derives from a local volume or if your boot disk itself is an empty bear is a local volume then you then
+00:39:12 [W] Dieter is automatically proposing from them.
+00:39:15 [W] This next question is is there any Automation in kubernative use to prepare these volumes for the first time?
+00:39:25 [W] Yes, definitely you've had is you know kind of what that local static provisioner is intended to do so that will handle disc prep and initial life cycle for you.
+00:39:37 [W] There are some things outside of that that we didn't really cover but that you'll have to still consider. So for example, even if you're using local static provisioner, it won't take care of things.
+00:39:46 [W] Like dis grade for you.
+00:39:57 [W] So if you say you had like or local volumes attached to your node and you wanted them to all be presented as as a single raid, then you would have to handle you would have to provision that ahead of time before
+00:40:02 [W] Call provisioner and then you would have to pass it to the local provisioner.
+00:40:07 [W] Next question is what would be a good option for local non persistent storage IE cash on a locally attached high-speed disk.
+00:40:23 [W] So this is something that I kind of alluded to this with some of those data processing pipelines that can take advantage of this.
+00:40:32 [W] So I'm not super familiar with spark, but I believe spark can use local or can you can spill over like some data to local disk?
+00:40:38 [W] I'm not a hundred percent sure, but I know that there are other kind of like data processing tools that can in this case, you know, if you don't have a remote volume attached and it's just going to by default like spill over onto the boot disk of the host which could be good
+00:40:52 [W] Comes with this capacity or performance. So using that for ephemeral storage is really helpful also that other case I kind of mentioned where was something like Cassandra you can have incoming rights buffered to a local disk.
+00:41:08 [W] and then third to one location and then have them and then have the kind of like more long-term data in another location on disk. That might be a good choice as well because if you are, you know, if your data is replicated between nodes, even if
+00:41:25 [W] you lost like a short period of Rights on one node at the top or at the benefit of being able to kind of like process the incoming rights quickly.
+00:41:33 [W] That could be pretty beneficial.
+00:41:44 [W] This other question is what is the best practice for the fs Mount location while using local storage provisioner? I can mount my TV and something like now discs because kublr by
+00:41:49 [W] It think it is kind of up to you.
+00:41:56 [W] For example, I know that with the local static provisionary you can mount them wherever you want and then just let it know about the path.
+00:42:07 [W] So you kind of have a lot of flexibility in terms of what path it picks up one other best practice though. And if you check out the best practices dock in the local static provision to Rico they mentioned this is that you'll want to include
+00:42:17 [W] uuid of the disc in the mountain pass because otherwise if your disc is if your disc is somehow replaced or formatted even if you lose the data on disk
+00:42:32 [W] Formatted even if you lose the data on disk, then you might even if the know if even if the disc gets wiped, it might come up with like the same name and you little be reattached with
+00:42:41 [W] Might come up with like the same name and you little be reattached with the same name, but you that it will have empty data that could confuse your application.
+00:42:52 [W] We are almost out of time. So we I will be in flax for any other questions folks have in the to Coop con storage room. Otherwise, thank you so much for coming and hope to talk to you all there.

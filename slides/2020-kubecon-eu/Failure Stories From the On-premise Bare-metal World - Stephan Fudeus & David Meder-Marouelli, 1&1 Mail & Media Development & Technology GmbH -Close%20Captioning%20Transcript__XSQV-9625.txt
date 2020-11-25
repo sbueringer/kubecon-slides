@@ -1,0 +1,257 @@
+﻿Failure Stories From the On-premise Bare-metal World: XSQV-9625 - events@cncf.io - Wednesday, August 19, 2020 7:27 AM - 61 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:12:10 [W] Hello welcome.
+00:12:12 [W] Baby brought a couple of failure stories that occurred to us when running kubernative on-premise on bare metal machines.
+00:17:45 [W] I'm David Miller Morelli.
+00:17:48 [W] I work at one point Maley media as an expert for continuous delivery and are currently filling the role of the product owner for the entire delivery platform.
+00:18:03 [W] And I everybody from my side as well.
+00:18:04 [W] My name is Stefan Fidel's.
+00:18:08 [W] Baby brought a couple of failure stories that occurred to us when running kubernative on-premise on bare metal machines.
+00:18:11 [W] I'm David made Emily.
+00:18:14 [W] I work at one point 1 million media as an expert for continuous delivery and are currently filling the role of the product owner for the entire delivery platform.
+00:18:15 [W] And I everybody from my side as well.
+00:18:16 [W] My name is Stephen Fidel's. I'm an expert for containerd platforms at 1 and 1 male media and my current role is being a product owner for our internal kubenetes platform.
+00:18:18 [W] To give you a bit of context where communities is running.
+00:18:19 [W] Of course, we are developing in-house software and one of the key factors that we strive for is time to Market and for optimizing time-to-market. There's three main components which are tightly coupled to each
+00:18:32 [W] Honor for our internal when it is platform.
+00:18:33 [W] To give you a bit of context where communities is running.
+00:18:33 [W] Of course, we are developing in-house software and one of the key factors that we strive for is time to Market and for optimizing time-to-market. There's three main components which are tightly coupled to each
+00:18:35 [W] which only can work if we have a reliable and good ci/cd platform which in turn requires a robust and scalable knative runtime transform and
+00:18:52 [W] Equipment has just being used.
+00:18:55 [W] So let's talk a bit about the context in which we are using communities.
+00:19:01 [W] We provide kubernative centrally. So there's one Central operations teams, which provides kubernative clusters for our operations and devops teams those operations and devops teams are tenants for our platform.
+00:19:14 [W] We focus on soft multi-tenancy.
+00:19:21 [W] So we do not try to strictly isolate the tenants from each other because they are considered friendly users, but we still try to do our best to help them.
+00:19:25 [W] Isolate their their compute workloads and their Network traffic from each other by using network policies and limits and requests and we try to provide them with tenant specific isolated infrastructure like
+00:19:41 [W] Shoulders pertinent our main focus is stateless microservices, but by now we have stetsom stateful Services as well in kubenetes. We have usually fast deployment Cycles every week. We are
+00:19:56 [W] All of our communities clusters. So any note within kubernative is redeployed once a week to guarantee that we can anytime add new hose and that anytime a node can be replaced easily.
+00:20:10 [W] We serve multiple clusters currently.
+00:20:14 [W] It's 15 clusters.
+00:20:15 [W] We are operating mostly separated on network Dimensions.
+00:20:21 [W] So we have dedicated clusters in the front end layer.
+00:20:25 [W] We have dedicated back and clusters and dedicated clusters on the infrastructure layer.
+00:20:30 [W] We separate as well on the data center level. We have three separated worldwide distributed data centers, and we isolate clusters regarding life usage and non-life usage.
+00:20:39 [W] Em all our clusters use bare metal notes on premise in our own data centers.
+00:20:45 [W] We do not use any Cloud providers at all for our services and one thing which is relevant for some failure stories later on.
+00:20:59 [W] We use CG nut pot ciders and service sliders. So they are isolated and reused within each clusters and there is no direct Network wise interaction between our clusters.
+00:21:06 [W] We are using of course an open source and Cloud native stack.
+00:21:12 [W] You see some of the examples we use here that relatively straightforward.
+00:21:20 [W] We just wanted to Showcase which of the Great open source and Cloud native projects.
+00:21:21 [W] We are using thanks to them.
+00:21:22 [W] Encounter which are related to the control plane.
+00:21:39 [W] So I have my application deployed onto the net is and the thing I noticed is that once in a while.
+00:21:42 [W] I see a fraction of my connections hanging and timing out from the point of view of the client.
+00:21:52 [W] And as far as I got it's correlated to The Rolling redeploys. You just mentioned Stanley explanation on and it anything I can do about it.
+00:21:56 [W] Of course, that's not trivial.
+00:22:00 [W] So let's have a bit of a look how our setup is looking like this problem.
+00:22:11 [W] You describe this usually occurring or can usually occur in our front and clusters. Our front-end clusters do use a hardware load balancers.
+00:22:13 [W] We use the F5 big IP appliances to expose our clusters to the public internet and we use them as kind of an edge gateway to protect from malicious public traffic and as you all might know services in kubernative canonical
+00:22:27 [W] Be can have two different external traffic policies.
+00:22:34 [W] There is external traffic policy cluster and external traffic policy local and the difference between both of them is that with external traffic policy cluster each traffic entering a kubernative snowed is distributed across all parts within the
+00:22:46 [W] You takes care of programming IP tables in that way so that everything is distributed for the integration of the hardware load balancer services are of type node part. So it's support based addressing scheme.
+00:23:02 [W] So the F5 forwards traffic to one of the hosts IPS on a specific service specific Port F5 manages, then so-called pool member tables and in these tables you see all the notes of the kubernative
+00:23:16 [W] He's honored specific service specific Port F5 managers. Then so-called pool member tables and in these tables, you see all the nodes of the kubernative cluster with their note port at least that's one mechanism
+00:23:19 [W] They're not port at least that's one mechanism on how to integrate F5 into the kubernetes cluster.
+00:23:27 [W] And if we have a look at external traffic policy local that's this example, then you would see that each queue proxy just four words the traffic to single local ports. It could be multiple ports on the on the same
+00:23:37 [W] Single local pots, it could be multiple pots on the on the same note so that it would balance there but there's no cross note communication anymore. And in that example, if you have a look at the pool member table on our third node the
+00:23:47 [W] Of the crew member would be red because there's no orange pot.
+00:23:55 [W] So the Q proxy or IP tables could not forward traffic on that node, and now we get into the detail why that is a problem for your service tonight because we notice that we are losing
+00:24:07 [W] Time a new note joints the cluster imagine the pool member table from F5 and we have two notes in there and both of them out healthy regarding that single service on Note Port 30 2001 and now a new note joins the
+00:24:23 [W] In that single service on Note portal in 2001 and now a new note joins the cluster and the new node is edited by the F5 operator to the pool member table in an unknown Health State and as soon as the health state has been
+00:24:32 [W] Known Health State and as soon as the health state has been established.
+00:24:34 [W] There are two different options regarding the external traffic policy when the external traffic policy was local then in the service example from before the health check would be read and if we have external traffic policy
+00:24:47 [W] The health check would be read and if we have external traffic policy cluster, the health state would be green because the pots are reachable even over the new node.
+00:24:58 [W] And as you can imagine if in you know, it joins the cluster usually it would not contain a workloads that specific type.
+00:25:10 [W] So for every service regarding external traffic policy local the service check would not be healthy the beginning so
+00:25:12 [W] but let's have a look at the state in between what happens when the health status unknown and now we stumble upon our problem F5 has a logic when traffic is unknown then it's still routed
+00:25:28 [W] Health state is red. Then the traffic will not be routed there.
+00:25:43 [W] And if you use external traffic policy local and as just mentioned a new node does not contain any workloads in the beginning you have a risk that the traffic is routed to a note which cannot serve the working so the solutions
+00:25:48 [W] You can tune the ramp up times because you can configure F5 that any newly joining pool member only get fraction of its original part and only over time gets more.
+00:26:04 [W] So that's that's the slow ramp timer in a five in addition. You can tune your health checks so that you notice earlier that the health state is red and not green the standard settings would take 16 seconds until the health state would be established
+00:26:17 [W] Of course, you can tune that to notice that earlier you do the health checks more often, but of course that puts more health check load on the cluster.
+00:26:33 [W] So we use this as mitigations. But the real thing we did is we patch the F5 operator and we open at issue in provided a merchant quest to fix it or to at least he's in that
+00:26:41 [W] On the cluster.
+00:26:42 [W] So we use this as mitigations. But the real thing we did is we patch the F5 operator and we open at issue in provided a merge request to fix it or to at least he's in that and we explicitly activate notes
+00:26:43 [W] The activate notes now after the health state has been established.
+00:26:52 [W] So first We join your note to the cluster and it is still in active, but it's already known to F5.
+00:26:53 [W] The health State can be established and only if it's established.
+00:27:02 [W] We enable the node in the pool member table so that it gets its share of traffic by that we guarantee that this that this case where the health state is still unknown does not occur and
+00:27:11 [W] Received when the note is not enabled.
+00:27:18 [W] Another option is to reduce the number of nodes where a 5-4 words traffic to by default. Every kubernative mode would be eligible to receive traffic directly from F5,
+00:27:29 [W] It's where F5 forwards traffic to by default. Every kubernative mode would be eligible to receive traffic directly from F5. But you could Mark only a specific subset of your notes as Ingress notes like
+00:27:34 [W] Only a specific subset of your notes as Ingress notes like a one note per egg.
+00:27:36 [W] for example and only forward traffic there.
+00:27:40 [W] So you have a lower amount a smaller amount of notes which are registered in F5 and you have less fluctuation on the pool members and the last thing which is the deepest integration
+00:27:52 [W] Registered in F5 and you have less fluctuation on the pool members.
+00:27:53 [W] And the last thing which is the deepest integration you can do a direct vxlan integration with F5.
+00:27:58 [W] Then you would not use the note Portman is Amanda more but the F5 balancers would be considered pot in your cluster.
+00:28:06 [W] They would receive IPS from the pots. I'd arranged and by that the F5 instances directly address pots and have put eyepiece in their crew member tables and not know type. He's anymore.
+00:28:19 [W] Problem with the unknown Health state for a note would not occur anymore.
+00:28:24 [W] Okay, great, but not all the problems and issues. We encounter are located in the control plane South also occur on the data obtained. Let's have a look at these.
+00:28:36 [W] So now that my applications running fine.
+00:28:40 [W] I'm looking at the data and processing and I notice that for some use cases where in the old world I could use the source IP address.
+00:28:52 [W] I only see internal IP addresses like for geolocation services or for classifying traffic or for for identifying botnets.
+00:29:03 [W] So from my point of view, it looks like the traffic from website is going through some.
+00:29:06 [W] Magic box and afterwards only original piece have disappeared.
+00:29:15 [W] There's any way I can get them back?
+00:29:16 [W] So thanks for that question.
+00:29:20 [W] Use cases where in the old world I could use the source IP address.
+00:29:23 [W] I only see internal IP addresses like for geolocation services or for classifying traffic or for for identifying botnets.
+00:29:24 [W] So from my point of view, it looks like the traffic from webassembly this going through some
+00:29:24 [W] magic box and afterwards only original piece have disappeared without any way I can get them back.
+00:29:25 [W] So thanks for that question.
+00:29:27 [W] That's a tricky one as well.
+00:29:31 [W] So in kubernative is a bunch of network address translation is involved and the standard thing is when a user connects to a service within Kuma Nettie's traffic is directed to one of the kubernative nodes and
+00:29:36 [W] Just Network address translation is involved and the standard thing is when a user connects to a service within kubernative traffic is directed to one of the kubernative nodes and then the IP tables rules kick in which
+00:29:38 [W] To proxy and usually two layers of network address address translation take place there.
+00:29:48 [W] The one is that the destination address has changed.
+00:29:52 [W] This is the load balancing mechanism of kubernative so that the service IP destination address is changed into a pot IP address for routing the the traffic to one of the pods, but the second thing which happens when
+00:30:03 [W] Traffic is sent from one kubernative node to another one is that Source net is applied as well to allow for the traffic returning on the same path as it entered the pot. So then a pod can
+00:30:19 [W] Internal hosts they are as net and destination that is reversed. And the traffic can be ordered response can be sent back to the your approach to the original user and there's more Nats and proxying involved in a standard kubernative setup.
+00:30:35 [W] The original user and there's more than that and proxying involved in a standard kubernative setup.
+00:30:36 [W] Imagine.
+00:30:37 [W] You have a client and you have some workloads.
+00:30:59 [W] On the load balancer so already when the traffic enters the kubernetes cluster at the kubeflow see it's not the original client IP anymore, but it's one of the source net is addresses of the F5 and now we have the one from the slide before
+00:31:14 [W] See, it does force net and destination that to forward the packet, but now there's English controllers as well in our example here it's traffic.
+00:31:29 [W] So the packet is not only forwarded to the workloads pot directly.
+00:31:36 [W] It's forwarded to traffic and now traffic acts as a layer 7 reverse proxy and then forwards the traffic to your workload.
+00:31:43 [W] So what the workload pot sees as the physical Source IP is just the IP address of a traffic part. So you see a bunch of addresses
+00:31:45 [W] these have been involved here.
+00:31:48 [W] So what can we do about that? If you have a layer 7 protocol like HTTP or grpc you can use application Level headers to preserve the original IP address you need to do that. Of course on the first point where
+00:32:02 [W] Your system in our case. It would be our load balancer and you would preserve and use a forwarded or x-forwarded-for or X forwarded host headers for what it is based on an RFC and exported x-forwarded-for and X4 wanted hosts are best practices.
+00:32:18 [W] Which are not really RFC back if you really want to make sure that nobody injected wrong IP addresses than you would even reset potentially existing x-forwarded-for headers on the load balancer and only at
+00:32:34 [W] line type PS the first hop when within your x-forwarded-for list for traffic, which is not capable on the on the application protocol level to add some headers with original Ip information
+00:32:51 [W] options but if you use external traffic policy local you can guarantee that no host-to-host traffickers and so the source net from Pew proxy does not occur or if you use a different service routing provider like Calico EPF,
+00:33:07 [W] That makes only sense if the traffic is the original traffic styra K entering your kubernative cluster without Force Network address translation on the Gateway.
+00:33:23 [W] For example, if it's about internal traffic within your data center and you have an interest on the original IP address there.
+00:33:26 [W] Okay nice, but in my application I observed another problem.
+00:33:32 [W] This application is running with lots of replicas and one specific instance of that application once in awhile goes into a question back off.
+00:33:44 [W] It's just a single instance on a particular node and what I can observe when I cue cover describe the pot that's affected by that is that it's unhealthy because the lightness probe
+00:34:00 [W] It's just a single instance on a particular node and what I can observe when I cue cover describe the pot that's affected by that is that it's unhealthy because the lightness
+00:34:02 [W] With a connection refused but when I look at the logs from the products elf, it looks like the application would be running healthy.
+00:34:13 [W] So something's going wrong here.
+00:34:15 [W] Do you have an idea of what the reason for that?
+00:34:18 [W] That was a tricky one?
+00:34:21 [W] We observed that with our Calico Network.
+00:34:24 [W] We are using Calico with the IP IP encapsulation and since some reason Calico version Calico by default.
+00:34:31 [W] The signs smaller IP blocks originally we use slash 24 IP blocks.
+00:34:44 [W] So the block where the pot I piece come from which is attached to a specific kubernative node since a more recent version of the default is / 26 and that means if on your notes are running more than
+00:34:53 [W] Or IP addresses that fit into a single slash twenty six block so you have multiple blocks attached to a host that in itself is not really a problem. So for each of the IP blocks a dedicated IP address is used for the IP IP tunneling.
+00:35:08 [W] We observed that an IP address is used twice once for a pot and ones for the IP IP tunnel interface.
+00:35:21 [W] And of course the tunnel interface one at that point.
+00:35:25 [W] So if traffic was sent to a specific pot it was received by the tunnel interface and drop their because it didn't know what to do with it.
+00:35:31 [W] The original cost for that is a race condition when canonical is managing it Saipan block and IPM handles objects.
+00:35:38 [W] You see the URL here for the buck.
+00:35:39 [W] Which was opened for that they were by now it able to reproduce the problem.
+00:35:45 [W] So that's a good thing.
+00:35:47 [W] Just the fix for that is missing yet. Our intermediate solution was to use slash 24 blocks again, because then we didn't have a problem that problem affect the
+00:36:00 [W] On the network level and it showed only up an hour monitoring because we had network-based license checks of the pulse the cube.
+00:36:12 [W] let was not able to reach the network Port of workloads because of the IP IP tunnel interface.
+00:36:20 [W] So kubelet check for liveness by using the network stack and found the application not being life. And this is why it went to into a crash look back off.
+00:36:27 [W] okay, interesting, but now I'm having a look at my resource consumption metrics and I noticed that I sometimes get less CPU cover than I expect for my application I have
+00:36:43 [W] Requested resources and also its CPU and limits set and as you can see on that graph the blue line on top shows the limit and I'm sure that the application would have enough workloads.
+00:37:14 [W] Credit application.
+00:37:20 [W] So I'd really like to make use of the power I could receive from from the node as to any way to improve that situation.
+00:37:26 [W] So what'd you hit now is even one layer deeper. This now is a buck in the Linux kernel so many of the Linux kernel has a completely Fair scheduler and that has a bandwidth control management and that's
+00:37:43 [W] What CPU limits there is a different mechanism for managing CPU requests. And if you have now a multi-threaded workloads, which is not really cpu-bound, but does a lot of I always or network weights then you might get
+00:37:58 [W] The spok the what was even so severe that multiple users, especially those which use different clusters for multi-tenancy.
+00:38:15 [W] They even disable the limit support because the performance degradation was so severe.
+00:38:17 [W] They are have been multiple patches for the kernel and it took some time the first one started mid two thousand eighteen and the last ones really fixing the issue came in and September 2019, and then for example
+00:38:29 [W] People like in our case where we use containerd Enix the patches were ported there in November 2009 teen so in December we were able to roll out pet turtles which solve the problem for us.
+00:38:44 [W] us. I added some links here for the communities issue tracking this problems the core OS back for porting that to contain a Linux and the two main commits fixing the problem within the Linux kernel
+00:38:57 [W] Okay, I found another problem.
+00:38:58 [W] Sometimes I lose TCP connections which already have been established. But all of a sudden they had dropped again.
+00:39:10 [W] This is happening when you do cluster requirements, but it also happens when my application scaling up and down because spikes cause the autoscaler to create more replicas or remove replicas.
+00:39:23 [W] Is there an explanation for that?
+00:39:25 [W] Evelyn that's more of a configuration and design thing in our bare metal setups.
+00:39:44 [W] So I mentioned earlier that we use the five load balancers as gateways for our front of networks, but in our back and networks and in our infrastructure clusters, we do not use Hotmail or balancers
+00:39:50 [W] Direct bgp announcements of service IPS or in fact of load balancer IPS to our routing infrastructure and we use metal lb for that and when those service IPS are announced via bgp, then we use equal cost
+00:40:06 [W] Ting so the routers then with no multiple paths on how to reach that load balancer IP address when using a when knowing multiple paths, and of course the router has to be side which path to use the router in general
+00:40:21 [W] So it needs to be some reliable algorithm on where to send traffic and that means that any time the routing tables are changing then potentially the association where it to Route connections are sent because there's no real connection tracking in place. So
+00:40:37 [W] Tables are changing it can cause we sets of your TCP connections because the follow-up packets are sent to a different destination host which does not know of the TCP connection and first sensor reset reply.
+00:40:53 [W] So only when the TCP connection is newly established everything works again find the solution to that one is to reduce the number of speakers to stabilize the changes the less speakers you have less changes to your routing tables. You have that
+00:41:10 [W] Their speakers you have the less Ingress path you have as well to ingest your traffic.
+00:41:17 [W] So you cannot reduce them the the speakers to just a single one or two because you need to have sufficient amount of speakers to process all your inbound traffic.
+00:41:25 [W] The second thing you mentioned was when you have lump spikes and you are using Auto scanning.
+00:41:35 [W] We observe that when Auto scaling our traffic Ingress controller and for being able to keep our source IP addresses we use traffic with external traffic policy local and metal.
+00:41:46 [W] Abby is aware of external traffic policy local and is then only announcing the service IP address of traffic. If on the Local Host really is a traffic pot up and
+00:41:56 [W] Thing you mentioned was when you have lots of bikes and you are using Auto scanning.
+00:42:08 [W] We observe that when Auto scaling our traffic Ingress controller and for being able to keep our source IP addresses we use traffic with external traffic policy local and metal LP is aware of external traffic
+00:42:09 [W] Scaling up your traffic because you have a load Spike then a new traffic pot comes up on a new speaker. So a new route is established or a new route is is announced to the to the routing infrastructure and the routers
+00:42:23 [W] Tables because they know have one routing entry more in their tables. And so you have a nice EMP change and TCP connections are disrupted.
+00:42:39 [W] And yeah, if you have spiky workloads, so scaling up means and easy and Peach Ange scaling down means again and I see em and ecmp change and that of course is then a problem because you have a lot of changes to the routing tables
+00:42:47 [W] Wishing and that case was that we have as many traffic instances always as we have bgp speakers.
+00:43:03 [W] So if a new traffic pot comes up that comes up on a node which already has the bgp speaker and does not change the routing tables.
+00:43:06 [W] But that hints to another additional caveat the real traffic balancing or the distribution occurs on the routers.
+00:43:21 [W] So if you have one node with the bgp speaker and five traffic pots and you have one node with the bgp speaker and just a single traffic pot then the node with a single traffic pot will get the same amount of traffic into your pot as
+00:43:32 [W] I would with the bgp speaker and five traffic pots and you have one node with the bgp speaker and just a single traffic pot. Then the node with a single traffic pot will get the same amount of traffic into your pot as the other node.
+00:43:34 [W] So it will have five times as much traffic as the other traffic.
+00:43:39 [W] Okay.
+00:43:41 [W] As the last take away this still a few more remaining open views recently. We observed again Network Ingress issues.
+00:43:57 [W] where actually we lost traffic and it certainly has got something to do with the load balancing mechanisms and or EGP the analysis is still ongoing so
+00:44:08 [W] Actually able to show that to you yet.
+00:44:12 [W] We stumbled upon what affinities and anti affinities which did not work as expected to to guarantee the highest amount of redundancy in our deployment pipelines a we add standard
+00:44:28 [W] to distribute the application first in different rooms that different top of rack switches then two different tracks and then two different hosts and we noticed at a multiple occasions that
+00:44:44 [W] Did not work as expected.
+00:44:56 [W] So setting up affinities is not as trivial as one might expect and maybe there are even bucks lurking in there, which we did not really pinpoint so far, but we are working on that one last thing we
+00:45:03 [W] Clarify yet. It is an issue with cute proxy that was completely overloaded through a single application with just 20 pots and these parts for some reason
+00:45:19 [W] Inventing ultimately into a crash to back off but kubeflow oxy was completely overloaded that consume lots of CPU and wasn't able to update the iptables rules
+00:45:35 [W] So that sort of screwed up the entire nodes we have that happened.
+00:45:41 [W] And to conclude from what we showed and learned there's a couple of architectural implications to take away.
+00:45:59 [W] So the entire design through the entire stack top form, but also the applications should
+00:46:01 [W] take it seriously to design for failure figures will happen once in a while and over and over again. There's no perfectly safe and perfectly reliable system.
+00:46:16 [W] So if your design respect that the impact is probably way lower than it could be.
+00:46:19 [W] What helped us in many places was having metrics so we could do post-mortems.
+00:46:27 [W] But of course we didn't know initially what all the metrics where we needed. So over time we build up a bunch of metrics that we continuously record and that grow more and more useful for failure
+00:46:39 [W] What's helped us in many places was having metrics so we could do post-mortems.
+00:46:40 [W] But of course we didn't know initially what all the metrics where we needed. So over time we build up a bunch of metrics that we continuously record and that grow more and more useful for failure
+00:46:41 [W] Particular and failures get more difficult mess up little more complicated.
+00:46:45 [W] also whenever something goes wrong, it's not unlikely that it's
+00:46:54 [W] not only in either the infrastructure or the application more often than not it shows that there's an an interaction or interference between both and so whenever failure occurs
+00:47:10 [W] To look at both at both sides sides and see if there's a an interconnection between them.
+00:47:18 [W] And what helped us in many?
+00:47:23 [W] Places is to have really well-designed proper live news and Readiness checks.
+00:47:33 [W] So these are well-designed they can quickly point to problems and quickly help you to find the root cause of whatever goes wrong.
+00:47:41 [W] So and that's a very end.
+00:47:47 [W] Of course.
+00:47:50 [W] We are not the only people experiencing failures and I would like to point you for more failure stories to the collection maintained by Henning.
+00:48:00 [W] Yeah coughs at the address shown here.
+00:48:03 [W] So thanks for tending this presentation and have fun with all the remaining presentations of Kube Khan.
+00:48:08 [W] So why everybody?
+00:48:24 [W] I hope you liked the presentation and we only answered a bunch of questions in the Q&A and it willingly when you have some more. I hope we manage all existing so far.
+00:48:37 [W] Maybe until you questions come in a short recap. There have been questions regarding the slides. They are on sketch as for nearly all the presentations.
+00:48:58 [W] We do not plan changing from call equal to a different sdn provider because we are still very satisfied with canonical Network policies were one of the main drivers for a we used
+00:49:07 [W] Left what misbehaviors have you seen related to affinities?
+00:49:15 [W] That was the one story where I don't know if I'm really into that topic and
+00:49:22 [W] their identity Infinities to spread workloads as much across the Clusters as possible.
+00:49:32 [W] So we split them to different tracks to different rooms.
+00:49:38 [W] We do not have crossed data center clusters. Each cluster is limited to a single data center, but we have different impact zones, theoretically and when we add multiple nginx the definitions then we
+00:49:48 [W] They will not work perfectly.
+00:49:55 [W] So there are still multiple thoughts on the same notes where a broader distribution would have been possible.
+00:50:03 [W] At least what we could see we did not fully analyze that so far.
+00:50:05 [W] We still need to go in there.
+00:50:06 [W] those entities did not work properly?
+00:50:10 [W] There is one more open question which storage solution is used for the persistent storage.
+00:50:22 [W] Currently, we don't have persistent storage within the cluster but we connect to an external essentially Seth based persistent storage, which all users can can make use of this might not be the
+00:50:36 [W] A solution, but currently that's sufficient for most of our use cases and as Stephen mentioned in the presentation, we are focusing mainly on stateless workloads.
+00:50:51 [W] So there's not too many applications using shared storage currently shed and persistent storage.
+00:50:57 [W] So and now there are more questions one regarding mental ability for us meddling be is a clear choice on handling the bgp sessions to announce IP addresses to an existing routing layer in the data center,
+00:51:14 [W] Able to peer with existing bgp speakers as well, but would not be able to choose the note that it's our IP is as far as I know we could expose service IPS of kubernative directly, but we use the
+00:51:29 [W] For service IPS as well.
+00:51:35 [W] So we would need to switch our service IP range to a routable IP range for that bare metal provisioning was a question and we do not use any any pre-built or open
+00:51:47 [W] Provisioning was a question.
+00:51:47 [W] We do not use any any pre-built or open source solution.
+00:51:50 [W] We have quite playing DHCP and I pick C booting and use containerd enough for that. The configuration of our containerd in of instances is done by a matchbox.
+00:52:03 [W] So the matchbox files are handled by already HTTP Services. Well, we use volt for handling all the secrets.
+00:52:11 [W] So when a note is booting then a certificate will be created by volt which allows the note to join the control plane.
+00:52:21 [W] So encrypting data at rest not so far.
+00:52:31 [W] That's one thing for the future even encrypting the storage data in transit when integrating remote storage is a topic as well, which is not sufficiently handled so far.
+00:52:48 [W] F5 integration for Ingress. We do not manage Ingress with F5.
+00:52:58 [W] We have traffic as English controller, but we have the F5 controller running in the cluster to configure the F5 for the note Portman is mmm and in the future for the pot vxlan litigation directly, but we do not use that for increases
+00:53:11 [W] Methodist
+00:53:14 [W] Okay, I think we are running out of time here of course will be available in the slack Channel networking, which is presentation is part of and we try to keep answer all your questions and look forward to discuss with you.
+00:53:32 [W] Thanks for attending have nice conference.

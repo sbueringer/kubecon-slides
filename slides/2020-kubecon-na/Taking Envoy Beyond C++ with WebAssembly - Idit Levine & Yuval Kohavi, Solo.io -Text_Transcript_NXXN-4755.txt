@@ -1,0 +1,249 @@
+﻿Taking Envoy Beyond C++ with WebAssembly: NXXN-4755 - events@cncf.io - Friday, November 20, 2020 5:57 PM - 35 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi everyone.
+00:00:01 [W] Today.
+00:00:01 [W] We're going to talk about extending envelope Roxy with webassembly.
+00:00:09 [W] My name is David Levine and I'm the founder and CEO of so loyal and I'm here you Falco Harvey the Chief Architect of so loyal and we will share with you but webassembly and boy.
+00:00:24 [W] So let's start giving a bit of an intro a little bit about the control plane and they deplane separation just as it's important to understand the moving Parts here.
+00:00:36 [W] So you'll go to the next slide.
+00:00:38 [W] We will see that the way I'm worried is structured is that Envoy itself is configured through a different component called a control plane that's responsible for processing user configuration.
+00:00:53 [W] And updating Envoy in real time dynamically in an eventual consistent way of that configuration.
+00:01:00 [W] And in this slide, you can see that we have two examples one of its CEO and one of group both of these use Envoy as the data plane component, right the data plane is where user data HTTP request
+00:01:15 [W] Blow through and they are the control plane component for Envoy and the control plane is the channel where configuration messages go through and if we'll move on to the next slide we can see sort of this visualization
+00:01:30 [W] and we're user configuration includes case group processes kubernative cri-o these and one of these are this is a virtual service goes into grew and then if glue processes it through
+00:01:45 [W] A good list of plugins that understand the user configuration. It gets translated to Envoy configuration and delivered unto angling. And now the reason for this extra API because the user configuration
+00:02:01 [W] that glow provide is use case specific and simpler to understand than the envoy configuration glue also can automate a lot of the parts that aren't we needs for example cluster membership and
+00:02:16 [W] Making Envoy easier to operate now. If we will continue we can talk about how the data path looks like and we can see that an HTTP request comes in to Envoy.
+00:02:27 [W] And that's one of the key parts that make Envoy very useful as a cloud native proxy the ability to extend it, right the request doesn't just pass through a I'm gonna run to the Upstream. It actually
+00:02:42 [W] Through a series of filters that can modify the request and impact will be impactor behavior of the proxy.
+00:02:50 [W] So in this example, we can see that the request goes through Envoy is filter Cheng first hitting the external filter where it's consulted with an external server whether or not to authorize the request moving on
+00:03:05 [W] The rate limit filter where he consults a real limiting server whether or not to allow their request for rate-limiting purposes. And finally it reverses to a grpc transcoder filter that allows you to provide a rest interface externally,
+00:03:20 [W] But converted to a grpc interface internally. So your microservices can talk grpc, which is very common in the goal of microservices ecosystem while your front
+00:03:36 [W] And your external facing API will be a rest API that's easier to consume from JavaScript.
+00:03:44 [W] So that's kind of how I'm void. Looks like sand one of the nice things about Envoy is that it's extendable.
+00:03:52 [W] So if you'll go in the next slide we can see that we can also insert custom extension points custom filters on to Envoy in the rest of the talk.
+00:04:03 [W] We're going to talk a little bit more about this custom filters and how Watson fits in now when talking about extending a product
+00:04:14 [W] Usually we have a checklist of things we want to to get out of it, right?
+00:04:18 [W] So we want to be able a language to use a language of our choice.
+00:04:22 [W] We want this extension to work fast.
+00:04:25 [W] We wanted to be safe that if we have an issue and extension. It doesn't bring down the whole proxy where a lot of other traffic potential name multi-tenant traffic flows through and we don't want to now we only want to build our code.
+00:04:39 [W] We probably don't want to rebuild all of envoy just to extend it and we want
+00:04:44 [W] not an easy to use experience and with that in mind, let's I'll hand it over to Italy to talk a little bit more about that.
+00:04:54 [W] Thank you.
+00:04:55 [W] Wow. So what is basically will take an example of the to control plan that basically extending and boy and managing and void and basically see how they decided to go about extending the data plane.
+00:05:08 [W] So the first thing that we will look at this glue and glue is an API get way based on the invoice spok assessing majorly on the edge.
+00:05:17 [W] That's the the use case and when we looked at how we can actually extend and void
+00:05:23 [W] We decided that because we won't care about the performance, right we want to make sure this is a basically being on the control pad on the request.
+00:05:35 [W] But so let us is extremely important we decided that we want to make sure that those filters going to leave still in the proxy and not going to do any wrong tree, but that means that it's hard because the way to actually extend those filter is a is by
+00:05:50 [W] Fighting a C++ icing filter code and then recompile and Roy, so I asked you during to decided to take this Banner on us in that case the solar companies oil company.
+00:06:03 [W] Basically, we make it extremely, you know, it's extremely to the user itself.
+00:06:09 [W] We make sure that it's extremely fast, right because it's in the control pad and it's built into the binary basically of envoi. It's extremely safe because you know, there is
+00:06:19 [W] no round trip, right?
+00:06:21 [W] There's no network involve a while involved in this but of course, it's not the easiest thing to do, right?
+00:06:27 [W] There's a said C++ code is not something easy to do.
+00:06:29 [W] We will know we are basically recompiling Android for the users.
+00:06:35 [W] So there's nothing easy about why we chose this we taking the law for us.
+00:06:40 [W] us. So it's you know, it is easy for our customers, but in the Natural Parks, it's you know, it's a challenging things and you know, and there's no a lot of people who can do that.
+00:06:50 [W] Sto took a different approach and we are sto started. Basically their idea was we'll really care about extensibility.
+00:06:58 [W] We really want people to be able to take that and write it by themselves and not be depending on us. And in order to do this. The basically came with Nixon and a different mixer is basically that every time that the request is coming to to the proxy.
+00:07:12 [W] Going to basically take the request and Raleigh to mixer and mix away. She will get all the requests and we'll be able to do whatever we want for me Telemetry, or maybe you want to do some you know, any adapter that people might want and basically return the request
+00:07:27 [W] two of the proxy after it the problem with that is you know, there was a lot of Advantage with this right potentially right now people right be able to use their own language because mixer can communicate grpc, you know
+00:07:42 [W] Cisco people were using go it's not fast, right?
+00:07:46 [W] I mean, that's the majority problem that there it is people talking about talked about stability in SQL.
+00:07:53 [W] That was the majority of the problem because there is a pull request for constantly going on the wire it is safe, right?
+00:08:01 [W] I mean it is going over the world, you know again, there is communication between two components here.
+00:08:07 [W] It's not the same binary.
+00:08:08 [W] So potentially there's always a problem but you know relatively safe you definitely
+00:08:12 [W] We don't need to compile and we're which is a very very huge advantage and it is easy. You know, I don't know they did still complex problem to solve but it easier than right as it was passing and recompile, so, you know when you're looking at this, you know,
+00:08:28 [W] The Google guys and they are in the community understood that this approach that they're still Community took is a little bit problematic.
+00:08:37 [W] There was a lot of problem with that and try to figure out what different way we can go so as an Android Community we decided to basically to explore the webassembly.
+00:08:45 [W] let's kind of like overview a little bit of what is webassembly and why we thought we thought that this would be a good way to leverage that technology. So first of all webassembly funny enough, it's not an assembly. Goodbye.
+00:08:57 [W] But it's a binary structure format and it's not only for the web as you know, because we bring it to a situation boy.
+00:09:04 [W] I also do a little bit misled but the idea would actually creating webassembly they did the measure reason for its existence is to extending the browser, right?
+00:09:14 [W] That's why people that and the idea was that they wanted an ability to be able to extend the browser with but you know with that they needed to have some use case to make sure that for instance.
+00:09:26 [W] It's portable right because
+00:09:27 [W] Father can write everywhere.
+00:09:29 [W] So we need to make sure that it doesn't matter which of currency system using the need to make sure that it's secure because the last thing that they want is that the Royal because some white stem extension that is not you know, you know that there's some error prone or something
+00:09:44 [W] That it will take all the browser down.
+00:09:46 [W] That's something that we definitely don't want to make sure that so they created a Sandbox.
+00:09:52 [W] We want to make sure that it's fast because again performance is extremely important in the browser as well as the SDM invoice and you can actually see here that it's very interesting is that if before if you know before the wasn't people were using
+00:10:07 [W] JavaScript JavaScript is not going to be extremely fast.
+00:10:12 [W] And the reason is because there is just more thing that you be, you know, I have processed while actually it's running with webassembly.
+00:10:19 [W] It's basically much more extreme version of what should be happening when this thing is running so you only need to you don't need to pass you don't need to do a lot of stuff.
+00:10:31 [W] It's already basically package very minimum the last you know, the other thing is you want mentioned.
+00:10:36 [W] For you probably prefer that the customer will be able you know, you user will be able to use any language and for that in webbing webassembly.
+00:10:46 [W] They created a very interesting, you know nice interface and that basically means that you can choose the language of your choice and there is some representative pay individual in intermediate representative that
+00:11:01 [W] In that you can choose the language of your choice and there is some a representative payee individual in intermediate representative that can go to whatever process like 8:00 a.m. You know a T6 or arm
+00:11:17 [W] and the last one that is that was extremely interesting where they when they were they came with is the ability to actually run it outside the the browser itself and by creating this interface was
+00:11:32 [W] But basically allowing us to eventually bring it to Android so although striction ality of fast secure portable and as well as any language, it's what basically make that
+00:11:47 [W] Ecology extremely extremely attractive for something like end point and this is what we decided to bring it because if you think about it, we will leverage it. Then we can use any function any language it will be very fast because it's very close to
+00:11:59 [W] It will be saved because it will be on the same binary.
+00:12:01 [W] There is no need to compile because basically extended and what without needed to actually compile it and it will be X relatively extremely easy or easier than then do the rest.
+00:12:14 [W] So I will allow to you about to explain you how exactly we do webassembly and brought it to the invoice together with the community.
+00:12:21 [W] community. Thank you D. So let's talk about that as mentioned before I'm way has a series of finops.
+00:12:28 [W] Filters that can act on the request and change it and essentially the way Watson is integrated onto Envoy is as a custom filter, right? So as far as Envoy is concerned most of our very core is
+00:12:43 [W] What's them at all but rather was some is implemented as a knative Envoy filter as we can see in the next slide that filter.
+00:12:52 [W] Actually talks with the envoy runtime and runs was some code. So most of coredns voi is not really aware that it's running was awesome. And that also has the advantage
+00:13:08 [W] So most of coredns voi is not really aware that it's running was awesome. And that also has the advantage of those filters having almost the full power of a knative Envoy filter.
+00:13:17 [W] This filter is having almost the full power of a knative Envoy filter and that is accomplished using something we call the ABI.
+00:13:29 [W] So the way the workflow works is that wasn't VM is built into Envoy. So we have V8 we have wabam and we have an album that's not really wasn't but more for development
+00:13:44 [W] some purposes
+00:13:47 [W] when you want to use a wasum filter in Envoy you create an Envoy filter or you instantiating that we config and Envoy filter of type was awesome and tell the wasn't filter to load your
+00:14:02 [W] With a specific person VM the was awesome.
+00:14:05 [W] I'm going knative filter communicates with your was some code using this interface called the Avi and in the next slide. We see sort of an illustration of what this API looks like. It's all open source on GitHub so you can check it out yourself,
+00:14:20 [W] Essentially it's a definition of see like functions that pretty much correspond to the envoy internal interfaces today and allow you to do the same request modifications that filters can do today.
+00:14:32 [W] So again things like we saw before like external loads like transformation all of this and what Sam filter can do.
+00:14:41 [W] do it has the advantages that the you can load it dynamically into Envoy you don't need to
+00:14:47 [W] Recompile Envoy you don't even need to restart Envoy right? It's all loaded.
+00:14:52 [W] Dynamically as as regular filters can be loaded dynamically and
+00:15:00 [W] It has the advantage of you being able to externally write and develop it. If we go in the next day we can see that today. There are various languages already supported. So you in order to essentially write a filter
+00:15:15 [W] You can write it using the raw SDK, but it'd be much easier to use a language specific SDK that brings the native language Concepts to your development flow. So today we have as the case for a C++ assembly script and rust
+00:15:30 [W] There's an additional Dynamic go and we have a list of them all in our wives Meri point will refer to that later and using the SDK allows you and much easier development experience than the row ABI because
+00:15:45 [W] Strike much of the low-level details of Wesson of you know memory management sandboxing all that stuff.
+00:15:53 [W] So if we move on to the next side, we can summarize that the way it works today is that you use a language specific SDK to build your Watson filter and then the wasum filter that you wrote
+00:16:08 [W] The case with the envoy was some knative filter using the API in Watson VM of your choice.
+00:16:17 [W] We're currently V8 and love them are supported and with that we can summarize and we can see that we achieve almost all our requirements from the for and the one thing the one point
+00:16:32 [W] Friction is how to get the what's a module from your developer laptop into the cluster and I let it did talk a little bit more about how this developer experience is solved using a tool we created.
+00:16:49 [W] Thanks.
+00:16:50 [W] You're welcome.
+00:16:50 [W] So basically when we looked at this and we understand the amazing power that it's giving right now to the user.
+00:16:57 [W] I also the saw this tweet that really is from Solomon hike the founder of Docker and basically linkerd is one of the the the the leader of webassembly echo system basically announcing
+00:17:12 [W] Was he someone hike mentioned that if was in wasn't was existing 2008 don't we will never created a doctor right?
+00:17:21 [W] And that's basically gave me kind of like the connotation of the fact that as you well mentioned before it will be extremely hard. Like it's really nice technology but is extremely how to go about doing it. And when you think about it, this is what happened with the container ecosystem because
+00:17:37 [W] Back then, you know Google did an amazing job Google and echo system to basically created a delete Linux container. But to make the Linux container as popular right that everybody can use it including us.
+00:17:50 [W] We need a doctor to make it very simple to use.
+00:17:53 [W] So when I saw that I realized that this is something that we can help with and it and there is a lot of similarity between what happened with Docker and what happened right now in webassembly and
+00:18:06 [W] is why we decided to create webassembly Hub.
+00:18:09 [W] So what is webassembly have so it's very familiar.
+00:18:12 [W] It's basically giving you the doctor like experience for webassembly bring into Android platform.
+00:18:17 [W] So in the natural Israel is very very simple interfaces.
+00:18:21 [W] It's a command line and it's a registry and I will let actually you will show you that instead of me actually talk about it, but by actually bringing this experience as well to the user. We kind of like checked everything every day.
+00:18:36 [W] That we wanted on the list, right? It's use any language is best.
+00:18:41 [W] It's safe.
+00:18:42 [W] There's no need to compile and now with webassembly athletes. He also extremely simple and now I will end in to you about if you are quick demo.
+00:18:53 [W] Thank you D. Let me share my screen and I'll do a quick demonstration of one's me r24 developer experience.
+00:19:08 [W] All right.
+00:19:09 [W] I hope everybody can see my IDE.
+00:19:12 [W] We make it a bit bigger.
+00:19:13 [W] Let's start with the demo. So the in this down we're going to show how we can use was me to create a nice developer workflow of creating building and distributing and running our webassembly Envoy filters.
+00:19:27 [W] So the first thing we'll start with
+00:19:30 [W] is with was me in it and was my in it essentially has a template of a filter so we can you know have something to start with right kind of like a the react app templates and when we run this command we choose
+00:19:45 [W] Language we would like to use will use assembly script and we choose the platform. We want to support the was some ABI has multiple API version. So this step explain to us which version of
+00:20:00 [W] Igloo and it co this filter will support once it's done.
+00:20:05 [W] You can see that it has extracted are was some template and we can open a bit of code right now inside of the new filter folder the index TS in the assembly folder and you can see
+00:20:20 [W] This is a summary script file.
+00:20:23 [W] It's very similar in the syntax to typescript and now just for a fine will change this a little bit.
+00:20:30 [W] So what this filter does it's a very simple filter and honor response headers, right whenever a response comes into I'm going it appends additional header on to the response and now I
+00:20:45 [W] Just change this from Hello World.
+00:20:47 [W] Hello, SM Wesson and save now.
+00:20:54 [W] Do note that this what we'll see is how we build and inject this filter onto Envoy.
+00:21:02 [W] So the next step.
+00:21:04 [W] would be to build the filter and we do that using watch me build was me build takes an argument what Builder type to use in our case assembly script and the image tag to use and this is a very similar concept
+00:21:19 [W] Up to Docker images and in our case, the image tag is webassembly her bio / UVA, which is my username or webassembly.
+00:21:27 [W] How about you and then the image from a Mad Hatter and aversion and finally dot to build that local directory.
+00:21:36 [W] So this now pulls in a build container with all the build tools you need so you don't need to have npm reinstall and builds the filter for us.
+00:21:47 [W] And let's give it a second to finish.
+00:21:52 [W] All right.
+00:21:53 [W] It says you can see it created a filter with our image tag and that filter has our wash them already in it.
+00:22:03 [W] And we can see if we'll do what's me least you can see that we have this image listed as an image. That was just built.
+00:22:11 [W] Now in order to distribute this we can do was me push. Now this is very very similar to how a Docker push work. And in fact, we even use the same code and was me push. We will push this to webassembly HUB
+00:22:26 [W] Speaking of webassembly, huh?
+00:22:28 [W] Let's take a look at that.
+00:22:30 [W] So we have here the webassembly have open and this is our portal to essentially help you discover deploy and Pull and publish all your extensions.
+00:22:42 [W] And as you can see, let's explore this a little bit.
+00:22:46 [W] Let's do more repositories. You can see that with there's a lot of existing filters already from users in the community just sign up it's free to sign up and
+00:22:56 [W] And push your code and we can filter by label to kind of help you narrow down by use case. If we look for example, it is security label. We can see this filter that has a nice description to it. And then it also gives you the
+00:23:11 [W] Command you need to pull it so you can do watch me pull to pull this filter from webassembly have locally into your local laptop. Now. Let's
+00:23:26 [W] Just to show you how my user looks like and you can see that.
+00:23:30 [W] I'm also a member of the so I organization and these are fillers published to the soul or go. But if I go to my own user, you can see the add header filter that we just pushed.
+00:23:44 [W] All right, let's continue with the demo. So once the filter is all built and all push we can deploy it. So once we deploy here, I'll just deploy locally to I'm going to have it just run fast.
+00:24:00 [W] And let's run this command deploy.
+00:24:02 [W] We currently support a glue and its CEO or a local Envoy.
+00:24:07 [W] What I'll do is essentially pulling the image if needed and then run it and essentially give you a very quick and easy way to get your filter loaded and running now, let's see that everything is working if
+00:24:22 [W] Everything is working.
+00:24:23 [W] I expect to see this hello was some header on the response.
+00:24:28 [W] So let's do a head request just so I can get some headers and you can see here.
+00:24:34 [W] The request was sent successfully and the response indeed contains the hello Watson response header that I just created in this filter.
+00:24:48 [W] And that's it.
+00:24:49 [W] That is our demo for was me the tools that allow you to build publish and deploy your webassembly Envoy filters.
+00:24:59 [W] Take it away that for some final words.
+00:25:04 [W] Thanks so much. You're welcome.
+00:25:10 [W] So guys as you see we are extremely extremely passionate about everything related to wash them and the extension of servicemeshcon and more specifically.
+00:25:20 [W] We think that this is the future of the cloud. We worked very hard to create a tooling to make it extremely simple to use it and we really hope that everybody will use it running as and were in production for a lot of be DOD Enterprise our
+00:25:35 [W] Rose I can tell you that this is so valuable and extremely desired look everything that we do in most of the stuff that we're doing is open stores, including blue and servicemeshcon all the work that we're doing is almost open sores
+00:25:51 [W] Come, you know follow us on Twitter go visit our repository and specifically the Western repository or there. You will find everything that solo is doing including a spec for what's mm oci image, so please check it
+00:26:06 [W] Out and we would love to take you, you know to get any feedback.
+00:26:09 [W] Thanks so much.
+00:26:26 [W] All right, I believe we are live for the Q&A and let me start with some questions.
+00:26:33 [W] So first question, we have that eye looks like Envoy what someone's just merged into Master.
+00:26:40 [W] Can you share more about stability and performance? And the second question is also similar about what some against real workloads and if it's faster than the alternative so let's touch a bit about
+00:26:55 [W] performance and that really is up to you know what's your Alternatives right if your alternative is writing as C++ filter now Watson will not be faster than C++ right and and performance it really
+00:27:10 [W] It depends what your filter is doing the more data intensive.
+00:27:14 [W] It means the more data needs to be copied to the Watson VM might be a performance pain point but you gotta weigh that against, you know ease of development the safety or if you're using things like external threat now you can
+00:27:29 [W] From inside a proxy right?
+00:27:31 [W] So is it faster than a sip of pass filter?
+00:27:36 [W] Probably not.
+00:27:36 [W] It's probably slower.
+00:27:38 [W] I think it's your benchmark show that it's a gets you something like 50% of knative speed but it's probably faster than you know, doing a network called right? So you gotta take everything into account
+00:27:53 [W] and understand if you know eventually you're playing it paining latency and you saving developer time and you saving if failures or you know time out so you kind of get away everything into account
+00:28:08 [W] new consider performance so there's no really good answer here we are working with some of our customers to introduce wasum to watch them into their prod environments and with them the alternative is to use external
+00:28:23 [W] Earth which they have issues within their environment. So even though Watson will probably not going to be faster than a sip of pass filter.
+00:28:31 [W] They're not going to write a C++ filter. So it's either was a more excellent and they prefer Watson as for a stability wasn't was just recently merged into and way Upstream.
+00:28:45 [W] I think they're still unknowns, you know things that kind of catches the remote fully aware of and talking about
+00:28:53 [W] The specific use case would be probably more helpful to talk about stability, but being it enough stream Heaven it exposed to more people means that whatever bugs there's there are going to get sold relatively fast because now it kind of signals to the
+00:29:08 [W] Our community to start trying it and like in every new technology.
+00:29:12 [W] This is going to be back to support them sure now that it's all Upstream. They're going to get fixed very fast.
+00:29:20 [W] Let's see how please good. Well, I just wanted to say that we are working with critical environment
+00:29:35 [W] Million transaction a day. I think you know we will we will make it better.
+00:29:40 [W] We will make it more solid. So, you know, it's really really close.
+00:29:43 [W] I really believe that any old time.
+00:29:45 [W] We you know, we're going to run watching reproduction in a matter of months. So
+00:29:53 [W] Yeah. All right, and now question is the example readily available.
+00:29:58 [W] Yes.
+00:29:58 [W] It's on GitHub. Go to the report that it did shared in the slides.
+00:30:02 [W] You will see the examples there.
+00:30:04 [W] Everything is there you can basically do this demo yourself that we did today.
+00:30:09 [W] Alright next question how this was some filters compared to the header security fillers the group provides within their route bus and was awesome doesn't do anything
+00:30:25 [W] If it is just a way to extend an Envoy to custom use cases without rebuilding Envoy, right?
+00:30:31 [W] So let's say I think it's a game changer in the sense that if up until today, you know where our customers wanted some Envoy functionality.
+00:30:39 [W] We kind of needed a broad support for it.
+00:30:42 [W] So it would make sense to read a filter and continuously maintain it now.
+00:30:47 [W] wasn't this is no longer a constraint each of our customers. We can help them develop and own there was some
+00:30:54 [W] ders that they can deploy to their environment on top of our provided envoi which we are willing to support so I don't think you can exactly compare them one to one with some just opens the door to a lot more custom
+00:31:09 [W] This cases that don't have to be provided or maintained by Upstream.
+00:31:16 [W] And what privileges was some runtime as networking file system access?
+00:31:21 [W] Do you imagine this growing into a web service firm work? Like how opentracing is built on top of nginx So currently and this is kind of a point of discussion.
+00:31:32 [W] There's not a lot of stuff as far as y z that's exposed in was awesome. So was it the sub system that lets you access operating system features like files and networking.
+00:31:46 [W] So in a while some filter you can just open a socket or you can just open a file.
+00:31:51 [W] Everything has to be done through the envoy ABI so you can make it should be because you can make Network calls, but another through it was the or system operating system interface, but rather through I'm very provided functions
+00:32:06 [W] I do imagine it.
+00:32:08 [W] I don't know if I imagine it'd been and web service framework, but I do imagine part of the reason we created webassembly have because we do imagine these extensions being shared by the community and really leveraged
+00:32:23 [W] If they buy the land boy, like I mean, we believe that that will be the way going forward to actually extend any Cloud.
+00:32:31 [W] So like we already saw a like something like that, you know, you know, we look for exact Nats princess.
+00:32:40 [W] I talking about it or a lot of other so I mean, I think that you will see more Cloud native application is being extended dynamically with webassembly and I think that that would be very interesting.
+00:32:53 [W] Yeah, the adventure was so essentially letting the user extend your product in a way that you have pretty good guarantees on what they can or cannot do right?
+00:33:04 [W] So with a wesen filter, you can't just make you know, you can just open a file.
+00:33:09 [W] You don't have really a lot of permissions you can do much except what the envoy API lets you which is mainly HTTP calls Network calls.
+00:33:21 [W] Things of that nature to you know, Envoy provided clusters not to arbitrary hosts.
+00:33:28 [W] And this is very exciting it is I agree.
+00:33:31 [W] How can we get involved?
+00:33:32 [W] So come and join our slack?
+00:33:35 [W] We have a wasum channel.
+00:33:37 [W] The envoy stack also has a was some Channel. I think the most important thing right now is you know Try It Out Try wasmy right a fill their run it if you find a bug, you know report it if you have any questions
+00:33:52 [W] Abe come to this little sack I'm there and Shane is also there and we can answer them.
+00:34:01 [W] Let's see. I wasn't filter available in the UDP pipeline.
+00:34:05 [W] I don't don't quote me on that, but I don't think so.
+00:34:09 [W] I don't think they're available yet.
+00:34:11 [W] I think if you're talking about quick.
+00:34:16 [W] I think it should be filter should work on quick. So in that sentence was some filters should work, but I don't think you can just do a UDP filter in Watson today, but I might be wrong.
+00:34:28 [W] I'll have to double-check.
+00:34:33 [W] All right any more questions?
+00:34:40 [W] Hopefully I didn't speak too fast.
+00:34:45 [W] And I really join us in this Locker.
+00:34:47 [W] I mean there is so many people there already and I think that you know, this is should be and that's why it's open source. And what what that's why we build it because we believe this is a community play. So, you know, come help us make it better.
+00:34:59 [W] As I said, we are working with a lot of customer trying to make it better on the field, but I think you know as much as more people will come in the open source, which is going to be better and better and it's really exciting.
+00:35:13 [W] cool

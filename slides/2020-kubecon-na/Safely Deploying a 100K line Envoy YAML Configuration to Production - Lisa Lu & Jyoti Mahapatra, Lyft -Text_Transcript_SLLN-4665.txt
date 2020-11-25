@@ -1,0 +1,164 @@
+﻿Safely Deploying a 100K line Envoy YAML Configuration to Production: SLLN-4665 - events@cncf.io - Wednesday, November 18, 2020 4:57 PM - 26 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi everyone, Welcome to our talk on how to validate Envoy convicts at scale.
+00:00:06 [W] My name is Lisa and I'm speaking here today with Jody.
+00:00:09 [W] Both of us have worked on the router check tool which is one of the main tools will discuss here as well as internal tooling for making testing and validating of envoy configs better while at lift.
+00:00:22 [W] We're really excited to share our learnings with you all today.
+00:00:27 [W] To start off. I'll describe lifts infrastructure and how we generate and transport are many Envoy configs.
+00:00:35 [W] Our bootstrap Envoy con fig and I route and cluster definitions are stored in a repository is the animal files which we template with ginger service teams can add their routes to a Jinja python-based infrastructure, which eventually is wired up
+00:00:50 [W] to deliver updates to the front boxy
+00:00:47 [W] upon container startup the envoy binary and bootstrap config get pulled and the static bootstrap config is generated with ginger sidecars in the internal meshmark the front proxy and the egress proxy or started with this.
+00:01:05 [W] To avoid rolling Envoy every time there is a new route that gets added. We use RDS or the rat Discovery service to serve routes from a go control plane based control plane.
+00:01:15 [W] The bootstrap config is configured to request XTS from our control claim meanwhile the routes and clusters which are stored in S. 3 are fetched by the controlled plane, which creates the respective route configuration and cluster objects to send via XDS to decide cars.
+00:01:30 [W] Which there are two main points at which we have to validate the format and content the configs.
+00:01:31 [W] The first such place is in the bootstrap config which ensures that the sidecars able to run properly and start up without crouching.
+00:01:38 [W] The other place we need to validate is in the route and cluster definitions.
+00:01:43 [W] We validate these before sending them to the control plane because we want to avoid the control play needing to do any validation as it gets the route and cluster information and real time and rather frequently.
+00:01:55 [W] As a number of services and routes that list has grown on some sidecars.
+00:01:59 [W] We have configurations that are upwards of a hundred thousand lines of yamo, which makes maintenance and modification extremely complex and risky.
+00:02:09 [W] I'll describe some of the issues. In fact that we have encountered over last year firstly is a growing company.
+00:02:16 [W] We have new developers joining every week and business expansion also means that new services are being spun up to cater to new scenarios quite frequently.
+00:02:24 [W] This means more code review requests from developers who aren't familiar with Envoy and want to know if they're change will do what they want it to do while it's great that we're having more and more development. It's not so great that the on-call burden
+00:02:39 [W] Is increased it means the on-call spends more time triaging these tickets and having to stare at yamo.
+00:02:46 [W] Is it isn't feasible for catching everything? For example, one common source of bugs is how Envoy does first order matching for its routes which means that in a huge list of routes. It might be easy for a developer reviewer
+00:02:55 [W] And a huge list of routes, it might be easy for a developer reviewer to miss a route that captures all the traffic that is actually intended for a new route.
+00:03:03 [W] These can lead to outages in your services and response to such errors.
+00:03:10 [W] We actually mandated a code review from the networking team for all routes at one point this quickly became the bottleneck for iteration because our networking team is about six people and while we were the Guardians of these route changes for a while.
+00:03:23 [W] And tried to eyeball every change going in. This just wasn't proven to be sustainable and was slowing iteration and roll outs for the rest of the company.
+00:03:36 [W] next we have this issue where we just saw a tekton piling up what dead rats and dead clusters refer to our unused routes and unused clusters for example clusters that are no longer necessary or can't be
+00:03:51 [W] Routes that point to the services that no longer exists.
+00:03:57 [W] This is quite common with deprecation service owners might delete the cluster config and forget to delete the routes or vice versa leaving in clutter and causing the control plane to continue creating route and cluster definitions that are no longer needed.
+00:04:14 [W] Next reason is that changes are hard to test actually. This was a main reason for the first issue that I highlighted which is that service owners weren't sure how to validate their changes which is why they wanted to reach out to the networking team in the first place
+00:04:30 [W] Next reason is that changes are hard to test actually. This was a main reason for the first issue that I highlighted which is that service owners weren't sure how to validate their changes which is why they wanted to reach out to the networking team in the first place
+00:05:00 [W] Automating her testing.
+00:05:02 [W] It was really difficult to validate changes.
+00:05:04 [W] You had to have an end-to-end set up with setting up an Envoy sidecar and sending requests. See if your convict changes worked.
+00:05:12 [W] Finally lifts recently switched to pulling in the latest Envoy version on a weekly basis.
+00:05:18 [W] And while this is great for minimizing tekton up-to-date quite frequently.
+00:05:23 [W] It runs the risk of always dealing with incompatible config changes and internal stability when we say con fig here.
+00:05:33 [W] We mean both the envoy bootstrap con fig and the XTS configuration and error in either of these could cause an Envoy sidecar to reject the config and
+00:05:42 [W] Failed to start up or fail to apply updated XDS objects.
+00:05:47 [W] And in order to maintain this high speed of iteration. We knew we would have to automate our testing in order to make sure that our envoys wouldn't regress whenever we pulled in the latest version.
+00:06:02 [W] Of all these issues in mind we set out to invest in tooling and tests that would make convict appointments safe and self service.
+00:06:11 [W] The first strategy I'll talk about here is how we addressed tekton particular the dead clusters and browz.
+00:06:18 [W] Lester but when it comes to new service launches or service deprecations sometimes developers only address the rap definitions and forget the Clusters or vice versa.
+00:06:31 [W] So for example in the second row, you see that there's no route definition pointing to the service and this could mean that the developer didn't leave any routes which means the cluster definition isn't being used or
+00:06:46 [W] Deprecated the routes and forgot to remove the cluster while this cluster is not accessible by outside users.
+00:06:53 [W] Your control plan is still creating unnecessary resources here and sending them to sidecars in addition.
+00:07:00 [W] It just creates tekton and can make reading through configs confusing since the service is presumably no longer being used or isn't currently being used and then in the third scenario you have
+00:07:14 [W] Accessible routes that are pointing to a cluster that isn't configured or it doesn't exist. And this scenario. Envoy will return a 5032 requests go into these routes because it doesn't see any healthy members
+00:07:29 [W] Routes that are pointing to a cluster that isn't configured or it doesn't exist.
+00:07:28 [W] And this scenario. Envoy will return a 5032 request go into these routes because it doesn't see any healthy members for this cluster.
+00:07:39 [W] And obviously you don't want your users to be hitting 500 threes for no reason.
+00:07:45 [W] So both checks here can prevent human error from derailing a service launched or deprecation which usually happens when someone
+00:07:54 [W] Forget some of the configs.
+00:07:58 [W] Next to validate the bootstrap config. We make use of a couple of Open Source tools.
+00:08:03 [W] The first one I'll discuss is the validation server this refers to running the envoy binary and validation mode, which you can set via the command line flag mode and what this does is it takes your binary and it takes your
+00:08:18 [W] on fake and it tries to boot up Envoy without starting workers, but it will go through the server initialization process as far as it can and if there are no errors it will exit so it will exit successfully
+00:08:34 [W] Exits, that's it will exit successfully the next tool we use is the conflict load check tool and you can see the docks on the left.
+00:08:43 [W] This is a standalone binary which you can run on all of your bootstrap configs and it basically checks that all the values in the fields are valid as defined by the Proto and that the schema
+00:08:58 [W] Envoy schema
+00:09:00 [W] We run both of these checks on all of our poll requests and see I and that just makes reviewing these changes so much easier because as the reviewer, we already know that the config is a valid Envoy con fig and so you only need to
+00:09:16 [W] The change does what it should.
+00:09:19 [W] I'll now hand it over to.
+00:09:21 [W] Jyothi to discuss the router check tool and its various functionalities Thank you. Lisa. Next I'm going to talk about the router check to the part of configuration in most flux over the last few years have been modifications to
+00:09:36 [W] Bounce work in a very sensitive way routing engine runs an incoming request what a set of routing rules and the first one to match wins.
+00:09:43 [W] This becomes risky in a high flux change scenario a route mistakenly added at the top of the list Clan can blackmail all traffic in cause incidents.
+00:09:53 [W] Envoy has a router check to executable this exercise is the routing engine and runs it over. The routing configuration has given it lets us add unit tests check field applications at code coverage constraints.
+00:10:09 [W] Complex routing configurations based on header match runtime and weight cluster configs.
+00:10:15 [W] We'll look at how to write the tests.
+00:10:19 [W] And in test for code is a well-known pattern.
+00:10:22 [W] There is a subject under test defined by test name some setup and assertions similarly routing test have it named a set of input conditions and statisticians the test always run the input route.
+00:10:38 [W] Through the routing engine and compares the assertions with the actual results.
+00:10:42 [W] Let's follow an example.
+00:10:44 [W] Imagine.
+00:10:45 [W] We have a routing table a shown on the left picture.
+00:10:48 [W] Imagine thousands of such rods one can imagine the plight of the developer with making changes to such a long country.
+00:10:56 [W] We need a way to prevent regressions and have the developer make change and find out any mistake in the pr.
+00:11:04 [W] On the right there are a few examples of how a test looks like it starts with esteem.
+00:11:09 [W] There is an input section which works as a test setup.
+00:11:13 [W] It has a URL the method headers Etc.
+00:11:16 [W] The tool has a strict set of estrogens the tool runs the config to the routing engine and matches the resulting cluster named path or host rewrites and redirects.
+00:11:28 [W] This was great. And we took all of our routes and added test for all of them.
+00:11:32 [W] An existing route can never regress anymore due to a bad change and we can detect them right in the pr.
+00:11:36 [W] Let's run the test and see how it looks like the tool takes a routing configuration and a test file.
+00:11:46 [W] It shows the success and failure using exit code exit code 0 is success and everything else is a failure.
+00:11:53 [W] The tests aren't verbose by default.
+00:11:56 [W] You could add verbosity by adding in the details flag on the command line and check the results using dollar question mark which shows The Last Exit code when we have hundreds of routes adding verbosity cost more friction than we
+00:12:11 [W] The shift was new and Democrats did not understand the testing semantics.
+00:12:06 [W] We added another flag only show failures and the pr failure logs would have exactly the test that fail many failures easier to understand. It means those tests names and all the acids that failed.
+00:12:23 [W] All this was exciting but the tool do not have a way of enforcing adding tests developers are able to work around the stopgap ways of test enforcement. We decided we needed a way to add code coverage to the tool.
+00:12:36 [W] There are two ways of adding coverage.
+00:12:37 [W] First one is shallow and just checks that there are is a test for Every routing rule.
+00:12:43 [W] The second one is more straight and enforces writing all associations for each test.
+00:12:49 [W] This gives us the comfort that all aspirations have been tested with the developer and they know what they intend to do.
+00:12:55 [W] In the example the third box shows an example of a failing test, which is complaining about low code coverage and tells us which particular actions are failing.
+00:13:11 [W] like any production system
+00:13:14 [W] our inference based on runtime configs for safe rollouts developers needed a way to flip the runtime in config and test how the routes behaved we added new fields in the input to crank the runtime using some random values and test output
+00:13:29 [W] Almost Hunter pushing code coverage in our system.
+00:13:27 [W] Routes behave differently based on a headers if headers if you wish them to we needed a way to enforce the testing on these routes. We can supply you can supply headers in the test setup and test the behavior of the routes.
+00:13:46 [W] Constantly updating the envoy binary comes at a cost.
+00:13:49 [W] There are Fields getting duplicated all the time and having them in the system introduces tekton and a higher migration time later. We added a deprecated field check in a tool so that it fails whenever it observes the deprecated field we quickly
+00:14:04 [W] Usually it's wanted to feature a time and doesn't stale now long enough to become risky.
+00:14:00 [W] Adding test for untouched Parts in the system is a culture shift.
+00:14:03 [W] It needs help from developers to test it. And also if you curious ones to work around it so that we can be we can put in better enforcement.
+00:14:13 [W] We had a bumpy ride was putting it in our system.
+00:14:16 [W] But in the end it was a win-win for everyone the towing team saved the time spent by on calls eyeballing routing configurations and help developers to ship stuff faster.
+00:14:27 [W] Are you double to Lisa to talk about the future directions?
+00:14:32 [W] Great. Thanks Jody. So hopefully through this presentation you see in the different ways.
+00:14:38 [W] You can utilize open source tooling or writing your own scripts to automate the testing and validation of envoy configs.
+00:14:47 [W] And while this is really powerful.
+00:14:48 [W] I mean it certainly helped lift.
+00:14:50 [W] keep up with are you GMO configs? There's still a lot of room for improvement and how we build the tool and to test these
+00:15:02 [W] So first off Envoy has a ton of different features, but they're still not test support for all of these features at least that lift.
+00:15:12 [W] Of envoy configs and while this is really powerful.
+00:15:10 [W] I mean it certainly helped lift.
+00:15:12 [W] Keep up with our you GMO configs.
+00:15:15 [W] There's still a lot of room for improvement and how we build the tool and test these
+00:15:25 [W] so first off Envoy has a ton of different features, but they're still not test support for all of these features at least that lift.
+00:15:34 [W] Our contributions have mostly been spurred by the man from our developers.
+00:15:39 [W] So for example, the router check tool didn't always have the capability to calculate coverage or have test support for runtime valleys and flags or header manipulation and checking
+00:15:53 [W] Header values and while those are supported now, there's still a bunch of features that users want such as cores or checking that your direct response.
+00:16:05 [W] right Returns the expected status code. And so there's definitely plenty of room to increase the kind of behavior that can be tested with the router check tool.
+00:16:17 [W] Building off of this one major Improvement would be utilizing production code. Currently the router check tool uses the same routing function as you know, Envoy and production itself, but when it comes to things like
+00:16:32 [W] Building off of this one major Improvement would be utilizing production code. Currently the router check tool uses the same routing function as you know, Envoy and production itself, but when it comes to things like
+00:16:47 [W] be of the code that runs in production and this is also one of the main road blocks to implementing something like korres testing support because ideally you want to be able to use the same code AS production so that testing
+00:17:02 [W] It doesn't diverge.
+00:17:02 [W] It also just makes adding test support a lot less fertile because as you may know Envoy open source Envoy gets a lot of changes every day.
+00:17:12 [W] So just copying the code over from production is not very feasible.
+00:17:19 [W] And then finally, I think the ideal stay of the tooling would be having true Black Box testing what this would mean is just having to input a full Envoy con fig versus knowing specific route inputs for your unit test beforehand
+00:17:34 [W] Could simulate request Behavior without having to come up with the certain test cases they want and just inspect the result in response and you know, this could be used hand in hand with the existing unit testing flow. But I think this particular approach also
+00:17:47 [W] what UI based way of testing the routing table and which you can just input some parameters and see what the resultant behavior is and that might be something that's more intuitive for service owners instead of
+00:17:57 [W] Out the values for very specific Envoy and Route configuration Fields.
+00:18:02 [W] So, yeah, definitely a lot of room for improvement in a router check tool and we'd love to chat if you are interested in contributing with that that concludes our talk and please let us know if you have any questions.
+00:18:15 [W] Thank you.
+00:18:59 [W] the question is does the
+00:19:06 [W] today
+00:19:13 [W] Yes, this project is open.
+00:19:16 [W] So.
+00:19:20 [W] Hey, listen, sorry, I don't know if my audio is working on all of the tools
+00:19:38 [W] And to expand checks Beyond wrong, so our demand like that.
+00:19:40 [W] We just aired was given by our developers and things, you know infra.
+00:19:43 [W] So at this point we are doing routes.
+00:20:13 [W] The next question is for this problems be solved with each to kind of control plane.
+00:20:18 [W] I'm not too aware of how HTO does route management since we do llamo based we could just feed in the yawm AL routes into the route tool, but it's definitely
+00:20:33 [W] You'll be probably some changes if we could utilize the routes into the file and give it to an object tool.
+00:20:37 [W] that is possible are we could devise other ways to feed it through XTS in the product rule and do it, but that support is not available today.
+00:21:26 [W] The question was is the project open source.
+00:21:28 [W] I am not sure for the question. Is this project open source. I'm not sure if we got the answer right? But yes, it is open source today. It is available inside envoy Source tree. You can compile it and when the two lingering truck
+00:22:36 [W] Take that one again how frequently are changes to Route config deployed. So changes are all configure cell service.
+00:22:46 [W] So anytime so say we have hundreds of microservices and if any of the developers wants to deploy their changes, they can just go to a place where all configure stored and roll this out. We do probably
+00:23:01 [W] And but listen hundred such deployments every day.
+00:23:20 [W] You said you would is question.
+00:23:28 [W] Can't hear you.
+00:23:41 [W] Now we could say you Lisa.
+00:23:52 [W] Okay, I will try to answer this one mixes behalf.
+00:23:56 [W] Okay, her audio seems to be okay, but does router check to help identify match a conditions that can overlap for example match.
+00:24:07 [W] I can write tests so that when one piece is supposed to work, it always works like that and it doesn't reduce when you add the different projects. So the short answer is yes.
+00:24:28 [W] Okay.
+00:24:43 [W] Why does great share your experience with you today?
+00:26:37 [W] Okay, I will.

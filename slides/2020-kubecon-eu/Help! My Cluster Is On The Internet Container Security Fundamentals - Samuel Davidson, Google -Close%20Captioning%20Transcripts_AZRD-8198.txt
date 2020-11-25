@@ -1,0 +1,393 @@
+﻿Help! My Cluster Is On The Internet: Container Security Fundamentals: AZRD-8198 - events@cncf.io - Monday, August 17, 2020 9:45 AM - 242 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:04:37 [W] Hello everyone. Welcome to help my clusters on the internet container security fundamentals.
+00:04:48 [W] My name is Samuel Davidson.
+00:04:52 [W] There's my LinkedIn and website if you're interested picture of me, and I will be your tour guide through the wonderful world of container Security in kubernative says so again a little bit about me.
+00:05:02 [W] My name is Samuel Davidson.
+00:05:03 [W] I've been at Google for about three years two and a half of which I've worked on gke the
+00:05:07 [W] a Google kubernative engine on the security team on that team.
+00:05:14 [W] I've done a ton of work with identity and authorization before joining.
+00:05:24 [W] I was a total kubernative beginner. So I've kind of got that perspective of not knowing what's going on to knowing a lot about kubernative security.
+00:05:31 [W] So to the title of the talk again help my clusters on the internet. There's your cluster floating around in the cloud of the internet and typically. Yeah, your cluster is on the Internet. It's how
+00:05:38 [W] devs access your API server and configure workloads and and
+00:05:42 [W] it's that policy and all that and it's how your users can access their pods or their data or you serve API traffic all that, but I'm as I'm sure you know, the internet is a very scary place with Bots and
+00:05:58 [W] Internet there's your cluster floating around in the cloud of the internet and typically. Yeah, your cluster is on the Internet. It's how you're devs access your API server and configure workloads and and
+00:06:00 [W] It's that policy and all that and it's how your users can access their pods or their data or you serve API traffic all that, but I'm as I'm sure you know, the internet is a very scary place with Bots and
+00:06:02 [W] Listen malicious third parties and bad guys and your developers are making mistakes and all of these are working against you to compromise your cluster to us your organization some pain. So I'm going to be walking you through a whole bunch of tips and tricks to help mitigate.
+00:06:14 [W] All these risks.
+00:06:21 [W] So before we dig into that, let me briefly talk on the structure of this talk first.
+00:06:24 [W] We're going to be looking at workloads security. So the pods it containers then cluster security which will be like the control plane and the nodes and then we'll be looking at user security which is like all of your developers or automation your ci/cd
+00:06:38 [W] And the nodes and then we'll be looking at user security which is like all of your developers or automation your ci/cd and all that.
+00:06:39 [W] So starting with workloads security there you are with your with your laptop and you've got a workloads to deploy and you want to make it secure.
+00:06:45 [W] What do you do first and foremost what you think what do you need to think about is that you need to assume that you'll be owned and this is a recurring theme throughout the entire talk.
+00:06:56 [W] You've got to assume that there is a there's a yet to be discovered vulnerability and one of your dependencies or in one of your base images that will allow remote code execution data exfiltration.
+00:07:09 [W] Whatever your definition of owned might be.
+00:07:12 [W] So let's look at let's look at an example here container one has all of these tools these Linux tools file systems.
+00:07:20 [W] It's a whole bunch of keys pulled networking capability and container to is a soft padded baby's crib with a nice Purple Plastic key that maybe
+00:07:28 [W] Isn't useful for much one specific goal.
+00:07:31 [W] Now, which of these containers would you rather an attacker own? Right?
+00:07:39 [W] There's container one where they have all the suite of this a huge attack surface Suite of possibilities or container to wear their kind of Trapped in a little cage.
+00:07:43 [W] Obviously.
+00:07:49 [W] This is a jokey analogy, but we want to make our containers look more like container to so, how are we going to do that?
+00:07:50 [W] The first and most easy thing you can do is to use a distro list base image.
+00:07:59 [W] If you aren't familiar with District lists, let's take another example here.
+00:08:03 [W] So let's look at let's look at an example here container one has all of these tools these Linux tools file systems.
+00:08:09 [W] It's a whole bunch of keys fold networking capability and container to is a soft padded baby's crib with a nice Purple Plastic key that maybe isn't useful for much on specific goal.
+00:08:10 [W] Now, which of these containers would you rather an attacker own? Right? There's container one where they have all the sweet of this a huge attack surface Suite of possibilities or
+00:08:13 [W] inner to wear their kind of Trapped in a little cage.
+00:08:15 [W] Obviously. This is a jokey analogy, but we want to make our containers look more like container to so, how are we going to do that the first and most easy thing you can do is to use a distro list base image if you aren't familiar with
+00:08:16 [W] Years, it's got that that you know, anti-lock brakes and and steering assist in whatever else.
+00:08:20 [W] It's got a little Cool Tools built into Debian 10, and it's also running on top of the Debbie and kernel which would be like the wheels and the engine the distro list release of Debian 10 is more like just that Colonel.
+00:08:29 [W] got the wheels and the engine The Bare Bones to move forward. So mostly for the most part your workloads do not need that Suite of of amazing options that that Debian has baked in-toto.
+00:08:38 [W] In and they just act as a basically attack surface that when someone owns their cluster they can use the shell to Ping around to curl all kinds of end points within your cluster and cause you a bunch of problems.
+00:08:53 [W] So how do we transition from Debbie intend to the district list of you intend or whatever other, you know distribution of Linux or operating system you're using it's really easy.
+00:09:01 [W] So here's an example dockerfile. You can see they build their binary with a sort of golang Builder image and then
+00:09:11 [W] Copy that build that built binary into that being 10 and that is sort of the output container that is used to transition distro list you simply replace Debbie and 10 with a distro list path to base Debbie and 10 and again, you don't need
+00:09:23 [W] And there's other distributions.
+00:09:28 [W] There's distro list versions of all kinds of operating system, but they all strip out sort of all of those tools and shells and stuff that an attacker might use. I just want to note that there's a builder pattern used here where they build the binary before copying it into the
+00:09:40 [W] and you will have to do that because the distro list is so Bare Bones that compilers won't even really run in them going to read up on this Trail is pause here go to that Billy link, or you can just Google this trellis super easy super common number three is
+00:09:56 [W] Want to make sure that your containers are really easy to rebuild really easy to deploy.
+00:10:05 [W] Why is that aside from just the convenience?
+00:10:11 [W] Well, typically a lot of the vulnerabilities the critical vulnerabilities and security issues.
+00:10:20 [W] You'll run into are actually like I said in your dependencies in the packages you pull in or your base images so often you'll have an exchange like this where an engineer might come and they say help.
+00:10:26 [W] I've got a critical vulnerability my container. Ah, you know, how much?
+00:10:27 [W] work is this going to be well, if your if your containers are easy to rebuild and deploy you just bump that dependency number bump the base image at at the dockerfile, you know, one line change and let the ci/cd platform take the
+00:10:42 [W] Of you know wall of ci/cd platforms.
+00:10:49 [W] It's typically how people accomplish easy rebuilds easy boys.
+00:10:52 [W] Obviously, there's a bunch of recognizable Brands there.
+00:10:53 [W] This is taken from the cncf landscape.
+00:10:58 [W] So I recommend you set up a ci/cd platform that makes all this whole process easier and similarly you want to trust your containers with signatures is another cool feature of the ci/cd environment,
+00:11:09 [W] Signatures, which are also known as binary operator ization signed containers image signing binary attestation content trust depending on the platform or the brand or whatever. They use these different names, but they're basically the same thing where whatever built your container whatever your
+00:11:25 [W] Is it attaches a signature to it from there?
+00:11:32 [W] They have a trusted private key that you've given them and they use that private key sign, you know the hash table ability of the container and here's an example of how that's useful is let's say your company has a repository of all your containers.
+00:11:44 [W] Here's an example of how that's useful is.
+00:11:45 [W] Let's say your company has a repository of all your containers and the access control lists for it isn't super well setup. So developers can maybe push to it and a developer could make a mistake or get their credentials compromised and be
+00:11:56 [W] And be pushing untrusted buggy or intentionally malicious code through your repository by building it locally and pushing it with their unsigned or with an untrusted signature and give it those sort of latest tags.
+00:12:10 [W] maybe at your naively setup kubernative cluster would start to pull those containers and run them. No questions asked which is a pretty huge risk. So if we utilize signatures we can have our trusted ci/cd platform, which has that
+00:12:24 [W] Private key that we've given it that we sort of has told have told our cluster to trust and it will attach signature to that container. It spilled spits out and our ci/cd platform can be configured to only pull reviewed trusted code in our master or release
+00:12:39 [W] distance
+00:12:42 [W] and signatures have a bunch of other really awesome properties.
+00:12:47 [W] We can we can use for them in your ci/cd platform. You can do dependency validation bone scanning.
+00:12:56 [W] You can run a suite of integration test and each one of these phases can each have their own signature.
+00:13:02 [W] So as are reviewed and code is compiled and push through all these phases. It can get a signature as each of these phases is successful.
+00:13:12 [W] And then the final output container can have all of these signatures that sort of provide guarantees that we have run all of these tests.
+00:13:12 [W] We have run all these dependency validations and no major issues arose so we can then as I said take your kubernative cluster and configure it such that it will only admit containers that have these four.
+00:13:28 [W] It is compiled and pushed through all these phases. It can get a signature as each of these phases is successful.
+00:13:29 [W] And then the final output container can have all of these signatures that sort of provide guarantees that we've run all these tests.
+00:13:30 [W] We have run all these dependency validations and no major issues arose so we can then as I said take your kubernative cluster and configure it such that it will only admit containers that have these four.
+00:13:31 [W] Ballad dependencies passed tests and all that and right here.
+00:13:39 [W] You can see I say some policy engine require signed containers and then a whole bunch of you know, public keys for these signatures.
+00:13:40 [W] This is pseudo code.
+00:13:45 [W] I will discuss more about how to configure your policy engine later at the cluster level, but just know that for now you want to make sure that your containers do have a trusted signature I blind set up for them.
+00:13:54 [W] Okay, so that was container just as a recap assume you'll be owned use District lists.
+00:13:59 [W] Rebuild your containers or make them easy to rebuild and redeploy and sign all your containerd know what about at the pub level. So at the Pod level I'm going to be giving all kinds of recommendations that concern the Pod spec which is used all over
+00:14:14 [W] Um, and these tips all apply there. So obviously in your pods you have a pods back but also in your Damon sets and jobs and cron jobs and replica sets and state will sets and any other kubernative resource that might want to pods back
+00:14:30 [W] And here's the pots back reference if you want to pause and go read the fields.
+00:14:36 [W] There's a bitly link. So number one don't use host path. This might seem convenient because it basically takes your container and it gives it a little window into the notes file system.
+00:14:49 [W] You give it a directory in the notes file system and your container can mount that directory and can read the contents and maybe you have a key there a config there.
+00:14:54 [W] It's convenient.
+00:14:58 [W] a nice place to just have those files that you need to load in at runtime, but
+00:15:03 [W] it's sort of a very risky Trojan Horse your urine you're setting up for yourself where you don't know where that file system is going to be some time from now, right?
+00:15:13 [W] You don't it can see all the subfolders.
+00:15:17 [W] Maybe the file system is editable by a whole bunch of other pods and other services. So it's pretty risky. It's a an attacker can explore this file system and pull out all kinds of sensitive.
+00:15:26 [W] What does it look like in code?
+00:15:30 [W] It's under it's a volume field.
+00:15:31 [W] So in your pod definition you would here's a very simple example, you can see it just pulls in basic container image and then it mounts a volume. We Define called Keith volume and ALT Keys volume is is host path.
+00:15:45 [W] up directory in this case etcetera / poddisruptionbudgets
+00:16:16 [W] Ask us later.
+00:16:24 [W] Number two, don't use host Network and this is pretty similar it ties your containers Network into the nodes Network.
+00:16:27 [W] So localhost on the Node is localhost on the container.
+00:16:28 [W] It shares the same port range some people do it because it's kind of convenient for your container to network to other sort of things on the Node, but it's super risky.
+00:16:39 [W] So in this case the container can through localhost ping, you know, the SSH server on the Node or the various kubernative services and so can an attacker who owns your
+00:16:46 [W] Here and the problem the biggest problem here is localhost is kind of treated like a trust domain like things running on localhost on the Node are trusted sort of system infrastructure level services, not arbitrary
+00:17:01 [W] Loodse so things like the cubelet provide some level of trust for API requests coming to it from Local Host.
+00:17:15 [W] Which an attacker might explain. So don't use host Network.
+00:17:22 [W] It's just a field on the Pod spec. So in code, here's another pot example where this pod has host Network set to true and it's bound to the for for sport just don't include this line if you are using it, you
+00:17:30 [W] This pod has host Network set to true and it's bound to the for for sport.
+00:17:32 [W] just don't include this line. If you are using it, you should really look into other networking Alternatives see if it's actually something you need or if it was just set their arbitrarily make sure it's not enabled number three and this is something that
+00:17:41 [W] Need or if it was just set their arbitrarily make sure it's not enabled number three and this is something that a lot of people probably overlooked which is to be conscious of your pod service account.
+00:17:49 [W] So here's a super simple pot spec all it has is a container image a path in a name is there, you know, is there a concern about security or service account credentials bound to this pod are their credentials loaded in it, or do we have
+00:18:00 [W] Like that, it doesn't look like it.
+00:18:03 [W] It's a very simple poddisruptionbudgets.
+00:18:31 [W] Boehner at this path under Secrets which an attacker who owns this container now has access to act as and ping your API server and perform all kinds of malicious requests and you know such a simple pods back like this might be
+00:18:45 [W] Then trust that much it's just a test app.
+00:18:49 [W] that might be buggy.
+00:18:51 [W] So it's really something to be aware of on the bright side. The default service account usually isn't bound to anything by default.
+00:19:04 [W] It doesn't have any permissions associated with it, but you never know if someone earlier on when added permissions to it to like simplify some workflow and now it's exposed to it.
+00:19:11 [W] So thankfully there's a bunch of super easy solutions to this first is you just simply bind us in
+00:19:16 [W] Different service account name to this pod. So in this case, I you know, I made this service account called Simple sa ads brand-new. It doesn't have any permissions bound to it. And we kind of like trust that it is blank or it has only the bare amount of permissions needed better yet.
+00:19:31 [W] Put the pot in a different name space.
+00:19:35 [W] So this time I put the pot in its own dedicated namespace, which is just a best practice regardless because namespaces are really great dirty isolation in our back or
+00:19:48 [W] Chances are this will work for basically you and all of your workloads is to just turn off service account token mounting.
+00:19:55 [W] This field Auto Mount service account token.
+00:19:55 [W] Is that path?
+00:19:56 [W] I showed you earlier and if you set this to false those tokens to act as that service account will not be in the file system.
+00:20:11 [W] Its own dedicated namespace, which is just a best practice regardless because namespaces are really great Verity isolation in our back or chances are this will work for basically you and all of your workloads
+00:20:17 [W] I would bet that for 99% of your workloads.
+00:20:22 [W] You can go and copy paste this config to all of your pots Dex.
+00:20:29 [W] If you want to learn more, here's a bitly link again, pause go read for yourself.
+00:20:30 [W] Whatever recap at the pub level. Don't use host path.
+00:20:35 [W] Don't use host Network and pay really close attention to your pods service account.
+00:20:42 [W] Okay, so that was the sort of workloads security. Now, let's talk about cluster security. Here. You are you did great with your workload. Now you're responsible for sort of
+00:20:46 [W] Securing up it's of your actual cluster or you are standing in front of it.
+00:20:51 [W] Wondering what to do.
+00:20:53 [W] Number one.
+00:20:54 [W] This one's a no-brainer keep your cluster up-to-date bugs and vulnerabilities are fixed all the time.
+00:21:02 [W] And that might sound obvious, but you probably relate to this character who has maybe a 160 no cluster.
+00:21:07 [W] They got it up and running.
+00:21:09 [W] it's working fine for them and they really don't want to rock the boat and while I can relate to that, you know, updating things is scary and sort of Might.
+00:21:19 [W] Require rolling updates and things like that consider this since the 160 no release there have been 174 bug-fix PRS not even just PR's total into that release Branch. The latest patch version is
+00:21:31 [W] So you should be updating your cluster to the latest patch version at the very least.
+00:21:41 [W] And if you're curious about those PRS, you can go to this bitly link updating patch version should be minimally intrusive you shouldn't have any compatibility issues and it is a very strong recommendation number two, and this is
+00:21:52 [W] We intrusive you shouldn't have any compatibility issues and it is a very strong recommendation number two, and this is finally to the title of the talk help my clusters on the internet.
+00:21:57 [W] Well isolate your cluster from the internet.
+00:22:03 [W] Ideally your entire cluster is in a private Network or behind an off proxy.
+00:22:07 [W] doesn't have any publicly addressable IPS who either control plane components the API server or any of your notes there should be no way for someone to port scan.
+00:22:17 [W] Or just hit your parts of your cluster by just an IP and you might wonder okay.
+00:22:24 [W] Well that sure that's more secure but now my cluster is not very useful.
+00:22:30 [W] It can't my web server doesn't work and my devs can't do anything. So what are some solutions to those problems?
+00:22:34 [W] Well, obviously for your Deb's and Bots you can lock them into the network bring them into your VPN.
+00:22:38 [W] Maybe your organization already has a VPN setup and you just put your cluster behind it.
+00:22:43 [W] So you're devs already have access to it or better.
+00:22:44 [W] Or for the other concern your users need to access your nodes.
+00:22:50 [W] This is where you might use like a load balancer or a reverse proxy. You put some sort of public load balancing layer that has public IPS that customers can access and then those will forward valid traffic within your VPN on to the node and they
+00:23:03 [W] Them into the network you bring them into your VPN.
+00:23:04 [W] Maybe your organization already has a VPN setup and you just put your cluster behind it.
+00:23:05 [W] So you're devs already have access to it or better or for the other concern.
+00:23:05 [W] Your users need to access your nodes.
+00:23:06 [W] This is where you might use like a load balancer or a reverse proxy. You put some sort of public load balancing layer that has public IPS that customers can access and then those will forward valid traffic within your VPN on to the note.
+00:23:10 [W] With and they can also have good properties. Like they can provide dose protection or block random garbage nonsense request that don't match sort of florals or another concern might be that your cluster needs internet access
+00:23:17 [W] Have good properties. Like they can provide daus protection or block random garbage nonsense request that don't match sort of for Ells or another concern might be that your cluster needs internet access your cluster Needs to Go download
+00:23:19 [W] Images or something in this case you again you can just configure your network to allow egress access and better yet.
+00:23:29 [W] You can add allow deny lists. You can block request to you know, super trusted site dot Biz but allow access to your GCR repository or Docker Hub, or what
+00:23:41 [W] Benefit number three on the cluster security for your secrets. You secrets secrets are awesome.
+00:23:51 [W] They're great for Access tokens passwords Keys, whatever sort of don't use again.
+00:23:57 [W] Don't use host host path don't store secrets on your node Secrets also have really great properties as compared to like config Maps or other types of storage which is they are never stored in memory. They're never saved on disk to the node or they are stored in memory,
+00:24:09 [W] Disk to a node there only ever stored on disk in at CD which you can encrypt their loaded as needed.
+00:24:22 [W] So nodes can't request Secrets unless their pods a scheduled on them request those Secrets.
+00:24:27 [W] They're super easy to set up authorization policy, which is great.
+00:24:30 [W] The only downside is they are limited to one megabyte there really should just be used for keys and tokens and passwords and not for all your configs ever used other stuff like config Maps or other larger.
+00:24:41 [W] More permanent storage for those if you want to read more on Secrets pause, here's a bitly link for you quick example of what loading a secret into your pod might look like let's say you have some file that used to be on your node naively or or it's on a dead work
+00:24:55 [W] Something like Cube cuddle to create the secret with the API server and the secrets are namespace.
+00:25:03 [W] So you put the secret in the namespace of the app.
+00:25:07 [W] So we have our sensitive app in its own namespace called app sensitive that would create an API object.
+00:25:13 [W] It's just that namespace that name and then a base64 encoded secret and then in our pods spec we simply reference it in a volume that we would mount a new volume we call let's say keys, but it can be anything obviously and we reference that secret name
+00:25:25 [W] In space is a line that secret will be loaded into the Pod at that directory that we Clinton justjust great super convenient super easy to use and also much more secure.
+00:25:38 [W] So recap at the cluster level keep your clusters up-to-date isolate your cluster from the internet and you secrets for the node.
+00:25:49 [W] I just repeat isolate your notes from the internet to that's great.
+00:25:51 [W] You want to isolate the whole cluster from the internet user security. Oh, here you are. Here's your Dev team.
+00:25:58 [W] You did such a great job with the cluster. Now your company's got a whole bunch of new engineers and you need to make sure that they are while they're uploading other workloads and making amazing products.
+00:26:05 [W] They are not doing anything to compromise the security of your cult.
+00:26:08 [W] So number one use our back and use groups with our back. Hopefully you're all familiar with our back you're using our back to control authorization policy within your cluster. If you aren't familiar with our back just it's the authorization engine built into all kubernative clusters.
+00:26:24 [W] Like your engineers and your robots in your service counts as roles that Grant permission like to get Podcast pod and delete secret and then it has bindings between the two though.
+00:26:39 [W] Just here's an example of what some are back organizational structure might look like here's all your subjects. Your organization has six engineers and and two robots.
+00:26:48 [W] Let's say to service accounts these all these Engineers have different sort of
+00:26:53 [W] roles within companies.
+00:26:56 [W] I'm wearing sarees summer sui's more security engineers.
+00:27:00 [W] And so you define out all these different roles within our back to sort of provide least privilege for all these subjects. You've got admins in some namespace.
+00:27:07 [W] You've got readers and figuration roles and all that and then you would go through all of your different Engineers or all of your different employees and Grant them different role bindings.
+00:27:18 [W] Do these sort of least privilege roles that you might need to accomplish their job and at this point
+00:27:25 [W] All of these arrows represent the role bindings and at this point, you know, you're in a pretty good place all of your subjects have access to the things they need.
+00:27:35 [W] hopefully they aren't overprivileged. If you gave your roles some good thought and thought about the bindings in a Smart Way, everything's in a relatively safe and secure place right here relatively, but the problem happens is what happens,
+00:27:46 [W] Monster years from now when let's say Bob quits and Dave and Emily switch roles and your ci/cd platform is recreated with a new identity a new requirements from the permission system.
+00:27:59 [W] What do we do now?
+00:28:06 [W] We have this giant web of bindings and we want to make sure that people still have what the access they need, but nobody's overprivileged this often leads to some pretty terrible like authorization decay of all these bindings where things get really messy and suddenly
+00:28:14 [W] Employee that quit a year ago has super user on your cluster and nobody knew it. Right and that access was never revoked. So what's a better way to think about this and that's and that's to use groups.
+00:28:30 [W] So again, we have our roles we defined from the previous slide.
+00:28:34 [W] These are again just toy roles. You can whatever works best for you.
+00:28:38 [W] But instead of going directly to subjects we create groups for each of the sort of different responsibilities within your organization.
+00:28:44 [W] So say you have a sarees and then you just have engineering and you have ci/cd for like
+00:28:45 [W] mint and you have a security group for performing audits or something.
+00:28:58 [W] You can spend a lot of time and thought finding greeting bindings between these rubies groups and roles in a way that you feel is very secure, you know has least privilege and you know supports the principle of least privilege and once these are in a really
+00:29:05 [W] Then you can think about your subjects. Who is it this organization and who needs to be a part of what group and then that would simply be with these memberships and memberships can be, you know, time-bound.
+00:29:21 [W] They can be ephemeral you it's easy to pick a user out of a group and put them in a different group when they change roles and the memberships can constantly be worked on while the group's two roles binding is like rock solid.
+00:29:32 [W] one last one thing to note though, is that while our back, you know, you can create bindings two groups groups are typically at your
+00:29:39 [W] Ization on how they're actually implemented.
+00:29:40 [W] Maybe it's Google Groups.
+00:29:42 [W] Maybe it's some Microsoft group thing.
+00:29:44 [W] I don't really know other grouping.
+00:29:46 [W] there's all kinds of grouping software out there and I'm sure your organization already has one but you can basically plug in kubernative to read through your group, which is super awesome for you dirty. If you want to read about our back, there's stuff about groups
+00:29:59 [W] Want to read about the API spec on all the different fields and are back again. Another bitly link Oz over here.
+00:30:13 [W] So my final tip and this one's super huge and super amazing is to use a policy agent to protect your cluster typically or what is it policy agent?
+00:30:21 [W] Typically it is a kubernative zed Mission controller, which selectively allows or denies kubenetes resource requests based on rules or policies. So that wasn't a super heavy sentence. You probably fell asleep halfway through it.
+00:30:30 [W] Let me try and explain with what these things do with an analogy.
+00:30:36 [W] So think about an airport or ballgame these foreign Concepts that you may or may not have forgotten about in this pandemic world.
+00:30:48 [W] When you arrive at these places first, you go to like the ticket agent the guy on the left who would check your identity you check your ticket.
+00:30:53 [W] Make sure you have like a right to proceed.
+00:30:54 [W] right to go forward you can you know, you could proceed and then even after
+00:31:02 [W] For that check you still have to walk through a metal detector. You had to put your bag through a scanner and the scanners enforce policies like no alcohol, you know check for weapons and metal and no full 12 ounce things that toothpaste
+00:31:15 [W] Agent the guy on the left who would check your identity would check your ticket.
+00:31:16 [W] Make sure you have like a right to proceed or right to go forward. You can you know, you could proceed and then even after that check you still have to walk through a metal detector.
+00:31:17 [W] had to put your bag through a scanner and the scanners enforce policies like no alcohol, you know, check for weapons and metal and no full 12 ounce things that toothpaste those are super dangerous.
+00:31:20 [W] As we all know and so in this analogy on the left, the ticket agent is kind of like our back e they know whether or not you have permission to proceed but no matter how super user you are how how many permissions you have.
+00:31:31 [W] You still have to walk through the metal detector and it will still be whether or not you're someone super special so that the scanners are like the admission controllers and you can set them up for your cluster. So rather than checking for alcohol or weapons or toothpaste they can enforce
+00:31:46 [W] Still have to walk through the metal detector and it will still be whether or not there's someone super special so that the scanners are like the admission controllers and you can set them up for your cluster. So rather than checking for alcohol or weapons or toothpaste they can
+00:31:48 [W] Been discussing throughout these slides post path host Network. They can you can set policy on service accounts images URLs keys are back labels.
+00:32:00 [W] You can require owner labels and there's just a zillion billion cool features. If you that you can set up they also can audit the existing resources within your cluster so you can see if you change policies see what's now out of compliance.
+00:32:13 [W] It's great.
+00:32:16 [W] And if you're wondering, okay.
+00:32:17 [W] Well, what is a policy agent? What's an example?
+00:32:18 [W] There's a bunch of them on the landscape cncf the one I'm familiar with and I've used is Opa as gatekeeper.
+00:32:25 [W] Probably.
+00:32:27 [W] I think it's got the most stars on that on that screen shot.
+00:32:32 [W] It's super easy plug and play if you want to read about it.
+00:32:32 [W] There's a bitly link.
+00:32:38 [W] So think back 15 minutes ago to this slide where you have your kubernative cluster admitting or denying certain containers with some pseudocode policy engine. So what's actually
+00:32:48 [W] Like going on behind the scenes it's these container specs are being passed through it your admission control and one of those admission controllers is Opa gatekeeper. It compares the signatures and the container to gatekeeper policies, which might be in GitHub
+00:33:03 [W] And then it will say okay.
+00:33:11 [W] I allow the container that has all these valid signatures and I deny the container that doesn't have the signature horse poorly configured.
+00:33:12 [W] So as a recap for your developers and automation use our back and groups use a policy agent protector cluster.
+00:33:22 [W] Array, so your workloads cluster and developer are enjoying a much more secure kubernative experience. You are recognized for your efforts and compensated handsomely you're filled with a sense of satisfaction there you are with your pile of money and you're happy kubernative cluster.
+00:33:37 [W] That's awesome.
+00:33:41 [W] So before we go to questions just real quick epilogue here.
+00:33:47 [W] I know that was a lot that was a wall of information. That was like 20 plus tips.
+00:33:49 [W] Maybe you took good notes.
+00:33:50 [W] You're probably not going to remember it all the bright side.
+00:33:53 [W] I made it DOC.
+00:34:06 [W] So all the tips and trips tricks from this from this these slides lots of links all the lots of reading. If you want to read more and learn more plus a ton of other stuff not covered. I had to cut so much out of this slide.
+00:34:06 [W] It's already long all kinds of stuff about
+00:34:08 [W] Pauses route about security policy namespace isolation basic auth yada yada.
+00:34:14 [W] It is a Google doc.
+00:34:17 [W] There's a bitly link bit ly / Sam kubernative security or Sam k8s seccomp.
+00:34:27 [W] All right ending the recording here we go.
+00:34:30 [W] How do I in the recording supper?
+00:34:32 [W] Hi, it's me.
+00:34:38 [W] It's Sam.
+00:34:42 [W] I'm a little sleepy ER because it's early early in the morning.
+00:34:42 [W] Then I was in that video.
+00:34:43 [W] But hello, I've been watching my recording with all of you and reading through tons of QA.
+00:34:52 [W] There's a bunch of questions about slides.
+00:34:54 [W] I'm I know that this is this is all being recorded.
+00:34:55 [W] It's going to be on the YouTube and I think the slides might be available to I'm not sure but also check out that link. I suggested at the end the Sam k8s security or Sam k8s.
+00:35:05 [W] Just try and burn through some questions here.
+00:35:11 [W] There are a ton of questions a lot of which frankly I don't know the answer to this is a huge problem space.
+00:35:18 [W] I kind of on learned.
+00:35:29 [W] I had my knowledge and some knowledge from my team and we all sort of put it together into the slide deck and there's a ton of really excellent questions in here that I don't know the answer to so if I don't get to him Google is your friend feel free to ask questions in the dock and I'll try and find
+00:35:33 [W] on learned I had my knowledge and some knowledge with my team and we all sort of put it together into the slide deck and there's a ton of really excellent questions in here that I don't know the answer to so if I don't get to him Google is your friend feel free to ask questions in the dock
+00:35:35 [W] Asleep, but first question is basically saying is that enough signatures that I have here?
+00:35:49 [W] It's like what happens if poisoned images are signed like what's protecting your cluster from a signed malicious image and that's a great question like the idea is that we want to we want
+00:35:58 [W] I think he's to trusted building platforms.
+00:36:06 [W] So like we have our ci/cd platform that engineer's can't really touch like someone configured it.
+00:36:07 [W] It has private keys.
+00:36:11 [W] And that's that's our sort of Last Hope at trust so that ci/cd platform does run all its tests and and Bone scans and everything and attaches it signature and sure if our trusted ci/cd platform does
+00:36:22 [W] Poison damage we're in a rough place, but hopefully we've configured it that it only you know, it only allows itself to pull from trust a like base images.
+00:36:34 [W] It does all those bone scans and everything. So that's my answer for that.
+00:36:36 [W] Next question.
+00:36:38 [W] Let's see it says some Monitoring Solutions suggest using the usage of post path.
+00:36:44 [W] Do you consider this malicious?
+00:36:44 [W] What if it's read-only? So I saw a lot of questions like this come up a whole bunch and they're great questions because yeah, there's these fields that I say don't use
+00:36:55 [W] are used all the time by a whole bunch of different pieces of software.
+00:36:57 [W] So they exist for a reason and so this to answer this question as well as I think a whole bunch of others is there are probably a ton of amazing software or amazing like plug-ins for your cluster that does use these fields.
+00:37:11 [W] It's probably perfectly safe.
+00:37:15 [W] They know what they're doing.
+00:37:18 [W] They're using the field for a reason because it provides some sort of inspection into the Clusters networking or something and they're probably pretty safe to use.
+00:37:28 [W] I think my main recommendation is don't use these fields lightly.
+00:37:30 [W] Maybe I should have hoarded it like that in my talk.
+00:37:32 [W] really think about it. Sometimes they're more convenient to sort of like plug your container into your network or the file system, but it's just it's really risky. So there's tons of better more secure by default ways.
+00:37:45 [W] To sort of achieve your goal. So that's sort of what I have to say about that second. Another highlighted question.
+00:37:51 [W] I had was again about host Network.
+00:37:56 [W] It was asking about the like CPU consumption of not using House Network frankly.
+00:37:58 [W] I don't know anything about that. There are tons of caveats and if CPU if this is a real thing then maybe you need to use host Network again.
+00:38:05 [W] These are all suggestions.
+00:38:11 [W] These aren't the one this isn't the 100% secure like follow these rules in your secure. That's that's not what I'm promising here.
+00:38:12 [W] These are just a whole bunch of of hopefully useful suggestions that you can use on your personal cluster in your organization. Another great question is our secret secured enough, aren't they? Just basically for hashed.
+00:38:27 [W] Concerned some people some I've read in a Like official kubernative book that secrets are encrypted by default.
+00:38:40 [W] They are not they are basically four encoded and say to at CD in base64 encoded so maybe like a lot of hosted kubernative offerings like GK, and I'm sure the other ones do encrypt Secrets
+00:38:50 [W] Do encrypt Secrets arrest.
+00:38:53 [W] So you're in a pretty good place.
+00:38:56 [W] The real benefit of Secrets is how the kubernative he's infrastructure passes them around there, you know, you can set really strong authorization policy on all of them and they are like hard to get access to
+00:39:08 [W] An attacker gets access to that CD disc like the the actual storage of that CD then you're in a rough place for a lot of reasons.
+00:39:24 [W] And yeah, they would be able to read secret. So but writing really good authorization policy against your secrets is really the benefit and yeah, so hopefully that kind of answers that question.
+00:39:31 [W] There's a questions about distro lists and why it's preferred.
+00:39:35 [W] This is sort of a bunch of people on my team like this drill is I like distro list. Someone was asking
+00:39:38 [W] about Alpine. I just did a quick Google search and yeah, like distro list doesn't have a default published Alpine image, which I thought was interesting.
+00:39:53 [W] I don't I would need to research and more into it.
+00:39:55 [W] I might post it in my dock again bitly dot bit dot Lee / Sam k8s zettabytes.
+00:40:08 [W] Bird that's another question.
+00:40:13 [W] Why is digital is preferred is like I said in the talk, it's it's got a very tiny attack surface no package manager, which is something I didn't bring up.
+00:40:21 [W] So, you know, if your workload gets on and they can't run like apt-get, you know, huge Network scanning data exfiltration tool install, you know, so that's a it's again just small attack surface.
+00:40:32 [W] There's some questions about how to test cves in already running images.
+00:40:48 [W] I don't know if I totally understand that question, but I think what it's I think basically it's as far as my understanding on how to check for cdes is a bonus of the way of on scanning tool works.
+00:40:54 [W] Is it basically just checks the base images and all of the packages that pulled in against a giant map of known vulnerabilities and check sit there and you see these associated with it so you can see
+00:41:05 [W] Own scanner on a running container and get probably a pretty authoritative set of known see these there were some questions about the software image.
+00:41:16 [W] I did a bunch of screenshots from the cncf landscape with like Opa gatekeeper, and I want to ci/cd platforms those screenshots were not an exhaustive list of solutions for that.
+00:41:26 [W] was asking about an Azure ci/cd platform. I'm sure that Azure platform is excellent and if it works great for you use it and there's there's other like
+00:41:33 [W] there's Google ones.
+00:41:34 [W] I didn't put right.
+00:41:38 [W] So the one the images I posted were just the open source ones.
+00:41:44 [W] I kind of like was biasing towards showing off all the cool open source ones like Opa Gatekeepers totally open source, but they're I'm sure they're super amazing policy engines the super amazing ci/cd platforms that are not open source that maybe you're already using
+00:41:53 [W] Best fit for you. So that's the end of that answer that I'm just going to keep running.
+00:42:01 [W] I don't know when I'm going to be cut off but there are like 200 300 questions and I've answered like six. So if I don't get to your question again, maybe post it in the the dock Sam Baily dot bit
+00:42:15 [W] It s seccomp.
+00:42:45 [W] Other people and yeah, so let's see. What's another one.
+00:42:55 [W] Which is true, too. Okay.
+00:43:02 [W] So here's a question that says nice approach to signing binaries after each step.
+00:43:04 [W] But do you have a practical solution in mind?
+00:43:05 [W] I can't find a solution to that.
+00:43:06 [W] Oh, I see.
+00:43:09 [W] Okay. So I think he's asked this person is asking.
+00:43:12 [W] Like what is an actual like piece of ci/cd software that will do that for you and I would wager that most do that.
+00:43:27 [W] It's based and I feel like most it's just F most ci/cd platform probably has like phases that you can set up for your release and yet for each phase you I'm sure you can say like perform a bone scan run this phone scan tool if you know if it didn't return an error.
+00:43:36 [W] Scan tool if you know if it didn't return an error run a little crypto signature on the image right to the next phase.
+00:43:46 [W] I don't actually know exactly how they work. But I'm sure there are a lot of ways to do it.
+00:43:53 [W] Let's see.
+00:43:55 [W] I don't know one.
+00:43:59 [W] I feel like I'm out of time but no one is yelling in my ear.
+00:44:01 [W] So I don't really know what's going on.
+00:44:02 [W] I guess I could talk and go through hundreds of questions.
+00:44:10 [W] What is the reason that Auto Mount service account token is not set to false by default.
+00:44:11 [W] As a great question, I don't know the actually the kubernative stocks right now.
+00:44:18 [W] I had to double-check that during the roll this talk.
+00:44:24 [W] they do not specify whether it is set to false by default. I'm pretty sure it's not because they kind of assume I guess that a lot of workloads will want those service counts to talk to the API server, which is a strange assumption in my mind,
+00:44:33 [W] It it appears that it is true by default.
+00:44:38 [W] So I don't know strange stuff.
+00:44:43 [W] Okay.
+00:44:43 [W] I have two more minutes.
+00:44:43 [W] There we go.
+00:44:45 [W] Now I know how much longer I have got.
+00:44:47 [W] Let's see.
+00:44:49 [W] I kind of there are so many questions.
+00:44:51 [W] So I'm again if I don't get to your question, I'm sorry.
+00:44:54 [W] Let's see.
+00:44:55 [W] Is using a loud host paths considered secure.
+00:45:03 [W] This was when I saw when the talk was going on.
+00:45:03 [W] This is a great question.
+00:45:04 [W] I didn't know about this field.
+00:45:07 [W] maybe the TOC implies. I'm like a super security expert but the security space is just absolutely so huge.
+00:45:16 [W] Oh, there's a cool field called that and I know about and it's underpot security policy pots Acuity policy.
+00:45:20 [W] Maybe some of you have heard that word before it. I think from my understanding some people on my team who used to like kind of
+00:45:28 [W] Pioneer the pot security policy stuff.
+00:45:32 [W] It's kind of being deprecated in favor of policy agents like Opa gatekeeper, but a pod security policy is basically yeah policy as sort of kubernative knative built-in policy agent
+00:45:43 [W] Tell you can tell your pods, but you can you can specify that like your pots back can't can't be certain things. Like it can include certain host paths.
+00:45:53 [W] So there's probably a world where for whatever reason in your organization's infrastructure. Your organization's computers that need you really need to mount a host path like a very specific trusted host path like path on the host.
+00:46:08 [W] What you thought I was bad at it and you would use like a pods pods security policy is back for a gatekeeper spec to say this is the only allowed I was path
+00:46:24 [W] The on particular policy, I believe in my supporting doc that is a summary of this jet also in that doc. I kind of structured it sets that you can make a copy and then you can run through all the bullet until the tips and then basically say like, this
+00:46:40 [W] It's great.
+00:46:41 [W] I applied it to my cluster.
+00:46:42 [W] This is not applicable.
+00:46:43 [W] This doesn't make any sense for me.
+00:46:45 [W] ignoring it.
+00:46:46 [W] So hopefully it's like a big checklist for you that you can either try and see if it works for you or ignore it.
+00:46:55 [W] Let's see if I can just read one more question here again, lots of links on to questions about getting access to the slides.
+00:47:04 [W] I don't know if the slides themselves be published but the talk certainly will and you can pause and fast forward and all that but the slides might be published yours.
+00:47:12 [W] Good one that says cluster update upgrade is a tedious task.
+00:47:16 [W] How can we best to automate this with minimal change?
+00:47:18 [W] That's a super great question that frankly.
+00:47:24 [W] I don't know the answer to I have worked mostly on gke and I guess this is a benefit of managed kubernative platforms is you'd like click a button or you make an API call that says upgrade to the latest version upgrade to version Foo and your cluster spins and you know all of the
+00:47:34 [W] Engineer all the engineering work has already been done by the Google Engineers or your Azure Engineers or whatever and your clusters now on the latest version.
+00:47:44 [W] I don't know what the best way to automate cluster upgrades, but I would bet that that is a super super common Google search.
+00:47:56 [W] I would that's probably a cluster management 101 that you there is tons of software for or tons of best practices tons of blog posts. So if I didn't answer your question, and it didn't it doesn't sound like I know what I
+00:48:03 [W] Even saying which could possibly be true just Google it and I pray for you that you will find the answers that you desire.
+00:48:14 [W] Let's see.
+00:48:16 [W] I don't know if I have any more time.
+00:48:23 [W] Oh, okay.
+00:48:24 [W] Well, I'm about to wrap up one last question.
+00:48:27 [W] It's just that like this was going too fast.
+00:48:32 [W] I wasn't able to absorb it all and I did acknowledge that at the end of the slide I do it was a dense dense slide.
+00:48:35 [W] So go to my supporting doc bitly bit that Lee / Sam k8s seccomp.
+00:48:46 [W] Have a wonderful time.
+00:48:50 [W] All right.

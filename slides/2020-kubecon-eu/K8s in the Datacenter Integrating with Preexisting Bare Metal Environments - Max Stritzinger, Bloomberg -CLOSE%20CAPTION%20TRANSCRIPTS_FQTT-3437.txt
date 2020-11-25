@@ -1,0 +1,236 @@
+﻿K8s in the Datacenter: Integrating with Preexisting Bare Metal Environments: FQTT-3437 - events@cncf.io - Thursday, August 20, 2020 11:59 AM - 150 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:03:13 [W] Hi everyone. My name is Max Ernst mayr I'm an SRE at Bloomberg.
+00:03:25 [W] And today I'm going to talk about integrating kubernative networking into bare metal or on-premise environments. So
+00:03:32 [W] Hi everyone. My name is Max Ernst mayr I'm an SRE at Bloomberg.
+00:06:47 [W] And today I'm going to talk about integrating kubernative networking in to bare metal or on-premise environments.
+00:06:55 [W] So I just kind of an overview of this talk.
+00:06:57 [W] The first thing I'm going to go over is kind of the basics of kubernative networking.
+00:07:04 [W] I'm going to talk about kind of what the options are for implementing that Network model on-prem or on bare metal. I'm going to talk about
+00:07:09 [W] specific Network environment, so what our hosts like what our hosts look like what our Network looks like and kind of how that creates some challenges in implementing some kubernative networking and then I'm hopefully if I have time I'm going to talk about
+00:07:25 [W] Just in implementing some kubernative working and then I'm hopefully if I have time I'm going to talk about some tips and some tools that you might be able to use to debug your own environment.
+00:07:33 [W] See if you're doing this. So the first thing I want to do is I want to get on the same page around what the kubernative networking model is so pods are scheduling its work.
+00:07:40 [W] They all get an IP address and model says among other things that pausing to be able to communicate with each other. So there's no real spectro.
+00:07:48 [W] On how you have to implement that but in general this kind of two categories of implementations, so there are overlay networks.
+00:08:03 [W] And then there's kind of more of a flat Network model and distinction between these two is does the rest of the network have knowledge of the pot I be space of the Pod cider.
+00:08:11 [W] cider. And if the rest of the network does then you're probably running with a flat network. If the rest of network doesn't really have any knowledge of the potty space then you're probably using an overlay and I guess really
+00:08:21 [W] The obvious difference here is that you know, if you're off cluster if you can talk to a pot. I pee then you're probably going to Flat Network. And if you can't then it's probably not really so in our rhyme and our environments we have to support both.
+00:08:31 [W] So I'm going to talk about that but you might be wondering you know, what are what is required in order to implement these right so overlay networks, we need two things.
+00:08:42 [W] We need encapsulation. If we ever want to talk to a pot of P from a pod or a host in the cluster.
+00:08:52 [W] That traffic on the ground because again in an overlay scenario, the network doesn't have any knowledge of the body be space.
+00:09:05 [W] So we do is we take that original traffic the original be encapsulated traffic and we put it in another protocol like UDP if you're doing vxlan or in an IP packet, if you're doing IP IP tunnels
+00:09:17 [W] Now the destination address on this encapsulating packet is going to be the host of the destination pile lives on the source address is going to be the host of the original problems on and now we can pass that traffic when it gets to the destination host
+00:09:32 [W] As well and wrap it and then pass it all kind of transparent to the podcast.
+00:09:41 [W] But if we want to have this going we need kind of an agent that's running on all of our nodes that's programming these routes that knows if a PHA gets launched on a certain host.
+00:09:50 [W] If any of the other hosts want to talk to that pain IP, then they need to encapsulate traffic to that host.
+00:09:54 [W] So that's one of the things that we need for implementing an overlay Network.
+00:09:57 [W] second thing that we need is we need for static with my pod wants to talk to the rest of the network then
+00:10:06 [W] again, if the source address is a pot IP the traffic might reach the destination but it's not gonna be able to come back. So what we do is we take the host IP and we put that put that in place of the the pods address and then the colonel will kind of keep track of this just turn so this address.
+00:10:17 [W] That's happened.
+00:10:22 [W] And on Linux is usually done using IP tables. Masquerade.
+00:10:24 [W] Conversely flat networks.
+00:10:28 [W] We don't need encapsulation.
+00:10:32 [W] We don't need for standing right because you can just talk directly to parties.
+00:10:34 [W] They're totally routable on the network.
+00:10:39 [W] What you do need though is you still kind of need an agent that is sharing Potter outs.
+00:10:45 [W] So again, if Pockets launched we need some way of informing the rest of the network that this pod lives on this host.
+00:10:46 [W] And this is where the traffic should go.
+00:10:47 [W] So you're maybe wondering, you know, what what you choose and I think there's this probably pros and cons to each so with overlay networks.
+00:10:59 [W] You don't actually need to maybe engage your network team for these.
+00:11:03 [W] So all you really need to implement an overlay is UDP connectivity or IP connectivity, but I'll put a little asterisk by that and come back to it later.
+00:11:14 [W] You can reuse the pot if he's faced between clusters because again, this is not these are not real life. He's you don't have to worry about allocating out of your organization's
+00:11:17 [W] He's our range or something and something else that I think is really nice about these is that the Ingress points your cluster really?
+00:11:28 [W] Well defined. So you've got you've got no support services.
+00:11:30 [W] You've got load balancer Services.
+00:11:34 [W] You've got host Network pods, but it's really kind of obvious where traffic coming to your cluster and that's not the case with Latimer's some downsides though or that you are going to pay a little bit of overhead in terms of computation terms of space on the packet in terms of encapsulation.
+00:11:46 [W] So if you have on the rest of your network Source address space firewalls, all of your pod traffic is going to have the eyepiece of your host. So all of your paws are going to be as privileged or as unprivileged as your hosts are against those firewalls, so
+00:12:03 [W] Be something that you don't want or something that you do want but something to consider and also this does kind of complicated bugging so you have to be aware that the source data is happening or this encapsulation is happening if using a tool like TCP dump.
+00:12:18 [W] To contrast flat networks don't have that same issue.
+00:12:26 [W] So if you're using TCP dump everything kind of looks as you'd expect so that's kind of nice also pots. Can we talk to you directly?
+00:12:36 [W] So because the routable on the rest of the network you could imagine maybe a service Discovery mechanism where we talk directly to pods.
+00:12:40 [W] I'm not sure if I would do that but something you could do.
+00:12:44 [W] There's also lots of options for sort of stress is filtering.
+00:12:45 [W] So I mentioned before that with Source netting everything is as
+00:12:48 [W] religious your host but in a flat Network we can kind of choose depending on what your neck network provider is we can kind of choose which IP ranges we want to drop pods into and so that can kind of make them more or less privileged against those hosts or the source address these firewalls
+00:13:03 [W] X so that's kind of nice also pots going to talk to you directly.
+00:13:07 [W] So because the routable on the rest of the network you could imagine maybe a service Discovery mechanism where we talk directly to pods.
+00:13:08 [W] I'm not sure if I would do that but something you can do.
+00:13:09 [W] There's also lots of options for sort of stress is filtering.
+00:13:09 [W] I mentioned before that with Source netting everything is as privileged as your host, but in a flat Network we can kind of choose depending on what your neck network provider is we can kind of choose which IP ranges we want.
+00:13:16 [W] to drop pods into and so that can kind of make them more or less privileged against those hosts or the source address these firewalls the downside of this is that you definitely are going to have soccer net routine because these are real IP addresses on your network
+00:13:21 [W] Of this is that you definitely are going to have such a network team because these are real IP addresses on your network.
+00:13:23 [W] you are going to have to allocate real ranges. You are going to have to share those ranges somehow. So you are going to have to talk to the network team. We also don't have this nice property where it's really obvious where traffic is coming into the cluster. So you might be
+00:13:26 [W] Certain services to the broader Network and a flat Network or just something that you have to be aware of and kind of handle maybe with network policy and I think something that is really overlooked is that IP address management
+00:13:40 [W] And is a huge issue in flannel works. So I talked a little bit about that here.
+00:13:49 [W] I think a really common scenario is that in a data center?
+00:13:51 [W] You may have multiple availability zones. And each of these availability zones May correspond to a different IP range and so requirement on your cluster is going to be that if you launch a pod in one availabilities and used to make sure that it gets an IP from that sends
+00:14:05 [W] Conversely, you know if it's launching the other Zone and needs an IP from the other zones range and so this is something that you know, you really need to be thinking about if you're going to go down the flat network path and it's kind of for that reason that I wouldn't suggest advertising
+00:14:20 [W] It's to the rest of your network.
+00:14:27 [W] So I know that's something that some Network providers will do but there's really as far as I know.
+00:14:34 [W] No great way of getting good eye Pam management around these services. So something to keep in mind. I mentioned previously with overlays you may not have to talk to the network saying what should be good, but I think you should also consider that
+00:14:42 [W] Don't then your options for later three or layer for Ingress or just note ports and that may not be enough for you.
+00:14:50 [W] So you might not be out of the woods in that regard and even with node ports.
+00:14:59 [W] There are some downsides right? So you have to come you have to grab a port out of this High Port range clients will have to find out about your node IP somehow so you still need some service Discovery mechanism.
+00:15:07 [W] So something to consider last thing I'll say is that by default the kubernative controller manager is seems that you have
+00:15:13 [W] one pot sire that's going to cover your entire cluster range and out of the cider.
+00:15:24 [W] It's going to kind of hand out a node cider to every single node that joins your cluster on a flattened work. I think this is probably too heavy-handed to work, especially if you ever want to like grow your IP range if you want to just joint IP range, that's probably not something that's going
+00:15:35 [W] Flat Network in an overlay. It might be okay, but he again something to think about when you're choosing your network provider.
+00:15:42 [W] So for us we use calcio for implementing both these models.
+00:15:49 [W] It does overlays the slide networks and it has really good sport for ipam.
+00:15:54 [W] So with calcio I can say if I launch it hosts on a certain node, or or actually if I want to poddisruptionbudgets the node label and use that node label to determine which IP pool that pockets and IP from you can also do this with labels on
+00:16:06 [W] And so you can say pods with a certain label should get IPS that are certain pool.
+00:16:12 [W] And and this is this is really flexible.
+00:16:16 [W] You can get really fine grain control here, which is great great for us.
+00:16:20 [W] It also implements kubernative Network policies, which is good.
+00:16:24 [W] what are the problems that we run into we run? So as a bit of a background we run both bare metal on-prem and also in private cloud vm's
+00:16:31 [W] we support both and we kind of had some tooling that we could point at Legacy of hosts and and get out of kubernative cluster.
+00:16:44 [W] But we have this new network architecture kind of come into view and now our tooling breaks for networking reasons pretty much.
+00:16:54 [W] So what is that new environment look like and how does it cause challenges so our new hosts in this new environment? We do layer 3 ecmp down to each host.
+00:16:58 [W] So eagle claws multipath routing down to every single
+00:17:01 [W] Host and what that means is that we have multiple independent paths to each of our hosts, which is really really nice.
+00:17:12 [W] We also get full throughput across two links.
+00:17:18 [W] So there's some benefits for the network team in terms of maintenance.
+00:17:24 [W] And we've also managed to kind of eliminate layer two domains in this model which which simplifies again.
+00:17:25 [W] Thanks for the network team.
+00:17:29 [W] And so that means that each host is kind of advertising.
+00:17:29 [W] It's a dress.
+00:17:32 [W] Bgp to the two top rack switches with that kind of looks like is shown in this diagram.
+00:17:41 [W] So each host has a service IP what we call a service IP.
+00:17:43 [W] And that is the real address of the host.
+00:17:45 [W] That is the address that other hosts.
+00:17:47 [W] are pods are going to be able to talk to that host on but it's also got on the actual interfaces. It's got to what we call Transit addresses and these Transit addresses. You can think of them as like link local addresses. They're not going to be routable on the rest of the network and the only thing that they're really used for.
+00:18:05 [W] Is for advertising this service address using bgp to the top Rex which so we can talk to the service addresses.
+00:18:12 [W] We can't talk to the translator dresses.
+00:18:14 [W] So how does that cause issues for us?
+00:18:22 [W] Well, one thing that really stands out is that you know, when we look at GitHub issues or PRS, we don't see that many people that are running into the same problems that we run into with our setup.
+00:18:29 [W] we're thinking that there may be aren't that many people doing this.
+00:18:33 [W] And so that's kind of a challenge.
+00:18:38 [W] Another challenge is that typically your networking stack is going to made up of these open source components. So you may have to make changes to those open source components. You may have to post hoc kind of figure out what certain implementation implementation details are
+00:18:48 [W] So why certain IP tables rule exists Ry routing is set up in a certain way and maybe that's in the code.
+00:18:57 [W] Maybe that's nowhere and you just kind of have to figure out on your own why that is and sometimes people don't understand your use case.
+00:19:06 [W] So if you go back to this slide here, this is a little tough to kind of explain in a GitHub issue and people may not understand why you need the features that you need so that can be a little challenging as well.
+00:19:13 [W] So what's the first major issue that we run into?
+00:19:20 [W] So I mentioned before that. Our hosts are advertising their service addresses the real addresses using bgp, and the running bird which is a routing Daemon to do so, so it's a process that runs and speech vgp to the switches Calico also
+00:19:32 [W] Which turns out to be something that's kind of hard to deal with so they both are running in the route network name space.
+00:19:42 [W] They're both binding the same ports and addresses and also because the bgp spec the top Rax which is only going to accept one pair and connection from our host.
+00:19:50 [W] So, how do we deal with this for the same port and same address issue? We can handle this pretty neatly by overriding Calico config templates. So in the Calico node container image
+00:20:03 [W] Uh, there's some templates that are used for configuring bird and saying with the bird conviction be and you can overwrite them either with a config map or a local file and that can kind of let you get custom behavior and Calico that
+00:20:17 [W] In Calico that you may need for your specific environment.
+00:20:20 [W] And also, of course, you know, you can change the configure the the bird instance this running for the host. And for the service of P. The tour only accepting one here in connection is a little bit tougher to deal with so we were trying to figure out
+00:20:36 [W] the tour only accepting one here in connection is a little bit tougher to deal with so we were trying to figure out you know, should we even run to burdens has maybe we could you know, bootstrap our hosts and then once kubernative comes up we could have the Calico bird
+00:20:45 [W] Host and then once kubernative comes up we could have the Calico bird be responsible for advertising both kubernative Padre Ops and the service address.
+00:20:50 [W] But we didn't want we didn't really want to do that because you know, we don't really want to rely on our cni-genie Badr to be up in order for Jose reachable on the network. You can imagine, you know, that that would be a tough dependency tough.
+00:21:03 [W] So, you know in the other direction, you know, maybe there's some way we could have figured out how to get the host bird to advertise kubernative routes, but I think that was something that was going to be a little tricky to figure out so
+00:21:19 [W] We ended up doing is we ended up tearing them together.
+00:21:27 [W] So Calico bird and as you can see in this this slide Calico bird is sharing these kubernative routes to the host bird and those birds kind of acting as a route aggregator whining them all up and advertising all of them to the chopper X, which so
+00:21:37 [W] Lining them all up and advertising all of them to the top Rex, which so that's how we dealt with that.
+00:21:45 [W] Um, but after after dealing with that now we see that our host kind of drop on and off the network intermittently. And so we actually weren't really sure what was going on here.
+00:21:49 [W] And and to have an idea you kind of have to understand how portworx sobered. I think like a lot of routing Damon's works like a similarly to a kubernative operator and that it has a desired state which is all the routes that it knows about and it's constantly
+00:22:05 [W] That desired State against an actual State and this case that's going to be a routing table.
+00:22:14 [W] So it's going to look at all the bird routes in the routing table do a diff against the ones that expect and then either delete or add routes based on that.
+00:22:25 [W] So the problem here is that both of these burdens burden senses are sinking the same routing table.
+00:22:31 [W] They're both seeing real certain by yellow bird and saying that those Russian be there and so they're constantly fighting for control of this routing table.
+00:22:33 [W] So something you can do is actually think them two separate routing tables. So I
+00:22:40 [W] I didn't know about this feature on Linux for doing this work, but you can Linux the kernel actually supports up to like 250.
+00:22:47 [W] I think routing tables per network name space and you can configure how they're how they are accessed using IP rule.
+00:22:55 [W] So we ended up sinking them to to suffer routing tables and now we can run to bird instances of the same time.
+00:23:02 [W] So that's those were kind of the bird issues. We faced the second really big issue is that iptables masquerade is stuff.
+00:23:09 [W] Deal with in our environment. So iptables masquerade is an IP tables Target that's used for resource netting which I mentioned we need for overlay networks, but just using some other places as well.
+00:23:16 [W] And what it does is it determines the address you use for that Source natin kind of automatically it what it does is it looks at the address on the interface of that traffic is leaving out of and it uses that primary IP address on that interface.
+00:23:31 [W] As the source address for the source netting so this is useful in a lot of situations but not ours because if you go back to this diagram, you'll see that on our interfaces.
+00:23:47 [W] We've got these unraidable Transit eyepiece. And so any masquerade rules are going to pick up those Transit VIPs because those are the interfaces that the traffic is actually leaving on.
+00:23:52 [W] So this presents some challenges because Mass Graves using a lot of different places, it's used in Coop Roxy calcio. It's used for resource planning of PODS.
+00:24:02 [W] This is for hairpin traffic and in most of these cases we need in iptables s not rule instead and it has not rule allows you to specify a specific IP address to use for that that source and adding but it's not all that.
+00:24:16 [W] We don't always need and that's our so the tricky part here is that, you know, we can't just find you replace all the masquerades and replace them with s
+00:24:25 [W] That's because there are certain situations in which we do need that masquerade to happen typically with an overlay.
+00:24:28 [W] So in Calico addressing masquerade is somewhat easy. So what we did was we modified Calico no to accept as a parameter to its config and IP address to be used for an estimate Rule and we Upstream those changes.
+00:24:43 [W] So if anyone else is running in a similar setup, that's something that you can use.
+00:24:48 [W] cluster but we do sometimes think the Masquerade typically with an overlay Network and a tunnel of ice because the address on the tunnel device is actually the dress we want to use so we kind of have to look at you know, each of these situations and coo proxy
+00:25:18 [W] tuitions and coo proxy kind of on a case-by-case basis
+00:25:20 [W] So in the course of this we ran into something that seems like a colonel bug we're running in an overlay environment using IP IP tunnels and some hosts that we're talking to a kubernative service bit.
+00:25:36 [W] We're doing masquerade on the encapsulating traffic but only to some VIPs only on some house. So again, I mentioned you have this encapsulated traffic and this is kind of the original traffic to the Pod and then we encapsulate it in another protocol and be encapsulating
+00:25:48 [W] Only on some house. So again, I mentioned you have this encapsulated traffic and this is kind of the original traffic to the Pod and then we encapsulate it in another protocol and the encapsulating packet is the one that was getting the Masquerade done erroneously.
+00:25:53 [W] The one that was getting the Masquerade done erroneously.
+00:25:56 [W] So we saw him some hosts in see on others in the issue seems to like come and go intermittently and you know, we've got two hosts that are set up identically that seems to be exhibiting different behaviors.
+00:26:08 [W] So it kind of looks like a colonel dog at this point, but let's dig in
+00:26:10 [W] So in addressing pretty much any kubernative networking issue the first tools I go to our ping dig that Gap and and IP route pretty much so paying for checking out right ability to poddisruptionbudgets.
+00:26:25 [W] There's seems like there's something related to the NS netcat for testing up' or to speed connectivity and then IP route to so looking at how your outings configured looking at how the sockets are listening or not listening.
+00:26:38 [W] And we ran this across both these hosts. And actually we were reproducing the issue with that Gap so that cat was not able to neck how is it was demonstrating the issue, but all these other tools kind of it appeared that both hosts that
+00:26:54 [W] In those that we're not working kind of had the same setup. So go in a little deeper you can use TCP dump.
+00:27:03 [W] So tcpdump kind of lets you treat the colonel as a black box. You can kind of look at how traffic looks like when it goes in you can look at how traffic looks like when it goes out.
+00:27:16 [W] And then from there you can kind of guess what all these kubernative components in the middle are doing so it's really useful for seeing you know, what is the network see when we drop traffic on it. It's also really useful for even seeing a traffic is on the wire so
+00:27:25 [W] A lot of times if you check that first, if you check if the post host is even passing traffic.
+00:27:31 [W] you can solve the issue right there or I have a better idea of where to start looking the second tool on the chin as IP tables. So I think I think it has a little bit of a bad rap or maybe like a scary rap, but I think it's you know once you
+00:27:44 [W] Couple scenarios with it.
+00:27:50 [W] I think it's not too hard to grasp and and I definitely think it's very much readable with some practice.
+00:27:57 [W] But if if that's still seems a little tough, you can also use the IP tables Trace Target, which is an IP tables Target that will output every single IP tables were like, it's hit to Kernel buffer and then you can kind of trace the path of packets.
+00:28:07 [W] That way last will mention is contract. So I didn't know about this tool when I started doing this work.
+00:28:21 [W] And if I had it would really help me out, which I'll talk about in a sec. But contract is something that will show you all the connections that the colonel knows about and all the address translation that's done on this connections.
+00:28:29 [W] So essentially it's just a big table of connections with the address translation that that's been done.
+00:28:35 [W] So all those things were kind of showing us the same behavior or they were kind of showing us what we expected on the good Meadows. So again, we don't we don't really know what's happening and what's causing this issue.
+00:28:51 [W] Little bit deeper in this case.
+00:28:57 [W] We're not even debugging that work anymore.
+00:28:58 [W] We're kind of debugging the kernel and so the tools I recommend for that at least starting out our like perf Trace so perfect race is an es très kind of drop in replacement.
+00:29:12 [W] But it also gives you an addition to the system called boundary. You can also get events that are happening inside the kernel so there's all these Trace points within the kernel that portrays is able to show you happening. So we were in perfect.
+00:29:21 [W] Race on the working and non-working host and you know replicate the issue and we didn't actually see a difference there, but it was really useful for was with these tracepoint events.
+00:29:36 [W] that gives us a place to go back into kernel code and start digging into kernel code and kernel functions. So I'm obviously not a colonel expert but using this Trace points I can get an idea of you know, what are the functions involved in this and and where can I start looking?
+00:29:47 [W] And using that I can start using EPF. So if you have is really hot really cool right now for C and IM plantations, but you can also use it to inspect functions or inspect arguments to Kernel functions on
+00:30:02 [W] You can look at return values of these functions.
+00:30:06 [W] And so once you have a place to kind of dig in using proof Trace UPF can give you a little bit more insight.
+00:30:20 [W] The last one I'll mention is have Trace. So like EVP a few kind of need an idea of where you want to start looking first, but it's going to show you the entire call stack for a process that is using kernel code and it
+00:30:27 [W] You know, if you need it can show you every kernel function that runs on a given CPU core. So again, you kind of have to have an idea of where you want to be looking. But if you do then you have enough Tracer or really useful to so what was our issue?
+00:30:44 [W] So to understand kind of what's going on here. I need to mention that something that may not know is that in iptables? The Nats table is only processed once per connection.
+00:31:00 [W] So I mentioned contract is the table that has all these Connections in it. And that is only done once so every other connection that are every other packet that is in that connection is going to use that same entry in the contract table.
+00:31:10 [W] So qu proxy is using IP tables Mark to select packets for masquerading. So when it does destination that if that packet is going to need a source out as well.
+00:31:22 [W] It'll Mark that packet and using evf we were able to see that this Mark persister encapsulation. So
+00:31:29 [W] if we had an encapsulated connection that is March for masquerade, then the encapsulating connections also going to be marked for masquerade.
+00:31:43 [W] So this kind of explains why on encapsulating packet. We were seeing the Masquerade as well, but it doesn't explain is why some of us were good why the problem with kind of come and go and why you know, why would
+00:31:53 [W] Most and others. So the reason for that is that the encapsulating protocol is IP IP which is a stateless protocol.
+00:32:08 [W] So every subsequent encapsulated connection that is going to be used over this tunnel is going to use the same encapsulating Connection in contract. So if the first encapsulated traffic
+00:32:16 [W] All is marked for masquerade, then all subsequent encapsulated traffic. Even if it's on a different encapsulated connection is going to be using the same encapsulating connection.
+00:32:32 [W] it's all that traffic is going to be masqueraded conversely. If the first encapsulated traffic that passes through that tunnel is not much for masquerade. Then when that encapsulating connection gets created. It's not going to have the Masquerade on it.
+00:32:43 [W] And so any subsequent encapsulated traffic that goes to the tunnel again, even if it's on a separate connection is not going to be Mark for masquerade.
+00:32:53 [W] So that end up being our big issue and yeah, that's that's pretty much my talk.
+00:33:04 [W] I thank you for listening and I hope that you got something useful out of this Bloomberg is hiring a sarees if that's something you're interested in and I'll be available for questions right now.
+00:33:07 [W] And ladies and gentlemen, we will now address your web questions.
+00:33:16 [W] I will turn it back over to our guest speaker.
+00:33:17 [W] Everyone, so I will be available in the network track chatbots as well.
+00:33:32 [W] But there's some questions that I can answer your the first question is whether we can have a single versus multiple errors.
+00:33:39 [W] I thank you for listening. And I hope that you got something useful out of this Bloomberg is hiring a sarees if that's something you're interested in and I'll be available for questions right now.
+00:33:48 [W] Ladies and gentlemen, we will now address your web questions.
+00:33:48 [W] I will turn it back over to our guest speaker.
+00:33:49 [W] Everyone, so I will be available in the network track chatbots as well.
+00:33:50 [W] But there's some questions that I can answer your the first question is whether we can have a single versus multiple errors.
+00:33:51 [W] Per cluster in a flat Network and it actually is not really dependent on flatter overlay.
+00:33:54 [W] So you could have an overlay cluster with multiple Bob Siders, but I don't know if that would make sense in most places. So
+00:33:55 [W] it's not really restricted by Flappers is overlay you can have multiple clusters Siders in either environment, but I think that you know, there's a lot of kubernative components that are kind of assuming a single cluster
+00:34:11 [W] You have no delay cluster with multiple Bob Siders, but I don't know if that would make sense in most places.
+00:34:13 [W] it's not really restricted by Flappers is overlay you can have multiple clusters Siders in either environment, but I think that you know, there's a lot of kubernative components that are kind of assuming a single cluster
+00:34:17 [W] It's trying to be fixed right now, but that is something to be aware of.
+00:34:18 [W] The second question is so the question is with ecmp to every host.
+00:34:24 [W] How do you minimize connection resets do to adding and removing notes from the radicals?
+00:34:31 [W] And I think that this question is probably around this is probably being thought of in terms of virtual IP s. So, I think with this person is asking is if we have multiple paths to it
+00:34:43 [W] This is probably being thought of in terms of virtual IP's. So I think with this person is asking is if we have multiple paths to it to a vamp and you change the routes to that bip
+00:34:49 [W] And you change the routes to that bip then, you know, the traffic may take a different path and that may end up on a different destination for that bit.
+00:35:00 [W] But because our ECP is for our hosts that that traffic and arrived on any path that it wants because the IP is again only advertise for one host. So we don't really have that issue with routing tables
+00:35:10 [W] when her skin editor moved
+00:35:13 [W] Another question is you know, would it make it any easier if we had a metal lb load balancer and bgp mode in front of Calico and not use Calico see and I and BHP mode.
+00:35:31 [W] So the reason that it wouldn't I guess unless we wanted a blowdown civilization the features that we need from a Lugosi and I and bgp are able to
+00:35:40 [W] You have pods in separate address spaces.
+00:35:49 [W] So if just adding a load balancer service in front of that doesn't doesn't really help us so much it. You know, it is useful if you want Blair through earlier Brian gross, but
+00:35:58 [W] How much it you know, it is useful if you want layer 3 layer 4 angrist, but again, that wouldn't help us with the source of rest issue.
+00:36:03 [W] another question is was our consideration for using bird on those level instead of another routing Daemon such as FR FR are and the answer that is that you know, that
+00:36:22 [W] And the answer that is that you know that it actually probably a little bit easier to use FR or sorry F5 frr but all of our hosts outside of our team are set up
+00:36:33 [W] There was kind of a standardized host set up. That was that I think bird and so we didn't want to go out of line with what other hosts are never her doing. So
+00:36:49 [W] yeah, there's a question about pods paint layer 3.
+00:36:54 [W] But how about host networking?
+00:36:57 [W] I will make that available.
+00:37:02 [W] So that was now working gets made available in the same way that
+00:37:06 [W] But that it normally is because the pods get the same routing environment and same network environment as the host. So, yeah, I think that that
+00:37:20 [W] that is all the questions I have again.
+00:37:27 [W] Feel free to hit me up in the cncf black if you have any further questions.
+00:37:32 [W] I'm happy to talk about this. Thank you.

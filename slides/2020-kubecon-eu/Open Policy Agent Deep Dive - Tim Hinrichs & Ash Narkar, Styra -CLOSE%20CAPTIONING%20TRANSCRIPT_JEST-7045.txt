@@ -1,0 +1,211 @@
+﻿Open Policy Agent Deep Dive: JEST-7045 - events@cncf.io - Wednesday, August 19, 2020 11:36 AM - 1143 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:03:56 [W] Hello and welcome to the open policy agent deep dive session. Thank you for sharing your time with us today.
+00:04:06 [W] My name is Ashna darker. I am a software engineer at styra and I'm one of the maintainers of the open policy agent project.
+00:04:12 [W] We also have Tim Hendricks who's the co-founder and CTO at styra and he's one of the co-creators of the open policy agent.
+00:04:19 [W] Today we are going to talk about Opa and we look at some of opa is use cases will do a deep dive into an API authorization use case and then talk about the new and upcoming features being added to Opa and finally look at
+00:04:35 [W] Projects like gatekeeper, so let's get started.
+00:04:40 [W] So last year, we added the OPA integration index which showcases all the open source projects Opa is integrated with the purpose of this page is to make it easy to find either a particular integration with opa.
+00:04:56 [W] Find it integration based on categories like servicemeshcon.
+00:05:18 [W] One of the best ways to contribute to Opa is to add an integration and have it featured on the OPA website.
+00:05:31 [W] So we hope you all will contribute opentracing Xin the future as well.
+00:05:32 [W] If you look at the cloud native landscape, it's constantly evolving new projects get added every day.
+00:05:42 [W] We have a new servicemeshcon have new databases and so on and so now if you're designing a system which consists of Epi gateways databases microservices, you are going to use a bunch of different projects some of
+00:05:56 [W] See on this screen and your system is going to have a lot of moving parts.
+00:06:03 [W] If we focus on security specifically authorization for such a diverse system, you can imagine a scenario where in every project is implemented in a different programming language. Every project has its
+00:06:18 [W] But in every project is implemented in a different programming language, every project has its own way of controlling access to resources which may be tightly coupled to the underlying system and eventually
+00:06:27 [W] And system and eventually you end up having no visibility into the security posture of your system.
+00:06:33 [W] even from a flexibility point of view if tomorrow if you wanted to say switch your servicemeshcon a wider you need to spend time and effort in rewriting those same policies for that new platform and you might say we'll just
+00:06:49 [W] Time and effort in rewriting those same policies for that new platform and you might say we'll just write all our policies in Vicki's and in you know in dogs and enforce them that way and that's
+00:06:56 [W] In Vicki's and in you know in docks and enforce them that way and that's fine until you realize you have tens or hundreds of microservices and this Vicki approach is not sustainable at all.
+00:07:05 [W] So what we want, you know, we want a unified way to enforce policy across diverse systems in a highly performant Manner and so this is been one of the motivations
+00:07:21 [W] And policy page as you can see from the screen. These are some of the projects or files integrated with and this is just a subset of those projects.
+00:07:31 [W] So one of the hottest use cases for Opa is around kubernative admission control where you can enforce policies such as only pull images from a specific registry or don't use the latest tag in your images
+00:07:47 [W] Also integrated with servicemeshcon Jex like sto and linkerd E Envoy and we talked about this use case in detail.
+00:07:54 [W] Later.
+00:07:55 [W] Opa is also integrated with projects like half cup where you can authorize which users are allowed to write on what topics.
+00:08:04 [W] With Opa and Linux Pam you can have fine grain authorization over SSH and pseudo and the cool thing about all this is that you can take any of these Integrations out of the box without having to write a single line of code
+00:08:19 [W] enforcing custom policies in your system using opa
+00:08:24 [W] so what is oppa oppa is an open-source general-purpose policy engine when you use Opa you are decoupling the policy enforcement from the policy decision making so your
+00:08:42 [W] good policy decisions to Opa by executing a query
+00:08:46 [W] So let's look at this figure to understand this in detail.
+00:08:53 [W] Imagine. You have a service. It can be any service.
+00:08:55 [W] It can be your own custom service.
+00:08:57 [W] It can be a kubernative API server.
+00:08:58 [W] It can be Envoy kefka, whatever whenever your service gets a request.
+00:09:04 [W] It's going to ask Opa for a policy decision by executing a query
+00:09:06 [W] Opa is going to evaluate the query based on the policy and data.
+00:09:17 [W] It has access to and send the decision back to your service where it gets enforced.
+00:09:23 [W] So you can see that we are decoupling the policy decision-making from the policy enforcement.
+00:09:24 [W] The policy query itself can be any Json value.
+00:09:37 [W] So if your service exposes an HTTP API endpoint your policy query can contain the request method the request path the user and so on if your service is a kubernative say Pi server, it can contain the Pod manifest.
+00:09:43 [W] So as long as you give some structured data to Opa and you write policies, which makes sense for that data Opa will send a decision back to your service.
+00:09:53 [W] And that's why we say opa is a general-purpose policy engine because it's not tied to any particular data format.
+00:09:59 [W] Back to your service where it gets enforced so you can see that we are decoupling the policy decision-making from the policy enforcement.
+00:10:13 [W] The policy query itself can be any Json value.
+00:10:14 [W] So if you are service exposes an HTTP API endpoint your policy query can contain the request method the request path the user and so on if your service is a kubernative API server, it can contain the Pod manifest.
+00:10:16 [W] So as long as you give some structure data to Opa and you write policies, which makes sense for that data Opa will send a decision back to your service and that's why we say opa is altinity.
+00:10:20 [W] General purpose policy engine because it's not tied to any particular data format.
+00:10:24 [W] Even the policy decision Opa returns back can be any Jason value so it can be a Boolean it can be string object sets and so on and then your service has to interpret that decision and enforce it accordingly.
+00:10:26 [W] That decision and enforce it accordingly.
+00:10:27 [W] So here are some of Opus of features at the heart of opa is a high-level decorative language called as Rego and with Rego you can write policy decisions, which are like Boolean strings sets like I mentioned before
+00:10:30 [W] For example, you can write a decision like which Fields is a user allowed to see or can a user perform this action on this resource?
+00:10:39 [W] Oppas written in go and it's designed to be as lightweight as possible.
+00:10:46 [W] So all the policies and all the data it needs for evaluation are stored in memory.
+00:10:49 [W] You can think of opa as a host local cash for your policy decisions.
+00:10:54 [W] You can deploy Opa as a sidecar host level demon or you can embed Opa inside your go code as well.
+00:11:06 [W] Opa does not have any decision time dependencies, which means to make a decision.
+00:11:10 [W] It does not have to reach out to an external service.
+00:11:13 [W] You can optionally do that, but it's not required Opa also provides some management apis, which allows you to pull policies and data from external services and upload it status and decision logs to an
+00:11:24 [W] Standard service, which can be used later on for auditing and other purposes.
+00:11:29 [W] Along with the code policy engine Opa also provides a rich set of tooling which allows you to unit test your policies, which allows you to profile your policies.
+00:11:40 [W] There are Integrations available with vs score and whim and there's also a Rego playground which allows you to experiment as well as share your ago policies.
+00:11:52 [W] So next we'll do a deep dive into an API authorization use case and see how Opa can be used in this for this use case.
+00:12:07 [W] So Microsoft versus they improve the productivity of individual development teams by breaking down applications into smaller Standalone pulse. And that's why you see a lot of organizations are adopting a micro service oriented architecture.
+00:12:22 [W] But Microsoft is themselves do not solve or distributed system problems, like service Discovery authentication and authorization.
+00:12:38 [W] In fact these problems become even more acute because of the diverse nature of microservices deployments.
+00:12:43 [W] imagine if you have like tens hundreds or even thousands of microservices and each micro service has to decide whether every one of those thousands of API called it's getting is authorized or not. That's a pretty huge problem to solve.
+00:12:55 [W] In fact Netflix was one of the leaders in microservices has publicly spoken about how important it is to have find when optimization getting it correct and also in a highly performant manner at scale.
+00:13:08 [W] So again, what we need is a way of understanding and controlling the authorization policies enforced by all these diverse systems and I hope by now, you know what the solution is.
+00:13:22 [W] It's the open policy agent.
+00:13:22 [W] He doesn't microservices has publicly spoken about how important it is to have find been authorized ation getting it correct and also in a highly performant manner at scale.
+00:13:28 [W] So again, what we need is a way of understanding and controlling the authorization policies enforced by all these diverse systems and I hope by now, you know what the solution is.
+00:13:29 [W] It's the open policy agent. So like I mentioned before Opa has multiple
+00:13:31 [W] but models and in this talk, we are going to focus on integrating Opa with your servicemeshcon.
+00:13:55 [W] Uncle Burnett, he's and inside your board you have your application container and you have an Envoy side car running.
+00:14:08 [W] So typically the way this works is that when your service gets a request it's handled by Envoy which forwards it to your application gets the response back and sends it back to the client.
+00:14:15 [W] You can now inject Opa inside of this structure by using envoys external authorization filter, which basically calls out to an external authorization service to check whether an incoming request is allowed or not.
+00:14:31 [W] Check whether an incoming request is allowed or not.
+00:14:38 [W] In this case on why I can call out to Opa and provide Opa all the requests context needed to make a decision about the fate of this incoming requests Opa is going to send a decision back to Envoy and as before if Opa
+00:14:45 [W] Unwise and the follow three back to the client and if Opa allows the request on way forwards it to the application gets the response back and sense that response response back to the client.
+00:14:59 [W] So again, you can see the goal here.
+00:15:05 [W] We have decoupled the enforcement from that policy decision making so this is how you can integrate Opa and Envoy to enforce custom invest policies egress policies service to service policies in a highly performant manner
+00:15:14 [W] I'm going to hand it over to Tim to talk about the new and upcoming features added to go.
+00:15:22 [W] Take policies. We can call them down into webassembly.
+00:15:58 [W] And so instead of running over webassembly.
+00:16:22 [W] Complete at this that is support for all of the different things.
+00:16:54 [W] So one of the things you see with it here written text. That's a way of taking three manipulation and and so not all of those.
+00:17:15 [W] Next up is it means been giving you insight into how long a particular policy takes so long, we certainly try a with oboro to allow you to
+00:17:58 [W] And certainly the case that person's been looking at high performance like these cases like micro service API offers a sin that a sequence has been you wanting a pretty low latency period valuation.
+00:18:14 [W] So that's what the benchmarking tool does the to various variations on it and discovered by the
+00:18:29 [W] Next up is decision log you patience.
+00:18:49 [W] remember that allows you to record all of the decisions that it makes in what I like to go - other DJs on so what our input is handed to open up whatever decision that it makes openmetrics around it, even if you
+00:19:04 [W] And I definitely recommend using that if you're looking for performance out of policy evaluation.
+00:19:06 [W] Next up is decision log mutation.
+00:19:07 [W] So remember that both are allowing you to record all of the decisions that it makes in what I like to go High Fidelity Json. So what our input is handed to open with whatever decision that it makes openmetrics around it that even if you
+00:19:09 [W] The revision ID for what policy you use those can all be restored as a decision tree and then those can be in batches loaded to some centralized service because that's what the decision on features also provides.
+00:19:21 [W] The Innovations about that it isn't live. Is it sometimes it means to information that you don't really want stored in that in that same place service and so for a while we've had the ability to actually delete or remove information from each of the decision identities,
+00:19:36 [W] That front door.
+00:19:38 [W] hi would be bleep attitude occasionally of those decisions as well.
+00:19:52 [W] So you can see an example here where effectively what we're doing in open leveraging the fact that Opa policies can return things besides along the line, but they can return in this case.
+00:19:57 [W] Basically if we can pass it to be applied to the decision entry itself. And so what's in this particular example we're seeing is the replacement of a field called password.
+00:20:10 [W] Value of it at least with the value of redacted.
+00:20:11 [W] So just very simple example to show you how it would work.
+00:20:15 [W] So thanks again to the me go.
+00:20:17 [W] They're a couple of other different features.
+00:20:48 [W] Restriction so now it's the case that if there's a fragment of policy that can be evaluated at compile time than that than that evaluation is actually fun.
+00:21:03 [W] Runtime at the time it was you up.
+00:21:14 [W] Kind of example that you see here come but this is common if you're especially in the case of like access control or application.
+00:21:18 [W] what does
+00:21:41 [W] Go ahead and ship it down to what you can also do though and it's leveraging this personally portal valuation handsome is specify a query for this dynasty of example flash allow and what that
+00:21:57 [W] Okay, and what you can also do though and it leverages this person would be purple valuation handsome is specify a query to this dynasty of example flash allow and what that kind of openness. Is that the query that
+00:22:02 [W] And then what you also see there is an optimization to sort of specified very similar to like seeing her compilers how aggressive to be in terms of trying to do optimization there.
+00:22:14 [W] that guy that optimization is effectively using that personal valuation that we that I just went through.
+00:22:30 [W] Everybody does previously in the in the previous round. The kitchen is generating a Walden bundle and so by default that Target is is just regular so it certainly opened opening will produce a lot of cool stuff that's going to go into that the third thing.
+00:23:00 [W] Let's comprehension.
+00:23:42 [W] So the optimization that we did in the back end was to basically find this class if any in this category of doubly nested iteration and because at the end of the day only you can in fact
+00:23:50 [W] A group by in linear time and so the optimization recognize this fragment determine fragment and goes ahead and implement it and the back and it only occurs again. One of these features where Opa just gets faster with the new algorithm.
+00:24:06 [W] Okay in addition to old.
+00:24:39 [W] Working on that. In fact, that one is already landed.
+00:24:50 [W] The next one here the idea is that each and every decision Patrick is working to make sure that I can basically put
+00:25:07 [W] Are in fact we're evaluated during it variant policy evaluations. And as you can see there maybe allow is true and is admin was false and
+00:25:18 [W] it gives you the ability into what's actually happening there.
+00:25:25 [W] The third one that's upcoming is a plug-in for IntelliJ.
+00:25:27 [W] Oh party has a plug-in for bof code.
+00:25:32 [W] And then this plugin for IntelliJ is going to be very similar in the sense that it gives you the ability to evaluate queries and run tests and be tracing and building bundles.
+00:25:43 [W] And so now you'll get to pick, you know, are you interested in are you a vs code user or an intelligent user and you get the same power of sort of a
+00:25:48 [W] Nice integration with in either case. Oh thanks to Frank events and Assam and honors for that.
+00:25:57 [W] The last one on this slide is mongodb integration.
+00:25:58 [W] So there's this body of work where the idea being that you've got.
+00:26:04 [W] You're trying to run a database query and you've got some policy written in Opa.
+00:26:13 [W] what you want to be able to do is sort of evaluate this query to let's say we return all of the resources in a particular class, but only have the database return those resources.
+00:26:21 [W] That according to the OPA policy. The user is authorized to see for example, and so that body of work teams that sort of taking these Opa policies translating them down into let's say a SQL or into elastic search queries so that when you actually
+00:26:33 [W] Body of work where the idea being that you've got your turn to run a database query and you've got some policy written an Opa and so what you want to be able to do is sort of evaluate this query to let's say we return all of the
+00:26:34 [W] We are you both ask the database to fetch the resources that also to enforce that authorization policy. So this work by the needs and ass is targeted at head doing that same kind of thing for mongodb.
+00:26:50 [W] All right, very quickly want to do some updates on some sub projects within opa.
+00:26:59 [W] The first one is gatekeeper.
+00:27:04 [W] I would expect a lot of folks know what gatekeeper is. So very briefly gatekeeper is really aiming at deploying Opa to enforce admission control policies within kubernative.
+00:27:17 [W] So the idea being that each and every request that a user sends to kubernative use whether it's for Potter and Ingress eventually goes through admission control and gatekeeper makes it especially easy to go ahead and use Opa to enforce policies of Ed admission control
+00:27:28 [W] To enforce admission control policies within kubernative.
+00:27:29 [W] So the idea being that each and every request that a user sends to kubernative whether it's for Potter and Ingress eventually goes through admission control and gatekeeper makes it especially easy to go ahead and use Opa to enforce policies of Ed admission control
+00:27:30 [W] Number of new things to to talk about here one of which is we went through it.
+00:27:37 [W] You got Security review and we passed so that was exciting. They're a bunch of our Bunch. There are a number of new pods security policies that have been added to the policy Library.
+00:27:46 [W] So you see on the right hand side of the slide.
+00:27:50 [W] are a number of the pre-built rule. So we've added pods security policies to that those those same kind of policies are good for putting controls around pods. Just like you would if you were using the Upstream pods curity.
+00:28:01 [W] see feature
+00:28:02 [W] Bunch of other things there that that are pretty exciting as well. So if you're interested in using Opa for admission control on kubernative, I definitely recommend that you check out GateKeeper.
+00:28:13 [W] Also now sub-project of opa is contest. So this has been announced publicly. But this is the first time in the coop con we get to talk about contest as a new Opa project. So really contest aims at using opa
+00:28:33 [W] And applying policies to configuration files. So those configuration files could live on your developer laptop or in a ci/cd pipeline.
+00:28:45 [W] Those are often places where you want to run Opa policies over like structured data configuration file. So this is pretty exciting for contest. One of the things that contest does really well is provide a whole bunch of ways
+00:28:58 [W] Data configuration file. So this is pretty exciting for contest. One of the things that contest does really well is provide a whole bunch of ways of a different different input format that it supports that you can run Opa policies over so you see in this
+00:29:03 [W] Different input format that it supports that you can run Opa policies over so you see in this list here on the left hand side all the different inputs for that the comtesse supports in addition all of the you can kind of see up here in the upper right-hand side some of the
+00:29:14 [W] That get produced by contest in terms of showing you which files sailed and maybe which error messages were produced. And so that output format is not only human friendly, but it also supports Json tapping and J unit
+00:29:29 [W] That is not only human friendly, but it also supports Json tapping and j-unit formats so that you can more easily use it an automated processes. And finally one of the most popular places to run contest is within a ci/cd
+00:29:39 [W] And finally, one of the most popular places to run contest is within a ci/cd pipeline and so contest has a number of out-of-the-box Integrations.
+00:29:43 [W] circleci.
+00:29:45 [W] I tecton and GitHub actions if you're interested in running Opa policies over configuration files. I definitely recommend you check out contest
+00:29:53 [W] Okay, and that does it for today?
+00:29:58 [W] Thanks for giving us some of your time definitely check us out online multi-agent dot-org and now we will open it up for questions.
+00:30:05 [W] I'll see ya latency is always a concern especially for let me repeat the question.
+00:30:38 [W] So the question is is latency a concern when using Opa to authorize on why requests.
+00:30:45 [W] So yes latency is always the concern especially for micro service environments burden Opa is going to be in the request path.
+00:30:49 [W] So you don't want to add more latency for their authorization decision.
+00:30:54 [W] So the way the OPA on why plug-in works is that along with your application container and on webassembly.
+00:30:56 [W] You're going to have Opa running inside the same board. So it's running locally as a side car next to Envoy.
+00:31:06 [W] Because you don't have to make that extra Network hop to make a policy decision.
+00:31:18 [W] So since everything is done locally. Your latency will be kept low and as you know that Opa can provide decisions in like high microseconds to low milliseconds and we have a bunch of optimizations as well.
+00:31:30 [W] So yes, so the latency is always the concern then it's in the request fat, but there are ways we can optimize your policies and because Opa runs locally along with Envoy the
+00:31:40 [W] Add the network hop and keep the latency low. Thanks for that question Liam.
+00:31:45 [W] Yeah, so we got another one here from from Martis. Maybe our teeth is asking how the decision log mutation feature will impact audit compliance.
+00:32:04 [W] So, you know, if you can mutate that that decision log then what's going to happen in terms of audit.
+00:32:17 [W] So one of the things that that does also happen when you mutate that decision log, and we've done this forever for when you need to do like grow
+00:32:18 [W] Boob elements from that from that decision log entry is we'll go ahead and record what was what was what was removed and and mutated and so you do still have that record that you know a field it exists and that was removed
+00:32:33 [W] Whatever and so from an audit perspective that certainly useful. The other thing to keep in mind is that the mutation of that decision log is something that obviously is a functionality that you should be making sure that only
+00:32:49 [W] Obvious something that obviously is a functionality that you should be making sure that only the right people only two people who are authorized to do so should be you should be able to modify that policy.
+00:32:58 [W] using you know authorization controls that around policy would be would be viable there. Well,
+00:33:02 [W] so if you have a question your by Stephen he says, how can you visualize Opa on runtime like metrics in Prometheus with Griffin?
+00:33:18 [W] Ah - board, for example.
+00:33:19 [W] That's a good question Stephen.
+00:33:22 [W] So Opa exposes an HTTP endpoint that you can use to collect metrics for all the API calls.
+00:33:33 [W] So it's a Prometheus endpoint that is enabled by default. When you run Opa as a server currently, we don't have agrafena integration to expose or to visualize those metrics.
+00:33:45 [W] But like I said before we welcome contributions and Integrations, so I would highly recommend
+00:33:48 [W] contributing to Oppa in that way.
+00:33:51 [W] Okay, looks like we've got another one here.
+00:34:05 [W] Here's another question.
+00:34:10 [W] Do is first of all thing about this architecture really Opa is designed to run at the edge.
+00:34:23 [W] So, you know in a let's say a micro service World you'd run, you know one Opa as a side car next to each and every instance of your micro micro service and part of the benefit of that is if therefore you reduce the sort of
+00:34:34 [W] Or super high throughput right like is your only answering queries from one, you know, one micro servicemeshcon for one kubernative cluster.
+00:34:48 [W] And so so Architects lie, that's like the first kind of response Opa doesn't today tasks across requests. We do we have seen people put a caching layer
+00:34:59 [W] Opa today does not itself cash between requests it will cast results within a single request.
+00:35:08 [W] So it never compete the same thing twice, but but it doesn't do any catching across request.
+00:35:14 [W] And so that's that.
+00:35:16 [W] But yeah, you're certainly welcome to put a caching layer on top if that's if that's what you need to do.
+00:35:20 [W] We've got we've got another one here asking about gatekeeper scale can gatekeeper scale to support large clusters thousands of nodes.
+00:35:55 [W] Yeah, so that's good one.
+00:35:56 [W] I don't know.
+00:36:03 [W] I'll put my head if there are like performance numbers for for gatekeeper or benchmarks for gatekeeper, as of as of today. I think it more depends like on you know, what policies are going to put in place like for any Opa use
+00:36:11 [W] No, the performance is really more defined by what kinds of policies you put in place and how many requests you're sending across so, you know, I think that you know thousand nodes like how
+00:36:27 [W] that is that Koster would be a better indicator for for scale then just like can you can Opa or beekeeper handle any any size kubernative cluster, but but certainly we've seen it run on hundreds
+00:36:43 [W] We've seen Opa run on hundreds of nodes easily.
+00:36:50 [W] So yeah, I don't know exactly how to answer that question.
+00:36:51 [W] All right. Any other questions we have about a minute left what one thing we should we should actually say here is like apologies for the audio quality there for like the middle third or whatever of the the slides.
+00:37:22 [W] Yeah, it was just it was pretty recorded and we just didn't didn't find out that the audio was so bad.
+00:37:29 [W] Time, I don't think I see more questions coming up.
+00:38:15 [W] So well, thank you.
+00:38:18 [W] Thank you everybody for giving us some of your time today.
+00:38:19 [W] Definitely check out Opa on open policy agent dot-org if you haven't already and log on to slack there. If you've got any questions, we're happy to help. Well, thanks so much everyone.
+00:38:31 [W] Thank you.

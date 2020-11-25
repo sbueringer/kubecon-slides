@@ -1,0 +1,234 @@
+﻿PKI the Wrong Way: Simple TLS Mistakes and Surprising Consequences: JMML-1600 - events@cncf.io - Wednesday, November 18, 2020 5:47 PM - 32 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi, thank you so much for coming and joining me with pki the wrong way.
+00:00:07 [W] I'm Tabitha stable.
+00:00:09 [W] I work as system security engineer a datadog.
+00:00:12 [W] We're a cloud native monitoring provider.
+00:00:15 [W] Us product features like log analysis metrics aggregation security monitoring and application performance monitoring.
+00:00:25 [W] There's extensive infrastructure to support all of those product features with dozens of kubernative clusters tens of thousands of notes.
+00:00:34 [W] I focus on hacking hardening and defending that infrastructure and helping to ensure that our operations teams and security teams are working together and
+00:00:45 [W] always helping to level each other up.
+00:00:48 [W] I also try to chop wood and carry water for Upstream kubernative by serving as co-chair of kubernative Sig security and an associate member of the platform security committee.
+00:01:00 [W] The the goals for today. What I'm really hoping to to do here is to share some lessons that I've learned from some kubernative security research that I've done and encourage you to think about your clusters
+00:01:16 [W] Adversary would think about them and also I want to have fun and just have a chance to say.
+00:01:19 [W] Hey watch this.
+00:01:20 [W] So what's on the hacker agenda first we'll do a review of what is going on inside a kubernative control plane specifically around the use of TLS and then we'll walk through four demos
+00:01:35 [W] Demos where we will hack a misconfigured kubernative cluster because of oversights in its configuration and use of TLS.
+00:01:41 [W] So we'll jump right into that review.
+00:01:44 [W] The first thing that we need to deal with is too many acronyms this talk is going to be inevitably filled with acronyms and want to make sure that we all start off on the same place.
+00:01:57 [W] So one of the most key ones that's going to be in this talk is TLS transport.
+00:02:02 [W] Our security.
+00:02:03 [W] this is a protocol that usually sits on top of TCP and it provides an encrypted and authenticated data stream from a client to a server.
+00:02:14 [W] So it uses public key cryptography for the server to prove its identity to the client.
+00:02:22 [W] Mutual TLS is an optional extension to TLS where the client also uses public key cryptography to prove its identity to the server.
+00:02:33 [W] Thus each has authenticated the other mutually the way that they do that is by the use of a certifying Authority.
+00:02:40 [W] This is a public key certificate that signs other certificates, and so if software trusts a particular certifying Authority then bye.
+00:02:51 [W] It uses public key cryptography for the server to prove its identity to the client.
+00:02:59 [W] Mutual TLS is an optional extension to TLS where the client also uses public key cryptography to prove its identity to the server. Thus each has authenticated the other mutually the way that they do that
+00:04:25 [W] Which is like the entire family tree of certifying authorities that have signed potentially other certifying authorities to eventually sign certificates that are used for clients and servers.
+00:04:40 [W] Here is your basic kubernative architecture diagram with Etsy D.
+00:04:45 [W] They're holding all of the state the API server in the center of the world and everything else talking to the API server.
+00:04:52 [W] And of course occasionally the API server talks out to other things as well.
+00:04:56 [W] So within that CD @ CD uses Mutual TLS both to authenticate client connections into the get CD cluster and for peer connections between
+00:05:08 [W] notes in a Nats ET cluster
+00:05:12 [W] the API server makes the most complex use of TLS within the kubernetes control plane it performs Mutual TLS authentication of clients that connect to it, but it is itself also a mutual TLS client
+00:05:27 [W] To at CD the kubelet and various other control claim components.
+00:05:34 [W] Furthermore there is this front proxy or aggregation layer that's configured by the request header arguments to the API server. And it also performs separate Mutual TLS authentication of
+00:05:49 [W] Coming in from a proxy server in front of the API server or it also uses Mutual TLS to authenticate itself to other extension API servers when you access them through it.
+00:05:51 [W] The kubelet and other parts of the control plane also use Mutual TLS when they communicate with the API server and most of them offer a metrics and point or some small API and they use Mutual TLS
+00:06:07 [W] Since to that don't forget your own applications, which likely include playing TLS servers like for web services and may include Mutual TLS servers or clients.
+00:06:19 [W] For example, if you are using a servicemeshcon, if you're doing authentication between some application server and a back-end database.
+00:06:27 [W] So with that all taken care of let's hop in and actually pack some clustering.
+00:06:33 [W] So the first situation that will work through here is based on the idea that you're certifying Authority controls the issuance of credentials for your kubernative cluster, so,
+00:06:49 [W] Matter how sophisticated the are back configuration that you have in your kubernative cluster. Maybe if you're certifying Authority is to free in who it issue certificates to then you may have
+00:07:01 [W] You there?
+00:06:58 [W] So we're going to access our certifying Authority require a choir a certificate inappropriately and use that to become cluster. Admin.
+00:07:10 [W] I have a local kind cluster here that's been provisioned.
+00:07:14 [W] It's using hashicorp vault as an external certifying Authority that has provisioned the many certificates and keys that are needed to make kubernative cluster work.
+00:07:25 [W] And in this case My Vault configuration is not very well locked down.
+00:07:31 [W] so one of the workloads on this kubernative cluster is a basic HTTP webserver and this HTTP web server is configured to be able to access
+00:07:46 [W] cluster in order to generate
+00:07:49 [W] the SSL keys that it the TLs keys that it needs to be able to offer web service.
+00:07:55 [W] So let's take a quick look at the certificate, you know, it's issued for dub dub dub dub example dotnet by the demo example net pki great and the way that it's able to do that is because
+00:08:10 [W] Token mounted into it and this particular Vault token is a human readable string because this is a demo and I wanted it to be easy to set up but usually this would be some long random secret value.
+00:08:14 [W] So with this certificate I shouldn't be able to do anything interesting, but I know that I can access involved. So if I'm able to access more with involved than I should be able to maybe I can
+00:08:29 [W] Better certificate it's useful in the kubernative cluster.
+00:08:29 [W] So I want a certificate specifically that has the organization system Masters in the distinguished name of the certificate because in a default kubernative cluster, there's a cluster
+00:08:44 [W] That group to Cluster admin and furthermore that particular group is special and has all privileges within the kubernative control plane. Even if you delete that role binding this is kind of confusing but
+00:08:54 [W] Plane, even if you delete that role binding this is kind of confusing but its necessary for internal communication within the API server itself.
+00:09:01 [W] So I'm going to make this open SSL configuration file so that I can run and openssl wreck command to generate a certificate signing request.
+00:09:15 [W] Now normally I should not be able to access the dangerous sign verbatim and point of Vault because then Vault will sign anything I sent it but in this case
+00:09:30 [W] - traitors have not been very careful, and I do have access to that.
+00:09:34 [W] so I can use this Vault command Vault right with the path to the kubernetes.
+00:09:42 [W] pki notice not the demo example net pki and I can submit the certificate signing request.
+00:09:49 [W] Now I have the resulting certificate in the Shell variable Json.
+00:09:54 [W] So I'll use JQ to write it out in a nice format into a certificate file and we can look at the resulting certificate issued by the demo kubernative. Pki for a goose.
+00:10:09 [W] of your system administrators group
+00:10:11 [W] This is exactly the key that we wanted. So with this certificate we can talk to the API server.
+00:10:19 [W] I don't have kubeedge CTL inside this web server poddisruptionbudgets officious if I downloaded it. So instead I'll use the notorious hacker tool curl to communicate with the API server and say can I please have
+00:10:35 [W] And it looked pretty suspicious if I downloaded it.
+00:10:30 [W] So instead I'll use the notorious hacker tool curl to communicate with the API server and say can I please have all of the secrets out of the coop system namespace?
+00:10:43 [W] Of course I can because that's what the certificate says. I should have access to.
+00:10:51 [W] So what do we learn from this how can we mitigate this?
+00:10:55 [W] I mean treat your certifying Authority permissions with care your see a configuration is an overlay over your are back configuration.
+00:11:06 [W] And so if your ca is willing to dispense certificates that people are Services shouldn't have then they will be able to get them use least privilege when you're configuring your ca so like specifically
+00:11:21 [W] Or vault you can set up roles that specify exactly what settings are allowed to be in the certificate and then that can prevent access to other settings.
+00:11:34 [W] That would be inappropriate.
+00:11:37 [W] Move on to another demo here, which is what happens if you only have one independent pki in your kubernative cluster.
+00:11:49 [W] Well as we discussed before at CD uses Mutual TLS to authenticate clients that are connecting to it and in the usual configuration in a kubernative cluster, every certificate signed
+00:12:04 [W] The at CD c-- a-- has full access to the contents of that CD.
+00:12:09 [W] And of course at CD stores everything for your control plane.
+00:12:13 [W] So therefore if SED trusts the same certifying Authority that kubernative client credentials are issued from you can simply submit a kubernative client certificate to at CD and
+00:12:28 [W] Let's see what that would look like.
+00:12:30 [W] Here we are back at a normal shell and I have a kubernative use client certificate.
+00:12:39 [W] You see it's issued by the demo kubernative pki and it's issued to me personally Tabby from the group cats.
+00:12:48 [W] Now I happen to have at CDC TL installed on my system because I'm a system administrator.
+00:12:54 [W] And so what happens if I take this kubernative client sir, and pass it to at CDC TL and tell it to talk to my at CD cluster.
+00:13:06 [W] I can just read out whatever values that I want from that CD.
+00:13:10 [W] I also could write whatever values I wanted into at CD.
+00:13:14 [W] So this client sir doesn't let me do very much when I pass it to the API server, but because I'm also able to inappropriately pass it to FCD. I can do anything that I can imagine
+00:13:31 [W] All this doesn't have to be this way.
+00:13:32 [W] What if I don't have at CDC TL installed time was you could just talk to Ed CD with curl and in the SED API version 2.
+00:13:44 [W] That's how that works.
+00:13:45 [W] But at CD API version 3 uses grpc.
+00:13:49 [W] It's not nearly as human readable. But at CD developers have taken care of us. There is a SED feature.
+00:13:58 [W] ER that's on by default that lets you access at CTV three through normal HTTP requests in addition to the grpc protocol.
+00:14:08 [W] So you have to read a little bit of the documentation to learn how to access it.
+00:14:12 [W] once you've done so you can submit a post request to the appropriate endpoint with some Json and base64 encoded query parameters, and you can pull the keys out of that CD with curl as well.
+00:14:28 [W] This does not have to be this way at CD supports are back.
+00:14:36 [W] To use at CDC TL. I have to pass all these ugly arguments. So I'll make a shell Alias so that the remaining commands look easier to read.
+00:14:43 [W] So it's necessary to create a root user and no password equals true means that you can't log in with a password only with mutual TLS.
+00:14:31 [W] Then we'll also create a user called kubeedge Pi server at CD client because that's the default CN in the client cert used by the API server when it accesses at CD.
+00:14:44 [W] have bound the root role to both of these because we're not trying to restrict what the API server can.
+00:14:51 [W] Do were only trying to restrict access to only the API server after we've created those users and roll claims. We can enable Authentication.
+00:15:02 [W] Now that we've enabled authentication what happens when I use at CDC TL and pass my kubernative client certain.
+00:15:12 [W] Permission denied because Tabby isn't one of the users that has access to that CD anymore, but kubernative is still working.
+00:15:25 [W] I can still access the API server and do things.
+00:15:28 [W] I'm going to go ahead and disable it CD authentication because if I left it on it would break some of the subsequent demos.
+00:15:37 [W] What have we learned from this and how can we mitigate this?
+00:15:40 [W] kubernative client surgeon
+00:15:39 [W] permission denied because Tabby isn't one of the users that has access to at CD anymore.
+00:15:45 [W] But kubernative is still working. I can still access the API server and do things.
+00:15:55 [W] I'm going to go ahead and disable it CD authentication because if I left it on it would break some of the subsequent demos.
+00:16:02 [W] What have we learned from this and how can we mitigate this?
+00:16:07 [W] It's really critical to have separate PK eyes for your Etsy D cluster and for your kubernative API server Additionally, you can use Network policy either like with a firewall or with cloud provider
+00:16:46 [W] Policy either like with a firewall or with cloud provider Ackles or if you're inside kubernative. He's with kubernative network policy to restrict who can even communicate with the Etsy Deport
+00:17:01 [W] You can enable SED authorization using at CD authorization is a relatively uncommon configuration.
+00:17:09 [W] So I definitely recommend that you test it first if you decide that you want to use it but this can mitigate some of the hazard that comes from having this pki shared, but it's really best to have separate PK eyes.
+00:17:24 [W] We'll get into the next demo here which involves my least favorite API server feature.
+00:17:29 [W] And the reason for that is that it enables two different features at once the dangerous and uncommon front proxy authentication.
+00:17:39 [W] where a proxy server passes headers to the API server and tells it who you are and the harmless and common aggregation layer where the API server functions as a proxy in order to talk to some other
+00:17:54 [W] of the community's API
+00:17:56 [W] So proxy authentication looks like this the user uses Mutual TLS or some other method to communicate with a proxy server the API server trusts then that proxy server communicates with the API
+00:18:11 [W] I server and passes special HTTP headers specifying the user on whose behalf. It's working.
+00:18:17 [W] The aggregation layer to an extension API server looks very similar because it's actually the same workflow except that the API server itself is the proxy in front of the extension API server.
+00:18:32 [W] So like for example, if you're using the metric server that supports horizontal poddisruptionbudgets ETL top, this is how this is how it works your user talks to the API server and the API server communicates with the extension API server.
+00:18:47 [W] trick server by using request header off
+00:18:52 [W] So how this attack is going to work?
+00:18:54 [W] It depends on a little bit of setup.
+00:18:56 [W] So the in this case in this cluster the aggregation layer trust the same see a as the main kubernative API server and the command line argument request header allowed names is missing on
+00:19:11 [W] off
+00:19:13 [W] So how this attack is going to work?
+00:19:16 [W] It depends on a little bit of setup.
+00:19:17 [W] So the in this case in this cluster the aggregation layer trust the same see a as the main kubernative API server and the command line argument request header allowed names is missing
+00:19:45 [W] So this means that right now in this cluster any kubernetes clients cert can pass the appropriate HTTP headers to enable front proxy authentication.
+00:19:58 [W] So that's what we're going to do will submit our kubernative user search to the API server, including the appropriate headers, which will allow us to authenticate as anyone and become cluster headman to
+00:20:14 [W] To be able to communicate directly with the API server from this shell first.
+00:20:21 [W] I need to find what port number my kind cluster is running the API server on so we'll do that.
+00:20:27 [W] And now I'm going to just use my kubernative client sir to try to get all the secrets from The Coop system namespace. And of course, it's Max my hand for that tab. You can't list secrets in Coop system namespace because that's not
+00:20:42 [W] Buster administrator
+00:20:45 [W] But that's fine because I know that this cluster is misconfigured or I'm willing to try it and find out if this cluster is misconfigured.
+00:20:52 [W] So now I'm doing the same curl call to the API server, but I'm saying by the way, I'm a proxy server and I'm communicating with you on behalf of this Goose that is honking around in your system administrators
+00:21:08 [W] Please have those coops system secrets.
+00:21:05 [W] For a goose like you anything.
+00:21:13 [W] What can we do to mitigate this it's important to use a separate pki for the request header off options with very strict access controls on it because this pki is more powerful than the usual one also.
+00:21:28 [W] Configuring this make sure to pass all of the relevant arguments to the API server.
+00:21:31 [W] look it up in the documentation alternately. You can pass no request header arguments at all. This will cause the the front proxy and extension API server feature to be
+00:21:46 [W] The downside of doing this is that extension API servers can't use an auto Discovery feature to learn how to configure themselves.
+00:21:51 [W] You will have to pass command line arguments to them in order to tell them how to be configured to accept connections from the API server. So that would be adopting an unusual configuration.
+00:22:03 [W] But if you're willing to if you're willing to research which extension API servers you're using and how to configure them that way it can reduce.
+00:22:12 [W] Use your need for having separate PK eyes and help to harden your configuration against these sorts of errors.
+00:22:21 [W] A another demo that we can do here has to do with inappropriate trusting of chained PK is so earlier. I said that a certifying Authority can sign another certifying Authority.
+00:22:34 [W] This is a diagram of the cas that are currently in the vault cluster that's set up for our demo.
+00:22:42 [W] There is one root CA which is signed an intermediate CA and that intermediate CA has signed five other cas.
+00:22:51 [W] For use by example dotnet the front proxy feature of the API server the SED the API server itself and another non-production kubernative cluster but
+00:23:06 [W] certificates have been loaded into the cluster for the mutual TLS client Trust
+00:23:11 [W] The root certificate is the one that has been loaded in as being trusted.
+00:23:16 [W] And so let's see some of the things that can happen when you trust too much of your PK itrenew.
+00:23:24 [W] For example, if the root CA is in the client see a file argument to at CD then every certificate issued anywhere in the pki tree is trusted by Ed CD.
+00:23:39 [W] We will will be able to send any certificate we want such as an application certificate in and we'll be able to access that CD.
+00:23:51 [W] So let's go ahead and do that.
+00:24:03 [W] First we will hop back into our webserver pot here and review what the web server config.
+00:24:12 [W] Looks like.
+00:24:16 [W] And we'll paste in one of these curl calls the tux to at CD.
+00:24:21 [W] CD. So the web server certificate is here in web server Dot pem.
+00:24:25 [W] See I trusted by it CD.
+00:24:16 [W] I can take my web server server cert and send it to Etsy D. Say give me all the coop system secrets and it says I'm happy to oblige.
+00:24:27 [W] Let's do another one of these.
+00:24:33 [W] Let's do another one of these hacks. So if the root CA is in the client see a file argument of the API server then weaveworks.
+00:24:44 [W] We can have cross cluster access. So here's a coupe config for my kubernative client.
+00:24:55 [W] Here is another Coop config for being a goose that is cluster.
+00:25:01 [W] Admin of the nonprofit cluster notice. The issuer is different between these two certificates in these two good can fix but because the API server is trusting the root CA and not the leaf
+00:25:16 [W] Probably do some inappropriate access anyway, so we'll specify the nonprofit kubernative. Admin Coop config.
+00:25:18 [W] Two coops ETL get secrets into our production cluster and of course it gives them to us because it doesn't know any better.
+00:25:29 [W] Another hack that we can do here is similar, but it combines that trust with the request header allowed names or a CA that allows issuing search for any name.
+00:25:43 [W] In that case we can submit our application certificate like from a web server directly to the API server. Our webserver cert won't have the appropriate U equals o equals in the in the
+00:25:58 [W] Checked but with request header allowed names that doesn't matter if we pass in the appropriate HTTP headers, or if the CIA allows signing assert with any name we can go and sign assert with the appropriate name and pass it in.
+00:26:02 [W] Britt name and pass it in. So let's go ahead and do that.
+00:25:53 [W] Again, we'll need to get into our web server.
+00:25:58 [W] And let's take a quick look at the web servers certificate we try and pass it into the API server. And it API servers not having it. The user dub-dub-dub dot example dotnet
+00:26:13 [W] Secrets, of course not dub-dub-dub. DOT example that net isn't even a kubernative user. This is this is not right.
+00:26:20 [W] But even this is showing us something scary the fact that we got permission denied here proves that the API server trusted our certificate and it believes that we really are dub-dub-dub. DOT example dotnet
+00:26:35 [W] Because it's misconfigured to trust the root CA so because this cluster is also poorly configured with missing request header allowed names option we can pass in the
+00:26:47 [W] TDP headers to say
+00:26:45 [W] We're a system.
+00:26:46 [W] Admin Goose.
+00:26:47 [W] You should give us those secrets. And of course it is obliged to do so.
+00:26:56 [W] So what can we do to mitigate all of these kind of problems?
+00:27:00 [W] The number one thing that we can do to save ourselves from this issue is use Standalone certifying authorities. The chaining really has very little benefit in a kubernative context and leaves you
+00:27:15 [W] In these sorts of mistakes.
+00:27:11 [W] So just don't do it.
+00:27:14 [W] You stand alone Cas and then you can't make this mistake in the first place.
+00:27:18 [W] If for some reason you feel that you must use change Cas be very careful to only trust the leaf CA so like in this case for the kubeedge pi server client see a
+00:27:33 [W] Very careful to only trust the leaf CA so like in this case for the kubeedge pi server client see a file argument we would pass in this CA that's circled in green here on the diagram.
+00:27:45 [W] We would pass in this CA that's circled in green here on the diagram.
+00:27:51 [W] Not the root CA like what we did other mitigations are also possible make sure that you have tight permissions on all of your Cas because going back to the beginning of the presentation.
+00:28:04 [W] Your ca is access control is a gate to your kubernative Access Control while you're configuring those CIA for Missions set client off and server off Flags specifically.
+00:28:15 [W] Lie on the certificates that need them in the case of the web server, sir being used to access the API server. If the CIA had removed the client off flag from that web Surfer sir.
+00:28:28 [W] It wouldn't have worked even though the other misconfigurations were present. And again if you wish to you can enable at CD authentication which would make doing some of these exploits harder.
+00:28:42 [W] To wrap this up pki is really complex. The configuration is complex.
+00:28:48 [W] There are many different command line options. But all of those Details Matter in nearly every case if you miss configure something it creates some kind of opportunity to do something inappropriate.
+00:29:00 [W] So you need to look at it creatively because these particular hacks are just fun examples that I cooked up for us to share.
+00:29:07 [W] There are certainly other ways in which pki misconfigurations could
+00:29:12 [W] exploited and kubermatic
+00:29:14 [W] Make them stand alone. And if you're unable to follow those rules that keep your life simpler be very careful that you understand every option your choosing.
+00:29:25 [W] Thank you so much for spending this time with me.
+00:29:28 [W] It's been it's been a lot of fun to to honk at this cluster with you and share, you know, the things that I've learned about some of the ways that TLS can go wrong. If you think that this kind of thing has interesting
+00:29:44 [W] Firing like datadog is looking for both security and operations people across all parts of the organization.
+00:29:42 [W] You can talk to me online.
+00:29:45 [W] I'm on kubernative slack.
+00:29:46 [W] I'm on Twitter can send me e-mail and if you want to play along with some of these exploits you can go to my GitHub and you can download the setup script and the demo notes that were used to do this demo.
+00:29:58 [W] So again, thanks a lot and go have fun with your clusters.
+00:30:14 [W] Hello.
+00:30:14 [W] Thank you all very much for coming to to join me today.
+00:30:21 [W] We had a lot of good questions during the presentation and I've tried to answer them as well as I could using the text-based QA system here.
+00:30:33 [W] So one.
+00:30:38 [W] There's there's a couple of them here that I would like to call out since since we have a little bit of time to talk to each other live here.
+00:30:46 [W] One question here was could you please create a diagram of the certifying authorities and certificates that each component should have in order to mitigate these kinds of problems and
+00:31:02 [W] The Upstream documentation has more or less.
+00:30:57 [W] got you covered for that need. The the name of the document is pki certificates and requirements and whenever I want to find it I go to my favorite search engine and I type in kubernative TLS certificates.
+00:31:13 [W] Very detailed list of all of the certificates that are used in a baseline kubernative cluster note. However, that it does not list every single meaningful argument that you would need to
+00:31:14 [W] To the different kubernative.
+00:31:14 [W] He's controlled plane components in order to use those certificates properly, but it does function as a checklist of all of the of all of the certificates that are needed to make the cluster work another
+00:31:30 [W] of these questions that I think it'd be good to share would be it says how many kubernative he's distributions have these kinds of pki config issues present by default and I feel like the
+00:31:42 [W] The distro seem to be doing a good job with this like for example, if you use kubevirt IAM to install a new cluster and you just go with all of its defaults, then it seems to give you safety faults.
+00:31:55 [W] I haven't done a detailed audit of you know, every possible kubernative. He's distribution, but it does seem that for the most part. They have got the the pki things down where the danger can come.
+00:32:10 [W] In is if you have very specific needs or like large-scale kubernative.
+00:32:15 [W] He's where you need to manage your own pki because you want to do frequent certificate renewals on your cluster or whatever reason that you might have in that case then you wouldn't
+00:32:30 [W] These safety faults that are baked into the different distros.
+00:32:34 [W] And if you're building your own certificates, then you could have the danger of making some of these kinds of mistakes.
+00:32:42 [W] So I think that's time, but I'll say thanks again so much for coming and I hope you enjoy the rest of kuchen.

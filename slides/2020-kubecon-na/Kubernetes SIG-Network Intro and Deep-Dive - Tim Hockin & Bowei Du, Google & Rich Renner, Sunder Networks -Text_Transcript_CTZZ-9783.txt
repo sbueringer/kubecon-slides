@@ -1,0 +1,357 @@
+﻿Kubernetes SIG-Network: Intro and Deep-Dive: CTZZ-9783 - events@cncf.io - Thursday, November 19, 2020 5:42 PM - 48 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, welcome to Sig Network intro and deep dive.
+00:00:02 [W] My name is Rich Runner Workforce under networks in a minute kubernative user for around 3 years. I'll start off with the introduction and later.
+00:00:13 [W] So as I mentioned, we'll start off with kind of an overview some of the basics material to get you started and then we'll transition into a deeper dive and look at the ongoing work.
+00:00:27 [W] First off.
+00:00:28 [W] What is Sig Network?
+00:00:29 [W] This is a special interest group, which is a subset of the broader communities Community focused on a particular area in this case.
+00:00:36 [W] It's networking were charged with Padma at working either between nodes of between pods the service abstraction Ingress and egress flows as well as the network policies and access control.
+00:00:48 [W] The user may want to apply to those flows.
+00:00:52 [W] Any of these things sound interesting encourage you to join us either on our slack Channel Sig Network e-community mailer, or you can see us on GitHub under Community Sig Network.
+00:01:06 [W] So be available at the end grab the links.
+00:01:12 [W] There's many apis in the communities domain.
+00:01:15 [W] So I'd like to call out in particular which Sig net owns our service in point and end point slice.
+00:01:24 [W] This is everything regarding e to the Service registration or publishing and from the client side the discovery.
+00:01:31 [W] Kress API
+00:01:21 [W] and feedback from the community as well as some challenges that have been seen in the initial or V1 rollout have led to this Gateway Next Generation HTTP routing and servicing Gress.
+00:01:33 [W] There's a lot of exciting work going on there and we'll hear about that from Bowie later on. Finally. We have Network policy API, which is your application firewall.
+00:01:46 [W] So the implementation of these apis and components to kind of build up the responsibilities that Sig network has first start off with the kubelet ci/cd the container network interface.
+00:02:01 [W] So the implementation of these apis and components to kind of build up the responsibilities that Sig network has first start off with the kubelet ci/cd the container network interface.
+00:02:20 [W] Little level Network Plumbing.
+00:02:22 [W] know, how does this pod have its IP? And how is it plugged to the network?
+00:02:28 [W] You proxy is responsible for the service layer implements that service API and we'll look at some more of the details here and I'm going to
+00:02:38 [W] As far as the controllers, we have an in point in point slides controller and point slices over feature going GAO playing 120 as well as the service load balancer controller.
+00:02:50 [W] It's constantly reconciling the state for of the service objects and ensuring that in the cluster additionally mentioned IPS.
+00:02:58 [W] There's an eye Pam roller and by default you have a DNS name based Discovery with with your default kubenetes cluster.
+00:03:10 [W] Sorry to begin to talk about the networking model.
+00:03:13 [W] It's important to note that while the networking model dictates. All pods can reach all other pods across notes and he location in the cluster.
+00:03:25 [W] There is no special meaning necessarily for a pods IP. It's just like anything else so
+00:03:33 [W] Whether it be a VM or container on in the inside of a node, depending on your provider networking you have many options few of them are listed here like flat or overlays or if you're looking to scale and get
+00:03:49 [W] update
+00:03:51 [W] there are solutions such as bgp to accomplish that.
+00:03:59 [W] Let's start with the problem at hand.
+00:04:01 [W] I have a client and a bunch of servers.
+00:04:06 [W] Which one should I connect to?
+00:04:10 [W] Well, hopefully I didn't pick server to because after a long enough time period everything will fail eventually, but maybe this is only temporary if we try again pick maybe server one.
+00:04:25 [W] how long can we continue on we're just picking a random IP and hoping that that service stays up forever or that server stays up forever and
+00:04:37 [W] You know, there's a lot of minut issues that come up from clients that have to either reconnect. They might have to reconfigure the IP of the server or
+00:04:50 [W] other challenges that we look to solve by abstracting this this problem.
+00:04:56 [W] So that is the service we have one has heard of the service object and it's logically placed in between the client and these back-end servers again so that we can connect to the same service
+00:05:12 [W] Worried about whether the servers in the back end or going up or down.
+00:04:51 [W] So service, it exposes a group of PODS has a durable VIP.
+00:04:56 [W] There are cases where you don't have to take this option. If you have smarter clients that can handle DNS changes, but in most cases clients like to have that more durable IP, and that is
+00:05:12 [W] Smarter clients that can handle DNS changes, but in most cases clients like to have that more durable IP, and that is the benefit that you get from using a service to connect to as opposed to direct.
+00:05:14 [W] You get from using a service to connect to as opposed to direct odd connection.
+00:05:25 [W] So cute proxy implements us using IP tables and I PBS but
+00:05:33 [W] If we think about the flow of operations from a client, it goes to connect to a service.
+00:05:39 [W] It's going to resolve that and then eventually it will reach its back-end server.
+00:05:44 [W] Let's kind of watch how that flow comes out in real life. Now. The DNS bot is actually a service itself, but to avoid getting too wrapped up with our explanation will
+00:05:59 [W] Ignore that fact for now and just imagine that we can resolve a service that were concerned with poddisruptionbudgets.
+00:06:07 [W] We query the DNS service.
+00:06:09 [W] It Returns the VIP we were talking about.
+00:06:12 [W] The client starts a TCP session or UDP depending on the vertical with this bib.
+00:06:19 [W] And those cute proxy rules we were talking about translates this dip to a actual pot IP.
+00:06:28 [W] Now when we actually meet the backend server, we won't have a destination VIP in the packet anymore, but the cube proxy has a record and knows how to reverse this abstraction
+00:06:45 [W] So now if we go back to our initial example server to go down.
+00:06:51 [W] I'm still connecting to the same IP address. Just just as before. The worst thing that I have to do is have a client started reconnection.
+00:06:59 [W] So no reconfiguration of other IPS and all-in-all this tends to work out better than directly contacting the server.
+00:07:12 [W] So the actual specification for this object has the standard metadata the you'll see across all kubenetes objects and a selector. So the label selection mechanism.
+00:07:26 [W] is pretty popular across not just the networking area, but kubenetes in general.
+00:07:32 [W] The service object leverages that same label selector and it indicates which pods are implementers or our servers, you know of the service of Direction.
+00:07:46 [W] But the Supply Port as well as a Target Port the port being the front end tcp/udp depending protocol Port that you would contact and the target part is the back end server so actually having this
+00:08:01 [W] Leverages that same label selector and it indicates which pods are implementers or our servers, you know of the service of Direction.
+00:08:05 [W] Got the Supply Port as well as a Target Port the port being the front end tcp/udp depending protocol Port that you would contact and the target board is the backend server. So actually having this
+00:08:35 [W] Traction turns out to make files of development a lot easier.
+00:08:40 [W] Not only do you get that benefit of the durability of the client IP address that you're connecting to word or DNS service.
+00:08:49 [W] Additionally, you have the ability to remap protocol ports.
+00:08:58 [W] The controller will see this new object that you've created and fill out some of the fields if you chose to not specify them as a user namely in the port section.
+00:09:10 [W] We see that we actually have the protocol TCP now which is the default but there are other protocols such as UDP that you can use as well.
+00:09:19 [W] We're allocated a cluster IP.
+00:09:22 [W] And this is that a femoral I'm going to excuse me.
+00:09:25 [W] This is that durable VIP that we discussed Nats.
+00:09:28 [W] Stay throughout the lifetime of the service even as servers selected by this app by app selector go up and down or come into and out of existence.
+00:09:41 [W] Next we'll hear from Bowie.
+00:09:51 [W] Now let's talk about endpoints a service is virtual.
+00:09:56 [W] It's going to be a controller that helps facilitate this the endpoints controller converts and pods into a smaller set of n points and inside the endpoints resource.
+00:10:06 [W] This represents a list of ips that are behind a service now. This is usually pods but it's not always you can manually populated endpoint Resource as well.
+00:10:15 [W] Now recall that service had a port and Target Port field.
+00:10:18 [W] So in endpoints resource can also remap ports. You may have a port coming in that remaps to an actual port on the
+00:10:25 [W] And generally endpoints are managed by the system the controller we looted to earlier. But as I said before they can always be manually managed in some cases now.
+00:10:37 [W] Let's look into what a man and points controller does so let's say we are given the service named Foo selector app Foo ports 80 and a Target Port nine three seven six.
+00:10:50 [W] Let's say we have a bunch of PODS that match the label selector for the service.
+00:10:55 [W] So these are a bunch of pause that are floating around and they have app Foo some of them have that bar.
+00:11:01 [W] Some of the app called books. The service will only select the pods that have F5 you now what happens is that the endpoints controller will then take the pods that match the service and put them in
+00:11:16 [W] Act now, um points object doesn't contain all the information about the pods. It only contains the endpoints information, which is basically the IP another way of doing service Discovery is DNS.
+00:11:28 [W] So DNS starts with a specification describing a records quadruple a records SRV PTR records and this generally runs as a service implemented using pods inside the cluster.
+00:11:44 [W] But it doesn't have to anything that matches the DNS specification can serve as a kubernative DNS.
+00:11:53 [W] Finally.
+00:11:54 [W] the containers are configured by cubelet to use Cube DNS or the provider of cube DNS as they are DNS provider and part of this is actually to use lipsey search paths to make it even easier.
+00:12:09 [W] to use the records that come with kubernetes currently the default implementation is corniness which lots of people run as a service inside their cluster, but you could imagine any such implementation that
+00:12:11 [W] It could also be a provider for DNS for kubernative. Now. Let's look into details about how DNS and kubernative weaveworks.
+00:12:09 [W] So here is sort of the most typical record that you will use.
+00:12:14 [W] It's a record a DNS record for a service and you'll see that it's composed of four pieces.
+00:12:20 [W] first one is the name of your service. Then there's the namespace of their service lives in and then there's just SVC which is a Sigil.
+00:12:30 [W] Or sort of like a constant there that tells us that this is a service name and finally there is the Clusters DNS Zone in this case.
+00:12:41 [W] We have cluster dot local but this is actually not strictly required. You can configure your cluster DNS Zone during setup to something else.
+00:12:52 [W] Now, let's talk about Q proxy.
+00:12:55 [W] so cute proxy
+00:12:57 [W] Is the default implementation of services but one thing to note is like most things in kubernative is it can be replaced Sookie proxy is a default implementation is part of the main repository and it basically allows every
+00:13:12 [W] And every note on the cluster to access the service virtual IPS to access the pods behind a service.
+00:13:21 [W] What key proxy does in its implementation is a uses the node.
+00:13:26 [W] That's a proxy for traffic from pods on that node to the back ends of the service and there are actually many different ways to do this. We can use IP tables.
+00:13:36 [W] I PV s on Windows you can use the windows kernel or there's even a user space option.
+00:13:43 [W] In fact, that was the original implementation.
+00:13:46 [W] On Linux iptables and I PVS or the best choice they're in kernel and they're very high performance.
+00:13:53 [W] The key to Q proxy is that is transparent to the consumers.
+00:13:57 [W] anyone accessing the service VIP virtual IP won't actually have to be aware of the fact that there's this cute proxy in between now.
+00:14:07 [W] What does q proxy do on the control path?
+00:14:09 [W] Well it mainly watches services and endpoints as part of this watch. It applies some filters, for example, it ignores headless services and then it links the end points which are the back ends the pods that are
+00:14:23 [W] Acted with Services which are the front ends and basically by service, we mean the virtual IP s accumulates changes to both and then updates the colonel state which is the node level proxy on the Node itself.
+00:14:38 [W] Proxy do on the data path.
+00:14:26 [W] Well on the data path, it has to recognize that surface traffic exists.
+00:14:30 [W] For example, your pod is sending traffic to a particular destination virtual IP and Port then it has to apply some kind of round robin load balancing technique actually is random.
+00:14:43 [W] It chooses a back-end and also Implement some of the service attributes such as client Affinity on this path, then finally, it uses Network address translation.
+00:14:54 [W] Ian to rewrite packets to go to a new destination and of course any kind of load balancing with network address translation, you have to undo the address translation on the response a couple of common questions that come up
+00:15:10 [W] Use DNS to do load balancing. Well people have done this in the past.
+00:15:01 [W] But what we have found is that typically DNS clients are somewhat historically broken.
+00:15:09 [W] I think one of the common offenders was Java way back in the day and they don't handle changes the DNS records very well, you know, if you think about it DNS typically you do a
+00:15:24 [W] You kind of forget about the fact that that record could change out from under you the next question would be well, my clients are ready 10 do this kind of you know load balancing inside the client itself.
+00:15:27 [W] Common examples are thick clients like the redis client library or for example grpc.
+00:15:33 [W] Can I opt out the answer is yes.
+00:15:36 [W] So the way you opt out is you can have a headless service which basically gets a DNS name that returns a list of back ends as a records, but doesn't really need the
+00:15:46 [W] AIP and hence has no virtual IP services and kubernative Zar. Also, how you configure L4 load balancers.
+00:15:52 [W] So cute proxy provides L for load balancing within the cluster and between pods to Cluster IP virtual IP s of circular Nettie services, but you can also configure
+00:16:08 [W] That take traffic from clients that are outside of the cluster.
+00:16:08 [W] so different lbs work in different ways, which is too broad for this talk but basically kubernative integrates with most Cloud providers to use their Network load balancer the external load balancer internal load balancer and configure a cloud-based load balancer
+00:16:23 [W] The service let's talk about Ingress.
+00:16:17 [W] So Ingress describes a HTTP proxy and routing rules and it's a very simple API what it does.
+00:16:25 [W] is it matches host names in your own path?
+00:16:27 [W] What an Ingress does is it describes a very basic HTTP router and it can Target a service for each rule in the Ingress kubernative defines this API but implementations are third
+00:16:42 [W] So actually there's many many many implementations of the Ingress API out there and we find that there is basically integration with almost every cloud and with every popular software lbe here's an example of an Ingress configuration.
+00:16:54 [W] On the left the yellow we have the Ingress with the host name and the number of pads. Now since Ingress is a tell 7 concept it typically stitches together multiple services to serve a
+00:17:09 [W] Website. So in this case, we have a website that has a foo service and a bar service and they're mapped to these HTTP paths Foo / films / bar, and they point to a service which is Food Service in the surface, which is bar service
+00:17:20 [W] To the actual back ends of the pause that serve that service common questions that people ask about Ingress one question.
+00:17:23 [W] How is this different from service load balancer? So surface load balancer basically is somewhat of an elf or ish concept talking about virtual IP, s ports and protocols like TCP UDP now s dtp.
+00:17:38 [W] Whereas the Ingress talks about an L7 protocol and actually stitches together a potentially multiple Services into one L7 service.
+00:17:51 [W] Next question is why isn't there a controller in the box?
+00:17:54 [W] So what is interesting about at least the Ingress space?
+00:18:00 [W] is that there were you know HTTP proxy and has been around forever basically and we didn't want to pick any winners. There were just so many implementations out there that were very very mature now looking back
+00:18:15 [W] A mistake but given the just the number of implementations.
+00:18:16 [W] I would say that the API is fairly successful even despite this network policy.
+00:18:21 [W] Now we're policy is a way for kubernative users to describe how pause can talk to each other and how pods actually can't talk to each other.
+00:18:32 [W] They say it describes the allowed call graph for communications. For example, a back-end.
+00:18:39 [W] Can talk to a front end and a front end can talk to a back end and back in can talk to a DB but the front end can never talk directly to DP.
+00:18:47 [W] If a front end of our attempts to talk to a DB that probably is a compromise or a bug. So just like Ingress implementations are mostly third party and they're often coupled tightly with the low-level Network driver.
+00:19:01 [W] The reason for this is that a lot of the logic for a cooling will also involve dealing with the packets that flow between the containers in our policy is a very simple API. So it has very simple rules
+00:19:16 [W] So just like Ingress implementations are mostly third party and they're often coupled tightly with the low-level Network driver.
+00:19:13 [W] The reason for this is that a lot of the logic for a cooling will also involve dealing with the packets that flow between the containers in our policy is a very simple API. So it has very simple rules
+00:19:45 [W] Fine focus on Apple owners rather than a cluster or network admins.
+00:19:48 [W] So this is something that is currently evolving in the Sig and we may need a related but different API for the cluster operators.
+00:19:57 [W] Here's an example of how Network policy works.
+00:20:00 [W] We have a bunch of front ends on the left. You have a bunch of back ends in the middle and we have a bunch of databases in the back.
+00:20:08 [W] And we can write a network policy rule that allows only front-ends to talk to it back ends and back ends to talk to databases.
+00:20:15 [W] But as you see here those red lines a front-end talking to a database or front-end talking to another friend in or disallowed and if the front end tries to send traffic in this way, the packets will just get dropped.
+00:20:28 [W] Let's get into part 2 which is a deep dive into new work that's going on in the Sig. Okay. So in part 2 of The Deep dive we're going to talk about
+00:20:37 [W] Out ongoing work in the Sig some of these things have reached GA stage.
+00:20:43 [W] some are in Alpha and some are in beta topics that we want to highlight today in this session are work on improving DNS scalability improving endpoint API scalability.
+00:20:57 [W] Improving Services Express ability orthogonal T and you know being able to map services and the express more complicated role-based
+00:21:13 [W] In of responsibilities for services and finally IPv6 dual stack.
+00:21:20 [W] Let's talk about notebook with DNS.
+00:21:22 [W] So this has been a perennial topic kubernative.
+00:21:26 [W] I think there's been probably more than five toxic keep con about how to deal with the nsmcon.
+00:21:43 [W] It's various names are great because you can create applications that look up names that are sort of independent of with namespace. It's living in which cluster is living in but you know implementing
+00:21:58 [W] Is pretty expensive because it requires this expansion.
+00:21:48 [W] The other interesting thing is that we notice that criminal has also has high DNS requests because of application latency.
+00:21:57 [W] So if you have a bunch of microservices now instead of your VM having a single application you actually pack it quite full with different applications than they all are doing the same amount of DNS.
+00:22:10 [W] We also have noticed that there are many DNS heavy application libraries such as node.js
+00:22:18 [W] And finally because the way DNS is typically implemented using Q proxy the way that Q proxy uses contrac interact badly with UDP contract wants to track connections.
+00:22:32 [W] UDP has no sense of connections.
+00:22:34 [W] So what's the solution no local DNS and this has gone ga-in 1.18.
+00:22:42 [W] As with most systems problems, you know, there's the two things you go to Cache level of indirection while the solution in this case is to run a cash on every node and add a level of indirection to the cube DNS service.
+00:22:57 [W] So we have to be careful about this because as soon as you talk about running something on every node now you have increased the per node overhead and this could become easily dominate in large clusters.
+00:23:08 [W] But we need to be really careful about how availability during upgrades and failures.
+00:23:06 [W] Let's take a look in detail about how node local DNS works.
+00:23:10 [W] So here we have the current way. Keep DNS operates tikv. NS in yellow on the right are set of back ends that are part of a service keep the nsf's that has a
+00:23:25 [W] Virtual IP is used by cubelet to populate the Upstream DNS server for the pods.
+00:23:20 [W] Here's what happens when local DNS is installed on the Node.
+00:23:25 [W] No local DNS is a Daemon set. So it runs side by side with the pod on the Node and as part of running it also installs a dummy interface and a set of no track
+00:23:40 [W] Basically Telco proxy that if you are sending traffic to the cube DNS virtual IP, which is 10.0.0.0 n actually to skip Q proxy and send the packets to the node local
+00:23:52 [W] Oh Damon.
+00:23:50 [W] No local DNS will then take those packets and send them out directly to a replica of the cube DNS service called Cube DNS Upstream, which has a different IP address and that will reach the cube DNS or core DNS service.
+00:24:06 [W] Now, what's nice about this is that when no local DNS, let's say runs into trouble or crashes in some way.
+00:24:14 [W] There is an agent that's a sidecar of no local DNS that will remove the no track rule in that case after this crash.
+00:24:23 [W] The no track will will disappear your pod will then have its DNS tracker traffic not captured by the dummy interface. In fact, it will go through cute proxy and it will go back up.
+00:24:35 [W] To the Upstream.
+00:24:37 [W] So in this way no local DNS is able to transparently insert itself and remove itself from your node without actually disrupting the DNS for your pod. And this is super important because many applications if DNS starts acting up.
+00:24:52 [W] And this is super important because many applications if DNS starts acting up bad things can happen. Let's talk about m point slice.
+00:25:01 [W] and point slice is an interesting exercise in figuring out how to scale a kubernative object that has gotten very big now in larger clusters think 15 K nodes and very large
+00:25:16 [W] That has gotten very big now in larger clusters think 15 K nodes and very large Services can lead to scalability issues in the API.
+00:25:26 [W] So as you remember the endpoints object contains a list of all the endpoints that are part of a service for service. That's like five pods.
+00:25:37 [W] not a big deal, but imagine that you have five thousand nodes and you have enough and points.
+00:25:45 [W] To make up one megabyte. So maybe a thousand ten thousand pods in the service then the amount of data that's going to be sent both written to the database and sent to all the Watchers in the whole
+00:26:00 [W] Which is basically a few proxy in this case actually becomes quite enormous, especially when they get updated.
+00:26:07 [W] So here we have SIMPLE calculation five thousand nodes and points are 1 Megabyte.
+00:26:12 [W] You'll basically transfer 5 gigabytes of data, which is basically a DVD and then, you know, if you do a rolling update on a deployment of a 10,000 Parts service and each one results in an
+00:26:27 [W] And then, you know, if you do a rolling update on the deployment of a 10,000 Parts service and each one results in the end points update you might end up transferring up to 25 terabytes, which is
+00:26:42 [W] You may end up transferring up to 25 terabytes, which is a lot in all it's doing is trying to tell every cue proxy what did list of n points are so what's the endpoint slice solution?
+00:26:55 [W] So here we have that the EP and end point.
+00:26:59 [W] We have a single update to one of the entries in the end point and we end up sending the whole thing to every single Cube proxy now with endpoint slice what we have done is we have
+00:27:10 [W] Sliced up the endpoint. We have multiple slices slices objects that represent a single and point here if given a single update to one of the slices.
+00:27:22 [W] We only need to send the slice now clearly.
+00:27:25 [W] This is a trade-off between how many slices you have to deal with versus how small you can make that incremental update and that's an interesting design question. So and point slice to implement it we
+00:27:40 [W] of a new controller actually two new controllers and end points sliced controller which basically takes services and the service selector and instead of creating an end points object actually creates slices multiple
+00:27:55 [W] You can make that incremental update and that's an interesting design question.
+00:28:01 [W] So and point slice to implement it. We have a new controller actually two new controllers and endpoint slice controller which basically takes services and the service selector and instead of creating an end points
+00:28:36 [W] service elector
+00:28:38 [W] We also have an endpoint slice mirroring controller which creates slices from a selector list service.
+00:28:44 [W] And other users can also create endpoint slices and they set a managed by to say that hey these slices belong to some other controller.
+00:28:53 [W] That's not the standard ones managed by kubernative. Now. One of the challenges of slicing is that you don't have this one to one correspondence between a service and for example is endpoints object instead we have to
+00:29:08 [W] Which is a service name that map's between a bunch of slices and the service that it represents.
+00:29:15 [W] So I said before that an endpoint slice is a trade-off between how many slices do you make how small they are?
+00:29:23 [W] also how do you update them such that you don't end up in the same situation as before you kind of want to do three things. You want to keep the number of slices low.
+00:29:34 [W] You want to minimize the changes of slices per update and you want to keep the amount of data sent low.
+00:29:39 [W] So we settled on basically a fairly simple algorithm for now seems to work.
+00:29:46 [W] Okay, but really we need information and in practice to see how this behaves but the current algorithm does the following first. It gets a list of all the employees slices corresponding service.
+00:29:59 [W] It runs through the service selector on the pause to figure out what the set of n points should be.
+00:30:05 [W] Then it runs through all the slices in memory in a rooves stale and points in the existing slices next it will fill in new and points into the free space left over from the Salient points.
+00:30:17 [W] And finally it will create new slices only if there's no more room what this is trying to do is basically try to reuse the existing slice objects without having to create new ones.
+00:30:29 [W] Basically had a bun all this tail end points go down except for one of them. Those slices will still be there.
+00:30:30 [W] But the claim is that this is kind of pathological and really in practice. You wouldn't get that kind of situation and instead we would want to avoid turning deleting and adding slices.
+00:30:43 [W] So what's the status of endpoint slice? So Envy 117
+00:30:48 [W] and point slice controller was beta Envy 118. The slice controller was enabled by default, but there was no Q proxy and 119.
+00:30:58 [W] Everything is beta and everything is enabled by default.
+00:31:01 [W] And finally we're going to GA in 120.
+00:31:05 [W] So endpoint slice is also interesting because since it's a core API and so fundamental to the operation of the system.
+00:31:11 [W] actually has taken on these many releases to kind of get it right and make sure that if you upgrade
+00:31:18 [W] To or downgrade you won't actually end up in a situation where everything breaks.
+00:31:22 [W] Let's talk about Services across clusters.
+00:31:25 [W] So as kubernative installations get bigger multiple clusters is becoming the norm and this is especially true on for example Cloud providers where the cost of creating a cluster is to just spin up a bunch of the alms lots of reasons to have
+00:31:40 [W] Haproxy clusters in different regions blast radius of configuration changes.
+00:31:37 [W] So if you do a sort of cluster scope configuration change, you can only blow up a small cluster rather than a large cluster geography latency and so forth many kubernative zaps tractions, in fact most of them
+00:31:52 [W] assumed to be cluster Centric
+00:31:41 [W] Services is one of these things surfaces have always been a cluster Centric abstraction and now in Sig Network and actually Sig multi cluster.
+00:31:50 [W] We're starting to look at how to basically extend the service of traction and these sets of resources to work across clusters.
+00:31:59 [W] So how does this work given a set up like this how to clients in the front end talk the back ends.
+00:32:04 [W] There are always ways existing right now such as talking through load balancer in the feels like it should be easier than this.
+00:32:11 [W] So what we're looking at with the multi cluster service is something like this the first you define a service just a plain old kubernative service, but you also say that the service is exported.
+00:32:24 [W] But what does that mean?
+00:32:26 [W] So what it means is that the service is exported to some group.
+00:32:31 [W] So we assume that there is some manner of grouping and in the Sig multi cluster. This grouping is called a cluster set. So it's a set of clusters that are sort of
+00:32:41 [W] Of cooperating in the same administrative domain.
+00:32:45 [W] We don't make very strong requirements on this grouping. But only that such a grouping exist.
+00:32:52 [W] Now this leaves room for interesting implementations by not imposing such a strict requirement.
+00:32:59 [W] Between different clusters mean the same thing.
+00:32:58 [W] If you have a prod namespace in this group of clusters in the cluster set that that prod namespace will sort of have the same ownership and admin model across the Clusters we can build controllers that
+00:33:13 [W] Operate across these clusters and sort of operate across these name spaces that are spanning cluster.
+00:33:12 [W] What service export does is it triggers the multi cluster service controller to publish this back-end service when you have exported it what this means is that it will create a service import. It also creates endpoint slices to represent the
+00:33:27 [W] Union of all end points across all exported services in this case.
+00:33:32 [W] It's just one that is exporting now clients in the front end namespace can talk to the backend namespace even though it exists in a different cluster.
+00:33:41 [W] Now what services comes DNS records multi cluster service also defines DNS records as well.
+00:33:47 [W] Just like before we have the name of your service the namespace that lives in and a multi cluster DNS Zone a couple of interesting things. You may think.
+00:33:57 [W] Of is one.
+00:33:59 [W] This is super cluster dot local.
+00:34:00 [W] This may be changed in name to Cluster set dot local.
+00:34:03 [W] The other thing is do cluster sets have their own domains. And these are things that we are currently working with Sig multi Foster to kind of figure out what are the use cases where the should go kind of as a more advanced
+00:34:19 [W] Example, you know that the back end service actually might exist across multiple clusters.
+00:34:23 [W] So you might have a service export and import that actually Aggregates the service back ends from both cluster a and cluster B. And if you access the cluster set IP or the supercluster IP, you will access
+00:34:38 [W] Cans from all of these Services across clusters is mostly kept way right now, but people are very busy hammering out the implementation and the API and the names and we're still working on some of the semantics now one of the big challenges of kubernative or
+00:34:53 [W] Iot cluster is that it's okay. If the things that you're defining in the API don't conflict, but what if you have a bunch of services that are linked together by surface export but you put some config on one cluster that's conflicting with another clustering
+00:35:08 [W] Those things have to be resolved now.
+00:35:10 [W] Let's talk about IPv6 ipv4. Dual-stack. IPv6 is something that's been rolling out for ages and kubernative is no exception and some people users will need to run Network Services in pods in
+00:35:25 [W] Both ipv4 and IPv6 at the same time currently kubernative only supports one pod.
+00:35:32 [W] And this IP has to be either ipv4 or IPv6. It cannot be both.
+00:35:40 [W] Some users need services that are in both IP families So kubernative currently only supports one service.
+00:35:46 [W] I be it has to be ipv4 or IPv6.
+00:35:50 [W] So while this change is very small.
+00:35:52 [W] it's actually quite fundamental and I think one of the harder things that we do in computer science is to take something that was singular and make it plural.
+00:36:02 [W] So one question also was wasn't this done already.
+00:36:06 [W] The answer is yes, but we found a couple of problems in this actually needed a major reboot.
+00:36:13 [W] What does supporting dual stack mean for resources in fact affects almost every resource that refers to IP addresses so for poddisruptionbudgets?
+00:36:43 [W] Them is V6.
+00:36:44 [W] There's a bunch of API Machinery to handle the fact that the singular field and the plural field have to be in sync in this case.
+00:36:53 [W] It's invalid if you submit a pod resource with a pod IP that's different than the one that appears in the list of product these the same change has to be done for node.
+00:37:07 [W] Here the Pod Siders are pluralized and API Machinery validation guarantees that the pot cider and the Pod Siders. Remain the same now.
+00:37:17 [W] let's talk about service.
+00:37:19 [W] So here we have service and it has a cluster IP.
+00:37:23 [W] That also has to be pluralized.
+00:37:27 [W] There's an interesting subtlety here.
+00:37:29 [W] Which one do we give depending on the user's preference? Should we always give ipv4?
+00:37:36 [W] Or we give an IPv6 address.
+00:37:40 [W] Should one of them be the default and that is kind of the Crux of the reboot.
+00:37:46 [W] It turns out that we can't make very strong assumptions about which family is returned in the cluster IP.
+00:37:56 [W] We have various requirements and turns out all of these seem to be valid. The user says I need a dual stack.
+00:38:05 [W] I would like to stack if it's available or I need dual stack and all of these are things that users could request.
+00:38:13 [W] So the solution is that it will default it single stack if users don't express a requirement. But if they need a specific requirement, they can actually express it in there.
+00:38:25 [W] Yeah moles in this works were headless Services note ports in lbs, if the cloud provider supports basically dual-stack Albie's and we're shooting for a second Alpha in 120.
+00:38:38 [W] It's like a very big PR but it looks like it's on its way.
+00:38:42 [W] They're so this is great.
+00:38:44 [W] Let's talk about services and the sort of next iteration and how we're thinking about the API.
+00:38:51 [W] So looking at the current service API.
+00:38:54 [W] It's a resource that describes many things.
+00:38:56 [W] It's a method of exposure cluster IP.
+00:38:58 [W] No poor little bouncer. It's a way to group pods.
+00:39:01 [W] So it's like a selector as we saw in the end points discussion also contains a bunch of attributes such as external traffic policy session affinity and so forth. It turns out that sort of evolving.
+00:39:12 [W] The resource has become quite hard to the fact that all of these fields interact with each other and the other thing that makes this complicated is that this as you see on the right-hand side, there's actually a hierarchy almost inheritance of
+00:39:28 [W] Different service types, one of the goals of re looking at Services is to evolve the L7 and L4 and kind of breakup service into these more orthogonal features along the way we want to provide.
+00:39:42 [W] They'd sort of a way to model different roles that are present in the cluster.
+00:39:49 [W] One of the ideas is to decouple some of these service Concepts and features along Rolexes. Now whenever you do a role based design, you have to first think about the personas that you want to kind
+00:40:04 [W] Of address and we kind of split up the rolls into the following sets.
+00:40:09 [W] There's that of a cluster provider and infrastructure provider, you know, this could be your cloud provider or this could be the person that runs your infrastructure as a service.
+00:40:18 [W] There's a cluster operator or network operator who basically manages the entire cluster as a whole and then there are the application developers who basically are given for example name spaces in which to do their thing, but not
+00:40:33 [W] Control the entire cluster now the concepts we talked about in the previous slide.
+00:40:38 [W] We also have split up in two different axes.
+00:40:43 [W] So grouping and selection will remain the domain of the kubernative service routing and protocol specific attributes will be put into a protocol specific routing resource and finally exposure and access is basically
+00:40:59 [W] The virtual IP the end point that the clients will be contacting will be part of Gateway.
+00:41:04 [W] And finally at the top of this is Gateway class what Gateway class does is it says that this particular Gateway router and Route will be implemented by a particular type of provider.
+00:41:19 [W] They're very similar to how ingresses can have Ingress class or storage and have a storage class.
+00:41:27 [W] Let's go through each of these roles and kind of see get a taste of like what the API looks like.
+00:41:33 [W] So the infrastructure provider will basically create a bunch of Gateway classes that then are backed by controllers that Implement a Gateway class.
+00:41:42 [W] So these Define a type of service access for the Clusters, for example, you can give your consumers of the Gateway classes generic names such as internal proxy internet lb it kind of abstract them from
+00:41:58 [W] How these things are implemented this as I said before this is simple similar to storage class has which abstract the implementation of mechanism from the consumer.
+00:42:09 [W] The second Persona that we're looking at is the cluster operator net Ops and this person we find is typically determining how services are accessed by the user.
+00:42:20 [W] You know, what port O'Call addresses TLS certificates whether or not it's on the internet whether or not its internal what resources you know, maybe it's expensive gold load balancing
+00:42:35 [W] Your cheaper infrastructure and really the cluster operator.
+00:42:40 [W] We feel will control the Gateway resource is a keystone resource. That's one to one with active configuration of some part of the infrastructure creating a Gateway resource will spawn for example a software.
+00:42:54 [W] I'll be in the add a configuration stanza to an existing lb May program the sdn.
+00:43:01 [W] So the Gateway will sort of describe how the whole service will be accessed and we also note that this Gateway resource may be under specified so you can kind of
+00:43:16 [W] Request a particular kind of Gateway, but the system and implementation can kind of fill in the details.
+00:43:05 [W] so here's a sort of a sketch of the Gateway resource and you'll see that it's under specified because all we're doing is asking for a port and about selector to see which routes are linked to this Gateway, but
+00:43:20 [W] About for example, which address it's going to get and those will be dependent on filled in by the Gateway class.
+00:43:23 [W] the final role that we're looking at when designing these sort of like orthogonal Services is that of the application developer the application developer is going to come up with you know, the set of routes that make up the
+00:43:38 [W] There for example in this case the store app which Services is going to route to in kind of the protocol specific matching and filtering.
+00:43:45 [W] That's how they Implement their application one interesting thing is that we have done here is in modeling this we have actually split out each of these routes into their own protocol specific resources.
+00:44:00 [W] Keep your route TCP route and so forth and this allows us to one make a resource that's specific to that protocol. So it's much easier to understand and to because they're actually separate resources that can all linked into Gateway
+00:44:10 [W] Creates a bit of extensibility. For example, if your gateway class provider can handle like a new protocol.
+00:44:14 [W] For example, let's say you do redis load balancing you can have a redis route that can talk about redis protocol specific details and actually add that to the system without having to say modify the entire standard
+00:44:29 [W] stream
+00:44:29 [W] what happens to service? So service still exists and you know all the basic functionality since its GA and part of the core will always remain but we're seeing that we're hoping to evolve it to a place where basically it's limited to grouping and selection.
+00:44:44 [W] But we're seeing that we're hoping to evolve it to a place where basically it's limited to grouping and selection.
+00:44:42 [W] So it's basically mostly just talking about the set of back ends that comprise the service.
+00:44:48 [W] So if you want functionality still works, but hopefully we won't have to add significantly to that surface area.
+00:44:55 [W] To add new interesting functionality on top of it.
+00:45:00 [W] So here's an example kind of broken out.
+00:45:03 [W] So we have a Gateway class that's referred to by the Gateway and the Gateway class defines sort of how the implementation will be wiring up the rest of it.
+00:45:15 [W] For example internet lb that's Implement by cloud provider that way but particular Gateway class, then we have Gateway which talks about sort of protocol termination which ports how the client is going to access this and that
+00:45:30 [W] That will be attached to a number of routes that the application developer will be writing and then the application developer will also be managing the services attached to it.
+00:45:42 [W] So the initial view 1 Alpha 1 it will cover basic applications and data types Gateway class for interoperation between different controllers.
+00:45:51 [W] I'll Gateway and Route so HTTP TCP HTTP server sativa secrets, and we actually have a whole bunch of implementers were going to participate in this Alpha
+00:46:06 [W] We're looking at both merging style implementers, which is sort of multiple gateways that are hosted on a single proxy infrastructure.
+00:46:15 [W] For example, you run Ingress nginx.
+00:46:19 [W] That's like a merging style Gateway that's running inside your cluster as well as a provisioning style or cloud-based Gateway. So you have a Gateway that when you created it actually maps to a cloud load balancer.
+00:46:31 [W] That is just some of the things that we're up to.
+00:46:34 [W] So, how do you get involved There's issues dot k8s dot IO which will send you to a place to file bugs clean up ideas and feature requests and you can also use this to find issues to help with so a large changes to kubernative
+00:46:49 [W] Are done through the enhancement process, which is also known as caps kubernative enhancement proposals and enhancements are user Visible Changes or even infrastructure changes of a sufficient size.
+00:46:52 [W] So pleased and submit enhancement proposals the best way to kind of get your kept moving is to show up at Sig Network and discuss what you're proposing probably in that discussion.
+00:47:06 [W] It will spill onto the mailing list or maybe a shared.
+00:47:09 [W] You meant and then after we have kind of consensus it will become a cap.
+00:47:16 [W] So if you want to get involved, there's our community page.
+00:47:20 [W] We have a zoom meeting, which is every other Thursday. The slack is hashtag Sig Network and then the mailing list.
+00:47:54 [W] Hello.
+00:47:58 [W] I I just wanted to thank everyone for showing up.
+00:48:01 [W] It's a way longer than a recession time.
+00:48:04 [W] Thanks again for watching Xbox.

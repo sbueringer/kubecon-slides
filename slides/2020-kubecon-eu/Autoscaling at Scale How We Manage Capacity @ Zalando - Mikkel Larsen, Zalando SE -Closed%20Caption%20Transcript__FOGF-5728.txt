@@ -1,0 +1,211 @@
+﻿Autoscaling at Scale: How We Manage Capacity @ Zalando: FOGF-5728 - events@cncf.io - Tuesday, August 18, 2020 7:40 AM - 84 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello everyone and welcome to this talk on auto scaling at scale and how we manage capacity at Solano. My name is Megan Larson.
+00:05:03 [W] I'm a software engineer at Solano and I work in the cloud infrastructure team, which was responsible for managing. Our company's infrastructure.
+00:05:11 [W] Salon du is the leading online fashion retailer in Europe, and we operate in 17 countries across Europe.
+00:05:20 [W] We have a levantine. We have an 11:00 fulfillment centers as a warehouses where we ship out all the passion articles.
+00:05:27 [W] We have 33 million active customers and a lot of this is every month. And in order to handle this size on the on the technical infrastructure side.
+00:05:38 [W] currently have a hundred and fifty Goonies clusters running in AWS.
+00:05:43 [W] Half of them are production and the other half the test clusters we have around 4,000 little bit more than 4,000 Services where 85% is running in communities and we aim to increase this to 95% of all services.
+00:05:56 [W] and because of solando operates only European also have a certain traffic pattern where we see less load in the nights because there's less people active on this website and therefore usual scaling in
+00:06:12 [W] Communities clusters is between 50 notes in the night and German 50 on the the peak hours of the day.
+00:06:24 [W] is not for all the Clusters but it happens for the for the bigger ones that see so much scaling difference.
+00:06:26 [W] And how we manage scaling from the user point of view.
+00:06:34 [W] So the users of the kubernative infrastructure that the teams developing services for solando is through horizontal pot or scaling.
+00:06:43 [W] This is kind of the interface that we give to users and we use the horizontal part autoscaler the official one from kubernative and the best way to explain this one is to look at the algorithm.
+00:06:55 [W] The main idea is that it wants to calculate a number of replicas or number of pots on
+00:06:57 [W] Of instances of your application that should run given a certain amount of given the current metrics that is observed.
+00:07:12 [W] So the calculation is that it takes the current number of replicas and multiplies it with the current metric over the desired metric and the current metric is what is currently being observed of the running pot. So we could be the CPU usage across all
+00:07:20 [W] And the decided metric is what you have to find for your application this in the scaling configuration. So you might say that you want your service to have 50% CPU load.
+00:07:35 [W] So if you load per instance of her pot and then you configure 50 percent average useless ation.
+00:07:47 [W] then if the if the current metric is reported to be higher than this then it means that it needs to scale out and if it's lower than this then it needs to scale in.
+00:07:52 [W] I'll scale down and one thing to also note about the algorithm is that it uses a seal and this is to ensure that it it calculates a bit more than needed in some cases.
+00:08:07 [W] Shoot the target then to under shoot the target because you rather run with a little bit extra capacity than to run with too few.
+00:08:18 [W] So that's why it uses the sealed through to ensure that their official HP case supports CPU and memory out of the box as metric types. And then it also supports custom or external metrics and because
+00:08:30 [W] Often our case because we have a lot of different applications and provide all of different use cases.
+00:08:39 [W] We have developed something we call the cubemetricks adapter, which is a component that can interface with the HPA and provide custom metrics.
+00:08:51 [W] the metrics we provide there is Ms. On HTS, so you can scale your application based on SQL SQL length. So if you have some job that read from a queue, you can scale out the number of workers based on that.
+00:09:03 [W] We also support Ingress requests per second metric to Scale based on the HTTP traffic for easy Pap eyes and services.
+00:09:15 [W] We also have a generic Prometheus query interface. So you can Define any Prometheus Korean Scale based on that.
+00:09:24 [W] You can also Define Json metrics. So if you have a service that just returns metrics in some Json format you can use this to scale on and then we also have a settlement checks, which is our internal monitoring.
+00:09:33 [W] Where you can also get metrics and some different format and this we also support and we last they all support in flux TV crows.
+00:09:44 [W] We don't use index DB in zalando, but this was contributed to us from outside and the cubemetricks is that there is an open source project available and also has users outside of solando. So
+00:09:55 [W] The link I put you in the slide and just to show how it it. Looks like with an example.
+00:10:06 [W] Here's where we scale them on requests per second.
+00:10:08 [W] So this is one of our services where you see the orange which is the requests per second and you see the black line, which is the number of pots and this shows clearly that like it useful to have something that scales based on the amount of traffic.
+00:10:21 [W] Of course, there are also some challenges using HP and some limitations that is either not supported yet or supported.
+00:10:36 [W] We're in very recent kubernative versions.
+00:10:42 [W] So one thing is scaling Behavior, which was until kubernative 118 a cluster white setting so you couldn't do it per application.
+00:10:51 [W] another thing is that pots with multiple containers inside are not handled variable.
+00:10:52 [W] Go on scalar and I want to show it give a shout-out to our June make.
+00:10:57 [W] who was in our team before and it doesn't work gets London anymore. But while he was here, he did a lot of contribution upstreams kubernative surround the HPA and he's working on the on the first issue and is currently working on the second issue, which is not
+00:11:12 [W] Hopefully we will see it soon as I fix for multiple containers and the the scaling Behavior issue of the changes that were done in 118 is that until 117 and including
+00:11:28 [W] Just hit some settings.
+00:11:32 [W] You could set lost the white so namely this downscaling stabilization is interesting.
+00:11:38 [W] This means how how fast service will scale down depending on the metrics.
+00:11:45 [W] and normally it will just five minutes.
+00:11:48 [W] So no matter what kind of service your head. You just have to rely on these five minutes. But from Coney is 118. You can configure these individually / auto-scaling configurations or per application. So for instance you could do here.
+00:12:01 [W] And in the example where you set it at lower scaling window from five minutes to 60 seconds, and this would mean that it would scale down faster.
+00:12:09 [W] You could also increase it. If you want to be more conservative with scaling down. Another thing you can do is use policies, which is behavior policies, which is a way to say if you are supposed to scale down.
+00:12:23 [W] Relate to scale down by 10 pots, then you can say that it should only scale down 10% at a time.
+00:12:32 [W] So one pot at a time and this way it doesn't just drop ten Parts at once but it drops the tin pots more slowly one one by one.
+00:12:45 [W] So the way to reduce the scaling in case it would have been too much so it could be that you have not consistent load on your system and you don't want to just scale to more aggressively down and this
+00:12:55 [W] these behaviors also work on the the other direction.
+00:13:02 [W] So when scaling up you can also treat this as very useful for having this per application where you have different different behaviors that you need to handle.
+00:13:07 [W] Regarding the multiple containerd pots issue.
+00:13:17 [W] Here's an example of how it how it currently works. So you can understand what the problem is imagine.
+00:13:24 [W] You have a pot with two containers inside and they each request some in this example each request 250 Milli course CPU and they one uses 200 million calls and the other uses 50 Milli calls and you could think
+00:13:34 [W] It's the main application in your in your pot and the other one is a sidecar.
+00:13:43 [W] It could be like a like a nice stereo side profile servicemeshcon something like this or it could be something that ships locks or whatever.
+00:13:54 [W] The main point is that they might have one application one container, which is the main container that you want to scale on and the other one is kind of secondary, but the way it works is that it takes the sum of all the
+00:14:02 [W] Treating them individually, it just take the sum and the sum of usage and the sum of requested CPU and then instead of having 80 percent for the for the main maintainer the the result of the HPA.
+00:14:18 [W] is that it sees 50% utilization across all the containers so not necessarily wrong the calculation, but it's not really helpful for what you want because if you want to scale your main application and you main container when it's at 50 percent
+00:14:35 [W] point and it is s at at 80% and if example then it wouldn't scale up.
+00:14:41 [W] So this is this is the problem and the solution for this problem that is proposed and currently being implemented is to extend the the way you define metrics. So in the in the past or are currently you have
+00:14:53 [W] Can specify a type resource and D could be CPU and then you specify the the average utilization and this is this across all the containers but in the future you would be able to specify another metric type, which is containerd resource.
+00:15:09 [W] future you would be able to specify another metric type which is containerd resource and here you can specify which container that you want to Scale based on so you can also add multiple containers and scale and all of them with different strategies, but the main point is that you
+00:15:19 [W] So you can also add multiple containers and scale and all of them with different strategies.
+00:15:21 [W] But the main point is that you can select the one that you mode care about and that mostly yeah explains how your application is scaling.
+00:15:32 [W] So this will be very useful when this lens and fortunately it is what not in in 119 of kubernative, but hopefully we will see it in 120 definitely looking forward to this one and this is also a trend that is working on that.
+00:15:42 [W] Now now we talked about the horizontal part over skating.
+00:15:50 [W] This is what our users do but it doesn't make sense to scale the parts horizontally unless the cluster also scales underneath and for this we have cluster Auto scaling and there we use the official Cost Auto scale of a kubernative
+00:16:06 [W] How it works is that normally you would deploy auto-scaling groups which are with your instances.
+00:16:18 [W] So this is running in AWS as an example.
+00:16:20 [W] It also supports tikv and other Cloud providers, but in AWS, you have auto-scaling groups and you place your notes or instances in those and then once there is a pending pot the autoscaler will
+00:16:32 [W] first see if it can fit on in the system note. If not, it will try to scale up a note in in one of these availability zones and normally for parts that don't have so much requirements.
+00:16:47 [W] They can run in any of those zones, but if pot needs a volume, it has is usually attached to a single zone and then the autoscaler need to pick the right Stone. So in this example, it would be some see that it has to pick
+00:17:00 [W] All side we have some abstraction on top of these old scaling groups that we called No pools and a note pool is basically a way to define like one type of instance. And
+00:17:15 [W] That is mapping to multiple auto-scaling groups.
+00:17:25 [W] So by default we met through three Auto scaling group, but we can also reduce it to less if you want to have a certain need for that.
+00:17:34 [W] But basically you define an opal you give it to you. Then you get all the skinning groups with the same instant types the same note labels and pains. If you want to have special scaling or scheduling logic there and the same Min and
+00:17:43 [W] But the difference is that the they aren't different zones.
+00:17:57 [W] So if we look this from from how we Define it, we basically have a list of no pools for each of our clusters. We can give them a name like default to find the in the instance type to be used and then set the Min and Max and then we also
+00:18:03 [W] Rights, and which is a way to either it labels obtains or set other special configurations for the non pools.
+00:18:18 [W] So one example could be that we have a custom node pool which has a certain instance type with local SSD storage and then we will label and chain these notes with a dedicated storage label such that the pots that really need to
+00:18:25 [W] Local SSD can Target those in the in the note select all the total duration.
+00:18:36 [W] This is how we operate like how we handle that.
+00:18:39 [W] There are special cases for different parts.
+00:18:42 [W] So it could also be a CPU node. We would label in a certain way.
+00:18:45 [W] So only parts that actually need to use the CPU GPU. I mean would land on this.
+00:18:50 [W] And because the cluster autoscaler by default doesn't do everything we want and doesn't do everything we want as well as we want. We have made some changes to the official and we run a photo of it and the changes
+00:19:07 [W] Is to do more robust template no generation. So it simply note is that there's a pot that is pending and the autoscaler tries to calculate what kind of instances need to create a what kind of kubernative snowed it would need to satisfy the pot
+00:19:23 [W] And of instances need to create a what kind of kubernative snowed it would need to satisfy the pot and in the in the official autoscaler.
+00:19:29 [W] It's not so easy. If you don't have any existing nodes because it relies on the existing nodes in the cluster. But if you're scaling from zero, you need a way to predict how the noble look like. Once it's created and this we have made some changes around that and we also added
+00:19:42 [W] Some types of knative. Yes.
+00:19:47 [W] This is mainly to handle spot where you can create auto-scaling groups that have different instance types and then AWS spot can select which which is the best for the time so if there's a certain
+00:19:59 [W] That's it will select another instance.
+00:20:02 [W] I can give you and additionally we have added a custom customizable back of settings, which is needed when you are trying to scale up Auto scaling group and it fails for whatever reason we hit many issues. Where
+00:20:17 [W] Somebody don't have enough of the instance type that we want and then the autoscaler has to fact fall back to another kind of Auto scaling Group, which has a different instance type that can be provided at this time.
+00:20:33 [W] And we want this to be as fast as possible. So we don't have pods pending for too long time.
+00:20:42 [W] time. And last thing we did is we added some priority-based expander expander is a name used in the autoscaler for logic that can.
+00:20:50 [W] Kind of figure out which node to pick which is the best one to pick and we added a simple one which uses priorities and the way it works is that we have here again the no pool overview, but you can see
+00:21:04 [W] priority is to find and this way we can Define the default node pool with a priority is 0 and then we can Define fallback note pools of different instance types to have things to fall back to in case we cannot provide the
+00:21:20 [W] AWS doesn't have the one that we want by default and this can both work as just fall back. So going back to a nympho large instead of an M5 light show going back to an older generation instance, but it can also work in the way that we always
+00:21:36 [W] Instance type unless the pods request bigger size than if the pot has to run an M5 x large because of the request then it would would land on this instead of instead of a smaller one and
+00:21:52 [W] So snyk example, we can Define like I said multiple instance types and then we don't know which of them we get but whatever AWS picks as the best one for the time in terms of getting getting taken out of spot to
+00:22:07 [W] And for this we can use we also add a label so you can you can select an actively opt into running on spot instances if you want to do this.
+00:22:19 [W] Of course the autoscaler also have some limits and not the not the autoscaler itself. But once you figure out solve all these problems of the autoscaler so it can scale out and pick new instances
+00:22:37 [W] Then what you start to do is you start to hit limits and it's we found that it's very easy to hit the default AWS limits on the number of instances that you can have in your account.
+00:22:52 [W] And we also hit limits in the networking layout.
+00:23:04 [W] So for the AWS limits basically every account that is created has a certain default set of limited. So it cannot just create an account and create millions of instances and then in order to get this limit
+00:23:07 [W] Increased you need to open a support request to AWS and this became very time consuming because we had to do this for many accounts many clusters and we had to do this for all of these different note pools that we create.
+00:23:22 [W] So what we did is that we have a Cron job that just looks at how much we want and then it automatically creates the support request rate of this and bumps and limits for this helps us a lot so we don't have to do this ourselves.
+00:23:36 [W] And regarding the limit on the network is basically this depends a little bit on the network layout you happen.
+00:23:46 [W] how you what kind of network interface you use in kubernative, but in our setup we picked for all our clusters as less 16 side are which gives us around 65,000 addresses and with
+00:24:00 [W] Configuration per node. You have stress 24 which gives you 256 addresses per note and this also means that you can maximum have 256 notes because otherwise the address spaces used up, so
+00:24:17 [W] the first thing we hit was this limit that we couldn't create more than 256 notes and then we found a way to we basically figured out that the way to deal with this is to just increase the side out and
+00:24:33 [W] the extra space 2/15 per node because then you have only a hundred and eight Twenty Eight at which is per node, but you get five hundred and twelve notes and you can go further and select
+00:24:49 [W] Note and then get more notes in total.
+00:25:00 [W] The lowest we have is / 26 because once you go to / 27, you have so few addresses per note that it becomes hard to schedule any pots on the notes because usually
+00:25:07 [W] released a double amount of approaches as much Anon number of parts and this is to ensure that it can easily Shuffle around pots without giving them the same addresses as a previous part because then you could be sending traffic to
+00:25:23 [W] Location basically and one thing also to notice that the cupid has a limit of hundred ten Parts by default.
+00:25:39 [W] So even with this slash 24 where you have technically 256 addresses, you can only schedule hundred and ten pots.
+00:25:46 [W] This also means that if you want to lower this cider to assess 25 or less 26, then you also need to change the flag on the kublr it to have less spots because otherwise you can schedule more than you actually have
+00:25:54 [W] Addresses for so this is something to look out for and we have basically can configure this that we just have per cluster. We can configure this the node cider. And then we automatically calculate how many pots per note and yeah,
+00:26:09 [W] Two more than you actually have a process for so this is something to look out for and we have basically configured this that we just have per cluster we can configure this the node cider. And then we automatically calculate how many pots per note and
+00:26:12 [W] The limit we have right now is thousand Parts with this current setup.
+00:26:19 [W] So if we want to go further in the in the future more notes or cluster, then we need to change how the network setup is. So if you're creating a new class, then you expect to have a lot of notes then it's something to be aware of.
+00:26:28 [W] and of course, once you fix all of these limit problems and you allow users to scale up to a thousand nodes, then they will also do it so they will make sure to create enough push to scale out and this is just an example of this and
+00:26:45 [W] Scale up to a thousand notes, then they will also do it so they will make sure to create enough pot to scale out and this is just an example of this and by scaling up the cluster.
+00:26:50 [W] This is one thing this is actually fine, but it obviously also put some loads on the control plane.
+00:26:56 [W] So on the API server and so on and this is just an example of when you skate a thousand then our latency goes from solid. We cannot even see it here.
+00:27:06 [W] here until several seconds and latency and yeah, this is obviously not ideal because every time you do kubernative get pots or any controller that needs to list all the pots and the cluster will either time out or it will take much
+00:27:20 [W] here through several seconds and then see and yeah, this is obviously not ideal because every time you do kubernative get pots or any controller that needs to list all the pots and the cluster will either time out or it will take
+00:27:22 [W] Then normally so in order to handle this we have something we call the control plane or the scalar which is something that we develop our own needs. And the way it works is that it scales a
+00:27:36 [W] The the control plane notes, so they were just one on ec2 instances and the scale vertically.
+00:27:45 [W] The reason we scale vertically and not horizontally is that what you want to scale is that a single instance can read all the parts from it CD and and send it via the API server.
+00:27:57 [W] So having many small instances would not actually solve the problem because then do just have many small instances that need to lead a lot of data and
+00:28:08 [W] and what you want is bigger instances that can be a lot of data faster.
+00:28:17 [W] So we already run with two notes at minimum to have highly available.
+00:28:20 [W] But we don't scale it further horizontally instead.
+00:28:20 [W] We scale it vertically and we basically look at CPU load as an indicator for scaling.
+00:28:31 [W] It could also be interesting to look at memory, but we found that CPUs enough to indicate whether we need to pick a bigger instance and the way we scale this just by chatbots.
+00:28:36 [W] the instance type so we basically sold all the instance types available in AWS by V CPU and memory and then we exclude some like we don't include GPU notes and so on but then if if we see that the CPU load
+00:28:52 [W] Hi at a certain level that we want to scale out. Then we just add this control plane autoscaler will pick the next instance type sorted by V CPU and memory and
+00:29:07 [W] important things is that this automates a previous manual tasks because before we just had alerts that will tell us they Kaiser was on the high load and then we would go and figure out okay, this is running this instance type will just change into a bigger one
+00:29:23 [W] Made of this which makes it much easier to manage a hundred and fifty clusters and it's not only good for scaling out.
+00:29:33 [W] So it's getting bigger.
+00:29:39 [W] It's also good for scaling down again. Once the cluster is on the less load because you don't want to just leave running with a very big instances that are much more expensive.
+00:29:48 [W] So this helps us both and cost saving and also on the manual work that we would have to do in the past along with the vertical scaling of the control.
+00:29:54 [W] Plane, we also have vertical pot out of scaling and and here we use the vertical poddisruptionbudgets.
+00:30:24 [W] This is also usually what you want is if your memory and it's useful for components that scale vertically with the size of the cluster. So example is like Prometheus you want to have more execute more.
+00:30:39 [W] I want to collect more mometrix and maybe execute more queries depending on how many are bigger clusters and how many resources you have any cluster and you cannot just scale Prometheus horizontally you need to scale the individual instances.
+00:30:52 [W] It's a bigger size of so vertically another example is English controllers. So if you have just a single controller running in your cluster, and if you have more increases, then you also need to scale it vertically because
+00:31:08 [W] increase resources and keep them in memory for some time similar external DNS is not example bread also scales with the number of Ingress or service resources and you have any cluster so the bigger the cluster usually the pickup they need to
+00:31:25 [W] The vertical part of the skill is very helpful to manage this.
+00:31:30 [W] And this is how it looks like so here's an example of a Prometheus and one of our clusters and the orange line is the request limit.
+00:31:45 [W] So we always use the same request and limit for memories. So you cannot overcome it and what it basically shows that at some point it's gets a bit down and then it scales up again when it sees that the usage which is the blue and the purple goes up and down over time.
+00:31:56 [W] This is like how it should work and and how we can kind of also save costs so we don't have to run with a very high memory request for all of the Clusters, but it depends on the cluster size. And also
+00:32:12 [W] Of course, there's always a failure modes with the BPA. It's also I don't think it's that widely used yet and there's some things that are also a bit troubling for us.
+00:32:30 [W] So one thing that we have seen a lot is that it it has picked the certain amount of resources and then over time it attempts to scale this down when it sees that these resources are not being
+00:32:42 [W] Instead of also a bit troubling fast.
+00:32:43 [W] So one thing that we have seen a lot is that it it has picked the certain amount of resources and then over time it attempts to scale this down when it sees that these resources are not being used.
+00:32:44 [W] This is also what it's supposed to do. But sometimes it scales too far down as this example, but then it quickly tries to scale up again and pick a little bit higher value.
+00:32:57 [W] Yeah, but in other cases it can also scale down to aggressively and then it can take longer.
+00:33:02 [W] So there's more steps in order it for it to recover and and scale through a high enough size that yeah, the deprecation won't get out of memory killed.
+00:33:13 [W] So for this we also have a fork of the vertical pot or scalar similar to the cluster autoscaler and in our Fork we have worked a lot of improving the OM kill handling. So whenever pot once out of the memory.
+00:33:28 [W] Wanted to do is to recover as quickly as possible.
+00:33:34 [W] So we want the BPA to scale out the resources Higher and Higher and everyone.
+00:33:40 [W] We made a bunch of changes to make it as quick as possible.
+00:33:41 [W] There's still work to do because they're still situations where it can write can take too long to recover a Prometheus instance that that ran out of memory.
+00:33:55 [W] We also did a some other small improvements of reducing the memory users of the VBA components and also which rates actually Ops
+00:33:59 [W] dreamed and then we also add a timeout and so on for the mission wake up rook which is part of the EPA.
+00:34:10 [W] So just more changes. We have a link for the folder changes we made if you're interested in that.
+00:34:12 [W] And this is pretty much to talk.
+00:34:19 [W] I put here some links to the open source things that we have done, which I talked about in the TOC. So we have the cubemetricks adapter which is yeah. It's an open source project.
+00:34:31 [W] And as you saw someone also contributed in flux TP Aquarius for it and you can also contribute other things if you're interested, we have a link to the cluster autoscaler fog and to the vertical part of the scalar Fork.
+00:34:42 [W] And then through the two communities enhancements proposals around the HPA.
+00:34:52 [W] So the one that is already in 118 about scale up and down velocity and it's gaining Behavior configuration. And then one that is about the container resource or scaling so handling containerd pots with multiple containers
+00:35:04 [W] What?
+00:35:04 [W] Hello everyone.
+00:35:11 [W] Thanks for watching the talk and now he alive and looking through all your minikube students that come in and I will try to go through them, but there's quite a lot so I might not get to all of them one that was asked several times was
+00:35:26 [W] Like how do we manage home with this many clusters that we have?
+00:35:31 [W] and how big our team our team is eight or nine people to manage these hundred fifty clusters and remember half of the clusters of this cluster, so they kind of grouped to and to for a product for a section of the organization.
+00:35:45 [W] And they're divided this way mostly to two separate of concerns between the different parts of our organization. And then there is questions around.
+00:36:01 [W] I think this was for the Mitch cubemetricks adapter with someone asking if we considered key term, which is a product I think from Microsoft, which we also have looked at it kind of covers the same things as our implementation does. The reason we haven't moved is that
+00:36:11 [W] Happy with what we have and I was came out a little bit before Kata was released. And we also try to be a little bit more opinionated.
+00:36:22 [W] I think in the way we do it's the one of the things we don't want to do is have that people have to configure credentials for accessing SQL Azure things like this this we want to hide follow users and Keda is little bit more flexible that you
+00:36:35 [W] Configure all of this as the kind of infuser, but this we this we don't do in our way but the projects are similar though. I don't have so much experience with Keda to be honest. Let me just sort through what other questions there
+00:36:51 [W] There's also a few questions around how we select a CPU and memory for our applications.
+00:37:01 [W] So what's important to understand is that our team is just just responsible for kubernative and updating kubernative and so on but what the teams have to responsible for is setting these how much CPU and memory and so on that
+00:37:14 [W] English how much CPU and memory and so on that they are applications need and they are they are managing this this is not centrally managed we try to help them by having good graphs and grow fonder that they can look at over time and so on but it's still something
+00:37:26 [W] I think the way we can improve Brad's it's down to doing it manually as it is right now apart from when we're using the PPA as also talked about and we just built a little bit
+00:37:43 [W] Sorry, there's so many Christians. It's very good.
+00:37:49 [W] I have to find my way here.
+00:37:59 [W] And then there's also a bunch of question about the custom autoscaler fork and if we will Upstream the contribute back the changes and we would like to currently we are working on currently.
+00:38:04 [W] At a quite old version in our fork and we need to bring this up to date. We will try to update it like one year ago, but found that the new versions of autoscaler made some things worse than what we had fixed.
+00:38:20 [W] So we it's a little bit tricky to do this, but there's something that we both want for ourselves to it's even easier to get Upstream features.
+00:38:33 [W] But also we want to give back these things that because we have so many clusters and we have a good good experience with a lot of
+00:38:35 [W] These things and a little bit alone. This question is also just asking do we run on E KS or not?
+00:38:49 [W] We don't want any case. We are considering this but currently we don't see the features are there yet that we would like we have done a lot of effort in our own tooling for updating clusters. Like we update clusters may be weekly or bi-weekly basis
+00:38:59 [W] Rotate the notes and so on and we update the Clusters from all the way back from leaders.
+00:39:07 [W] One for Words will now 118 is we working on and we feel that we have still a bit of paste and aquellas on this part.
+00:39:15 [W] So therefore we are not yet on the case, but it may be that we will change in the future.
+00:39:22 [W] future. We're looking into it. At least there's also question about cni-genie that we use and I have very little time we use flannel cni-genie.
+00:39:29 [W] And get this maybe we also want to change the future. But this is what we started with and we and we have the Clusters running forever.
+00:39:39 [W] So we're trying to fight migrations without replacing clusters to those the model. We operate under I think I cannot answer more questions. But if you ask in the in the selection of the name will stick around and try to answer there.
+00:39:55 [W] Thanks for listening in everyone.

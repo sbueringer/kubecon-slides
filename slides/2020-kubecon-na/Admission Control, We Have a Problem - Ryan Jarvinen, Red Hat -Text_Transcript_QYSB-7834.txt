@@ -1,0 +1,250 @@
+﻿Admission Control, We Have a Problem: QYSB-7834 - events@cncf.io - Wednesday, November 18, 2020 4:57 PM - 35 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello and welcome to admission control.
+00:00:04 [W] We have a problem.
+00:00:04 [W] I'm Ryan Jarvan from Red Hat.
+00:00:31 [W] Hello and welcome to admission control.
+00:00:35 [W] We have a problem.
+00:00:36 [W] I'm Ryan Jarvan from Red Hat.
+00:00:40 [W] You can find these slides that this bit ly / k20a see and here's the schedule link.
+00:00:48 [W] You can find me online as most places is Ryan J.
+00:00:53 [W] I'm a developer Advocate on red Hat's openshift team and I would like to give you a
+00:01:00 [W] On admission right off the bat. I have somewhat of a particular Focus or motive in my approach to this talk.
+00:01:09 [W] I am particularly interested in making sure that I can have a sustainable productivity when I'm developing using kubernative. S'right kubernative.
+00:01:22 [W] He's is great.
+00:01:22 [W] But usually I want to make sure I can also accomplish my day job. And so I want to make sure I give you a good sense of the
+00:01:30 [W] the balance between learning all about the advanced features of kubernative and being realistic about what you may actually be able to take advantage of so, hopefully this talk fulfills all of those
+00:01:45 [W] My day job and so I want to make sure I give you a good sense of the the balance between learning all about the advanced features of kubernative and being realistic about what you may actually be able to take advantage of
+00:02:02 [W] I'm looking for a reliable platform that allows me to focus on my day job goals for this talk.
+00:02:09 [W] I want to make sure you understand the primary role of admission controllers in kubernative and understand typical use cases for admission control. And also when and how to avoid this topic, so first up on the agenda.
+00:02:24 [W] So first up on the agenda, I broke this into three parts.
+00:02:28 [W] We've got admission control Basics Next Up Dynamic admission control and then like I said when and how to avoid this topic, so first admission control Basics and Mission controllers,
+00:02:43 [W] Topic so first admission control Basics and Mission controllers play a critical role in securing the kubernative API and control plane.
+00:02:55 [W] This this diagram is a little bit outdated.
+00:02:58 [W] I think I have a of course totally fake.
+00:03:02 [W] Let me get you a hopefully a more accurate API pipeline model that fits a little bit closer to realistic.
+00:03:13 [W] What you might experience and kubernative given a recent version admission controllers are going to basically you'll see new requests come in go through authentication authorization.
+00:03:25 [W] They'll hit the admission control and first hit the admission control plugins.
+00:03:34 [W] If you want to see the Upstream docks, I definitely encourage you to take a look.
+00:03:39 [W] I see a question from the audit. There's actually a list of questions.
+00:03:43 [W] Got questions and answers. I got from reading this dock. So is this why my operators and ciardi S are failing to work correctly quite possibly actually differences in admission controller setup are one of the major
+00:04:00 [W] Since y an operator may fail to function correctly on a cluster how might I enable or disable an admission control plugin.
+00:04:07 [W] Well, it's pretty simple. Actually you just use the enable admission plug-in flag or disable admission plug-in flag when you're starting up kubeedge Pi server as one does since we've all done kubernative
+00:04:22 [W] I am sure we're all manually starting kubeedge Pi server.
+00:04:20 [W] How do I find out which admission controllers are enabled currently on my cluster?
+00:04:26 [W] Another easy one.
+00:04:28 [W] You can run kubeedge Pi server - H - for admission plugins and you should be able to see that's assuming, you know how to find kubeedge pi server in your path and you have root access on one of the
+00:04:43 [W] Able to see that's assuming you know how to find kubeedge pi server in your path and you have root access on one of the control plane nodes, right so as much as this is theoretically easy
+00:04:55 [W] That's right.
+00:04:55 [W] So as much as this is theoretically easy standard front-end developers might not have access to all of these pieces on their own if you're using many kublr example, you could type in commands like this in order to find
+00:05:11 [W] On your setup. I ran this with many kubeedge I think on a one 18.2 cluster.
+00:05:18 [W] I got the same result on a 119 to Cluster with minikube, which I think is set up via kubeedge DM.
+00:05:26 [W] I did a minikube SSH to get access to the control plane and then ran PS aux grabbing for API and then passed it through this set expression here in order to
+00:05:40 [W] To parse out just the list of admission control plugins.
+00:05:45 [W] So this worked it looked like this was Maybe started inside a Docker image. So I'm not sure how easy it is to actually just call kubeedge Pi server from the command line, but this got me kind of what I was looking for.
+00:05:58 [W] You can run the same type of thing against an openshift cluster. If you have administrative credentials, you can actually get some of this information using the API which is kind of interesting.
+00:06:10 [W] They have a pi configuration available on the API, but that's you know, kind of an interesting openshift approach so you could run coops ETL get a pi servers / cluster - oh yeah,
+00:06:26 [W] Command line but this got me kind of what I was looking for. You can run the same type of thing against an openshift cluster. If you have administrative credentials, you can actually get some of this information using the
+00:07:14 [W] Admission and you should see something about the plug-in configuration in the response.
+00:07:20 [W] Here's a link to the dock up here on same same admission controller page just a little bit further down you can there's a nice index on what each admission controller plug in the standard
+00:07:35 [W] For So to that I'd like to point out that are here on the page and let me enhance zoom in a bit always pull images is a mutating admission control
+00:07:50 [W] and so this is actually going to rewrite some of the requests when you create a new pod and enforce that the image Pol policy is set to always this is kind of a security feature another one that's been
+00:08:04 [W] Of 113 is the always deny plug in this is I think more of a validating plug-in and this is going to look at every single right request and reject every right so you could still do
+00:08:16 [W] But this basically puts the cluster in a kind of read only state essentially if you were to enable this always deny plug-in. So how might that look if we were to look at this
+00:08:29 [W] Aidan I might come in during this validation phase you might have some type of hook to evaluate it similarly with mutating you have kind of a earlier
+00:08:45 [W] Kurz to perhaps modify add in that image pole always rule into the Pod spec. So that's kind of how you might see this flow of interactions and
+00:08:57 [W] Or you get to the basic crud access on the resources. So similarly in some ways you could say admission controllers are a bit similar to
+00:09:11 [W] Insomuch as they operate with elevated privilege scope.
+00:09:12 [W] They are probably best configured by a system administrator or someone who's got access to updating kubeedge serverless lags, and this is absolutely not
+00:09:27 [W] Package or distribute application code or even frequent changes to policy on your cluster. If you have to change flags on the API server, you know, this is not a dynamic API
+00:09:41 [W] Of of making changes to the admission process at least what we've seen so far. Also, we're also going to likely require access to a modern API release for all of this to function as expected so
+00:09:53 [W] If you want to use some of the new pods security policies, those have been marked beta as of kubernetes 119.
+00:10:00 [W] here's a link to the docks for that. If you want to use the dynamic admission control endpoints, you need kubernative 116 or newer if you want to use the V1 apis, so
+00:10:15 [W] One first, I want to make sure we have got an understanding of how admission controllers are enabled disabled and configured on a cluster.
+00:10:21 [W] Hopefully I covered that reasonably. Well second thing I wanted to emphasize is how configuration of admission controllers can be used to enforce basic security policies for your cluster.
+00:10:35 [W] There are two phases of in the admission control pipeline that you want to focus on for this talk.
+00:10:43 [W] Validating and mutating mutating is going to come first validating will be the kind of finalizing phase user experience notes.
+00:10:55 [W] This is a little bit like a sledgehammer.
+00:10:56 [W] Like I said not designed to distribute quick frequent policy changes if you if you plan to do that, so and I think one of the top use cases for my purposes at least is to enforce
+00:11:11 [W] Final rules for disparate clusters that are part of a release pipeline.
+00:11:13 [W] That's always I want to have zero surprises as my code rolls out to production.
+00:11:18 [W] And so I want to make sure the policy matches everywhere whenever possible.
+00:11:23 [W] All right on to part two Dynamic admission control.
+00:11:29 [W] This is where things get a little bit more complicated requirements for dynamic admission control. I mentioned this is you're going to need these too.
+00:11:38 [W] Admission control plugins enabled or else Dynamic admission Control won't work at all.
+00:11:44 [W] This is like one of those things if you don't have the plugins enabled correctly in the first place all of your operators and extension points, or even the whole API might end up in a read only state if you
+00:11:59 [W] Again, enabled unintentionally or something.
+00:11:53 [W] So these two you're definitely going to need these plugins enabled you should have those by default with 116 or newer, especially if you want to use that V1 API that will give you V 1 versions of the
+00:12:09 [W] the dating webhook configuration data types
+00:12:15 [W] or kinds of so one more point along this topic, since you are setting up a dynamic admission control and point you're going to this is going to involve basically making the web hook
+00:12:31 [W] That you host and that service the name of the mutating webhook or validating webhook must be a valid DNS name at least within the cluster so you could use
+00:12:44 [W] The deployment but if this is expected to be up as a dependency of the API you I don't know we want to make sure you model that correctly having the AP i-- pipeline be dependent on
+00:12:56 [W] line be dependent on things hosted by the API can lead you into tricky situations when you're doing updates of services and things so watch out on that for more information via the docks definitely
+00:13:08 [W] And via the docks definitely look at there's the whole URL there enable extensional admission controllers web configuration section in the docks.
+00:13:21 [W] There's a lot of nice examples in there.
+00:13:23 [W] This is one that I actually screenshot. I pulled out of the docks.
+00:13:28 [W] Here's the URL for it. So if you were going to register a validating webhook on the API, this would give you a chance to
+00:13:38 [W] set up your own custom Dynamic admission control.
+00:13:43 [W] And in this case.
+00:13:44 [W] It looks like we're going to be watching create operations on type pods with API version V1 with some namespaced scope the the
+00:14:00 [W] Service is going to be example service. So hopefully that's resolvable and we have a timeout down here as well.
+00:14:06 [W] So on these distributed systems, you can't wait forever for the web hook to respond. So it's nice to have values like that.
+00:14:16 [W] Yeah zoom in a bit on that.
+00:14:21 [W] So how would that look in the API pipeline?
+00:14:25 [W] Like I said before requests are coming in at the top corner there.
+00:14:30 [W] We're going to get our mutating webhook after it's been registered.
+00:14:35 [W] This will make a call out to that service same with a validating would come in at a later phase in the pipeline.
+00:14:44 [W] So you can make sure you're validating things that have already been modified and that there weren't going to be further modified.
+00:14:51 [W] Vacations in the pipeline once that successful this will hopefully get written to at CD but this always should allow you to enforce how things get written to at CD including security.
+00:15:07 [W] Restrictions on pods and other things like that.
+00:15:04 [W] So Dynamic input validation examples, what are the use cases that I might want to build a custom controller and make my whole API pipeline dependent on some new service sounds crazy.
+00:15:18 [W] Why am I going to need to do this?
+00:15:19 [W] Usually this is kind of operational policy that you might want to implement.
+00:15:24 [W] This may very well break some operators, you know, I don't know if this is a good idea, too.
+00:15:31 [W] Say we're going to always reject all images tagged with latest, but it's something you could potentially do as a policy you might be able to actually do this via regular expression via open
+00:15:46 [W] Talk about open API spec in a minute.
+00:15:37 [W] You could also do things like okay. I want to make sure my Etsy D member count has to be odd number and it has to also be between 1 and 11 or you know, you could have really kind of complex functional.
+00:15:52 [W] All input validation on these custom controllers if the can custom controllers are really Advanced, you know, you could use the the go client. It can even make further calls to the API to update other objects as well if it's
+00:16:01 [W] solution so here's a web hook example, you can actually write this in a variety of languages but here's a go client example if you're interested in seeing the stock example,
+00:16:17 [W] Review Dynamic admission control.
+00:16:19 [W] We've got a couple points here first.
+00:16:22 [W] I want to make sure we all understand how Dynamic admission control web hooks are used to validate or to quote coerce any right request as well as they pass through the API pipeline the
+00:16:37 [W] Said will not begin until the mutate phase has totally concluded.
+00:16:39 [W] That's anytime mutates available.
+00:16:41 [W] At least until that time app hits right review security use cases and implications.
+00:16:50 [W] Let's see. Oh, yeah. I mean before I move on you could potentially with this mutating webhook. You do all kinds of crazy stuff depending how much access you have you could potentially listen in on
+00:17:04 [W] On every right request to the API and forward it out to an external cluster if you know, if or other kind of malicious purposes depending so be careful you want to make sure that these are locked down appropriately.
+00:17:19 [W] much access you have you could potentially listen in on every right request to the API and forward it out to an external cluster if you know, if or other kind of malicious purposes, depending so be careful
+00:17:47 [W] And kind of standardized and that's why not all of it is even possible to update via an API, right?
+00:17:56 [W] This is really about standardizing and securing your clusters.
+00:18:00 [W] So part three, how do I avoid admission control?
+00:18:04 [W] And why did I show up?
+00:18:06 [W] Why did I need to learn about this?
+00:18:07 [W] Well, okay. So you want to make sure you select the appropriate abstraction and solution for your scope of work, right? So if you're in
+00:18:17 [W] Evolved in securing your kubernative clusters.
+00:18:21 [W] There's a couple things to establish, you know, an operational base line for a cluster definitely admission controllers are a huge piece of the puzzle there.
+00:18:31 [W] You can also establish further operational rules for platform Services via the dynamic admission control or by using operators and ciardi S.
+00:18:44 [W] One of these here has a
+00:18:47 [W] They both actually are going to require admin access but cri-o s and dynamic admission control end points are possible to update over the API.
+00:18:58 [W] So huge advantage in terms of how quickly you can iterate and change these things solution number three, you want to also focus on offering standardized application control.
+00:19:12 [W] So for me as a developer I can skip the whole
+00:19:17 [W] It if I focus on AB, c-- ours and Helm charts that gives me simple ways to update my application code my config push updates into the cluster.
+00:19:27 [W] No admin scope required.
+00:19:30 [W] And if I'm on the the end of the team, maybe a team lead or someone who's trying to standardize that app interaction.
+00:19:37 [W] can use crd S and open API spec to help restrict and validate some of the input
+00:19:47 [W] And hopefully once you establish these mechanisms for standardization, you are able to apply them evenly across all systems in your release pipeline. So you have a consistent operational
+00:20:02 [W] Situation throughout the whole pipeline, right?
+00:19:51 [W] No surprises for developers maximize productivity by minimizing bad feedback.
+00:20:01 [W] So why should why should you learn about admission controllers?
+00:20:06 [W] Honestly, the answer is so that other people on your team won't have to not everyone needs to know about this topic if you're in the business of offering a standard interface to Junior.
+00:20:19 [W] Developers or other other folks on your team.
+00:20:22 [W] This is definitely something you want to make sure the right person on your team gets this info and is able to standardize the experience for other folks.
+00:20:29 [W] Should I avoid writing and maintaining custom controllers that may impact the operational reliability of the core platform apis?
+00:20:39 [W] Yes, whenever possible always avoid this if you can there are other Solutions should I use Helm or application cri-o?
+00:20:48 [W] Is if they're yes, absolutely. Yes use those instead if you can like I said if Helm is an option for you use it right if you are doing Dynamic admission control or
+00:21:04 [W] Drds, you can take a look at kublr or actually more dynamic in Mission Control specifically in go you can start with the go client. But if you want a more modern tooling that will help you build
+00:21:11 [W] You can start with the go client. But if you want a more modern tooling that will help you build a CRT S as well take a look at kubelet, er for development in go.
+00:21:13 [W] We also have on the there's operator framework is another option that will allow you to develop in go and it actually uses kubelet ER as of the 1.0 release of operator framework. So you
+00:21:28 [W] Get the best of both worlds and Isabel is another option. You can import ansible roles and run them using an operator.
+00:21:38 [W] Also, you can import Helm charts and then make them available using CR CR DS.
+00:21:47 [W] Both of these solutions could build her and operator framework includes support for using open API spec for schema-based validation of
+00:21:57 [W] Of inputs and here's one more link to that go client as a potential implementation option open API spec schema validation.
+00:22:09 [W] So here's an example from one of my team members.
+00:22:11 [W] This is a custom resource definition.
+00:22:14 [W] Let me zoom in on this a little bit. Looks like we've got here we could see there's a validation section open API V3 schema. There's a couple things that were calling out that we're going to validate.
+00:22:28 [W] If I scroll down we can see here in the spec area. I'm looking for a value called sighs.
+00:22:36 [W] That's an integer and sizes required.
+00:22:40 [W] It's not a super complex validation and really is just validating the schema more than the values themselves, right but this hopefully can be easily done using open API
+00:22:55 [W] That can be used regardless of whether you're using admission controllers or not. Any kind of act interactions with kubernetes API that's generally considered a best practice part 3 review. So
+00:23:10 [W] He's a pi that's generally considered a best practice part 3 review. So we talked about using application CRS and Helm charts as an alternative for targeting developers know admin permissions
+00:23:13 [W] For targeting developers know admin permissions scope required.
+00:23:18 [W] They're using open API spec to provide schema-based input validation for custom resources.
+00:23:24 [W] You can use kublr or operator SDK for custom validation and translation of API requests.
+00:23:31 [W] Hopefully, all of this together gives you a reliable distributed platform that allows you to focus on your day job, just like I am struggling to focus on my day.
+00:23:42 [W] A job goals for this talk?
+00:23:47 [W] Hopefully you've come away with a clear understanding of the role of admission controllers typical use cases and when to avoid it. If not, I'll do one quick recap primary role. You've got a request validator request translator.
+00:24:02 [W] Goals for this talk.
+00:24:04 [W] Hopefully you've come away with a clear understanding of the role of admission controllers typical use cases and when to avoid it. If not, I'll do one quick recap primary role. You've got a request validator request translator.
+00:24:32 [W] It's there to apply security and you want to have admin access right use cases. Mostly, you know security upon security policies are a new thing denying privilege denying host path host
+00:24:48 [W] You can do Dynamic input validation more complex validation using the tools.
+00:24:57 [W] I recommended kubelet ER or operator framework and the goal of all this is to ensure consistency of your cluster and hopefully standardized policy between clusters in a pipeline alternatives.
+00:25:12 [W] Definitely developers stick with a Helm or application crd s whenever possible.
+00:25:17 [W] Don't muck up the API pipeline unless you really have to use open API spec to provide schema-based validation and consider using kubelet ER operator SDK operator framework
+00:25:32 [W] Schema-based validation and consider using kubelet ER operator SDK operator framework or evaluating a hosting provider that includes a strong set of admission control defaults
+00:25:44 [W] Provider that includes a strong set of admission control defaults and a clear plan for Distributing updates. Some of the testing I did was on learn dot openshift that will give you a free one hour session on
+00:25:59 [W] You want to see what the admission control policies look like on that system go ahead and give it a try. Here's a couple links to summarize and a couple talks that I found very inspiring go ahead and hit pause on your video if you're watching
+00:26:13 [W] As links I don't have time for questions today, but take a look at the chat.
+00:26:16 [W] I'll try to answer questions and chat for the live folks.
+00:26:19 [W] Thank you very much.
+00:26:20 [W] I've my name is Ryan J.
+00:26:22 [W] Ryan. Jarvan looked me up online.
+00:26:25 [W] Thanks all hope you have an excellent coupon.
+00:26:29 [W] This has been admission control.
+00:26:31 [W] We have a problem. Thank you all see you next time.
+00:26:59 [W] All right.
+00:27:01 [W] How's it going?
+00:27:03 [W] Coupon good to be here.
+00:27:04 [W] Hopefully my video is coming through I can only see about half of it on my monitor down here.
+00:27:09 [W] So hopefully you can see everything you need to see and I'll do my best to answer some Q&A for you. All right now, thank you all for attending this topic.
+00:27:20 [W] It's really just meant to provide a basic introduction to admission control and really kind of show you the
+00:27:31 [W] All right.
+00:27:32 [W] How's it going?
+00:27:34 [W] Coupon good to be here.
+00:27:35 [W] Hopefully my video is coming through I can only see about half of it on my monitor down here.
+00:27:40 [W] So hopefully you can see everything you need to see and I'll do my best to answer some Q&A for you.
+00:27:48 [W] All right now, thank you all for attending this topic.
+00:27:51 [W] It's really just meant to provide a basic introduction to admission control and really kind of show you the
+00:28:02 [W] Whether you need to get involved or not, right, so I'm going to go through some of our top questions that came up in chat during the session.
+00:28:11 [W] I've got one from mr.
+00:28:13 [W] James Dade.
+00:28:15 [W] He asked he's I think I kind of mildly trolling me asking a question about Windows Server 2019 worker nodes.
+00:28:21 [W] My response to him was I would be happy to chat and more detail about about that topic during my weekly developer experience office hours on
+00:28:32 [W] stays quick shout out because I know James dad's always there for those Thanks James another question.
+00:28:39 [W] I got a real question from Benjamin.
+00:28:42 [W] He asked is where's this diagram of the API server flow from he's searching for something similar.
+00:28:49 [W] I searched far and wide for something similar and ended up the best source.
+00:28:56 [W] I found and I'm not sure if it's a hundred percent up to date but the best source I found was
+00:29:03 [W] Stefan szymanski's hope I pronounced that correctly but Stefan's talks from Sig API Machinery. He has some really nice work flow diagrams.
+00:29:14 [W] And so I kind of borrowed some of what he has already published, but I would definitely defer to the experts in the Sig API Machinery group for specific questions.
+00:29:28 [W] My slides are available. However, if you'd like to borrow my diagram
+00:29:32 [W] flow diagrams and so I kind of borrowed some of what he has already published, but I would definitely defer to the experts in the Sig API Machinery group for specific questions
+00:29:56 [W] Are if you're trying to bring it up level to an advanced level talk double check my work before you go.
+00:30:02 [W] pass it on please. So let's see. Next question. I have there's one from illya 11 and they're asking can I provide a couple examples of what type of
+00:30:18 [W] From illya 11 and they're asking can I provide a couple examples of what type of policies you might enforce on a cluster or
+00:30:32 [W] Is you might enforce on a cluster or on a production cluster one example, I had in the slides here was you know, always block a latest that may be a good idea might
+00:30:48 [W] Good idea might be a terrible idea.
+00:30:49 [W] I think really the possibilities are endless at all kind of depends on what level of input.
+00:30:57 [W] Are you trying to validate restrict or control?
+00:31:00 [W] And what is the appropriate control mechanism for admission control?
+00:31:06 [W] You're really trying to control fundamental aspects of platform security. So for application developers, I would definitely say try to do your
+00:31:17 [W] station externally via Helm or something before it hits the pipe line. So you don't muck up the pipeline cause it to lag caused the overall platform performance to dip keeping that pipeline
+00:31:32 [W] Try to do your validation externally via Helm or something before it hits the pipe line. So you don't muck up the pipeline cause it to lag caused the overall platform performance to
+00:32:02 [W] And fast is important. If you need to do more complex reconciliation or synchronization or other kind of residual interactions Within kubernative.
+00:32:17 [W] Usually you can do those kind of out-of-band using operators or crd he's so those buy you a little bit more extra time that doesn't stall out the core API pipeline, right? So hopefully that's a clear.
+00:32:32 [W] Eight off from architectural perspective.
+00:32:36 [W] Let's see.
+00:32:37 [W] who else I have here. Is there a way to support there's a question about integrating authorization and are back.
+00:32:47 [W] Usually that's kind of done at a slightly higher level like had those included in the diagram as well.
+00:32:53 [W] But usually those are a little bit earlier in the request you have authorization impersonation like
+00:33:02 [W] Identification a couple different steps in there and it's very pluggable and kubernative use and if you need help with that topic, there are Sig groups that can give you follow up advice and excellent documentation
+00:33:17 [W] Let's see anything that restricts a pod from being scheduled on a master node, you know, there are a couple, you know, usually the control plane nodes are all marked as
+00:33:31 [W] So you should not need to use admission control to restrict pods going on to the control plane.
+00:33:34 [W] It's probably not a solid use case for this operators, or you can even plug in a custom scheduler, but I would you know, probably stick with something more portable like
+00:33:49 [W] custom placement of workloads if you need to do something really complicated that can always
+00:33:57 [W] be an extra way to extend the core apis and the core platform functionality.
+00:34:06 [W] Let's see.
+00:34:07 [W] What else in here at Mission controllers are a lot similar to open policy agent.
+00:34:14 [W] This is from Hale Evan Ivanov.
+00:34:19 [W] Yeah.
+00:34:19 [W] thanks for pointing that out. If you actually are looking for a use case of Distributing policy across clusters. You can distribute them as
+00:34:34 [W] Dynamic admission control web hooks, that's one way to do it.
+00:34:38 [W] There are other tools though in the cncf ecosystem and one that's definitely worth mentioning is open policy agent.
+00:34:46 [W] I have not used it myself so I can't say for sure it really anything about it. But I have definitely seen a lot of talks on this admission control topic that end up as an open policy agent talk
+00:35:02 [W] so that's definitely a very related topic and that's probably an easier way of making frequent updates that hopefully
+00:35:09 [W] is not quite as a manual amount of involvement for you, you know, they've already abstracted out some of the interactions and hopefully made it a little bit more resilient for you.
+00:35:23 [W] I think that is about all the time we have feel free to drop a additional questions into the slack Channel and we can keep the conversation going there.
+00:35:34 [W] Thanks again. See you all next year at at Coupe con.

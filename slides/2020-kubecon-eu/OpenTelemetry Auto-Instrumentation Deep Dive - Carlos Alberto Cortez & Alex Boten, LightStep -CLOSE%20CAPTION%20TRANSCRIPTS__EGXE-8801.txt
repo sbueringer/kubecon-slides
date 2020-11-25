@@ -1,0 +1,300 @@
+﻿OpenTelemetry Auto-Instrumentation Deep Dive: EGXE-8801 - events@cncf.io - Thursday, August 20, 2020 12:02 PM - 148 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:02:45 [W] Hello everybody.
+00:02:46 [W] My name is Carlos Alberto Cortez at work.
+00:02:49 [W] I work at like step.
+00:02:53 [W] I am part of the core team of opentelemetry and this is
+00:02:56 [W] I have a buddy.
+00:03:00 [W] I'm Alex Gordon.
+00:03:01 [W] I'm also one of the maintainers at with opentelemetry and I also work for Liza.
+00:03:05 [W] We are very happy about having the opportunity to give this presentation.
+00:03:16 [W] Even if it's a little bit delayed, you know, but what they say it's better later than never.
+00:03:21 [W] So thanks so much for joining.
+00:03:22 [W] Definitely.
+00:03:24 [W] Yeah, I think we're will be going through the slides.
+00:03:30 [W] So the first thing is that we were actually not very sure about bullying and how many of you watching this presentation are familiar with opentelemetry.
+00:03:39 [W] So we are going to be very small introduction.
+00:03:45 [W] So first of all opentelemetry is a cncf back big project is an open source project. The idea behind this project is to provide a complete Rich environment.
+00:03:54 [W] Meant to provide and capture Telemetry data as part of your services and then of course provide this information has deceived the traces and metrics and other signals in the future and the days at once you
+00:04:09 [W] Presentation are familiar with opentelemetry.
+00:04:10 [W] So we are going to be a very small introduction.
+00:04:10 [W] So first of all, opentelemetry is a cncf back big project is an open source project. The idea behind this project is to provide a complete Rich environment to
+00:04:12 [W] Dr. Out of your service.
+00:04:13 [W] This can be sent the back end of your choice.
+00:04:17 [W] And of course to make this actually a reality we the idea is that we will be providing a complete ecosystem for many languages which includes goal Java C sharp python JavaScript and so on
+00:04:31 [W] Of course, there's an API which will allow people instrumenting their applications or their libraries, you know, just go and say Hey, I want to send this and I want to send that at this spot.
+00:04:47 [W] Not only that we are also providing an actual SDK Implement implementation has been think of it as a reference implementation so you don't have to go and look for one and decide which one you like the most and of course Everybody's Free To
+00:05:00 [W] These Decay so that that is going to give us a lot of flexibility part of this is that we also want to provide out of the box instrumentation for popular Frameworks like Django for python or spring for Java.
+00:05:15 [W] Political a collector The Collector is a component that actually we can see as a sidecar. It can receive these Telemetry data massage it processing normalize it and then finally export all these Telemetry data to the back end up in your choice
+00:05:32 [W] Things from Edition which is the one that you guys are most interested in. Otherwise, you're going to be in stock.
+00:05:43 [W] And of course the idea of this is a you can just go and try instrumentation for your services without being able to actually don't you do code base.
+00:05:49 [W] Okay.
+00:05:51 [W] so what that's also that all sounds so good, but what about instrumentation? So essentially out in termination is usually a component which is a grammar for an Asian depending on the language that allows you to instrument
+00:06:07 [W] Okay.
+00:06:07 [W] so what that's also that all sound so good but what's our instrumentation so essentially I've been termination is usually a component which is a grabber where an agent depending on the language that allows you to instrument
+00:06:09 [W] Just without touching the cold other instrumentation basically mean instrumenting your application earlier servicemeshcon being able to provide automatic traces or metrics and other stuff out of it.
+00:06:22 [W] We are taking this part very seriously as part of the opentelemetry project and we are even making it part of our for actual specification. You know, we think this is a core piece that will help
+00:06:36 [W] Use this project all the way.
+00:06:40 [W] Now while yeah, this is products.
+00:06:45 [W] Yeah, you know, we one of the things that I always loved to drive for is understanding why we're implementing anything. And in this case then one of the important reasons for auto instrumentation is understanding the why and one of the one of the key
+00:06:59 [W] anything that in this case, then one of the important reasons for auto interpretation is understanding the why and one of the one of the key benefits of Auto instrumentation is to help folks that are already busy already overworked find a way to
+00:07:06 [W] Help folks that are already busy already overworked find a way to instrument your applications more easily.
+00:07:16 [W] And if you're not familiar with the stupid tracing or what metrics that could be a huge barrier to cross and so one of the benefits of automation mutation is that you can with with a fairly simple installation step and a
+00:07:23 [W] In command to run an application with you can start collecting opentelemetry information for your application.
+00:07:34 [W] One of the other benefits with auto instrumentation is that with zero or very little code you can provide insights to users of particular libraries as to how those application how their applications are leveraging those libraries.
+00:07:44 [W] Is of particular libraries as to how those application how their applications are leveraging those libraries and they libraries will provide Rich metadata that is important to the users of those libraries.
+00:07:52 [W] And so as you'll see it will be diving into demo today.
+00:07:58 [W] We're going to show you a composer system composed of multiple applications some written in Java some in Python that can be instrumented with little or no code and then we'll dive a little deeper.
+00:08:07 [W] You talked about how the implementation is actually done in Python and Java.
+00:08:16 [W] I I love having a good picture. So here's a little bit of what the application looks like.
+00:08:23 [W] So there is a client here that will make a request.
+00:08:25 [W] The client is written in Python.
+00:08:29 [W] It will make a request to a server written in python as well. The client is instrumented will be automated via the request Library the server is using flowmill.
+00:08:37 [W] That server makes a request to a SQL Server that just has a list of work from home tips for anybody who's looking for more tips that fast server will then make a request up stream to a so another server written in Java using spring.
+00:08:53 [W] And that server will return account of how often a particular tip has been blogged about in the past five months important note here.
+00:09:05 [W] All of the data is static and has absolutely zero scientific value and each one of these Services is actually going to be using Jaeger back end for collecting Telemetry information.
+00:09:15 [W] And now on the Carlos for the demo.
+00:09:20 [W] Yeah fantastic now is the time for you guys to check out what this looks like real life.
+00:09:31 [W] So I will go through so essentially, you know, these components that are all services that Alex mentioned I will go through the code quickly.
+00:09:42 [W] So we have first class server, which is just as you can see this super something very simple. You just make a call from where else in this case.
+00:09:47 [W] The actual Java code then we have the request client, which is something or this is actually well.
+00:09:59 [W] Well, it was showing so the flux server is the code you can see that is uses SQL artomenes. I you know, probably go because ways and roping and nothing fancy. We are not sending any traces of part of
+00:10:10 [W] Doing our thing, and finally I will show also the spring service Springs.
+00:10:19 [W] Second and there we are just starting the application and doing the usual, you know, just making a call a pair of calls to raise.
+00:10:32 [W] There's nothing related or specific to tracing or to opentelemetry. Now for the first run. What they will be doing is that I'm going to start with I'm going to run these tricks are meters.
+00:10:47 [W] but only one of them is going to be automatically instrumented so you can feel
+00:10:50 [W] The actual difference so this is the Java. This is a flux service and this is going to be the client requests.
+00:10:58 [W] You know, that's its way down to be there. We are fantastic.
+00:11:11 [W] And then we are going to start off or simplification.
+00:11:19 [W] And there we are.
+00:11:21 [W] And you can see here the deep is coming in.
+00:11:28 [W] Which is pretty nice.
+00:11:30 [W] No, that's its way down to be there. We are. Fantastic.
+00:11:42 [W] And then we are going to start up or simplification.
+00:11:42 [W] And there we are.
+00:11:42 [W] And you can see here the tips coming in.
+00:11:42 [W] Which is pretty nice.
+00:11:43 [W] And of course now we are going to switch to the Jaeger, you know we have here and now let's check out all the latest traces, you know, so in this case as you can see here.
+00:11:46 [W] We can see part of this part of the trays, you know, it's not complete but you can see that because we're still missing one of the components that we can see that this is how it looks this is what our Intel they come without the code in-toto.
+00:12:18 [W] Extreme permission like what's the command and other stuff for the flux server itself?
+00:12:26 [W] You can see what's what was the matter?
+00:12:28 [W] What was the actual status code and similarly for Java?
+00:12:32 [W] We can also see here the actual request and because of the fact that releases of instrumented you can see the actual commands. You can see the process the URL and so on.
+00:12:44 [W] So that's pretty sweet.
+00:12:45 [W] What of course we have to also go and now I'm going to change things.
+00:12:52 [W] So we are gonna run the client without instrumentation. Now, I'm going to use a very similar script.
+00:13:05 [W] So that that's pretty sweet.
+00:13:11 [W] What of course we have to also go and now I'm going to change things.
+00:13:12 [W] So we are gonna run the client without instrumentation. Now, I'm going to use a very similar script sorry. So as you can see this script, the only thing the loss is a useful for users. What's the
+00:13:14 [W] See said we are using this preference educate.
+00:13:16 [W] so now it's going to be almost the same but the difference is that now we will be getting part of the
+00:13:24 [W] Part of the sorry, we are going to get the entire.
+00:13:29 [W] Traces so now you see that we can actually see the entire page because now this time I am also instrumenting the request Parts you can also see this is the entire thing and of course it also has additional information like opponent.
+00:13:46 [W] It's a difficult and so on and the and all of these was done without touching your actual code, which can be pretty useful. You know, like just imagine that you want to try out what all opentelemetry for nice about and say
+00:14:02 [W] Let's give you the wrong. You just need to go to your your back end and a pair of things and that's about it.
+00:14:11 [W] Thank you, and now going forward now.
+00:14:18 [W] How does it work?
+00:14:21 [W] I guess that this is the obvious question, right?
+00:14:23 [W] This is part of an actual deep value.
+00:14:26 [W] So let's go through the actual phone.
+00:14:32 [W] So first of all, usually the way you actually instrument your job application.
+00:14:37 [W] It's a we use the Java agent facilities.
+00:14:40 [W] This is a very common thing in the Java ecosystem. Usually just go
+00:14:44 [W] Fetch a jar.
+00:14:50 [W] There's a project part of opentelemetry called open to limit each other instrumentation that provides this agent in term is Agent contains certain components. The first of all the first 1 is the output instrumentation
+00:15:00 [W] Launch your application and will inject code to make this instrumentation possible.
+00:15:08 [W] But we also need actual instrumentation for popular libraries, like spring grpc.
+00:15:17 [W] Okay, HTTP and so on we have a lot of instrumented libraries these days which is going to help users. You know, they can forget about trying to actually determine those super popular libraries and then by
+00:15:28 [W] A few standard exporters that are part of the specification, which is Jagger's if King and iot LP Hotel piece.
+00:15:42 [W] It's a neat very interesting project because it is to Define opentelemetry Navy protocol that can be used among the different components.
+00:15:53 [W] It isn't by The Collector which as I mentioned before it's a component that can work as a sidecar where you can receive data.
+00:15:59 [W] Is it and then send it back to the actual bucket?
+00:16:02 [W] When you actually want to instrument your application, let's say for example for as in the example shows okhttp or grpc.
+00:16:22 [W] Usually try to use we try to avoid going the bytecode manipulation way.
+00:16:27 [W] We are trying to use available hooks events or interceptors.
+00:16:31 [W] These two are small screenshots show how it's done there for
+00:16:33 [W] Both in those cases for okhttp and grpc.
+00:16:39 [W] We're using simple interceptors, which is very simple, you know, and it's pretty nice.
+00:16:43 [W] You don't have to actually manipulate anything and by Body which is one that we use we need to use probably not so much to actually inject this instrumentation libraries drum time when your application is started.
+00:16:57 [W] When it comes to the actual how it looks instrumenting a library.
+00:17:08 [W] There is an instrument or interface that everybody who wants to instrument your application need to extend.
+00:17:12 [W] The good thing is that there is a default implementation that goes for the most common cases and then of course in this example, you can see here you can see in the in the corner this part
+00:17:25 [W] At the Aging the hey look for all the classes that have this name, which is Java will Telco coredns triple executor. And then of course you provide also called, you know to replace the Rapport Columbia code and
+00:17:41 [W] Shawn for the Allah it is on you know, as I said, the engine itself is simply a jar.
+00:17:48 [W] It's a single file and then you have to provide the configuration yourself.
+00:17:53 [W] Usually that's done through environment variables, which is a very common practice what you can also specify them as something which is specific to Java called station properties, which is basically parameters that can be passed directly to the
+00:18:06 [W] The Java called see some properties which is basically parameters that can be passed directly to the the Java runtime.
+00:18:10 [W] either of them your choice and then of course in this example, you can see that we are configuring what exporter we want to use their points pain timeout and other things.
+00:18:19 [W] Now, how does it work for python?
+00:18:23 [W] Yeah, so in on the python side, if you want to get started with add-ons imitation, the first thing first thing we want to do is go and install the opentelemetry instrument instrumentation package, which you can do through pep-pep package contains a few different components.
+00:18:39 [W] Yeah, so in on the python side, if you want to get started with add-ons fermentation, the first thing the first thing we want to do is go and install the opentelemetry instrument instrumentation package, which you can do through spiffe this package contains a few different components.
+00:18:41 [W] Opentelemetry bootstrap and the opentelemetry instruments script the instrument our interface that will describe a little bit from her shortly and then deside customized up. I file for opentelemetry instrumentation.
+00:18:55 [W] So first things first, the opentelemetry bootstrap script is a nice convenience script that allows users to ought to discover what auto-determination or instrumentation libraries exist for their environments
+00:19:07 [W] Is it script that allows users to ought to discover what other instrumentation or instrumentation libraries exist for their environments?
+00:19:14 [W] And it does this by doing a lookup with Pepe of all the installed libraries in an environment and then it Compares that list against a list of known instrumentation libraries and it prints out the recommendation. So for example, in this case here, it recommended
+00:19:22 [W] And so for example in this case here, it recommended installing flasks Jinja to and SQL Alchemy T. So this is after running it for the in the server environment.
+00:19:33 [W] There's also a install flag for opentelemetry bootstrap which allows the user to just let the opentelemetry bootstrap script does the installation for them and it does so by a
+00:19:45 [W] Is an instrumentation library in Python. It really has to do two things.
+00:19:58 [W] One of the responsibilities of the instrumentation laboratory is Implement an instrument or interface much like in in Java this interface as you can see here on the right hand side is fairly minimal.
+00:20:06 [W] It has an instrument and an instrument method.
+00:20:07 [W] I'll touch base a little bit further on the instrument method shortly, but it's important to note that the instrument and an instrument methods are implemented.
+00:20:15 [W] Today's Library specific as far as your implementation goes some libraries provide hooks that can be configured.
+00:20:24 [W] While others don't have that nice facility.
+00:20:30 [W] So we end up using monkey-patching for a lot of those and for those who aren't familiar with monkey patching. It just means that we're overriding the call to Purdue to a specific library library method called for example
+00:20:39 [W] The other thing that the instrumentation library has to do is to register an entry point.
+00:20:49 [W] So in Python and you points is a mechanism that a package can use to advertise a method or a component the other packages other python applications within a system.
+00:20:59 [W] And so the instrumentation Library must register its entry point under the opentelemetry instrument or entry point. And so here you can see the flask entry point is just the flask instrument or
+00:21:09 [W] And within a set up that CFG file.
+00:21:18 [W] And we'll go further as to why we need these entry point shortly. But the next component that installed is opentelemetry instrument, which is used to run the the application itself.
+00:21:34 [W] And the reason why we need to to use the opentelemetry instrument script to run the application, it's because we want to ensure that the instrumentation has a chance to be applied before anything in the application is done so that we don't miss any any call from the application itself
+00:21:47 [W] It does so by using the site customized file which looks a little bit like this besides customized file looks at the registered entry points iterates through all of all of them and tries to load them
+00:22:03 [W] instrument method that I mentioned earlier
+00:22:06 [W] there is a couple of gotchas that I'd like to bring up to everybody's attention because they're not super obvious when you get started with opentelemetry out on termination for Python and I think Carlos touched on this in the demo, but there are a couple of things that you
+00:22:24 [W] ahead of time and these are things like the meter provider and the Tracer Provider by default the opentelemetry API by Design implements a no op Tracer provider and a no optra media provider but
+00:22:40 [W] no configure this to use the SDK provider unless you're implementing your own SDK, for example, but the other thing that's a bit of a gotcha here is that not everything that you would like to have configured is available
+00:22:55 [W] Via environment variables yet in Python.
+00:23:00 [W] There is active work happening even today on this to make it better, but currently things like the Spanish border and span processor things that need to be configured and that's why if you look at the demo code you'll see this
+00:23:14 [W] Of code that configures a Jaeger spine exporter and the bachelor export spawn processor.
+00:23:21 [W] So a little bit about where we are today with with instrumentation and auto intimidation.
+00:23:33 [W] So there's a list here of some of the languages that are currently working on or intimidation and instrumentation libraries, as you can see there's a lot of progress across many six already.
+00:23:43 [W] already. This is not a full list of all the languages that are available with opentelemetry is just a sample set. There's also like a PHP Sig and inner lining so you can rust and others
+00:23:52 [W] But today Java JavaScript Python and Ruby all have mechanisms for auto increment ation and go already has some instrumented libraries and there's a big effort underway for dotnet.
+00:24:09 [W] And you know as you can imagine there's a gazillion libraries out there for all of the different languages. And so it's going to take a lot more work to ensure that we have coverage for all of the libraries that are important to people and
+00:24:26 [W] Being involved.
+00:24:30 [W] This is actually a really good way to get involved.
+00:24:33 [W] If you have a favorite library that isn't currently supported feel free to open an issue to this sig of the language of your choice.
+00:24:43 [W] If you'd like to give a try to the existing libraries and you know report any issues or any missing documentation, that would be another good way to get involved.
+00:24:51 [W] And of course if you have time to write some code for for us, that would be great.
+00:24:54 [W] We were always excited to see PRS from from our users.
+00:24:57 [W] So, okay.
+00:25:05 [W] Yeah. So if you're if you're looking for more information about opentelemetry, I highly recommend checking out the website.
+00:25:09 [W] It has all of the links and info about the different six different languages links to notes of the of the cigs and it also has a super useful registry.
+00:25:20 [W] So if you're looking for any instrumentation or any languages that you're interested in, you can check out the registry and just search search it to see if your library is.
+00:25:27 [W] Ready for it.
+00:25:33 [W] and of course if you're interested in the demo that Carlos showed earlier here is the link to where you can find the code.
+00:25:37 [W] And yeah, so that's that's about it. If you're if you're looking for more information about opentelemetry, or if you have any questions, you can feel free to reach out to Carlos and I were always always available you can jump into together as well if you're if you're looking for more information there.
+00:25:55 [W] Languages that you're interested in you can check out the registry and just search search it to see if your library is already supported and of course if you're interested in the demo that Carlos showed earlier here is the link to where you can find the
+00:25:56 [W] Always happy to talk to the folks about interpretation about opentelemetry or anything.
+00:26:00 [W] really and yeah come and come and talk to us join the project where we're currently in the almost JS. So it's pretty pretty exciting time to get to get involved Carlos any parting thoughts.
+00:26:15 [W] Yes, please provide us with as much feedback as you can we are supporting they're saying that now it's a perfect time and thank you for watching.
+00:26:24 [W] Thanks everybody.
+00:26:26 [W] All right, Carlos, can you can you hear me?
+00:26:38 [W] Yes again Perfect. All right.
+00:26:46 [W] I'm just gonna start asking the questions that are listed here and we'll start with the first one solución asks.
+00:26:51 [W] What is the performance impact of Auto instrumentation Yeah. So basically these answer is you know, it includes two factors. The first one is that
+00:27:02 [W] And instrumentation jet that you can set up manually has a cost.
+00:27:06 [W] Of course, like even if you do that without the agent for those parts, we are being very aggressive when it comes to Optimum optimizations.
+00:27:21 [W] And component is a sometimes you get a little bit more of time at startup.
+00:27:36 [W] So we have been also first of all, a lot of this agent code bases have originated with datadog agents, which we already know use in production.
+00:27:50 [W] Of these we know the of course, there's a cost but they were you know based on production code, which is great.
+00:28:06 [W] And for example, when it comes to compare for example can tell you for the Java case specifically the agent the opentelemetry delay said it's based on the data datadog one.
+00:28:14 [W] It's it's like two or three times faster and startup than the special agent, which is the one that was created as part of opentracing, you know, opentracing and open suse, you know, they ended up
+00:28:29 [W] Like opentelemetry so you can see that it's a big Improvement also as part of GA of reaching GAO for opentelemetry that we will have actual testing which we will be publishing
+00:28:45 [W] Bear these agent against other code bases and the final thing is at least when it comes to the Java Parts at least is that we have people who have a lot of experience on this side.
+00:29:01 [W] We have people from New Relic we have people from datadog. We help people from Microsoft and you know people who have a lot of experience in the agents who have been working in the agent side for for so many years.
+00:29:11 [W] So there's a cost for sure but we are working as you know, we great people.
+00:29:16 [W] Well, and we hope that it's not going to be a problem. But the in any case we will have actual performance testing to make sure that you know, we are we are not decent shape.
+00:29:30 [W] I hope that kind of kind of answer your question.
+00:29:33 [W] know Alex you want to answers something more?
+00:29:36 [W] Now to give I think you covered up there's a few more questions here.
+00:29:43 [W] So I guess we'll just move on to the next one.
+00:29:45 [W] one. Are you aware of integration with CNB buildpacks Auto installing the opentelemetry agents?
+00:29:51 [W] I'm not personally not familiar with C and B is
+00:29:59 [W] Yeah, sorry about that.
+00:30:01 [W] Yeah, maybe we can take it to slack and and investigate a little bit more.
+00:30:09 [W] Yeah.
+00:30:09 [W] Yeah.
+00:30:09 [W] Yeah.
+00:30:09 [W] Yeah.
+00:30:10 [W] Yeah. Yeah.
+00:30:11 [W] Now the cube, I think you covered up.
+00:30:16 [W] There's a few more questions here.
+00:30:16 [W] So I guess we'll just move on to the next one.
+00:30:16 [W] one. Are you aware of integration with C and B buildpacks Auto installing the opentelemetry agents?
+00:30:16 [W] I'm not personally not familiar with C and B is
+00:30:17 [W] Yeah, sorry about that.
+00:30:17 [W] Yeah, if it maybe we can take it to slack and and investigate a little bit more.
+00:30:17 [W] Yeah.
+00:30:17 [W] Yeah.
+00:30:17 [W] Yeah.
+00:30:17 [W] Yeah.
+00:30:17 [W] Yeah. Yeah.
+00:30:18 [W] Yeah, we are always open to adding instrumentation additional instrumentation for libraries and we don't cover but also about considering, you know, including components that may make this limitation overall better.
+00:30:25 [W] yeah, I would love to hear the feedback.
+00:30:28 [W] Next one is a question from Kevin.
+00:30:35 [W] He asks, is there a way to add custom tags for Auto instrumented Network calls?
+00:30:40 [W] Yes, you can you can basically add you can add any number of metadata you want to any calls that are happening because you can you can basically
+00:30:52 [W] Feedback. Next one is a question from Kevin.
+00:30:53 [W] He asks, is there a way to add custom tags for Auto instrumented Network calls?
+00:30:53 [W] Yes, you can you can basically add you can add any number of metadata you want to any calls that are
+00:30:54 [W] happening because you can you can basically add traces to Auto instrumented applications.
+00:30:58 [W] We didn't will enjoy it here because we wanted to just show that with very little or no tracing code. You can get tracing information about your applications using Auto instrumentation, but you can definitely you can instrument you can combine manual and auto
+00:31:11 [W] As you wish it's probably good to know that opentelemetry calls tags attributes.
+00:31:18 [W] All right.
+00:31:22 [W] Next question is from David say and the question is I thought opentelemetry was about correlation between metrics traces and logs via labels. I don't understand how this works with auto instrumentation.
+00:31:36 [W] Yeah, I think that so I don't know if this is what you are asking David wa but at this moment we only you know, the agents only kubevirt racing. But of course the plan is to include metrics as well and I saw another question,
+00:31:54 [W] I think the so I don't know if this is what you are asking David David a but at this moment we only you know, the agents only cover tracing but of course the plan is to include metrics as well and I saw another question,
+00:31:56 [W] We will be covering but in the future we will also have locks.
+00:31:58 [W] It's part of the entire solution and usually this instrumentation components won't be doing anything fancy. They will just be up to installing existing instrumentation.
+00:32:13 [W] So that instrumentation will be the one responsible for you know, putting everything together. Yeah, so I don't know if you are if that's what you meant.
+00:32:18 [W] And just add to that there there is some work underway, at least on the python side for the grpc library instrumentation library to add metrics as well.
+00:32:34 [W] So we didn't get a chance to demo it because it wasn't ready at the time of the recording but that's something we definitely want to spend a bit more time in the future.
+00:32:40 [W] Pronounce of asks does opentelemetry have planned to collect logs as well.
+00:32:48 [W] Yes, so I say Mission before the ad that's something that's in the works for GA.
+00:32:57 [W] It's going to be an experimental feature because we know there's only so much time that we can work on.
+00:33:07 [W] But yeah, we will there will be something that's part of Gia and of course eventually we will have a more stable update to that part.
+00:33:12 [W] Next question is from Andre asks.
+00:33:19 [W] I'm asking just to make sure because I've already suspect the answer libraries work transparently for codleyn workloads as well.
+00:33:24 [W] We're cuddling.
+00:33:30 [W] But if you think there's something that we should support please just contact us. I think that there was there has been interest in adding stuff specifically for scallop for example, and yeah what yeah, usually just like, you
+00:33:42 [W] Equals with Java will work with cotton or it shoot and if not, we can have it.
+00:33:48 [W] All right called next question is from Sashi asking.
+00:33:55 [W] Can I use opentelemetry as a sidecar for node.js containerized applications?
+00:33:59 [W] Yeah, I don't have an answer for that.
+00:34:06 [W] Yeah, I'm not sure if it would be a sidecar as much as the node.js containerize application itself would be instrumented with opentelemetry
+00:34:23 [W] JavaScript Auto instrumentation to allowing. It's probably worth taking a look at the opentelemetry JS repo to get an idea for how Auto instrumentation for JavaScript works that might give you a better idea of how to how to go about
+00:34:39 [W] Or how Auto instrumentation for JavaScript works that might give you a better idea of how to how to go about using end.
+00:34:40 [W] Ben C asks, are there any security risks with instrumentation itself?
+00:34:50 [W] Well, it shouldn't there are there having actually security concerns on the API on because we had this idea of for example doing context propagation out of the box, even if the user didn't configure that.
+00:35:06 [W] So we are working hard on solving to see issues. But those things wouldn't be happening as part of their presentation.
+00:35:21 [W] There are just part of the API SDK and instrumentation in general.
+00:35:22 [W] But yeah, we're taking this very seriously. This is you know, being part of this cncf is for of this.
+00:35:28 [W] Yeah, and I think I mean I think like what any any code whatsoever.
+00:35:35 [W] There's always security risks. You know, I think I think that's
+00:35:38 [W] It's really up to the library and instrumentation Library writers to ensure that no data is like that shouldn't be leaked.
+00:35:54 [W] I think it's also it's also up to the the folks that are leveraging those libraries to look at the data that gets populated in they're tracing information in the tracing back ends and and ensure that no sensitive data is being exposed.
+00:36:04 [W] Instrumentation Library writers to ensure that no data is like that shouldn't be leaked.
+00:36:06 [W] I think it's also it's also up to the the folks that are leveraging those libraries to look at the data that gets populated in they're tracing information in the tracing back ends and and ensure that no sensitive data is being exposed.
+00:36:07 [W] So I yeah, I think there's always a security risk I think is the to take away that I would like to see from that question.
+00:36:15 [W] The next question is from subin asking those the Telemetry data from routers. Make CPUs too busy. Not really. No, I think there's no
+00:36:29 [W] Asking those the Telemetry data from routers make CPUs too busy.
+00:36:30 [W] Not really.
+00:36:31 [W] No, I think there's no evidence of that. In any case, you know, let's say that for example, there's some case like this or another one that is creating too much too much
+00:36:42 [W] You can most of this is from addition engines already support blacklisting something.
+00:36:49 [W] you don't want to do instrument and if they don't they will have it in the future.
+00:36:57 [W] And of course you can always leverage sampling if it's if it becomes a problem.
+00:37:00 [W] Well, yeah, but there I am a little bit curious about that.
+00:37:03 [W] I would I would like to hear more about the details.
+00:37:04 [W] Yeah, Alex.
+00:37:07 [W] Yeah, no, I think you're right.
+00:37:09 [W] I think we haven't seen it yet, but it doesn't mean it doesn't exist.
+00:37:15 [W] I don't think that we've tested it with what brother is at this point.
+00:37:20 [W] Okay, probably the last question because we only have one minute left here and then we'll have to go to slack from my mood asking.
+00:37:27 [W] Is there any overhead to on requests and how do we convey your probability of capturing tracers?
+00:37:35 [W] So there is the sampling?
+00:37:36 [W] Hi or the sampling API that's configurable and the opentelemetry SDK that's that's likely how you would configure the probability of capturing traces. And as far as overhead on requests.
+00:37:51 [W] I mean, I think like with with everything there's always going to be overhead as you add more code on the path.
+00:38:02 [W] So it's just a matter of you know, how much overhead are you comfortable with on on the requests?
+00:38:04 [W] And yeah, any any last thoughts on that question Carlos?
+00:38:09 [W] right
+00:38:13 [W] All right, cool.
+00:38:18 [W] Well, thank you everybody for attending the session.
+00:38:20 [W] It was great having all these questions and yeah as we said in the in the slides, please reach out to us if you have any further questions and it sounds like we're gonna have some questions on slack. So yeah, I think it's a much guys.
+00:38:32 [W] Yeah, it's follow-up.
+00:38:32 [W] Thanks for joining.
+00:38:35 [W] And yeah, we'll waiting for we waiting for your questions. Thank you for joining again.
+00:38:39 [W] cheers

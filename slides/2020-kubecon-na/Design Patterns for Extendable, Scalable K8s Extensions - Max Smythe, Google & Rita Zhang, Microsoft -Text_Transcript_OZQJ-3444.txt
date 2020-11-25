@@ -1,0 +1,301 @@
+﻿Design Patterns for Extendable, Scalable K8s Extensions: OZQJ-3444 - events@cncf.io - Friday, November 20, 2020 5:57 PM - 44 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello everyone. Welcome to design patterns for extensible scalable kubernative extensions.
+00:00:05 [W] I'm Rita Jay.
+00:00:07 [W] Take a look at some of the design patterns underlying gatekeeper and how they allowed us to create an extensible scalable kubernative extension because there are a lot of topics to cover this talk will mostly cover high level Concepts.
+00:00:23 [W] But first what is gatekeeper gatekeeper is a customizable kubernative a mission while parsec the helps its Force policies and strengthen governance.
+00:00:32 [W] take a look at the way. It does this before we dig into how the pieces work.
+00:00:40 [W] Gatekeeper supports both audit time and admission time checks, but today we're going to focus on admission time specifically serving the kubernative admission webhook. This diagram is a high level model
+00:00:55 [W] / serves admission requests when something makes a request to the API server.
+00:00:52 [W] So for example a user making a cute couple requests the API server receives that request and sends an admission request to Gatekeepers validating webhook.
+00:01:04 [W] It's asking gatekeeper.
+00:01:06 [W] Hey, should I allow this request to proceed right and gatekeeper must answer either?
+00:01:11 [W] yes or no and to do this gatekeeper consult spok.
+00:01:16 [W] Policy configuration which is the large gray box at the bottom of the slide the green objects that are labeled constraint.
+00:01:25 [W] Tell the web hook what checks and admitted wants to perform and constraints rely on templates, which are the blue documents to tell the system exactly how to perform the check.
+00:01:37 [W] For example, they might say labels live in meta data labels.
+00:01:42 [W] So that's where you should validate labels.
+00:01:47 [W] The Notions of gatekeeper the web hook constraints and templates under live Gatekeepers philosophy that policy is a team effort separating these rolls into discrete areas allows for specialization.
+00:02:00 [W] where work in each area benefits the others increasing its scale.
+00:02:05 [W] We rely on Duck typing to give us this separation of concerns.
+00:02:03 [W] So let's take a brief.
+00:02:05 [W] Look at Duck typing how it helps in some of the patterns.
+00:02:08 [W] we found helpful in our implementation.
+00:02:12 [W] That typing has been covered in previous Cube cons. So we won't get into the details, but generally speaking if it walks like a duck and talks like a duck as system should treat it like a duck.
+00:02:23 [W] This is similar to polymorphism in object-oriented programming are ducks are constraints.
+00:02:31 [W] Our goal for admins is that there are able to Define different types of constraints.
+00:02:37 [W] They share Universal behavior for instance. All constraints can use label selectors.
+00:02:42 [W] We do this by creating a parent class for the constraint that implements Universal behaviors.
+00:02:48 [W] Template authors are able to create sub classes by injecting their enforcement logic and its function signature by declaring a concern template resource. The construing template is combined with this Universal Behavior to create a
+00:03:04 [W] How does this look inside Gatekeepers code one gatekeeper receives an admission request from the API server. The first thing it does is find the matching kind the find the matching constraints using the match criteria as defined
+00:03:15 [W] It then passes off execution to the template logic back in each constraint which tells gatekeeper whether the constraint was violated or not gatekeeper, then Aggregates the results and uses enforcement actions on the constraint to tell they get
+00:03:18 [W] how to proceed now constraint templates are cri-o es and they create constraints which are also see our DS so really we have created a system where cri-o is can create cri-o s
+00:03:31 [W] There are a few challenges with this Paradigm first. We need to have a generic controller to handle constraints.
+00:03:39 [W] Right and we wrote ours using unstructured resources and where ever we needed to have strongly typed sub schemas, you know for things like status.
+00:03:50 [W] We serialize the Jason subtree were interested in and then read deserialize it into a strongly typed.
+00:03:58 [W] Giggling struct. We also need a way to reliably merge partial Jason schemas for the template arguments and the universal Behavior into a fully realized constraint schema and
+00:04:14 [W] Must you know for things like status.
+00:04:12 [W] We serialize the Jason subtree were interested in and then read deserialize it into a strongly typed golang struct.
+00:04:21 [W] We also need a way to reliably merge partial Jason schemas for the template arguments and the universal Behavior into a fully realized constraint schema and keeping the two
+00:05:11 [W] two different sub schemas like the template schema in a special route avoids the possibility of collisions when the there's overlap between the two scheme has the most difficult
+00:05:26 [W] Link Dynamic watches originally we did this by creating a sub manager that would restart every time the set of watched resources changed and there were two big problems with this approach.
+00:05:38 [W] The first was that we had in efficient memory usage because the controller runtimes watch cash was duplicated across the two managers and a larger problem for users was
+00:05:53 [W] Fine eliezer's so that we could catch delete events that may have been missed because the sub manager was restarting and we've since been able to move on from this specific model because orange shomron rotes a
+00:06:07 [W] About allows us to change the set of watched resources without restarts cash duplication, or of course final answers.
+00:06:14 [W] let's zoom in a bit and discuss how we interact with this Dynamic watch manager gatekeeper has two sets of dynamic watches one for constraints and the other to sink arbitrary data for each one of these we have
+00:06:30 [W] And controller and a dynamic controller. The main controller is responsible for telling the dynamic controller what to watch the dynamic controller is a generic controller that can understand a duck type resource.
+00:06:39 [W] We have two main controllers one watches considering templates. It tells the watch manager which concern kinds are available to watch the other watch the other one watches the config Resource as that's where
+00:06:54 [W] Watch manager, which constrained kinds are available to watch the other watch the other one watches the config Resource as that's where users tell gatekeeper that they want to sync those resources.
+00:07:04 [W] There is a potential problem here.
+00:07:06 [W] What if two main controllers are watching the same resource and one stops.
+00:07:11 [W] do we prevent one Dynamic watch from interfering with another we developed the register pattern to provide isolation.
+00:07:21 [W] Here's an example of how a main controller uses the registrar first. It would request a new registrar from the watch venator by providing the controller name and a channel by which watch events will be sent to the
+00:07:37 [W] And when the main controller wants to add or remove a group version kind from the dynamic controller it simply calls add watch or removed watch.
+00:07:51 [W] Each register is namespace to the controller and is capable of adding or removing an intent to watch a GVK or replacing the set of watch TV case altogether the watch me a manager can then take the union of all the
+00:08:06 [W] Registrar's to figure out what resources to watch by adding a layer of indirection and namespacing intent. We have made a significantly easier to write multiple Dynamic controllers that watch potentially overlapping sets of resources.
+00:08:20 [W] Can we easier to write multiple Dynamic controllers that watch potentially overlapping sets of resources?
+00:08:24 [W] Now we've touched a lot on meta topics right controllers that control controllers crd is that creates? ER DS ducks that walk like constraints we could take this process to The
+00:08:39 [W] Walks the walk like constraints we could take this process to The Logical conclusion, right?
+00:08:46 [W] We probably should we should go full meta.
+00:08:51 [W] Alright, so let's take a look at the policy enforcement as a phenomenon, right?
+00:08:58 [W] It follows a pretty standard pattern.
+00:09:01 [W] Generally.
+00:09:03 [W] It's just looking at an object and returning a yeah, that looks good or no. This is not good.
+00:09:09 [W] Right. And is there any reason that this must be done as kubernative admission controller right do the resources even have to be kubernative resources?
+00:09:23 [W] This is probably not true. If you walk one rung up the abstraction ladder and duck type the decision process itself.
+00:09:32 [W] Alright, so let's see what that might look like.
+00:09:37 [W] So here we have the constraint framework constrain framework is the library that underlies gatekeeper. It coordinates all of the dock typing logic. We've covered so far it provides the execution flow gatekeeper uses to render a decision
+00:09:52 [W] Over it also provides to abstractions that allow us to Define construing templates and constraints enforcement points and targets.
+00:10:02 [W] There are a few critical behaviors the constraint / template abstraction relies on some kind of match criteria schema and logic enforcement actions to tell the system what to do when a constraint is unhappy
+00:10:18 [W] an interface on which the enforcement logic can rely
+00:10:12 [W] Here we have the target at Target abstract stand notion of a platform.
+00:10:17 [W] What do objects look like how our policies bound to them while request metadata do I have?
+00:10:25 [W] Target's give us a match criteria schema and logic such as what a label selector looks like and how to test if a label selector matches.
+00:10:36 [W] Target's also provide conferring template authors with the information. They need to evaluate a request.
+00:10:42 [W] Like what does the object on validating look like?
+00:10:47 [W] what kind of request metadata do I have such as requesting user?
+00:10:53 [W] And enforcement point is the system that asks for a policy check and knows what to do with any violations Gatekeepers webhook is an example of an enforcement Point Gatekeepers audit processes another enforcement points.
+00:11:10 [W] Putting all of this together gives us a model for abstracting policy enforcement itself.
+00:11:16 [W] We can use the higher-order abstractions of the constraint framework targets and enforcement points to take the notion of constraints and templates to other venues.
+00:11:27 [W] audits caps provides a Docker image that can be used to validate kubernative configurations at rest or as part of a ci/cd pipeline of cloud config validator wraps the constraint framework
+00:11:38 [W] That understands Google Cloud.
+00:11:33 [W] It creates a library that has been used for a few things.
+00:11:37 [W] It can validate gcp resources as part of a first study server deployments.
+00:11:43 [W] It can validate gcp resources or snapshots at rest using cfd scorecards. And also it can validate terraform plans via project called terraform validator.
+00:11:59 [W] Abstracting constraints and templates into a library has made it faster to bring them to other platforms and other policy enforcement points, which allows devs to give users a consistent experience and helps users execute the
+00:12:14 [W] In many places so duck typing has allowed us to bring Kate style policies outside of the kubernative cluster expanding the potential for cool user experiences, like rejecting
+00:12:24 [W] Ci/cd pipeline at the pre submit stage which provides defense and death.
+00:12:24 [W] All right. Now we're going to take a 90-degree turn and talk a bit about Gatekeepers infrastructure. Let's talk about gatekeeper as a web troller.
+00:12:35 [W] So what do we mean by web crawler?
+00:12:38 [W] Well gatekeeper is both a web hook and a controller at the same time and these students things are usually very different beasts right when we think about web hooks.
+00:12:50 [W] Well webhooks main job is to serve requests. That means they need to be responsive and therefore generally intolerant of downtime and webhooks also scale their availability and serving capacity by
+00:13:05 [W] Increasing the number of serving pots and each of these pods are peers, which means there's no leader or a follower relationship and everything is a flat hierarchy where every pot is equally able to serve
+00:13:20 [W] Controllers on the other hands observe and reconcile resources and come together to create and eventually consistent system because controllers are background processes.
+00:13:32 [W] They are a little more down time tolerance because the system only needs to converge in a reasonable amount of time and controllers are generally Singleton's they can use leader election, but that doesn't really
+00:13:47 [W] Really add capacity what we do there is extra pods and leader election.
+00:13:52 [W] usually approve of availability by having hot standby as they can take over if the leader becomes unavailable now because gatekeeper is a web hook that serves results based off of observed resources.
+00:14:08 [W] Is a little bit webhook and the little bit controller therefore what troller?
+00:14:04 [W] Because of this tension between how well plugs and controllers usually scale.
+00:14:09 [W] It seems like they may be incompatible models. This apparent conflict can be resolved by observing that item potent controller processes don't need to be Singleton's if more than one controller is watching the same resource
+00:14:24 [W] Agree on the in-state the first controller to write the output were when the right.
+00:14:20 [W] Other controllers will either have not yet processed that resource or will have their rights rejected on retry those controllers will see the correct State and will not attempt to reconcile further.
+00:14:33 [W] This is similar to how kubernative leader election works.
+00:14:36 [W] This can lead to some extra traffic but only one controllers need to write a change.
+00:14:44 [W] So with this observation we can create web trollers that leverage what we call leaderless horizontal scalability in this model a web troller scales horizontally like a normal web hook right
+00:14:59 [W] So with this observation we can create web trollers that leverage what we call leaderless horizontal scalability in this model a web troller scales horizontally like a normal web hook right
+00:15:20 [W] our identity in and they use this first right wins model that we just talked about and each pod manages its own internal cache of constraints templates of data, which makes every
+00:15:35 [W] Other pods now, there are some limitations this model imposes on us.
+00:15:40 [W] We need to be sure that non-identity and operations like audit run in a separate Singleton pods.
+00:15:49 [W] We also should avoid scaling right contention quadratically with the number of pods which can happen. If each pod needs to write its own pod specific State one thing we need to be sure about also is that
+00:16:04 [W] Is our side effect free as there's no guarantee that side effects are identity Thames.
+00:16:11 [W] That was easy.
+00:16:12 [W] Multiple part-time.
+00:16:14 [W] Now what I think are we done can can we go not quite people probably want to know the status of their policies whether they're in force.
+00:16:26 [W] were not this is hard because kubernative ziz eventually consistent so multiple pods means multiple possible enforcers and policy is only as strong as its weakest link.
+00:16:41 [W] If we have three web hook pods to and forcing a new policy one.
+00:16:49 [W] Not and an API server that's going to choose a web hook Bob randomly. The policy only really has a 66% percent chance of being enforced.
+00:16:59 [W] And in order to reason about whether a constraint is in force. Therefore we need to know whether it is recognized by all pods.
+00:17:09 [W] So to do this, we implemented a bipod status sub resource this resource tells us which pots have ingested a given resource and what roles like audit or webhook those possible form.
+00:17:23 [W] Policy is only as strong as its weakest link if we have three web hook pods to enforcing a new policy one.
+00:17:30 [W] Not and an API server that's going to choose a web hook Bob randomly. The policy only really has a 66% percent chance of being enforced.
+00:17:40 [W] And in order to reason about whether a constraint is in force. Therefore we need to know whether it is recognized by all.
+00:17:48 [W] ponds
+00:17:50 [W] So to do this, we implemented a bipod status sub resource this resource tells us which pots have ingested a given resource and what roles like audit or web hook those pots perform.
+00:18:04 [W] We also track The observed generation of the resource to make sure each pot is enforcing the most current generation.
+00:18:12 [W] The uid of the object to detect if they if we are actually seeing the status of a delete an object that has since been recreated and any errors of Padma may have encountered ingesting the resource.
+00:18:27 [W] We now have more information about the state of the system. But how do we interpret it pessimistically, of course, so if a pods entry is missing, we assume that that pod has
+00:19:33 [W] If they if we are actually seeing the status of a delete an object that has since been recreated and any errors of Padma may have encountered ingesting the resource.
+00:19:46 [W] We now have more information about the state of the system.
+00:19:50 [W] But how do we interpret it pessimistically, of course, so if a pods entry is missing, we assume that that pod has not yet ingested the resource if a resource is
+00:20:18 [W] Said the resource if a resource is deletion timestamp is set we assume that pots have already processed that delete and if the number of PODS reporting status is equal to the number of
+00:20:33 [W] A pod serving the web hook.
+00:20:35 [W] Well, then we can assume that all pods have ingested and are enforcing that particular constraint.
+00:20:45 [W] So in order to make these observations more meaningful, we need to enforce some invariance in our project one. If we expect to have in pots. We must never have n plus one pot.
+00:20:59 [W] Otherwise counting in observations leaves the possibility that there is still one pot has not observed a new resource.
+00:21:07 [W] To pause cannot serve until they have booby-trapped all resources present during startup.
+00:21:14 [W] Otherwise a new pod would put the assumption that n observations means and enforcing pots into question.
+00:21:21 [W] Lastly.
+00:21:23 [W] We must design our resources such that a missing resource has a known impact on the system in this case a missing constraint means that policy is enforced more Loosely than it would otherwise be
+00:21:36 [W] B we should also know here that writing referential constraints which rely on cache data potentially violates this principle for one thing weather data has been cached is unreported
+00:21:52 [W] It's impossible to know the significance of missing data without knowing the specifics of a constraint Logic the use cases for cache data are too valuable to ignore, but it's worth calling out that such templates.
+00:22:07 [W] Have imperfect enforcement at the web global.
+00:21:57 [W] There are two potential problems with reporting by pods status which are write amplification and the possibility of zombie status write amplification can occur when all pods one to write status at the
+00:22:12 [W] Because of kubernative optimistic optimistic concurrency each pod may try to write the status at the same time and one will win the leaving the other pods to retry which means that in the worst case.
+00:22:24 [W] There will be N squared total write requests where n is equal to the number of pods.
+00:22:29 [W] zombies status can occur if removed pods don't clean up their status. And so you'll start seeing that old status and it'll just be there perpetually.
+00:22:40 [W] Really gatekeeper solves these problems with a layer of indirection. We create a separate constraint pods status resource, which is there where there's one of them per unique
+00:22:55 [W] Strain Tuple and each pod will write to its own constraint pod status resource.
+00:22:58 [W] There's then a Singleton controller called the status controller that Aggregates these statuses and writes them to the constraints this model lowers the worst case scaling of write requests from
+00:23:13 [W] In here and because each constraint pods status is owned by the corresponding pods.
+00:23:11 [W] We can rely on kubernative garbage collection to clean up any zombie data that's left by old pots.
+00:23:20 [W] And that's how we Implement a web crawler all the way from scaling while Pol pot's horizontally to managing how they report status.
+00:23:28 [W] Let's take a look at how the reliability and performance of the system May scale what the number of pots if we assume one serving poddisruptionbudgets serve all inbound traffic and that each pot fails
+00:23:43 [W] Their pod and probability of down time decreases exponentially with the number of running pods on the other hand because we only consider a constraint as being enforced when all pots have observed it
+00:23:55 [W] Time to enforcement as reported by the system as a whole unfortunately without knowing the exact distribution of ingestion times. It's hard to say, how by how much
+00:24:00 [W] To sum up we have covered design patterns that have helped us create the web troller model which include duck typing and various patterns.
+00:24:09 [W] We found helpful there along with infrastructure and interface development that helps us both serve and reason about our system.
+00:24:17 [W] So hopefully some of these patterns will be useful to you in your own projects. And if they do solve an issue for you, we would definitely love to hear about it.
+00:24:29 [W] And with that thank you for attending this session.
+00:24:31 [W] We just want to thank the gatekeeper Community all the users all the contributors for your feedback and all the feature requests to make a keeper the project it is today, and we also want to extend our thank you to the
+00:24:46 [W] Runtime Community for all the awesome work that has bootstrap the gatekeeper could project and last but not least our wonderful audience for attending this session.
+00:24:53 [W] Thank you guys very much.
+00:25:05 [W] Hello.
+00:25:06 [W] All right.
+00:25:11 [W] Oh time for the QA.
+00:25:14 [W] Not many question questions, but a couple of very nice responses.
+00:25:22 [W] So thank you guys for that one was just wanted to let you know. I'm watching and you both are doing great work with gatekeeper from Bridget. Thank you very much.
+00:25:32 [W] That means a lot it really does and also another one saying I just wanted to say the session is super interesting and useful for anyone writing controllers.
+00:25:45 [W] Thanks very much.
+00:25:46 [W] Do you both that's from neck and thank you Nick. I'm glad that it was, you know General enough that these patterns can be adapted that is that is the goal of the session and I'm glad we didn't get
+00:26:01 [W] Keeper weeds. So that's all of the outstanding QA right now.
+00:26:00 [W] So feel free to ask anything.
+00:26:06 [W] Otherwise new question.
+00:26:09 [W] All right. So the question is would you like to talk a bit more about possible changes in kubernative a surround pods security policy. I would like to talk a little bit more about that.
+00:26:22 [W] That I don't know if I am up to date unlike the exact current status. So I don't want to like speak out of turn in terms of what the state is Rita you are at the most recent meeting,
+00:26:37 [W] I was just gonna say if you want the latest you can check out the recording from the latest Sing-Off meeting we had but there are some discussions around different options
+00:26:42 [W] But there are some discussions around different options for how PSP will change in kubernative itself whether or not there's future and what that means for
+00:26:52 [W] In kubenetes itself, whether or not there's future and what that means for users who rely on the knative built-in feature. Obviously, there's also the alternative options where
+00:27:07 [W] Teacher obviously, there's also the alternative options where you know, you can use something like a gate keeper as alternative to providing custom policies to your clusters.
+00:27:21 [W] So stay tuned and definitely join the Sig off conversation.
+00:27:27 [W] it sounds Dynamic right? There's like some like baked in policies or something like that there.
+00:27:36 [W] Like the tiered security policy like the Rings thing. I think I think the general feeling was people wanted something that just ships out of the box, you know secure by default right
+00:27:51 [W] whereas like you know, if you eat deploy something outside of kubenetes, that's something that the cluster operator will have to deploy in a you know, on top of kubernative after the Clusters bootstrapped so
+00:28:06 [W] in a you know on top of kubernative after the Clusters bootstrapped so that was a big concern and so, you know, I'm looking at the Q&A if others show up, I will okay,
+00:28:19 [W] So the question is if someone wants to get involved in gatekeeper, do they start by attending say off?
+00:28:26 [W] Where are the best places to join as a new contributor?
+00:28:28 [W] So for gatekeeper, specifically, I would definitely recommend looking at our GitHub repo which is github.com / open - policy - agent / gatekeeper and
+00:28:47 [W] that links to it now.
+00:28:48 [W] Yes the things I learned.
+00:28:51 [W] Yeah. So if you go there in the readme, there's links to the community meetings. We have we alternate between more EU friendly times and more u.s.
+00:29:06 [W] Friendly times. Hopefully that covers most time zones for people.
+00:29:13 [W] Let us know. If not and yeah filing issues. There's a
+00:29:17 [W] Black, right the OPA the OPA slack the kubernative stash policy channel is another place.
+00:29:25 [W] You can reach out to us.
+00:29:26 [W] Okay.
+00:29:28 [W] So someone is saying they have a question in so in the slack Channel, I am guessing this is the cncf slack Channel.
+00:29:39 [W] Actually, I don't see it.
+00:29:44 [W] Yeah, but I don't see it.
+00:29:46 [W] Read me there's links to the community meetings. We have we alternate between more EU friendly times and more u.s.
+00:29:58 [W] Friendly times.
+00:29:59 [W] Hopefully that covers most time zones for people.
+00:30:05 [W] Let us know.
+00:30:06 [W] If not, and yeah filing issues.
+00:30:09 [W] There's a slack right the OPA the OPA slack the kubernative stash policy Channel.
+00:30:16 [W] It is another place.
+00:30:18 [W] You can reach out to us.
+00:30:19 [W] Okay, so someone is saying they have a question in so in the slack Channel, I am guessing this is the cncf slack Channel.
+00:32:12 [W] Keep Calm custom extend Kate's Channel, if you could post it in the QA that'll save us some hunting.
+00:32:23 [W] Because I don't know if I'm going to be able to find it.
+00:32:26 [W] Otherwise.
+00:32:29 [W] also
+00:32:31 [W] keep an eye on that slack channel in case it pops up.
+00:32:34 [W] Ah, OK another question fill your policy in webhook config in gatekeeper Repose still set to ignore with web crawler work.
+00:32:45 [W] It should be safe to set it to fail now, right?
+00:32:48 [W] Yes, and no, um, I think with regard to failing closed the biggest
+00:33:01 [W] And now is cluster recovery.
+00:33:05 [W] So there is an issue. I can link it in slack after the presentation if people are interested with kubernetes webhooks generally about their potential to interfere with
+00:33:20 [W] Set to ignore with web crawler work.
+00:33:21 [W] It should be safe to set it to fail now, right?
+00:33:24 [W] Yes, and no I think with regard to failing closed. The biggest concern now is
+00:34:57 [W] Not is core infrastructure.
+00:35:00 [W] Right? Like if you're interfering with Cube system and you're upgrading your cluster, you might break leader election, which makes it so the cluster can't recover which then gatekeeper can recover.
+00:35:12 [W] So you wind up being hard down. So there is an issue filed where we want to have a feature where you can ask for certain resources to be sort of safe.
+00:35:27 [W] Um the web hook that's all all kubernative use admission weapons outside of the label selector mechanism.
+00:35:34 [W] They already have in terms of like if you're not worried about you you're confident that you could write your policy such that it won't interfere with your cluster, I believe so personally,
+00:35:49 [W] the that, you know, you probably want to do some availability analysis yourself there, you know, just just to make sure we're meeting whatever expectations you have based off of your cluster use cases,
+00:36:04 [W] Consider maybe looking at the reliability of the under underlying deployment as well.
+00:35:55 [W] Right? Because the purpose of having these multiple pods is failure domain diversity, which very much depends on how gatekeeper itself is deployed.
+00:36:07 [W] Okay.
+00:36:08 [W] Oh, so people are asking and to keep cotton sekai de policy as well.
+00:36:14 [W] OK I will join that but there's another question of I'm still a bit confused.
+00:36:25 [W] So multiple pods are adjudicating.
+00:36:28 [W] How did their underlying rules stay in sync.
+00:36:32 [W] So this is eventual consistency.
+00:36:38 [W] Their underlying rules may not always be a hundred percent in sync and this is part of why missing rules need to have well understood impacts, right?
+00:36:53 [W] What the system does is it creates kind of a high water mark right you could say that well 50 out of our 60 constraints have been observed by all pods.
+00:37:05 [W] So we're confident that those are enforced and then those that last 10 will be in kind of an ambiguous State maybe some pods will enforce it. Maybe they won't and how we reach that high water
+00:37:20 [W] Which we kind of covered in the presentation though.
+00:37:15 [W] It's a bit implicit.
+00:37:16 [W] is that each part is broadcasting its individual status, right?
+00:37:23 [W] So so each pod is ingesting that particular config and it will not write out its status until it is finished ingesting that config. So the the status is a lagging indicator that the
+00:37:38 [W] Right and because each pot is doing this individually and we've designed our system semantics in this way where you don't need coordination.
+00:37:45 [W] You can rely on each pod being its own independent server and reach conclusions about like the emergent Behavior the system.
+00:37:59 [W] So the the follow-up questions of that was is this via at CD storage?
+00:38:04 [W] I mean you're reading the status which is in at CD storage, but it's it's more like a mathematical construct.
+00:38:13 [W] Right? Like if I know five people are aware of things a thing and there are five people in the room, right? Then I can say everyone's aware of this thing. And if someone leaves the room, I could still say everyone's aware of this.
+00:38:28 [W] Thing right and if I have a doorman saying that before you enter the room, you must know what everyone else already knows then I can still say that everyone knows about
+00:38:43 [W] See's that's that's weird analogy but out but just I mean they stay in sync because we have the reconciler that checks for consistency.
+00:38:56 [W] Yeah, yeah, like they Converge on the they sort of independently all Converge on on that state right and just note the by Spire status pattern is being reused in other.
+00:39:11 [W] To so we're trying to spread this out and reuse the same pattern we're preaching.
+00:39:06 [W] Is it really?
+00:39:08 [W] where is it sprung?
+00:39:11 [W] All right. Yeah, we're using it in the secrets for a CSI driver project.
+00:39:15 [W] It's a say Goths a project where they're multiple controllers trying to write to the same resource also, so very nice patterns reuse there.
+00:39:30 [W] Nice, so it Rita if you can look at the questions, I'm going to try to join that other channel so I could see ya so seems like it was a typo probably it's
+00:39:45 [W] ID policy I just joined by there was a question about open general not specific to gatekeeper or anything.
+00:39:50 [W] Got you.
+00:39:51 [W] Yeah, and anything we could be helpful with or is it kind of out of our
+00:40:21 [W] I think somebody asked about cute management.
+00:40:25 [W] Okay.
+00:40:26 [W] Yeah, that's not something. I'm deeply knowledgeable of okay. So two minutes, is there any other knee dangling questions and he or anything you'd like to talk about?
+00:40:51 [W] I think we've addressed all of the QA is we could Circle back to some of the topics?
+00:40:58 [W] That we covered.
+00:41:06 [W] Okay, I'm seeing okay.
+00:41:09 [W] Yeah Alex saying he sent a question in the main Channel.
+00:41:15 [W] Hopefully, yeah if you send it on the Q&A if it's not.
+00:41:20 [W] if you haven't already answered it, otherwise, I think
+00:41:24 [W] the custom extend Cates is where we'll be hanging out.
+00:41:30 [W] Ah, gotcha cool. JoJo is in slack saying that there is another Opa talk going on like kind of at the same time. So we might be Crossing wires.
+00:41:50 [W] Cool. Well, thank you guys very much for listening to us talk for you know, 25 minutes and asking us questions.
+00:41:59 [W] We really appreciate it.
+00:42:00 [W] I hopefully this has been helpful for you.
+00:42:02 [W] So Holly wait wait looks like there's second page.
+00:42:07 [W] So if you look there's item page.
+00:42:10 [W] Oh, well at the top there's an arrow so asked on the eventual consistency problem is they're sort
+00:42:18 [W] Consistency controller on the roadmap that makes sure only the sink policies are enforced by the web hook.
+00:42:30 [W] is there's 14.
+00:42:33 [W] Only the synced policies well today, you know as as we had in the diet great like we do check for cash Readiness be when the when the
+00:42:48 [W] Roller comes up and this ensures. I only when the policies that are already in the cluster are already in the cache.
+00:42:57 [W] That's when they're being enforced and that was something that Oren had worked on.
+00:43:03 [W] Yeah.
+00:43:05 [W] yeah. Yeah, and that's there as I was trying to make sense of the question. I think maybe what they're asking is I only enforce once all pods are aware of the policy.
+00:43:20 [W] So so you don't have this like 80% hit rate of policy enforcement.
+00:43:26 [W] It's not something I have thought of.
+00:43:32 [W] It's not something we've discussed in the community, but it should be possible.
+00:43:38 [W] There might be some like weird delicacy where if you do it wrong, the the policy will never serve like at the status
+00:43:53 [W] I can have some goes down or something, but it's worth thinking about.
+00:43:57 [W] Okay, they're saying we need to wrap it up apologies first the questions that we didn't get to but I think what I'll do is I'll paste these questions in slack and answer them.
+00:44:13 [W] There there's a good one about an attacker.
+00:44:16 [W] Let's follow up.
+00:44:18 [W] Yeah.
+00:44:18 [W] Yeah.
+00:44:18 [W] Yeah.
+00:44:18 [W] Yeah.
+00:44:18 [W] Yeah.
+00:44:18 [W] Yeah. Yeah, and so the webcast is saying where to go for that again.
+00:44:23 [W] Thank you guys for coming.
+00:44:24 [W] We really appreciate your time and we will be in Slack.

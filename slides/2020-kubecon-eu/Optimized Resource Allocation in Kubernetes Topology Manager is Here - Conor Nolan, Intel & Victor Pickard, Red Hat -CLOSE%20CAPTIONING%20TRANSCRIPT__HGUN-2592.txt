@@ -1,0 +1,217 @@
+﻿Optimized Resource Allocation in Kubernetes? Topology Manager is Here: HGUN-2592 - events@cncf.io - Wednesday, August 19, 2020 10:54 AM - 1181 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:02:13 [W] Hello.
+00:02:15 [W] Thank you for joining our talk on kubernative topology manager.
+00:02:17 [W] My name is Victor Picard.
+00:02:18 [W] I work at Red Hat.
+00:02:21 [W] My colleague Connor Nolan from Intel will be you will be presented with me today. Please type your questions in the Q&A box and we will adjust these at the end of the presentation.
+00:02:29 [W] Here is an outline of our discussion today.
+00:02:33 [W] We will introduce topology manager why it is desirable and useful for certain scenarios. Now, we can't talk about topology manager without first giving a brief overview of two essential components CPU manager and device manager so
+00:02:48 [W] On it's a bit. Then we can dive into topology manager and show how this kubernative component works with both CPU manager and device manager and he'll topology manager can be leveraged to maximize performance why use topology manager
+00:03:03 [W] Von Konig where some testing results from our friends and colleagues and Intel to help answer these questions are we done is topology managed to finish there's a complete there's tremendous interest in topology manager with several enhancements being
+00:03:19 [W] To get it will go over and give some highlights of these activities.
+00:03:26 [W] Are you interested in learning more want to contribute will have a few words on this topic as well.
+00:03:29 [W] Why Numa a growing number of applications and workloads, especially in Telco 5G machine learning artificial intelligence and other type of workloads often say we must be new maligned a common example of such a workloads would be
+00:03:47 [W] Based application here. The application would desire to have a certain number of dedicated CPUs some chunk of huge page memory a high speed network interface such as s RI ovhcloud functions with perhaps two or more of these one for Ingress one
+00:04:03 [W] All of these resources would need to be on the same Newman node in order to get the best performance.
+00:04:10 [W] From a broader context there's a desire to get the best performance possible out of the hardware.
+00:04:19 [W] How do we achieve optimal for performance with the lowest latency and high throughput well, we have to align the resources on the same Newman owed these resources include CPUs devices such as Network GPU devices
+00:04:32 [W] And possibly more to meet these objectives.
+00:04:37 [W] What is nuuma so we've mentioned Kuma several times some of you may already be familiar with Noma know what it is and why we need it for those that aren't familiar with Noma.
+00:04:50 [W] Let's briefly review.
+00:04:54 [W] Noma is non-uniform memory access looking at the diagram on the right. We see a to nuuma node system.
+00:05:01 [W] This system has to CPU sockets each CPU has local access to the directly connected memory and devices and
+00:05:08 [W] CPU can certainly access all of the memory on the system. But as you can see for example for CPU 0 on socket 0 to access memory on Numa Node 1.
+00:05:21 [W] It must go over the enter socket connection accessing the memory or devices over the interconnect ads delays.
+00:05:28 [W] So to get the best performance Padre sources such as CPUs and devices should be on the same Numa node, and avoid the inter socket connections.
+00:05:39 [W] How do we get exclusive CPUs assigned to a container? We use CPU manager CPU manager is a kubenetes component that runs in the kubelet it allocates and the signs exclusive CPUs to a container that specify a guaranteed quality of
+00:05:55 [W] that both requests and limits are integer values as shown in the sample pots back now for CPU managed to allocate guaranteed exclusive CPUs to a container the CPU manager policy
+00:06:12 [W] For more information about the CPU manager.
+00:06:17 [W] We've included a link to the blog post below at the bottom of the slide.
+00:06:19 [W] So we have guaranteed exclusive CPUs assigned to a container how our device is assigned an allocated.
+00:06:29 [W] Well kubernative has a device plug-in framework devices can use the device plug-in framework to implement plug-ins for gpus Nick's fpgas and other device resources that require vendor specific setup and
+00:06:44 [W] Ice plug-in you can advertise system Hardware resources to the cubelet that will be used to assign resources to the container.
+00:06:53 [W] So we've introduced CPU manager device plugins and how they can be utilized to allocate resources to a pod and or container, but these allocations are done independently, no coordination.
+00:07:10 [W] Meaning the allocations could come from different Numa nodes.
+00:07:13 [W] How do we get these resources aligned?
+00:07:15 [W] We use topology manager topology managers a component that runs inside the kubelet on each node topology manager was promoted to Beta as of kubernative.
+00:07:24 [W] Not 18, it provides an interface to allow CPUs and devices to coordinate resource assignment two pods in containers at the node level both CPU manager and Device Manager support the topology manager interface with
+00:07:39 [W] So beta as of kubernative 1.18, it provides an interface to allow CPUs and devices to coordinate resource assignment two pods and containers at the node level both CPU manager and Device Manager support the topology manager interface.
+00:07:41 [W] We now have the ability to assign and allocate resources such as CPUs gpus network interfaces like SRV virtual functions to a container from the same Newman Odin.
+00:07:53 [W] Let's take a look at an example on the left is a simple pot spec with one container.
+00:08:00 [W] The container in this pot spec is requesting two CPUs some memory and one instance of device a on the right.
+00:08:10 [W] You see we have a to nuuma node system 4 CPUs each with two devices on each node Now using topology manager and coordination with CPU managed in device manager, the cubelet will assign and allocate resources for this container
+00:08:25 [W] Kuma node and this example using topology manager you can see that we have an aligned poddisruptionbudgets.
+00:08:48 [W] Now Connor will take you through some of the details of topology manager including policies in a workings along with some detailed examples Connor over to you.
+00:09:00 [W] Thanks, Victor.
+00:09:07 [W] So an we've seen what apology manager is and why it's needed. So I'm going to go into some more detail on how it actually works starting with the topology manager policies.
+00:09:17 [W] So the chosen policy is set at node level as the Cuban flag and there are few different options with varying degrees of strictness.
+00:09:22 [W] The first is known which is set by default.
+00:09:25 [W] It doesn't do any kind of resource alignment.
+00:09:28 [W] The next is the best effort policy. This will attempt to perform some
+00:09:31 [W] Orson alignment, but the Pod will always be admitted regardless of whether that can be achieved or not.
+00:09:43 [W] Then the restrictive policy is the same as the best efforts policy in terms of how it actually works under the hood with the difference being - part of mission can be failed if an optimal alignment cannot be achieved and we've got some examples come up
+00:09:51 [W] Works then finally the single luminol policy as the name would suggest will attempt alignment of resources for a container on a single Uma node and will fail but admission if that cannot be achieved.
+00:10:07 [W] So how to apology manager actually works under the hood. So iPod admission time the topology manager part of MIT Handler will Loop over all containers in the Pod then for each container.
+00:10:22 [W] It will call out to the individual hint providers which are currently the CPU manager and the device manager as Victor spoken about and from those gather what we've termed as topology hints for each topology where resource type these topology
+00:10:34 [W] Lee all the possible allocations for a given resource and again these are covered in more detail in the next slide.
+00:10:49 [W] So then once all of these hints of been accumulated the topology manager using the selected policy will merge the gathered hints and then select It Best in the will align all requested resources.
+00:10:58 [W] So then we look back over those in providers instructing them to allocate their respective real respective resources using
+00:11:06 [W] At best hint as a guide for which Newman old or new monoids, they should allocate from then finally as we mention this Loop runs as part of mission time. So if any of these steps fail are the alignment cannot be satisfied
+00:11:19 [W] Resources using that best hint as a guide for which Newman old are Newman Old State Should allocate from then finally as we mention this Loop runs ashpod admission time. So if any of these steps fail are the
+00:11:21 [W] See for any of the containers in the Pod at the part of mission would fail with a topology of finity error. And any of those allocations that occurred prior to the failure are cleaned up cording lie.
+00:11:31 [W] So mentioned in the previous slide a topology hint at five you can't is a construct that used that we use to describe how a resource requests can be satisfied.
+00:11:45 [W] So it currently consists of two Fields the pneuma no definity.
+00:11:49 [W] This is a bit mask of mooma nodes where a resource requests can be satisfied IE.
+00:11:53 [W] Which Newman?
+00:11:54 [W] Oh darn Kuma nodes, then the preferred field contains a Boolean that encodes whether that given hint is preferred or not, and there's some
+00:12:02 [W] Samples, we have to explain what we mean by preferred and how that can influence part of mission with respect to the given policy.
+00:12:11 [W] So if we take this example similar to the diagram Victor showed you earlier. So if this is the underlying Hardware of our of our node, we see over on the left. We've got noumenon 0 and connected to that. We have socket 0 @ 4 CPUs and also
+00:12:27 [W] Three devices so one GPU and to Nick's then over on the right across that into a socket connection.
+00:12:36 [W] We've got socket one with again four CPUs and three three connected devices.
+00:12:41 [W] So two gpus and one Nick and these are all connected to Node 1.
+00:12:46 [W] old one. So all of these resources are available for allocation, and then the following part is scheduled to the node and this pile is requesting to exclusive CPUs one Nick one GPU.
+00:12:59 [W] So now we can actually take a look at the topology hints that are returned from the individual in providers both the CPU manager and the device manager.
+00:13:13 [W] So for the CPU resource type, we can see from the first CPU hint the one with the zero one true semantics that our request for two CPUs can be satisfied entirely on Newman old 0 and this is indicated by the bit mask, which is
+00:13:21 [W] It's zero. And we also see that this allocation is preferred because it's the narrowest possible placement and narrowness in this instance refers to the least number of bits set in that bitmask.
+00:13:37 [W] So then the second CPU into the 1-0 true. This tells us that the request for two CPUs can also be satisfied on Newman old one and this allegation is also preferred because again, it is the narrowest possible placement or
+00:13:50 [W] So then the second CPU into the 1-0 true this tells us that the request for two CPUs can also be satisfied on Numa Node 1 and this allegation is also preferred because again, it is the narrowest possible placement or equal to
+00:13:52 [W] Placement the final and third CPU Intel the staff the request can also be satisfied across both new and old 0 and Newman old one.
+00:14:06 [W] However, this allocation would not be preferred as there are narrower possible placements as we can see from the first two ants
+00:14:08 [W] so the same hints are also returned from the other resource types in this particular scenario.
+00:14:18 [W] And for example, we can see the request for one.
+00:14:21 [W] Nick can be satisfied on either Newman alone, which would be preferred are with a bit mask for both new minerals, which are Beyond preferred and the same applies for the request of one GPU.
+00:14:33 [W] So now this policy manager has gathered all hints from all providers. The next step is to merge these hints. So this is ultimately done by taking a chronosphere.
+00:14:39 [W] Product of hence across all resource types and performing a bitwise and on the númenor affinities of those hints and this gives us a new bitmask for a merged hint.
+00:14:54 [W] So for the preferred field in any of the in any of the hints in the cross product, if any of the hints in that cross product contain a non-preferred hint then the merged in this alternative for otherwise, it's set to True
+00:15:05 [W] If the Affinity of the merged hint is all zeros, we set the preferred field to false. So then it's just a matter of iterating over all the possible permutations in those hints and this continues right through until we have compiled a full list of
+00:15:20 [W] So finally once we have all those Merchants, it's up to the policy to 10 choose a best hint.
+00:15:39 [W] So for the for the best effort policy in this scenario, the best hint chosen will be the one with the zero one true semantics and this is true for all K. All three policies. In other words. The best hint is to allocate
+00:15:45 [W] Zero and this is a preferred allocation.
+00:15:53 [W] So this means that the best effort restricted and single luminol policies are all Satisfied by this placement and the Pod will be admitted successfully under all three policies with the allocations shown. So all CPUs and all devices are
+00:16:03 [W] Wonder Woman or phenomenal zero. Okay. So a slightly more complex example this time again.
+00:16:12 [W] Our node has the same underlying Hardware topology.
+00:16:19 [W] However on this occasion GPU one on Newman old one has already been allocated and is no longer available to us.
+00:16:22 [W] So now The Following part is scheduled.
+00:16:28 [W] This part is one containerd requesting to exclusive CPUs one, Nick and two gpus.
+00:16:33 [W] So again, we look at what kind of hints are returned by the hint providers so for the ci/cd,
+00:16:34 [W] EP you and Nick resource types.
+00:16:36 [W] We see the same result.
+00:16:42 [W] Each request can be satisfied on either Newman old alone are across both Kuma nodes for the GPU resource type. We see a change.
+00:16:51 [W] So now the request for two gpus cannot be satisfied on numerals 0 R Newman old one alone.
+00:17:00 [W] only hint we see tells us that the request can only be satisfied across both Newman olds and this allocation is not preferred. The reason that's not preferred. Is that although it is the narrowest possible.
+00:17:04 [W] Replacement for this resource requests at this time.
+00:17:15 [W] It's still possible to satisfy this request for two gpus on a single Kuma node, but just not right now because as we've seen GPU one has already been allocated.
+00:17:16 [W] So then if we look at the results per policy for the best rate for policy, although the final best hint is not preferred.
+00:17:28 [W] Each request can be satisfied on either Newman old alone are across both Kuma nodes for the GPU resource type.
+00:17:34 [W] We see a change.
+00:17:34 [W] So now the request for two gpus cannot be satisfied on numerals 0 R Newman old one alone.
+00:17:35 [W] The only hint we see tells us that the request can only be satisfied across both Newman olds and this allocation is not preferred.
+00:17:36 [W] The reason that's not prefers. That although it is the narrowest possible placement for this resource request at this time.
+00:17:39 [W] Is it still possible to satisfy this request for two gpus on a single Kuma node, but just not right now because as we've seen GPU one has already been allocated.
+00:17:42 [W] So then if we look at the results per policy for the best rate for policy, although the final best hand is not preferred.
+00:17:45 [W] This policy is all this policy always allows part of nation regardless, and then uses the murder the best hint to allocate resources on a best effort basis as shown here the restrictive policy.
+00:17:49 [W] Will always produce the same best hint as the best effort policy.
+00:17:54 [W] However, it will fail part of mission when the merged and is not preferred as we see here the logic being that it's better to fail and try to reschedule then to schedule with a non preferred alignment and this exact scenario have here is a good example of how
+00:17:56 [W] As shown here, the restrictive policy will always produce the same best hint as the best effort policy.
+00:17:57 [W] However, it will fail pattern Mission when the merged into is not preferred as we see here the logic being that it's better to fail and try to reschedule then to schedule with a non preferred alignment and this exact scenario have here is a good example of how
+00:17:58 [W] Then finally the single luminol policies best hint tells us that the requested resources cannot be satisfied on a single luminal of so therefore it will also fail but admission.
+00:18:10 [W] So our final example again the known as the same underlying Hardware this time all resources are available to us.
+00:18:24 [W] And if we look at the party this time the parts get scheduled has one container questing to exclusive CPUs three Knicks and three gpus
+00:18:27 [W] So the hints that are returned for the CPU resource type, we see the same result again.
+00:18:36 [W] The request can be satisfied in either Newman alone are across both windows for the GPU and Nick resource types.
+00:18:46 [W] We now see that they both return a single hint with a bit mask of both Newman olds and this allocation is preferred.
+00:18:54 [W] Now, the reason this is now preferred is because it is actually the narrowest possible placement the could ever be achieved for that request for instance a request for three gpus.
+00:18:59 [W] As you can see can only ever be satisfied across Bolton were nodes and likewise the request for three Knicks.
+00:19:03 [W] And for that reason the Pod is admitted with what what is now the narrowest alignment that could possibly be achieved for that request.
+00:19:34 [W] And again, finally we see the single luminol policy again will fail part of mission because it's best to in tells us that the requested resources cannot be satisfied on a single Kuma node.
+00:19:39 [W] So what does all this mean for performance? Well at Intel we release some updated collateral for our container experience gets earlier this year and included in that was a technology guy down topology manager with some information on performance benchmarking and the
+00:19:55 [W] Like to check it out in a bit more detail, but the key takeaway here.
+00:20:03 [W] is that workloads that have an Umma numeral. I meant of their resources by topology manager can achieve a performance increase of over 2 X versus workloads with that sub optimal allocation.
+00:20:13 [W] The Victor spoke about earlier and this particular test. We did see a flat line on the performance improvements for the larger packet size. Once you in-toto 1024 bytes. So but this was just down to the test setup and the the line rate essentially was
+00:20:26 [W] Smacks doubt as around 200 gigs so we didn't get to see the performance beyond that. But again, as I said the link to the technology guys ism is included in the slides if you'd like to check that out and see what was actually done in detail for anyone who's interested in that.
+00:20:41 [W] I saw what the future looks like for topology manager. So first thing their support for device specific constraints. This will be part of the one that 19 release.
+00:20:58 [W] So this is an enhancement to the device plug-in API that allows allows device plugins to indicate a list of preferred allocations for its device.
+00:21:02 [W] So the plug-in can take into account any internal topology constraints on the device when returning this list then this information can be incorporated into the
+00:21:12 [W] See the performance beyond that but again, as I said the link to the technology guide is is included in the slides if you'd like to check that out and see what was actually done in detail for anyone who's interested in that.
+00:21:26 [W] So what the future looks like for topology manager, so first thing their support for device specific constraints, this will be part of the one that 19 release.
+00:21:29 [W] So this is an enhancement to the device plug-in API that allows allows device plugins to indicate a list of preferred allocations for its device.
+00:21:31 [W] So the plug-in can take into account and internal topology constraints on the device when returning this list then this information can be incorporated into the ultimate.
+00:21:36 [W] Location decision so it extends it Beyond simply just númenor definity support for part level resource alignment. So the topology manager currently attends to align all resources for a
+00:21:47 [W] little container at this enhancement would extend the scope to allow alignment of all resources for all containers in a single pot and there's been a cap approved and merge and that's linked here and in the slides and
+00:21:49 [W] Which provide hints for CPU and device resources naturally, but this proposal is for a new component called the memory manager, which would provide hints and ultimately numeral alignment for memory and huge pages and there's a cap on the review on this
+00:22:03 [W] We're scheduling there's been lots of discussion and talk on this topic, you know, should the scheduler be pneumonia. Where should this be an entry solution or an outer crease Aleutian? Etcetera Etc. And there's a lot of ongoing work in this area across Red Hat Intel
+00:22:19 [W] And others and there's a couple of caps includes the slides if you could get if you'd like to learn more on that per pod or alignment policy.
+00:22:34 [W] So as mentioned in the the topology manager policies, the policy is statically configured at node level at kublr startup time.
+00:22:42 [W] And so this enhancement would allow the user to specify a policy in the pots back for a particular part.
+00:22:47 [W] this change is something that would require an API change and that that in itself is challenging but it's something that's been discussed briefly.
+00:22:50 [W] As of now there's no official plans are kept but it's something that we've spoken about briefly.
+00:22:55 [W] so finally if you would like to find out more about topology manager, you can physical knative cri-o to read up on it, or you can read through the blog post that was released earlier this year to coincide with the one that 18 release and the graduation of the feature to Beta
+00:23:12 [W] Work has been done under the stewardship of Sig note.
+00:23:20 [W] I just like to give a special mention to Derek care of red hat for all his help and also a huge thanks to Kevin clues of Nvidia who's done a huge amount of work and this and has been instrumental in taking a topology manager to where it is today.
+00:23:31 [W] So if you'd like to get involved or hear more about this or any related projects the link for the weekly signal meeting is also included.
+00:23:40 [W] So I hope you found this informative. Thanks for listening and myself and Victor happy to take
+00:23:43 [W] any questions
+00:23:45 [W] All right.
+00:23:54 [W] I see we have some questions on the Q&A board.
+00:24:01 [W] board. We're working to answer those as we can or the any questions that folks would like to ask now.
+00:24:04 [W] Okay, so we've got a list of questions we all start
+00:24:56 [W] Let's start with there was a question. Are there memory allocation has and so the answer to that is currently there are no memory allocation hints. But as Connor mentioned in the future
+00:25:13 [W] Are memory allocation hits?
+00:25:14 [W] And so the answer to that is currently there are no memory allocation hints. But as Connor mentioned in the future enhancements, there is a memory manager cap that will allow
+00:25:18 [W] Mimi manager cap that will allow for hints for both conventional memory and huge page memory.
+00:25:22 [W] Yeah, see another one picture their kind apology manager rescheduled already running pods to achieve best alignment with request of new pot placement.
+00:25:40 [W] So topology manager is a part of the kublr sits not part of the scheduling decision making or you know, it's a pod can in fact be scheduled but then sale and so if you have a deployment,
+00:25:49 [W] Topology manager is a part of the cube plus it's not part of the scheduling decision making what you know, it's a pod can in fact be scheduling but then sale and so if you have a deployment, you know, if you're if you don't get your
+00:25:52 [W] You're if you don't get your optimal placement to Candy fans, and then rescheduled Bush as regards to this, I think from what I can understand from this specific question, and no that's not something that's doable in the current college, man.
+00:26:05 [W] Yes, I agree with that.
+00:26:08 [W] Connor can't currently no way to reschedule currently running boards. The only the be admitted and the new model and or they will fill to be admitted based on the topology manager policy.
+00:26:19 [W] Next question is there was a question which version of openshift will have topology manager at GA.
+00:26:36 [W] And so the answer to that is topology manager is GA and openshift 4.6.
+00:26:38 [W] Another question was is it possible to have the slots for this presentation?
+00:26:53 [W] So if you go to the schedule on the agenda the slots are there so you should be able to find them.
+00:26:55 [W] Okay, Connor. You want to pick the question about how to check the let's see.
+00:27:05 [W] What's the question? How do you check the
+00:27:08 [W] to see if the
+00:27:12 [W] how can we check in a running cluster if the requested resources for each pot or on the same node?
+00:27:18 [W] You can for example on your system to check for the CPUs. You can do LS CPU and you can on the multi socket system.
+00:27:32 [W] You'll see the CPUs and the Numa notice on and then you can for example SSH or connect to the Pod and look at the CPUs that are signed and Connor. You also had another way to check this.
+00:27:44 [W] Yeah, so you can also check to the kublr checkpoint file. And so that will list any exclusive CPU allocations to Containers our devices and it won't tell you the Newman old but you
+00:27:59 [W] It will tell you which cpuid it is and then you can cross-reference that with something like Keda CPU and just sort of things popped into my head are interestingly. I've seen cats in the last week or two to
+00:28:15 [W] Versus kublr endpoint to be able to show you information such as Newman old information on CPUs, allocations containers and pods and I think it's very early days.
+00:28:31 [W] Obviously, it's only keptn ball float, and that would be something that would be very useful I think going forward.
+00:28:36 [W] Okay, next question.
+00:28:45 [W] Would it be possible for you guys to develop a scanning feature to check how much we could improve performance if we use topology manager?
+00:28:54 [W] I'm not quite sure what you mean by scanning feature. But you know, what what has been done is Connor and his team and Intel have have done some testing and the results are posted
+00:29:05 [W] And some of the improvements that were there that were there.
+00:29:11 [W] I'm not quite sure what the what the scanning feature would be.
+00:29:19 [W] So I think I don't know if you can rephrase the question. Maybe that would help Connor you have any input on that one?
+00:29:22 [W] And no, I'm just - and again, there's a link to the white paper on that includes in the slide.
+00:29:30 [W] I don't want to check it out in a bit more detail from the out for a bit more than what was mentioned in the in the presentation.
+00:29:37 [W] I'm just looking there's one really long question in there describe to set up technically minutes to get through it. And whoever asked that maybe you could sink with us afterwards.
+00:29:49 [W] I will be heading over to the the Intel Booth.
+00:29:55 [W] I think there's a zoom room setup for any QA as people have afterwards and also the slack channel will be open if you want to carry on that discussion.
+00:30:03 [W] Okay, next question. If I am using host not work, I'm using host network with node with multiple interfaces.
+00:30:25 [W] Can I use topology manner to to allocate interfaces to a pod? So, you know again topology manager requires in provider for things like CPUs and devices so,
+00:30:35 [W] To use multiple interfaces in kubernative we have requires.
+00:30:43 [W] Malta's and so with multiple the support having multiple SRV interfaces and we can align Sr. For example SRV virtual functions.
+00:30:59 [W] So if you have if you want to use multiple interfaces one way that is supported is to use the SRA V device plug in and you can get high-speed interfaces with that. Now the question about Foundation hosts Network.
+00:31:12 [W] You have if you want to use multiple interfaces one way that is supported is to use the SRA V device plug in and you can get high-speed interfaces with that. Now the question about I'm using host Network.
+00:31:14 [W] Sure about that one that's follow up with you offline, maybe or in select get more info on that time. You have any additional you put on that one?
+00:31:27 [W] And no sorry.
+00:31:30 [W] I was just reading through another one.
+00:31:34 [W] That's when there is the support for private and public clouds.
+00:31:40 [W] And so quality manager was Alpha for kubernative 1.16 and basic as of 1.18 and it's integrated into the kublr.
+00:31:49 [W] Okay, are there any questions that we haven't covered?
+00:31:58 [W] I'm looking to see?
+00:31:59 [W] Think of we address them all.
+00:32:03 [W] Okay.
+00:32:07 [W] I think that's all the questions that I'm just going through reading these.
+00:32:17 [W] okay, so if you want to you know continue the conversation you have more questions take a look at the channel number to keep con custom extend k8s own your slack workspace after the sessions
+00:32:34 [W] The answer any questions and you know chat with you and thank you for you know, attending feel free to you know reaches over there and it's Connor mentioned kind of I think you said there was a until room you want to share some more
+00:32:50 [W] I'll be heading over to the Intel booth now to join.
+00:33:04 [W] I think there's a zoom room setup for any Q&A people might have after the talk. So if anyone has any follow-ups feel free to head over there and thanks for joining. Hope you found it informative.

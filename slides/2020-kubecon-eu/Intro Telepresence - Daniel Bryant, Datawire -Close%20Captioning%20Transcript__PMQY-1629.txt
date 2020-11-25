@@ -1,0 +1,278 @@
+﻿Intro: Telepresence: PMQY-1629 - events@cncf.io - Wednesday, August 19, 2020 7:39 AM - 49 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:01 [W] Hello everyone and welcome to the introduction to telepresence talk. My name is Daniel Bryan time the product architect data and I'll be your guide for this maintain a session.
+00:06:08 [W] Let's get started.
+00:06:10 [W] So I like to start all my talks with a high level tldr kind of key takeaways. And today we're focusing on telepresence and this is driven by the motivation that inner development loop with microservices and kubernative use can be quite painful microservices means there's many
+00:06:28 [W] All things you're interacting with many more dependencies on your service and kubernetes is a container orchestration framework fundamentally.
+00:06:38 [W] It's often running remotely or even if it's running locally.
+00:06:42 [W] There's many more components in the mix than with a traditional kind of Monolithic single process application telepresence proxies your development machine into a kubernative cluster.
+00:06:49 [W] This is fantastic.
+00:06:56 [W] We can run our Dev tool chain do our development processes locally on the laptop as if we were in the cluster telepresence support several.
+00:06:58 [W] Workflow Styles, and I've been lucky enough to learn from many folks over the years from our slack and also from previous Coop cons at small to large scale work flows and how folks have integrated it into their development lifecycle.
+00:07:12 [W] I'll share some of those references later on in the talk.
+00:07:14 [W] There is ongoing work in the telepresence community the splitting of the client side and cluster side components will dive into that in a bit more depth and bottom line get involved with all this stuff.
+00:07:24 [W] This is the beauty of the cncf.
+00:07:26 [W] This is the beauty of the kubenetes community.
+00:07:26 [W] Everyone is super friendly. Everyone is
+00:07:28 [W] On goals in terms of making development and deployment easier in the cloud knative space telepresence is a cncf Sandbox project.
+00:07:37 [W] We'd love you to get involved and I'll give you some hints on how you can do that and point in the direction of where to get started do.
+00:07:43 [W] So let's set the scene.
+00:07:48 [W] So we all know as developers we have this inner and outer development Loop fantastic blog posting. I'm referencing by Mitch Danny and he talked very much around this sort of inner devil Loop. You can see here on the code build test commit where we go really fast trying to prove that our
+00:08:00 [W] D is often we may be using something like test-driven development write a failing test write some code that works.
+00:08:09 [W] Once we've gone really fast and proved out. Our code works.
+00:08:11 [W] We then go to the outer loop.
+00:08:12 [W] We may do a pull request.
+00:08:14 [W] someone may review that pull request and then also that gets added typically into a continuous delivery pipeline built verified tested and but eventually released and so forth.
+00:08:27 [W] Now the challenge with kubernetes is the inner and the outer development Loops can be quite similar particularly when
+00:08:29 [W] You've got a lot of dependencies on a service you're working on you might write the code.
+00:08:36 [W] You have to build the container push it to a registry and then deploy to the cluster before you can start testing.
+00:08:45 [W] So if I'm making small changes on a service, this is quite a slow process make must change go through all these steps here deploy it test it. I really want to go super fast, but I'm kind of stuck with this Loop.
+00:08:54 [W] Automation does help speed this up some fantastic tooling here draft scaffold Garden tilt get Cube. They all offer various ways of automating container builds in the background and doing some other very cool stuff.
+00:09:09 [W] Definitely encourage you to check out these tools. Sometimes though. You just want a really fast in a Dev Loop in my Java days, you know, we were often working on monoliths and we were doing a hot reloads and I could literally change, you know bit of code or change a bit of a JSP web
+00:09:22 [W] Each and I could see the results in my browser all in the same sort of process on the same local laptop that's really hard to do now with distributed systems and things like Docker and and kubenetes as much as they've given us a lot of really cool benefits.
+00:09:37 [W] I still miss this really really fast in a devil Loop and sometimes I just want to run my own tools.
+00:09:44 [W] I'm a big fan of IntelliJ.
+00:09:47 [W] I like running, you know virtual VM for profiling all these kind of things and I can't easily run these in a remote cluster from running my kubenetes.
+00:09:52 [W] Services remotely and even if I can connect up in those various debug protocols you can do on the wire it's not quite the same as running stuff on a local machine. You can't always get that fast feedback loop you're looking for.
+00:10:04 [W] One thought folks have is let's do everything locally.
+00:10:11 [W] You know, it's really fast and I can use my tools spin up minikube spin up Docker my Croquettes.
+00:10:14 [W] take your pick and this often is a great way to start if you're on a Greenfield project with a know couple of services.
+00:10:25 [W] This can get you a sort of reasonable way. But there comes some point where your laptop simply won't be able to cope running all the services. I'm taking the Java space and a.net space where I bumped into and when you're running like a jvm or a:clrmap.
+00:10:34 [W] Are very quickly your laptop will get exhausted trying to run all these heat based processes.
+00:10:45 [W] So, you know, there's no way we can spin everything up locally to do all the tests.
+00:10:45 [W] Enter telepresence. This is kind of we know the Delaware team had this kind of pitch and we scratched it by writing telepresence and over the years it's evolved and now it's a cncf Sandbox project and more folks are contributing in this is where telepresence was born
+00:11:00 [W] This need for this fast devil Loop.
+00:11:05 [W] Let's dive into telepresence bit more.
+00:11:08 [W] So I've had many ways of describing telepresence.
+00:11:10 [W] Some folks say it's a fancy kubernative UPN for development a coupe cattle port forward on steroids have heard which is a good one. But fundamentally, it's a network bridge between your laptop and the kubernative cluster.
+00:11:22 [W] So how does this work? So you can see in the picture here.
+00:11:25 [W] We've got a local development machine on the left and we've got a kubernative cluster running in the cloud somewhere in the middle of the picture. Now what I'm trying to do
+00:11:31 [W] as I'm trying to work on service a now you can see a in the cluster has been replaced with a telepresence icon and you can see a prime running on my local machine.
+00:11:43 [W] That's exactly how telepresence Works under the hood.
+00:11:46 [W] It's swaps out my deployment my kubernative deployment running in the cluster with a two-way proxy and then proxies traffic destined to service a to my local developer machine.
+00:11:58 [W] can then run a copy of service a locally do some staff debug test.
+00:12:01 [W] Develop these kind of things and send the traffic back into the cluster.
+00:12:08 [W] So for example, if I need to be getting some data from service B or C.
+00:12:10 [W] I can totally do that on my local machine because that is proxied effectively as if it was in the cluster.
+00:12:15 [W] I'll show you a demo. Now. This is a very simple Java app.
+00:12:21 [W] Using that drop Wizard and spring boot you can see I've got a it's a shopfront a perfect be a very simple e-commerce kind of shopfront app the customers making a request that the top there. We're using Ambassador open source API Gateway to ax an Ingress to kubelet.
+00:12:35 [W] He's a shopfront service reaches out to the product catalog and the stock manager service combines and Aggregates the data and displays that back to the user. What we're going to do is I'm going to swap deployment on the shop front and then we can intercept the traffic destined to into the
+00:12:50 [W] Aster to the shop front and we can also see what results come back from product catalog and stock manager we can make tweaks on our local copy of this service and send that traffic back into the cluster to the external customer Us in this example, we can see the changes we are making
+00:13:05 [W] In real time effectively, right?
+00:13:08 [W] Let's go.
+00:13:11 [W] I'll drop back to my terminal here.
+00:13:16 [W] You can see I've already spun up a kubernative cluster and I'm running some basic Services. If you look in the bottom right terminal window here, you actually see I see I'm doing a watch on the pods kubernative get a pods.
+00:13:24 [W] I've deployed my Ambassador API Gateway.
+00:13:26 [W] I've got the product catalog there ignore the rate limit is that day got the shop front which we are going to be telepresence thing out and I've also got my stock manager service.
+00:13:34 [W] They're running as well. I'll
+00:13:35 [W] Share the link to the GitHub repo in the end.
+00:13:38 [W] You can see the actual files.
+00:13:39 [W] I've got a my top right window here.
+00:13:42 [W] And now let's let's actually run the application.
+00:13:43 [W] have a look what what we've got.
+00:13:45 [W] I just bring up Firefox and doing cubed CTL get service can see that's my external IP that the Ingress is offering.
+00:14:00 [W] I know I'm running the shop front slash up front.
+00:14:00 [W] Here we go.
+00:14:04 [W] You can see it's a very simple e-commerce app front-end skills are very much not my thing.
+00:14:05 [W] This is a literally a color combination of the data from the product catalog on the stock manager aggregated together in the shop front and then rendered you'll notice the title Banner is the color black.
+00:14:18 [W] That'll change when we swap out of moments.
+00:14:18 [W] So keep an eye on that but this is fundamentally the very simple shopfront.
+00:14:22 [W] We're going to be working with today.
+00:14:24 [W] Just the proof everything is running.
+00:14:28 [W] as planned if I do a cube CTL Logs with a follow
+00:14:36 [W] on the shop front if I do a few refreshes you can see this is actually I'm following the logs on the remote poddisruptionbudgets.
+00:14:52 [W] Ke cluster and every time I hit refresh you can see the after a while or two. You can actually see the get stock logging calls.
+00:14:58 [W] So, you know, it's actually going out to the cluster making my call on local machine to 3473 1621 17. The request is going out to the Ingress forwarded on to the shop front fold onto product catalog stock manager we can see the logs.
+00:15:07 [W] Back there now.
+00:15:12 [W] So when I do the swap out you can actually you'll see this a bit differently one thing I do like to do as well. It's just if we try and do saying nslookup against our product catalog.
+00:15:20 [W] like so
+00:15:23 [W] we'll get no data back and this makes sense.
+00:15:32 [W] Right? Because the product catalog service name is a concept within the remote kubenetes cluster, but on my local machine, I'm not connected into that Network.
+00:15:40 [W] So I can't do a name surname service look up on something that is in a separate Network when we login with telepresence when we use telepresence the swap the deployment. My machine will effectively be effectively be proxied into the remote cluster and then we can do this kind of
+00:15:50 [W] So let's do that. Now if I do a telepresence swap deployment on the shop front have a look at what's going on on the bottom right panel here, you'll notice that the shop fronts service itself will get swapped out with a telepresence proxy
+00:16:05 [W] Now put my cri-o passed within their telepresence does some cool stuff with the networking. So it does need root access as this is ticking away.
+00:16:16 [W] You can see the shop front just got swapped out there and there's another one being created and this with this you it here is effectively our telepresence proxy spinning up in the background when that's complete.
+00:16:26 [W] You'll notice telepresence will come back and I'm now swapped the deployment successfully and there we go. So if I now refresh my website,
+00:16:35 [W] we should see a failure.
+00:16:47 [W] Yep. There we go, because I've swapped out the shop front service. And that was my primary service that we were routing all our English traffic to this is a default error message. I'm not a bother to change the envoy the Ambassador error message there. So you notice we get enough screen connector.
+00:16:53 [W] This just means that the shop run service is effectively not there now because telepresence is routing that traffic traffic destined for the shop front to my local machine now if we go back and look at the NS log up now.
+00:17:06 [W] You notice we get some data back our LA because our namespaces we're actually proxied into the remote cluster. We can do cool things. Like look at the product catalog. We can even get the data in the product catalog.
+00:17:21 [W] So I find this really useful when I'm doing some integration testing or trying to understand and build my mental model of how the dependencies work with the service.
+00:17:30 [W] And swap deployment and I can start looking around I can do curls test the data coming back as if I was in the cluster all on my local machine.
+00:17:36 [W] This is very powerful.
+00:17:37 [W] In fact, let me show you that now if I do a curl you can see we get the product catalog data back.
+00:17:48 [W] This is what's happening in our Java shop front app. It's calling out the product catalog getting the data back managing it with the other service data as well.
+00:17:53 [W] Now, let's start a local service running on our machine here. I go to IntelliJ. I've got a copy of the shop for an application.
+00:17:56 [W] Although the app in IntelliJ if I start it in debug mode like so
+00:18:01 [W] Just wait for that to spin up.
+00:18:04 [W] That looks good.
+00:18:17 [W] If I now make a wrong move that window cross and if I make a request on our docket Jama shopping here, you'll notice it now completes.
+00:18:27 [W] We've got the red banner and that's because my request is going to the from my local machine to our remote kubenetes cluster going through the Ingress and then the swap deployment is routing that traffic to my local machine for routing what I process on my local machine back
+00:18:35 [W] Into the cluster.
+00:18:41 [W] So we've got that Loop now from remote to local and I can do very fast feedback locally on this service in IntelliJ hit refresh my browser and see in real to effectively near real-time. The changes are making you're going to get that hot reload based on the service. You've swapped
+00:18:51 [W] The service you're working because it's all running in debug mode.
+00:19:00 [W] It's kind of cool and long as you've got the Ingress time outset quite Loosely you can actually debug in real time effectively as well.
+00:19:06 [W] So if I set a breakpoint on that their do a refresh you should see the breakpoint gets hit now when I do I can return it through Page loads or good fire try this again, and I'll modify the actual
+00:19:16 [W] Data that we returning back.
+00:19:23 [W] back. We're going to the values. You can see here the premium Acme widgets if I just change that now.
+00:19:23 [W] two premium coupe Khan
+00:19:28 [W] you
+00:19:30 [W] widget set that return it through you'll notice we get that live reload of I can change a date. I can change the look of the website and so forth very fast feedback loop going here don't have to be in debug mode.
+00:19:46 [W] I can actually be running my application and just changing it on the fly. But I find it particularly useful for debugging sometimes where I'm calling out to lots of dependence Services when I'm in debug mode, I can see the data coming back and I can see it being processed as I step through the code and that is just really useful
+00:19:58 [W] Spotting those kind of gnarly microservice bugs that we will bump into when you've got many dependencies right now.
+00:20:08 [W] Let's clean up if I stop my process here.
+00:20:11 [W] Let's go minimize IntelliJ and I'll exit from my telepresence terminal.
+00:20:15 [W] Up here, you'll notice that the the stock manager is getting spun up again a real stock manager instance and we're terminating our telepresence proxy pot give that a few moments while that does its thing and we will need to give a few moments for the stock manager to actually
+00:20:31 [W] Been up successfully.
+00:20:33 [W] It's a Java app as well.
+00:20:45 [W] It goes for its kind of initialization process with spring Boot and soon as that's ready. We can then again refresh our web browser on the right here if I just do a blogs again.
+00:20:46 [W] We can watch for when this one has spun up correctly and give it a few more moments and I can do a refresh.
+00:20:56 [W] There we go.
+00:21:04 [W] The colors change down the on the header effectively what we're back to normal.
+00:21:10 [W] Laughs what laughs swap the Pod successfully and now I've removed that swap.
+00:21:11 [W] We're back to normal and Wallah the demo hopefully made it much more concrete as to what we're doing here the benefits of a tool like telepresence is that any tool that runs in your laptop can be used in this scenario.
+00:21:25 [W] You saw me using a debugger there, but I've also used the profiler anything you can run on your local machine because you're practicing traffic in and out you can do you can connect
+00:21:31 [W] Base resources so frequently, I'm an Amazon.
+00:21:35 [W] I maybe got an RDS instance that is only available in the communities cluster.
+00:21:43 [W] Well, if you can proxy into the cluster telepresence, you can now access the URI of that cloud based resource that RDS database for example, the win the same network name space.
+00:21:49 [W] I've showed you the nslookup. I frequently find this is super useful for nslookup sore digs trying to figure out, you know gnarly kind of domain name issues and this is super useful to run again local tooling as if I was in the cluster.
+00:22:00 [W] And you saw hopefully the inside of the very fast in a Dev Loop.
+00:22:06 [W] Yeah, I can code in my IntelliJ locally on a service and that service can call out to all the other services running remotely in my kubermatic cluster.
+00:22:14 [W] I can spin up all the services if I want to you always got to balance their you don't want to have an overly coupled system for example, but some systems I worked on you simply have to spin up a bunch of stuff and we can do that now in our remote cluster.
+00:22:26 [W] Just keep our local laptop for the service.
+00:22:26 [W] We are running on normally there is some requirement for telepresence you do need a network.
+00:22:31 [W] Connection it's not like running everything in minikube locally.
+00:22:36 [W] You do need that connection into the remote cluster.
+00:22:39 [W] You also need coup couple access to the cluster.
+00:22:44 [W] I've worked on some teams where operators do restrict access to Google.
+00:22:47 [W] They for example insisted everything gets deployed via sort of custom GUI or some other kind of process the way we bootstrapped the connection with telepresence you need to keep cattle access on on uniqu pressure on your local machine and access into the remote cluster in the moment telepresence
+00:22:59 [W] Primarily works on Mac and Linux we have had stories of folks working successfully only on Windows, but the networking stack on Windows is very different particular across the different versions of windows. So if you do have Windows you want to get involved in the conversation pop along to the telepresence GitHub
+00:23:14 [W] Pop along to our telepresence slack, you can see what folks have done in the past and you can kind of build on their work.
+00:23:20 [W] Telepresence is a cncf project.
+00:23:25 [W] There is lots of different users out there.
+00:23:31 [W] We've been super humbled by the amazing talks people have done it previous coupons as lots of blog posts out there.
+00:23:34 [W] Very active slack. We've got going on on the data wire possess a slack.
+00:23:38 [W] It's truly humbling and please do get involved in. This is the beauty of the cncf sandbox project. You can contribute you can ask questions and we loved folks to get involved in telepresence.
+00:23:48 [W] So one common question I get is what's so complicated about telepresence classic hacking News Post right telepresence.
+00:23:51 [W] So big I could build this over a weekend and you maybe could build a to a proxy for keeping that he's over a weekend, but one that works and all different types of machines or perhaps the Clusters.
+00:24:03 [W] That is a real challenge.
+00:24:04 [W] Yeah, are they the lead developer on telepresence a basic Santa who works at dead a wire?
+00:24:14 [W] I've you know, I'm presenting here today, but he does all the hard work and I've had some fantastic chat with a be over the years. I've come to realize how gnarly some of the networking is involved in, you know, kubenetes and many other things.
+00:24:21 [W] Capturing DNS and writing only part of it is really tricky.
+00:24:26 [W] So there's some very interesting challenges around how to route traffic into into a kubermatic cluster by telepresence.
+00:24:31 [W] We still have challenges getting telepresence to work a hundred percent of the time or we'll all we have done in the past.
+00:24:45 [W] I should say there's those issues have mostly been fixed now, but it's really tricky swapping out your real deployment for a proxy deployment is fundamentally quite hard.
+00:24:47 [W] Yeah, so we recommend don't try this at home.
+00:24:52 [W] not build on the The Works already out there again telepresence open-source cncf sandbox tool you're free to do pull request your free to sort of modify it as you want and we'd love you to contribute back into that everyone benefits from your modifications.
+00:25:01 [W] So let's look at food workflows.
+00:25:04 [W] Now.
+00:25:06 [W] We're we're lucky enough to learn from many folks over in various past coupons about how they're using it.
+00:25:10 [W] So I wanted to share a few references.
+00:25:17 [W] We do often find that sort of people that are say pre-production or looking for product Market fit or not.
+00:25:19 [W] Very many customers often use telepresence in a production like environment.
+00:25:25 [W] There is one production cluster has a single source of truth that microservices.
+00:25:27 [W] Maybe there's a few developers on the team. They simply coordinate, you know, either by slack or in the office.
+00:25:31 [W] And they sent simply say I'm going to check out this microservice.
+00:25:35 [W] I'm going to telepresence this microservices.
+00:25:39 [W] So can you avoid using that that microservices for a while and this is pretty simple stuff and telepresence we use it in the default mode.
+00:25:47 [W] And once the coding is done like the example. I showed with IntelliJ.
+00:25:52 [W] Typically then folks with commit the code into a diversion control might be some reviews going on and then use a ci/cd pipeline to actually deploy the service. So this is like a ridiculously simple, you know in
+00:26:01 [W] You can kind of you only live once that workflow some folks Riley get very nervous about, you know, running things like telepresence in production.
+00:26:15 [W] Totally fair enough, right?
+00:26:16 [W] You might want to see the world burn but I'm sure that many feel when your company don't the typical workflow.
+00:26:16 [W] We see for small medium Enterprises small medium businesses is production is ring fenced off but there's one development cluster which is a single source of Truth for microservices developers often workloads.
+00:26:30 [W] We as long as they can with mocks and stubs these kind of things but when they need to test with real
+00:26:30 [W] All dependencies then is to do some kind of integration testing.
+00:26:38 [W] They use telepresence to swap out a microservice. But they coordinate with the others on their teams do that.
+00:26:41 [W] Hey, I'm testing the shop front service.
+00:26:47 [W] Can you not test involving the Shopper and service the moment because if anyone makes a request that shopfront service that we've swapped out there traffic comes to our machine and we might be doing special things debugging for example, which would mess up their workflow often same deal
+00:26:56 [W] This is done people use ci/cd to my circleci.
+00:27:01 [W] I to run tests build and deploy nothing really different there.
+00:27:07 [W] This is just you often. See this one Dev class Turtle expanding to to death glasses three death clusters sometimes but this is a very typical workflow we hear about in the slack on that all the time.
+00:27:17 [W] These are buddy of mine did a fantastic talk about how using telepresence to do exactly this it devops UK last year. So if you want to know more, I'll put the link there.
+00:27:25 [W] can pop along to Caesars talk and learn more
+00:27:26 [W] as a more advanced workflow building on what I've just mentioned about running multiple clusters and developers being assigned to those clusters.
+00:27:35 [W] We do see some folks running multiple clusters and multiple namespaces.
+00:27:46 [W] So each developer each pair each team gets access to their own cluster or their own namespace which makes coordination easier. If you're swapping out Services as part of your development workflow. Fantastic talk by Christian row here last year a coupon the you I
+00:27:50 [W] Us but that ink in there for you and he talked about how angle in volkers are using this workflow for quite a big team.
+00:28:00 [W] They're using basil basil dining on pantheon.tech.
+00:28:20 [W] workflow
+00:28:21 [W] So moving on what's next well telepresence as I've got a talked about it. There's two main components.
+00:28:39 [W] There's the clients and the proxy the client is what I'm running when I'm typing telepresence WAP deployment and then the proxy server is what gets spun up in my remote cluster to manage. The communication work is ongoing with the client.
+00:28:42 [W] You can check out the progress on GitHub.
+00:28:48 [W] There's a move we use cupola port forward to bootstrap s shuttle which is an SSH based VPN as a lot of functionality a shuttle but we're not using one of them telepresence so
+00:28:53 [W] Looking to requite replace a shadow with something else something new more designed for kubenetes.
+00:28:58 [W] This is in progress.
+00:29:12 [W] You can pop along the slack Channel pop along to the GitHub chatter are basically developer several other folks involved in the project there as well. If you want to learn more about this the proxy server you as I showed you is this you swapped in and out every time you do a swap deployment and you know, this is
+00:29:13 [W] It comes in some ways and then you've got a spin something up every time you connection breaks.
+00:29:21 [W] Sometimes that you know, will then roll that back and then you spin it up again.
+00:29:24 [W] Whereas we're looking to switch the mode to be persistent.
+00:29:28 [W] This is what kubenetes good for right you define a service you define a deployment kubenetes will keep it running and that gives much faster startup times.
+00:29:34 [W] times. We can actually do a telepresence swap deployment or telepresence connect and very quickly if something's already running in kubenetes, you can connect up super quick and you get that reconnect if you're working on a plane or a train and you
+00:29:44 [W] Connection drops no biggie if that thing is running in kubenetes all the time.
+00:29:50 [W] This is leading us to multi-user development. And because swap deployment doesn't work really well for multi user Development.
+00:30:01 [W] I've either scenario where I've swapped out someone else's swap deployment and it all got a bit messy right is a bit confusing.
+00:30:07 [W] So telepresence is fantastic as a single user tool and you can use workflows as I've shown you earlier on to sort of get around this limitation, but we're thinking it'd be super cool if you can do this multi-user music
+00:30:14 [W] For your team just run you through how this might work at the moment or an Abbey actually gave a demo at kublr Lon San Diego last year, so you can pop along to the website and Problems YouTube and actually see his demo we imagine our classic shopfront demo.
+00:30:28 [W] We've just shown if we did this sort of telepresence four teams kind of thing.
+00:30:33 [W] He put telepresence on the wire as opposed to swapping out the actual deployment itself so you can run multiple deployments, but then use telepresence is of indicate telepresence.
+00:30:45 [W] This requests should be routed to this version of the service.
+00:30:50 [W] So maybe we put like a telepresence runs on The Wire here user makes a request. Maybe put some kind of cookie or some kind of header that goes through into the Ingress or into the service and then write it on to telepresence telepresence says at this cookie is present like dynatrace.
+00:31:00 [W] Daniel's test for example, it will rank to my local machine the traffic proxy to my local machine at a but it still would allow other folks without that cookie set to access the default product catalog you imagine if there's many of us working on the
+00:31:15 [W] catalog you can have the production effectively the Production Service running, but I can have Daniels product catalog and James product catalog a long as we're putting the appropriate head is in we will see the services running on our local machine to other developers will not
+00:31:30 [W] Again, if you're looking to get involved in this looking to learn more definitely encourage you to pop along to the telepresence GitHub have a chat with Abby and then the slack as well.
+00:31:37 [W] So wrapping up we loved folks the contributes telepresence, you know documentation is super super important these projects as well as talking about how you've integrated telepresence into your workflow and love being do PR's on the website chatbots on
+00:31:53 [W] Chapters, you know Twitter wherever you like and we'd love to hear and even fewer user of telepresence that we be super useful for us when we're working with the cncf to sort of, you know, constantly review the usage of the tool if we know your user that helps us build the case to keep telepresence as an ongoing project.
+00:32:08 [W] We're always looking for folks to triage things as lots of folks using get up a support which doesn't scale. Well when I open source project and you can also join our slack to them, you know more about these things ask questions and so forth.
+00:32:21 [W] And yeah, we'd love you to get involved.
+00:32:23 [W] That's it for today.
+00:32:27 [W] I feel free to reach out to me at DB at Delta y Dy.
+00:32:37 [W] Dy. Oh, I'm on Twitter gets up LinkedIn and so forth as Daniel Bryant UK, you can visit telepresence website and GitHub repo there and you can also check out some of our early work with the Ambassador Edge stack integrating telepresence there as well. I thank you very much.
+00:32:38 [W] much
+00:32:39 [W] I have to defer a few to a baby who's the lead developer.
+00:32:59 [W] He knows even more about this than I do, but I'll certainly do my best to answer questions.
+00:33:01 [W] I've got a couple of questions focused on can we proxy other protocols or other databases?
+00:33:10 [W] For example, Miguel has a spec Africa.
+00:33:22 [W] So someone asked about my SQL and not a prob we're far as I remember and I mostly do service demand these days with service to service dependencies. So I'm with a local service other dependents services in the cluster, but I'm sure a proxy.
+00:33:27 [W] My SQL in the past no problem at all.
+00:33:28 [W] You're effectively going over like a VPN SSH connection.
+00:33:30 [W] So that was no props.
+00:33:31 [W] Other question that a couple people asking is this only for microservices based apps and the honest answer there is no and we definitely have folks say working on brick big Ruby monoliths, which have got like a few satellite services and people have effectively telepresence
+00:33:47 [W] And swap deployment the monolith.
+00:33:55 [W] So again long as you can run it on your machine and you've always got that bandwidth kind of contention long as you can get enough traffic down and up to meet all the requirements and no permit all you can definitely use it if you're using a monolithic app, no problem with that one.
+00:34:01 [W] A few folks asking around em TLS and servicemeshcon how this interacts and that one I may have to defer to a basil lead developer. I know we've got a couple of folks that have integrated sto with telepresence and
+00:34:19 [W] Xiao Shu a link to folks there is a couple of GitHub repos. I can point folks out.
+00:34:23 [W] I've got open my browser here.
+00:34:25 [W] So if you join me on the slack, I can share those with you and I know the customer work with I don't think of shared publicly what they've done but a few folks and the kind of common use case these days running a servicemeshcon then wanting to do and some kind of telepresence into it.
+00:34:39 [W] We're working on some other tools there the why in this space are building on telepresence check out service preview on our website to the Community Edition to play with there for that but it is a bit tricky sometimes when you've got
+00:34:49 [W] TLS enabled within your cluster of East-West traffic and yeah again a bacon probably share more stories on that so I can certainly take him into any conversations. If you do want to ask more about working with telepresence and Mt.
+00:35:02 [W] Less in the cluster keep you on a security note a few folks have asked around about secrets and when you telepresence into a cluster you can tell swap deployment. I should say you do get access.
+00:35:16 [W] Remember I need to all the secrets so something just to be aware of there and you can use
+00:35:19 [W] Of other committees tactics for ready to try and mitigate some of these sort of potential leakages, I guess information. But bottom line is when your your telepresence into a pod you are literally connected into that namespace
+00:35:33 [W] you see the Enzo environment variables you can see the filing system and you can access things as if you were in the cluster operating as that pod whatever that pod has got in terms of credentials, you know, you have effectively have so do be aware that something
+00:35:49 [W] Fairmont if you're yet, if you're telepresence into a production cluster that there is a lots of element of danger not least, you know the production traffic but you also do see all the secrets and so forth as well. So just just like sh and abroad right always risky doing that.
+00:36:28 [W] when shouldn't someone use telepresence so good question, so
+00:36:38 [W] I want to look at questions any good references with regard to debugging telepresence us are using terrorist about kubenetes King.
+00:37:05 [W] That off top my head, but I can totally look.
+00:37:11 [W] The and telepresence, you know riding you can swap the product or software deployment.
+00:37:20 [W] I should say.
+00:37:20 [W] Sorry. You're good to go in terms of that.
+00:37:22 [W] Map hopefully walk through some of those the the moment when you swap deployment.
+00:37:39 [W] So I can try make that longer lift running some kind of a Daemon process Diamond set in the cluster potentially and that way you won't get their connection the connection drops affecting you so much.
+00:38:01 [W] So that's something on definitely get involved telepresence dot IO pop along to GitHub as well. And there's lots of chat going on in the data wire versus slack and you also find minikube in the communities and cncf slacks and we loved folks to get involved with some contributions and feedback in these things.
+00:38:14 [W] That's always appreciated as well.
+00:38:16 [W] Walking we definitely know the few people that have the best specific networking fact their specific version of Windows, but your voice in contributions problems Gabrielle problems.
+00:39:15 [W] It has its telepresence Channel and the data by with its black have a chat without a against each other.
+00:39:22 [W] / he's an appointment directions this thing work going on.
+00:39:25 [W] on. But yeah, the networking stack is pretty gnarly. It's my understanding of situation, but we haven't done much
+00:39:30 [W] new question
+00:39:35 [W] Is that all that may be hanging around in the community tomorrow to Central European Time?
+00:39:55 [W] He's goes what Stan's use cases? For example to scale to force users. Currently. The only one of us is a deployment each time. But if you would swap price offers women get to bit
+00:40:07 [W] It's a that these women and working on a specific job. He's gonna run for that presentation going to use cases.
+00:40:20 [W] And so we use the telepresence Norfolk School how we're looking at to multi-user telepresence to attending the Shadows are they you can find them all need any wild black definite plan check out.
+00:40:30 [W] Yeah, I said one, please visit the maintaining traffic.
+00:40:55 [W] Let's see if there are any more questions.

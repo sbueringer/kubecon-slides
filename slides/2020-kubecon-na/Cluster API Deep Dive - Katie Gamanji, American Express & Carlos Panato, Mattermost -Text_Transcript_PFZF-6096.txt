@@ -1,0 +1,295 @@
+﻿Cluster API Deep Dive: PFZF-6096 - events@cncf.io - Friday, November 20, 2020 4:02 PM - 38 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello everyone.
+00:00:00 [W] My name is Katie Comanche and alongside Carlos cannot oh, we're going to give a deep dive into class 3 pi as mentioned.
+00:00:09 [W] To transferring the current platform by embracing the cloud native bristles and making the best use of the open source tools as well.
+00:00:16 [W] I am one of the TOC or technical oversight committee for the cncf alongside in every Champions within the open source Community will be responsible to steer and maintain the technical vision for the ecosystem.
+00:00:29 [W] Pretty much we are the committee that enables and leverages projects to join the open source community and be useful for our end users.
+00:00:38 [W] Hello everyone.
+00:00:39 [W] My name is Carlos panopto. I'm software developer. S re at matter most in the kubenetes community.
+00:00:46 [W] I work in the cigarette is as a bank branch manager and also in the cluster API and in the various class therapy. I provided as a contributor.
+00:00:58 [W] Today we're going to talk about the cluster EPI. And this is our agenda for today. We want to like give you a quick overview about cluster API going to explain the control plane K2 going to talk a little bit about
+00:01:13 [W] We're going to see a demo.
+00:01:07 [W] And we going to talk a little bit. What's the next 10 planets features for the closer API and how you can get involved with?
+00:01:16 [W] Why cluster API like today?
+00:01:19 [W] We have more than a hundred installations tools for kubernative and also the cluster life cycle.
+00:01:26 [W] It's very hard to deal with it like the day to day one day two of the cluster and the idea of cluster. Epi is bring in a
+00:01:40 [W] In a central place, like easy way to create your cluster provisioning or workloads cluster and manage this cluster in terms of upgrading repair out scaling and
+00:01:55 [W] Stan as well in the end.
+00:01:49 [W] today, we have a lot of providers that it's like a building block for the cluster API with you can plug your provider and start using that provision your cluster we have for example today Asia are packed in
+00:02:04 [W] Providers you can see a full complete list of the providers we support today in the greatest API book as you can see in the link above and if you don't find your provider here, you can build your own
+00:02:12 [W] Don't find your provider here. You can build your own we support like there's in the book. You can see how you can add a new provider.
+00:02:20 [W] Okay how it works.
+00:02:23 [W] That is a lot of llamo files Nats everybody in Blacks that and it's a declarative spec that you declare your cluster and we have like a management cluster that you install your cluster API and the cluster
+00:02:38 [W] And that can bootstrap kubernative clusters across several Cloud providers including also bare metal as well.
+00:02:46 [W] For example this example here so you can declare declare your configuration it you going to apply this to the class API and again create cluster for in this example. We have AWS
+00:03:02 [W] FPS fear Google cloud in Asia you can imagine this like being in the blast cluster for a team a and another one in VMware for the product B and so on you can have multiple
+00:03:15 [W] Providers and you have your management cluster in one place for you that can manage several classes across various Cloud providers.
+00:03:24 [W] Where the class API are right now like we are part of the Sig cluster life cycles of the project.
+00:03:31 [W] We have more than 200 contributors and we are in the alpha stage.
+00:03:35 [W] We like we are most likely to in the end of Doubt office stage.
+00:03:39 [W] We had like really is Alpha 1 which was the initial implementation and the POC to validate if this everything works then we got Alpha 2, which we've solid foundation.
+00:03:53 [W] And like building the bootstrapping agnostic infrastructure a few months ago.
+00:04:00 [W] We released Alpha tree with like more primitive and a lot of improvements like trying to make a little bit more stable. And now we are like aiming for Alpha for with more stability like not more having
+00:04:15 [W] API and supporting a lot of ux to make it more easier to make easier for the people that want to use that and also to support the V 1 beta 1 transition for the next year.
+00:04:30 [W] What we want where do you want to be is like the idea of the cluster API is making the managing the lifecycle of kubenetes very boring and like to be easier to people use
+00:04:46 [W] And create you are managing your clusters.
+00:04:38 [W] We also have a lot of support a lot of use cases. Like you can write your own plugging. You can write your own providers and the idea is also support like security requirements and different
+00:04:53 [W] Plex scenarios as well
+00:04:54 [W] now this stage, I'd like to give a deep dive into the control plane resource now in The View on Alpha 3 release which is the current release these control pain resource was introduced and it provides a lot of powerful corporations of how
+00:05:10 [W] Years before I move forward with this topic, I would like to introduce the customer service definitions introduced by cluster API at the moment.
+00:05:16 [W] There are five of them cluster control play machine missions it machine deployment.
+00:05:22 [W] The cluster resource is going to contain the holistic information about the cluster such as the networking components will be able to specify the Siders for our pods and services control plane is mentioned is a new resource
+00:05:37 [W] And he provides an abstraction layer of how can we manage our masters where the control plane for the master suite of the core components in within a cluster machine is configuration is very similar to a node configuration is going to contain information
+00:05:49 [W] is the version of kubernative C would like to run alongside the instance type you'd like to attach to instance machine said is going to be very similar to replica said it will make sure an amount of machine resources are going to be up and running at all time and machine deployment is
+00:06:01 [W] Means it comes with a very powerful rolling out strategies between machine sets one thing.
+00:06:04 [W] I'd like to mention here is that the machine resource is immutable that means that if you push new configuration to the cluster the instance with all configuration is going to be taken down and the Machine with new configuration is going to be brought up.
+00:06:17 [W] There is no patching. There is only me to be working to fully understand how we can create a cluster using cluster API and how all of these resources in fact between themselves. I would like to introduce
+00:06:28 [W] he's kind of a pirate point of view or perspective of how can you use this resources overall now to begin wave will require a cluster Resource as mentioned.
+00:06:40 [W] This is going to contain the entire networking configuration recall provider will be able to create resources such as VPC subnets and so forth with the cluster automatically going to have Associated a control plane with it.
+00:06:53 [W] it. So we're going to have a control plane resource and that is going to manage a set of machines now these machines
+00:06:59 [W] Going to be our Master nodes.
+00:07:00 [W] The control plane is summation is going to install the core components for a cluster. So we're going to have the API server the scheduler control managers pretty much all Peck packaged nicely together.
+00:07:11 [W] And the last thing for working cluster is our Network nodes or the data plane.
+00:07:17 [W] To all cluster a such we can have a machine deployment and that is going to have an abstraction layer above the machine set and of course them with the machines themselves, which are going to be our workloads.
+00:07:28 [W] Let's look at the llamo definition for our cluster because this is the main resource which will bootstrap our infrastructure as you can see in our cluster.
+00:07:38 [W] We're going to have a networking specified.
+00:07:41 [W] We're going to choose select 8/16 for our pods.
+00:07:44 [W] I would like to draw your attention to here is the control plane reference.
+00:07:49 [W] Now, this is the section which will invoke a different manifest which is going to be a declarative representation of our control plane.
+00:07:57 [W] Be mindful here that this is actually a trimmed output. So we're going to see the full llamo definition for the demo.
+00:08:04 [W] So within our control plane, we will specify our cluster. The namespaced is going to reside we're going to specify information such as the infrastructure template and this is going to be the pluggable definition of how we'd like our machines
+00:08:19 [W] Um for the masternodes to be configured if it's going to be for example in AWS will be able to specify the region the instance type pretty much configuration parameters like that.
+00:08:27 [W] The qpd ADM conflicts bag is going to focus on how can we initialize and join new machine to the cluster and as well within the control plane.
+00:08:38 [W] We're going to Define its amount of replicas.
+00:08:40 [W] replicas. So the amount of Masters would like to have along with the version of our kubernative cluster.
+00:08:47 [W] And the last section we have in our cluster is the infrastructure reference. Now, this is actually going to have the information of how we'd like to define those networking components our it was mentioned before the site. If you look at the Manifest for AWS cluster, we're going
+00:09:02 [W] Specified in this case is going to be you best one and we are going to attach an SSH key to our instances. And for now it's going to be the default as the same chicken.
+00:09:02 [W] Before I move forward with the demo, I would like to Showcase this setup. We have with cluster EPI and Argo CD Now cluster. Epi is an extremely powerful tool because it completely rethink the way we see our
+00:09:17 [W] They are actually represented for llamo. And if we have the animal that means that we can have in operations within the cluster on top of these files as well.
+00:09:19 [W] For example, if you have manifest will be able to use the Rhythm and get and apply templating layer on top of them such as hell for customized.
+00:09:27 [W] Once we have this templating layer is going to be very easy for us to apply changes and reconcile any changes with a tool such as Argo CD and flux the sake of this demo we're going to use
+00:09:40 [W] A Helm template for our class trip a manifest and we're going to reconcile any changes using Argo City.
+00:09:47 [W] It looks look exactly how would be able to upgrade the cluster by using just one command or one can meet for for our manifest at this stage in the top view.
+00:10:00 [W] You're going to see our cluster cluster. This is a demo cluster with six notes free Master notes and free worker nodes and this is running in one point 18.8 on the
+00:10:13 [W] lower level of the terminal you'll be able to see all our machines.
+00:10:16 [W] So these are going to be the rest of the mission resources.
+00:10:19 [W] We have a cluster API as you can see looking at the name.
+00:10:23 [W] We're going to have the control plane, which is going to be our Master nodes and we're going to have our mission deployment use going to be pretty much all working towards and all of them are running in one point 18.8 to create this cluster.
+00:10:36 [W] So any changes using Argo CD?
+00:10:37 [W] And let's look exactly how would be able to upgrade a cluster by using just one command or one can meet for for our manifest at this stage in the top view.
+00:10:50 [W] You're going to see our cluster cluster.
+00:10:52 [W] This is a demo cluster.
+00:10:54 [W] We've since notes free Master notes and free workloads. And this is running in one point 18.8 on the
+00:11:03 [W] lower level of the terminal you'll be able to see all our machines.
+00:11:06 [W] So these are going to be the research Mission resources.
+00:11:09 [W] We have a cluster API as you can see looking at the name.
+00:11:13 [W] We're going to have the control plane, which is going to be our Master notes and we're going to have our mission deployment just going to be pretty much all working towards and all of them are running in one point 18.8 to create this cluster. I have used Argo
+00:12:50 [W] And pretty much I have an application here which is going to go and look for the helm chart.
+00:12:57 [W] So if you look at the application details will be able to see our Helm chart which is declaratively defined here.
+00:13:04 [W] So we're going to have a template fairly standard with that and the values file we're going to use is the values that demo which represents 1.18 the amount of replicas for Masters and workers which are going to be free.
+00:13:18 [W] And we can further confirm that by looking at our parameters.
+00:13:21 [W] This is pretty much what we see here.
+00:13:23 [W] This is going to be our source of truth that we will think to our cultured now, we would like to see how exactly the control plane resource Works in real example. So that would like to push a
+00:13:38 [W] To push a new change to our masters and one of the most common operations we're going to have within any infrastructure team is upgrading your cluster.
+00:13:47 [W] And for now, we'd like to change the version to 1.19 .1 and I'm just going to commit this change.
+00:13:58 [W] It's a very meaningful message as well. And I'm just going to push it straight away.
+00:14:06 [W] Once these changes are pushed.
+00:14:08 [W] They're going to be identified by Argo City straight away because I have manual reconciliation.
+00:14:12 [W] If I just hit refresh we'll be able to see that we are out of sync we have and you can make it will get alcomate. There's the only change we've done so we've changed our version of kubernative and because I have manual reconciliation.
+00:14:27 [W] Buttons and it will synchronize our resources.
+00:14:30 [W] Now the most interesting thing is to actually look at how exactly the machine resources behavioral cluster APA resources. Behave as you can see already have a new machine being provisioned.
+00:14:42 [W] So one for our masters and one for our workers as well. And this is going to be pushed another thing. I'd like to Showcase if you look for example at AWS straight away.
+00:14:54 [W] We'll be able to see that we have two instances initializing.
+00:14:58 [W] So we already have the new machines rolling work is creating once we have a machine being ready with the new version. It is going to be added to the cluster.
+00:15:09 [W] So let's wait for maybe one or two minutes and see if that's actually going to roll out. The full demo is already recorded as well. We'll make that available on social media if need be we can attach a YouTube link to that.
+00:15:24 [W] So you'll be able to see a speed up version of the entire process, but for our trance, we have a new machine within the configuration that is going to be added to the cluster and a machine with all configuration is mentioned is going to be taken down.
+00:15:38 [W] There is no patch in there is only two bility now.
+00:15:42 [W] Let's see if that will progress fast enough for us.
+00:15:48 [W] Looking back into our AWS.
+00:15:54 [W] Oh, you can see we have a new machine with one point 19.1 ready to the cluster.
+00:16:00 [W] It's not ready yet.
+00:16:01 [W] It'll be ready. Once the networking calcio actually is going to be propagated through.
+00:16:08 [W] And you'll be able to see as well that a machine this one for example, the scheduling is disabled. It is going to move all the pods transition all the parts to a worker but to working mode and
+00:16:23 [W] Actually going to be removed and this is going to be performed over and over again up to the point in the new cluster which is going to have all the notes within your version and just to confirm as you can see this machine is not deleting stage.
+00:16:26 [W] And just to confirm as you can see this machine is not deleting stage.
+00:16:26 [W] It's going to be removed.
+00:16:27 [W] this is pretty much the other deployment strategy the colorful concept of how can we really do upgrades with just one only one change to our control plane?
+00:16:41 [W] I will just leave that running from now. It's going to take around 15 to 20 minutes depending on the amount of workloads or Master knows you have it pretty much around 20 minutes.
+00:16:51 [W] We're going to have a new cluster.
+00:16:52 [W] Well the same cluster with the new version.
+00:16:58 [W] Okay for the road map for the V1 of a for the we we are still doing some grooming to see what is the the future is going to add 4 Alpha for but the ones we already know when we are working on
+00:17:14 [W] ocean
+00:17:18 [W] okay fight their roadmap for the V1 of a for the we we are still doing some grooming to see what is the the future is going to add 4 Alpha for but the ones we already know when we are working on
+00:17:47 [W] They're ones you can see in this light right now.
+00:17:49 [W] It's we are going to focus on the ux and bootstrap like have a machine bootstrap failure detection as well.
+00:17:56 [W] We are going to work also in other more core improvements moving away from Court one object reference and also like updating the dependency like using kubeedge DM V 1 beta 2 types and
+00:18:11 [W] As well, there's aiming like to have the latest cubed DM and also aiming to like have more stable and movie to beta one later on.
+00:18:24 [W] And this pretty much concludes the Deep dive. We wanted to Showcase about cluster API there few takeaways would like to leave with you before concluding the TOC.
+00:18:33 [W] The cluster API has been so exciting successful inefficient in just one year and a half because it uses the building blocks principles does not concern itself to bring new API importance for kubernative to consume its capabilities it actually
+00:18:48 [W] Of the existing Primitives and making the best use of customer service definitions a very important thing about cluster API is the fight against cloudevents take it truly provides that one interface that allows the infrastructure changes to plug into different Cloud providers.
+00:19:01 [W] More importantly by reusing this manifest. So we have a better management of our clusters overall.
+00:19:03 [W] And currently cluster apis you can see is under continuous development.
+00:19:08 [W] So if you'd like to have new features, if you'd like to propose a new provider to be integrated cluster Epi, please reach out to the team and contribute now is the perfect time to customize cluster API to use case if you'd like to find a bit more
+00:19:23 [W] Please reach out to the team and contribute now is the perfect time to customize cluster API to use case.
+00:19:29 [W] If you'd like to find a bit more information about cluster EPI, and someone's the knobs and the kind of maintainers point of view.
+00:19:38 [W] You'll be able to do watch the webinar, which was proficient.
+00:19:42 [W] Well recorded with help of cncf.
+00:19:44 [W] The link is provided below.
+00:19:47 [W] And if you'd like to find out a bit more of how to get started with cluster API, how can integrate the cluster API with Argo CD and how you'd be able to do this one common line one line commit to upgrade a clusters.
+00:19:59 [W] I have written detailed blog post medium and you'll be able to find them there and pretty much get you started on all of these methodologies.
+00:20:09 [W] If you want to like it start contributing like in the project itself, you don't need to have only like coding skill. Like if you write a writing skills, if you write like writing documentation writing writing guides and so on like
+00:20:25 [W] places that you can contribute for that if you have like more product skills, like we can get like collect use cases and compile and do all the stuff like me can see they use cases and then we can be able to and plan better
+00:20:39 [W] As well if you have coding skills, you can review / requests and become an approver like you can search for help when the tickets are good for tissues across the entire cluster API not cluster API, but also the cluster API providers as well.
+00:20:50 [W] And the tickets are good for tissues across the entire cluster API not cluster API, but also the cluster API providers as well.
+00:20:56 [W] That is a lot of help wanted tickets that we need help on that.
+00:21:00 [W] If you have any other skills, like you can like provide feedback to us. You can make demos you can ask questions. You can also join the weekly Community meetings and join our is like as well like you can always
+00:21:15 [W] So you can also join the weekly Community meetings and join our is like as well. Like you can always helping testing the cluster API and then opened issues like to explain what is wrong or what we want to see
+00:21:37 [W] So as mentioned if you'd like to have more information about today's stock, please reach out to us on social media.
+00:21:44 [W] Yeah, you're going to be available on Twitter and Linkedin as well.
+00:21:48 [W] Please read articles I have on the medium account and reach out with any questions. You have enjoy the rest of the conference.
+00:21:55 [W] Thank you.
+00:21:56 [W] Thank you.
+00:22:05 [W] Hello y'all.
+00:22:09 [W] OK we have some questions here in the in the UK can weigh and I don't know how you wanted to do Katie.
+00:22:19 [W] Let's take it one by one.
+00:22:20 [W] Thank you very much for attending by the way, and we have have a set of very good questions.
+00:22:26 [W] We aimed to answer in the live Q&A maybe to provide a bit more detail rather than have the text.
+00:22:31 [W] And of course just going to be useful for our listeners as well.
+00:22:35 [W] I could read the question and then we can focus on it answer them again.
+00:22:40 [W] Look at the next one.
+00:22:41 [W] So the first question is coming from the part if the first question is coming from Oliver the
+00:22:49 [W] They mentioned that they used both to create vmsinstal kubenetes.
+00:22:53 [W] I'm a bit afraid.
+00:22:53 [W] We've cluster API because nothing can be controlled about the OS. How do you manage the OS we've got straight API.
+00:23:00 [W] One thing before we answer I've actually picked Oliver and some of the cluster EPA maintainers straight away.
+00:23:06 [W] So they'll be able to provide if you want to connect with them directly then that's that's a good way as well.
+00:23:12 [W] However, I think Carlos do you want to take this one?
+00:23:15 [W] and then can I can expand on it?
+00:23:18 [W] Yeah, like right now the it depends on them on the provider like each provider can publish the image. For example, we have a repository.
+00:23:30 [W] It's the image Builder and in there like we right now we have like for AWS for DCP and for digital version against as well, then you can build the image that
+00:23:45 [W] Listen API, and then you publish those images and then you can use those images, but it's depend for by each providers right now. But the idea is to have this image Builder to build the image that you're going to
+00:23:52 [W] to bootstrap your cluster
+00:23:52 [W] precisely so pretty much their it depending on the provider because cluster API is does integrate with different providers.
+00:24:00 [W] So you'll have to have a dependency layer there.
+00:24:03 [W] Well initially like our dependency, but if you tying into a particular cloud provider, then you'll have to use the options available there with a database. For example, you'll be able to create your own images will be able to push push them
+00:24:19 [W] Registry and then you'll be able to reference those to your cluster well to the cluster API to use those straight away. So there is a way to make images the question actually want to specify here
+00:24:32 [W] Interviews, which means you are completely bare metal currently cluster API integrated Cloud providers. So having cluster API on a particular bare metal without any API integration is difficult because there is no centralized manner to provide all of
+00:24:43 [W] As if you need our party provide networking, how do you provide the computer so forth?
+00:24:47 [W] So since you integrate with a cloud provider you will need to make the best of what's available within that ecosystem.
+00:24:53 [W] Hopefully that did answer your question in detail.
+00:24:58 [W] Let's go to the next one.
+00:25:00 [W] We have a question from Helena.
+00:25:02 [W] When do you expect with CRT is to become beta better? Yeah. We we always picked expect expecting for this end.
+00:25:11 [W] Of this year, but this year is quite a typical and we are finishing like we are developing V1 of a for right now and the idea is no better the better one.
+00:25:26 [W] We're going to be like a in Chi 1 Chi to next next year precisely.
+00:25:33 [W] There's definite intention from the cluster a painting to kind of help older all of the resources better it is worth to
+00:25:42 [W] Shin third cluster a great already used in production by some of the teams at VMware. So it is proven to be to be stable is just a matter of making sure that this is fully transparent to the community as well so slowly
+00:25:57 [W] With the momentum. The next question is from Helena's well, could you please provide an update on integration with cluster autoscaler?
+00:26:05 [W] So on this one, I have linked the proposal to to the answer the proposal about the auto scaling.
+00:26:13 [W] You'll find the latest details.
+00:26:16 [W] If you look into the class trip a roadmap, there is a an intention to integrate that fully in July / June July this year, however again
+00:26:25 [W] The year has been an eventful enough.
+00:26:27 [W] So I think some of the latest comments are still dating September / October.
+00:26:34 [W] So yeah, is that on the roadmap? And yeah, hopefully we'll see more traction.
+00:26:40 [W] you need Carlos.
+00:26:41 [W] Yeah, and if you join these leg channel in the to cubicle maintainer Channel, Json just pasta like a message about the cluster out scalar. That is like a there's a pagerduty.
+00:26:55 [W] Explains and in detail everything like how what's the status and everything and then you can take a look at that.
+00:27:05 [W] Yes, so pleased to have a look at that.
+00:27:07 [W] The next question is about the demo with gitops. So the demo gitops actually consists of two stages.
+00:27:15 [W] First of all, making sure that you have cluster API set up successfully the second one is to make sure that you have a gitops tool in this case.
+00:27:22 [W] Once you have these three requirements, then you'll be able to use the helm chart. I have actually it's Upstream.
+00:27:11 [W] I can officially say that one of my GitHub repositories is Upstream.
+00:27:14 [W] It will be able to reference the help chart and install cluster APA currently.
+00:27:19 [W] It's supporting AWS.
+00:27:20 [W] But if you have the need for our Cloud providers, please do parameterize the helm chart and contribute to some more people can use it as well. I've linked to a YouTube link to the full.
+00:27:33 [W] Pretty much is like the time lapse of how exactly the the upgrade is happening when you remove and add one note at a time.
+00:27:43 [W] Let's go to the next question can cluster Epi be used to deploy clusters across different AWS accounts.
+00:27:55 [W] I don't use it WS provider much.
+00:27:58 [W] I know that supports one, but I don't know if you support somewhat accounts right now.
+00:28:05 [W] So let's say I have some insights on this one, but definitely I would recommend you to reach out across drapey a team and request this specifically or upvote the this particular proposal one thing that
+00:28:20 [W] Gators if you can provide multiple clusters within the same AWS account, and actually there is a for every single cluster require a set of cluster a brake controllers to manage that currently if
+00:28:26 [W] They replicate the controllers as well.
+00:28:19 [W] There is a definite desire to simplify that so you have one set of controllers to manage multiple clusters.
+00:28:25 [W] So that's definitely one of the things they focusing on the way you integrate cost for API is by providing the AWS credentials as well, which means that you potentially be able to provide in different accounts as well.
+00:28:39 [W] I haven't tried this yet, but please do I'm pretty sure it's possible.
+00:28:44 [W] So please give it a try and feedback.
+00:28:47 [W] Go to the community will be great to hear how it goes.
+00:28:51 [W] The next question let's go.
+00:28:53 [W] It's coming from Avi.
+00:28:58 [W] Is the idea that you'd have one kubernative clustering which you're running cluster API and the instance of API is the one used to provision all of your other clusters.
+00:29:08 [W] I think this is about the management and the target clusters.
+00:29:11 [W] Could you expand on that Carlos?
+00:29:13 [W] Yeah, you can like you need to have like a de manager cluster can be any kubenetes cluster Conformity above 116 and then you deploy all the
+00:29:27 [W] cluster API and cluster API providers in that cluster and then from there you can bootstrap the other clusters, but also there is another idea, which is you
+00:29:40 [W] The one you use the provision all of your other clusters, I think this is about the management and the target clusters.
+00:29:46 [W] Could you expand on that Carlos?
+00:29:48 [W] Yeah, you can like you need to have like a de manager cluster can be any kubenetes cluster Conformity above 116 and then you deploy all the cluster API and
+00:30:53 [W] And we use that one.
+00:30:55 [W] I'm not sure if that one is a hundred percent like a
+00:31:02 [W] working but nowadays like that the safe the safest method is you have a manager cluster then that bootstrap other clusters these manage clustering. Don't be don't need to be like big
+00:31:18 [W] Is fine like for our testing purposes and for all this hype lines we use we use kind for that and that is very like safe to to work on that.
+00:31:29 [W] But if you are running and pushing to production, it's safer to have your dedicate cluster to that not going to disappear like after five minutes.
+00:31:43 [W] Precisely. So yeah, the idea here is that you have to to set of clusters the management which will provision of a clusters and these are called the target clusters which will deliver to your developers.
+00:31:56 [W] And yeah, Carlos already expanded on that if yeah you it's if you want to use cluster Pi for more protection users to host you actual Services.
+00:32:06 [W] It's recommended to have a kind of a stable cluster which is not going to be ephemeral the next question which weaveworks.
+00:32:13 [W] Already answered is coming from our Vic. This is mainly targeted targeted towards cluster right?
+00:32:19 [W] Not much more bare metal.
+00:32:20 [W] Yes precisely.
+00:32:21 [W] This is because class rep a provides an integration a unified way for you to use different Cloud providers. Currently. It relies on that cloud provider API to provision the resources.
+00:32:35 [W] That's why for bare metal at the moment.
+00:32:37 [W] It's there is not so much.
+00:32:39 [W] However, there is a integration with packet.
+00:32:43 [W] Recommended to have a kind of a stable cluster which is not going to be ephemeral the next question which we already answered is coming from or Vic.
+00:32:52 [W] This is mainly targeted targeted towards cluster right? Not much for bare metal.
+00:32:56 [W] Yes precisely this issue because kosrae provides an integration a unified way for you to use different Cloud providers. Currently. It relies on that cloud provider API to provision the resources.
+00:33:54 [W] Do look into that integration is to lead to Creation. You know, I stayed after that the packet one and after that is the vsphere for VMware as well that you can like bootstrap your vsphere VM as well.
+00:34:10 [W] One question is coming from Oliver as well.
+00:34:13 [W] Do you can you specify different?
+00:34:16 [W] Oh, do you let me just fix that.
+00:34:21 [W] Can you specify different cni-genie?
+00:34:22 [W] Is it out of scope for the clustering?
+00:34:25 [W] Do we refer to the the networking component for the Target clusters or the management cluster?
+00:34:35 [W] Actually, that's a good question.
+00:34:39 [W] Yeah, so right now we like with the fold the cni-genie for Calico, but I think you can like change that when you just need to apply a another cni-genie that we are defaulting that
+00:34:55 [W] So I see so you can help you can definitely customize those.
+00:34:59 [W] Let's look into have a question coming from
+00:35:04 [W] I think it's hard here, but I'm not going to be better that the cluster upgrade with a single commit was great.
+00:35:11 [W] Well that we're going to be KS and manage control plane.
+00:35:16 [W] Yes, Carlos.
+00:35:18 [W] Yeah. Yeah quick quick comment is like the cluster API provider AWS.
+00:35:25 [W] They are working to introduce AKs as well in the to be managed but is not like fully ready as far as I know but then the idea when we integrate the eks, you're going to be you're going to
+00:35:40 [W] The same demo as katydid using KS as well.
+00:35:38 [W] Precisely so there is a currently because everyone was asking how can we migrate or integrate e KS a case cluster to be managed by cluster API and I think this kind of feedback was like it was so much that the
+00:35:53 [W] Like we really need to do something about it.
+00:35:50 [W] So that's why really do feed back to the community.
+00:35:54 [W] So as mentioned there is a desire to integrate e KS as part of the managed clusters and then pretty much of cluster API because you have that control plane resource, which pretty much works as a deployment
+00:36:09 [W] And then pretty much of cluster API because you have that control plane resource, which pretty much works as a deployment.
+00:36:11 [W] You'll be able to rotate your nodes one by one to roll out your nose.
+00:36:16 [W] So definitely do to keep your awareness around this place.
+00:36:21 [W] I hope it's going to be great in the future.
+00:36:24 [W] Yeah.
+00:36:24 [W] just had like some quick comments like any database provider. We are adding the AKs support and age or site we are at
+00:36:34 [W] Adding a Windows support as well or the cluster API, then you can bootstrap your windows notes as well and I think AKs elsewhere in the other side going to be so variable as well.
+00:36:52 [W] Another question.
+00:36:53 [W] I hope you have enough time to answer that.
+00:36:54 [W] What do you upgrade from 118 to 1 and 10 .1 the kubernative objects.
+00:37:00 [W] Are they migrated from the old to the new cluster here is a very important point. For example, when we had a API change for the green disc release, I think 116 when you have to change your API endpoint for resources, that is something
+00:37:16 [W] Your applications of request API will be able to kind of roll out your notes to a new version.
+00:37:24 [W] And of course the same way you actually have chains like the nodes will be evicted from the old node. The pods will be evicted from the old note and put into the new control plane.
+00:37:36 [W] So there is pretty much kind of a very nice rolling out a strategy to it.
+00:37:41 [W] to it. I'm not sure if you had more neutral. Yeah, if
+00:37:45 [W] You have more questions.
+00:37:47 [W] We are you walk and go today's lecture AnnaLynne the channel 2.
+00:37:51 [W] What's the name of the channel?
+00:37:53 [W] So it's called thing.
+00:37:55 [W] chuckling to give con maintainers and I questions there as well.
+00:38:01 [W] Precisely.
+00:38:04 [W] thank you very much for all of the questions.
+00:38:06 [W] This is great.
+00:38:07 [W] You have more of them.
+00:38:08 [W] Please give them coming into this like channel so we can increase the visibility of some of these kind of areas you'd like to find more information about and thank you very much for listening to all talk.

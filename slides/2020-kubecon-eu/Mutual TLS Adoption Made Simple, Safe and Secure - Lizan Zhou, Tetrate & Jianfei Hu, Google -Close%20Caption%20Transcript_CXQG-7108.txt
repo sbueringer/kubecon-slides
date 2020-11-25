@@ -1,0 +1,154 @@
+﻿Mutual TLS Adoption Made Simple, Safe and Secure: CXQG-7108 - events@cncf.io - Tuesday, August 18, 2020 12:30 PM - 48 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi everyone.
+00:00:03 [W] Today.
+00:00:04 [W] We are going to talk about Mutual Kia's adoption.
+00:00:07 [W] So here is the introduction for ourselves.
+00:00:15 [W] Hello, my name is design Joe.
+00:00:21 [W] I work at a trade. I'm an Envoy maintainer and also in still networking and security working group.
+00:00:29 [W] Hi, my name is Jennifer and I'm working at Google.
+00:00:41 [W] my work is also mostly focused on the issue of security in working group.
+00:00:42 [W] So we are going to talk about what is mtrs.
+00:00:57 [W] And the Y Mutual care is very hard and what customer challenge it's gonna face.
+00:00:58 [W] And the based on that challenges we are going to explain some of our approaches to how to optimize and improve user experience.
+00:01:14 [W] And in the end. We are going to talk about the summary and also some lessons we learned during this API Improvement for MTS Topton journey and
+00:01:23 [W] June when we have time, you're going to have a Q&A session.
+00:01:28 [W] so
+00:01:31 [W] first we can explain why what is MTS and why it matters?
+00:01:39 [W] So mutual k3s extension of the TRS.
+00:01:46 [W] And it's essentially a security check on both the client and the server side.
+00:01:53 [W] The client is checking the server's identity by x.509 certificate and the server is also asking for a certificate from client.
+00:02:07 [W] The this we are in step three is to secure to service to service authentication and the transport layer or so based on the x.509 certificate information.
+00:02:22 [W] Mr. The server can derive some client information like name space and service account to do some further authorization check.
+00:02:29 [W] So if I'm curious is good. Why what make is very hard to adopt?
+00:02:38 [W] Let's take this as an example on the left side.
+00:02:43 [W] We have client and the server a full-service and there's a traffic are in plain text.
+00:02:48 [W] after the customer adopt the sidecar.
+00:02:52 [W] Injecting the employee to the application we can now established a mutual Tears by adding these in between the server and client employ.
+00:03:07 [W] So this way you don't have to change your client and the server application code at all you get in tears for free. Everything is transparent to it.
+00:03:13 [W] But in the real world since I know that simple, so if you look at this diagram, you can see on the right hand side. The bar service actually has the 1 and V 2 2 versions and
+00:03:30 [W] V1 version is a legacy released for example, and it doesn't have the invoice I car rolled out.
+00:03:42 [W] So if the client and boy is the only instance the mutual tears traffic for the park service, it's gonna fails as they need to reach out to the power of E 1 Port.
+00:03:51 [W] And similarly on the counterpart of the client Side Story.
+00:03:58 [W] We have a similar situation. The client one does not have the invoice sidecar and the client to does have when the server for service and why only accepts the MPS then the plaintext traffic
+00:04:12 [W] Request friendly climb one we are starts with failed.
+00:04:15 [W] So to make things even more complicated Kate you can see both things can happen at the same time.
+00:04:27 [W] So we have a partial sight car throughout both client and server side and you can see two of the request kind of situation out of the four because we fail
+00:04:39 [W] So, how can we solve this problem one way to think about is well, if you cannot accept the music's between the client and server and way unless invoice are everywhere.
+00:04:55 [W] Not be just wait by on the we start from the plain text but not doing any of them you to tears at all on the left side where you start to ramp up the invoice injection there.
+00:05:08 [W] are your servicemeshcon.
+00:05:25 [W] materials and jewelry of all at once
+00:05:28 [W] However, in the real words, this is almost impossible to do we all know the complexity of a Enterprise deployment that you always have some kind of corner cases.
+00:05:44 [W] There are some teams service but not be able to adopt new technology cycle can just not be put there you cannot this will never happen basically, so you still
+00:05:56 [W] Charlie's doing something unusual API improvements on this in this example.
+00:06:04 [W] you can see the full service both is client and server application have already finished the invoice icon rod.
+00:06:15 [W] So in that case, we don't have to wait for Bart clients to be finished. We can just adopt the mutual tears for a full service.
+00:06:20 [W] So we have a two apis on the sto side while is called destination rule, which is essentially API configure The Climb
+00:06:28 [W] in NY Closter behavior, for example, like load balancing like circuit breaking and also assume Mutual tears can be configured here. We have a
+00:06:41 [W] In this case, we specify the service host as full and the chaosmesh deceased you Mutual.
+00:06:46 [W] To let the client envoy's sending you to tears traffic on the server side.
+00:06:53 [W] We have a authentication policy and these policy also specify the service as full and a single Boolean flag has to enable the mutual tears that here is our very basic approach
+00:07:07 [W] Our Baseline of how to solve this problem. Now, these aren't we have starts to talk about how he's still an invoice make some improvements.
+00:07:16 [W] So in the server-side Improvement
+00:07:27 [W] This is in the case of the client side car is partially deployed.
+00:07:38 [W] We do the t is sniffing that detect the TLs and plaintext traffic.
+00:07:47 [W] So in this case server will be able to serve both case whether the clan have Envoy sidecar or not.
+00:07:50 [W] In the is still a pi this is expressed in permissive mode and compared to the strict mode the server only accept mutuality as config in Envoy config. This is showed in the snippet in the slide here.
+00:08:08 [W] We have the TOs inspector this new filter and we have to Define to filter chain with different filter match one matches to the TOs traffic and another manages to the plain text traffic.
+00:08:25 [W] So how it works basically 30s sniffing.
+00:08:38 [W] Yes inspector take a look on the first packet that sent from client to check whether as a clan.
+00:08:47 [W] Hello in T is if that's the case the TOs inspector will extract the some teal as metadata search whether it still is what a OPN it is u.s.
+00:08:57 [W] Used.
+00:08:58 [W] What the Sni in the client handle message?
+00:09:06 [W] There's some drawback of this approach.
+00:09:08 [W] for example for some of the server first protocol such as MySQL this case the first packet won't arrive when tears inspectors working, but the traffic is not forward
+00:09:24 [W] Upstream server. So in this case, we introduced some time out in the distant future.
+00:09:31 [W] But it still adds a timeout to the search protocol when timeout happens service item voice forward traffic as plain text and then server responds with the first message back to
+00:09:47 [W] It keeps clients such as MySQL works, but at latency to the old order to the time time time out.
+00:09:56 [W] So in this case, we address the two different needs one is permissive one is trick.
+00:10:15 [W] That is the inside once you down with the all roll out on the client side.
+00:10:20 [W] You can switch the TOs policy to strict mode in that case. The server won't do the test one detective plain text traffic that means
+00:10:30 [W] You are now fully secured in the first service.
+00:10:35 [W] That won't get plain text traffic.
+00:10:36 [W] So in a still site configuration, this is this expressed as destination Rule and authentication policy.
+00:10:48 [W] So one server side roll out finished the current designation rule should be still mutual and permissive should be changed to strict.
+00:11:00 [W] this also address some config complexity in the previous like the manual config approach since the is still destination rule is an override base in this example
+00:11:20 [W] If you have some function connection timeout in full service, and you apply the cluster y desde El Mutual is won't apply to Food Service.
+00:11:33 [W] So it will break there as well.
+00:11:38 [W] You have to do something like the bar service to have the traffic policy and also you have to apply that to the all the subsets as well.
+00:11:47 [W] This is an complexity of the HDL destination rule itself.
+00:11:51 [W] But this make mutuality as much harder because you have to know about the all the override and applying them correctly.
+00:12:01 [W] so in the current side
+00:12:08 [W] This is for the case that Server doesn't have the fully side / deployed.
+00:12:19 [W] This is based on the new feature.
+00:12:21 [W] We introduced in Envoy called endpoint labeling.
+00:12:24 [W] Transport matches was added to the classic config. Which defines can Define multiple transport socket which basically allows you to specify multiple TRS config or plain text config and the
+00:12:40 [W] And the points that delivered for the for that cluster just a label called Mutual TS ready?
+00:12:49 [W] So when it is true, it matches to the transport socket defining the Caster to initiate the TOs connection to those servers workload with sidecar deployed.
+00:13:03 [W] For those without server and void deployed.
+00:13:14 [W] It still uses the row buffer means it uses the plain text communication.
+00:13:15 [W] So combine those two servers side and client side approach.
+00:13:24 [W] You can see we addressed all the situation here that whether client have Envoy or not, whether it's partially deployed or fully deployed all the server and client
+00:13:40 [W] Look to each other for the for the Legacy case, like both side doesn't have Envoy deployed. It can still communicate.
+00:13:53 [W] Of course.
+00:13:54 [W] So we start so as a journey of the adoption we started with you can start with permissive mode by default. And then this happens automatically when you start deploying
+00:14:12 [W] To your server and client once your rollout is done on this on the service file side.
+00:14:23 [W] You should be able to switch that to strict mode.
+00:14:24 [W] Then you're fully secured on their service.
+00:14:30 [W] Now. I'm going to pass back to gen Fay to tell more about the lesson we learned from this.
+00:14:37 [W] Thanks, leave them for explaining what kind of the details and the mechanisms for improving the issue Mutual tears adoption. So now I'm talking to talk about some lessons when we learn go through this journey ourselves.
+00:14:54 [W] The first of their first that servicemeshcon real doesn't take otherwise it takes time.
+00:15:03 [W] people try new technology gradually and they would be quite some period event your servicemeshcon ceased of both workloads Visa enemies outside car and this could take quite some time.
+00:15:16 [W] We need to have good user experience in terms of a configuration amount you need to do for you to adopt Mutual tears.
+00:15:22 [W] That brings up to the second point we one way to look at this problem is that customer can solve this problem on their own if they just reading to write more kind of configuration.
+00:15:37 [W] For example, one of the Alternatives as output compared to our approach is that you can create some subset in the destination Rule and one subset corresponds to the server workloads result and way
+00:15:51 [W] and one that has the mo SI car you can also specify the percentage weight between these subsets of and doing the load balancing and the of course, this is very manual and introduce a lot of config toy problem
+00:16:07 [W] The next point is that don't forget about Security.
+00:16:16 [W] Even you just want to focus their transition and make user experience good that's why we realize there's to Moe's in the beginning you need to need permissive and make sense. Very smooth.
+00:16:27 [W] But once you are down business, I carry a lot since want to be fully secure only strict MTS is what you want.
+00:16:34 [W] In the end one last point is that the real world traffic is really complicated and be kids all kind of corner cases where we design these magnesium's for example on the server side, then we are doing
+00:16:49 [W] Permissive by curiosity V we found sometimes the Legacy client can send HTTP request to the server and if we are just doing the transports talking match transport
+00:17:05 [W] If you based on the transport protocol as TRS, that'll be a match to the program theater chain and trying to terminate a cheapie s traffic with issue immunity as configuration. And of course since we start to fail
+00:17:20 [W] On the client side we have here some similar issues the endpoint labeling solution only works for the endpoint Discovery typed and way calstrs and and we have other kind of clusters like original
+00:17:36 [W] Nation and it started this is the type of on the slice that we also have DNS resolved kind of clusters.
+00:17:48 [W] Those kind of clusters doesn't go through the end point they would in selection code paths and the workflow so you cannot have this automatically detect any point MTS ready Behavior
+00:17:59 [W] Next is our test to summarize or we present today.
+00:18:09 [W] We solve this emptiest option Problem by two parts.
+00:18:12 [W] The first is the server and boy, we make it both support and peers and the plain text.
+00:18:23 [W] This is done by of the envoi level Tas sniffing in as a network layer filter and want a story Pi side. We introduced permissive in a strict for two kinds of needs.
+00:18:30 [W] He's on the client side.
+00:18:36 [W] We introduced the make the client envoi able to send both plain text and mutual TS traffic based based on the server and points labeled in results the outcome for this.
+00:18:46 [W] Improvements is that we remove the client-side destination rule configuration. Totally if you just want to get MTS down and these two things combined together is that you start from the permissive and the ultimate
+00:19:01 [W] In the beginning, all you need to do is one switch from permissive too strict for your entire MTS Journey, which is much much more simplified.
+00:19:11 [W] All right, and today that is our today's presentation here now.
+00:19:19 [W] It's the Q&A sessions.
+00:19:20 [W] Feel free to ask any questions.
+00:19:21 [W] anks.
+00:19:22 [W] Hey, my name is Jim pay I see a question posted this on the room that is asking.
+00:19:52 [W] Is it easy to renew the MCL certificate you the whole cluster in easiest case that we have the entire public key infrastructure to responsible for key rotation and deliveries
+00:20:03 [W] from the control plane to the
+00:20:06 [W] something control plane to the envoy sidecar. So the key is to duplicate of the workloads are rotated every for a short period of time.
+00:20:20 [W] ah.
+00:20:21 [W] and I see another question suppose the original if some of the MPS ready and then some rely on what is the easiest way to support these cutting pattern plain text to another
+00:20:58 [W] transitions
+00:21:00 [W] So under server side that we for the workers that have the invoice icon are we have the AR p.m. Match?
+00:21:17 [W] We instill - Otto are p.m.
+00:21:20 [W] that that won't conflict with your the their own and here is that all of offer you a supports both the application that has three.
+00:21:30 [W] In the his own MPS verses that we are trying to terminate mtrs, but we cannot control the workloads that does not have Lee and cares and we think are good.
+00:21:45 [W] So yeah, I can answer the next question can use of mutual TS lead to lack of visibility since the traffic is now encrypted.
+00:22:18 [W] There's no way to do traffic inspection on application traffic is there so
+00:22:22 [W] Yeah, there's a debugging techniques still can be used with boy to inspect application traffic using Envoy debug feature, or you can still try
+00:22:37 [W] To see what the traffic in plain text between sidecar and the and the application by inspecting the local traffic traffic, but basically Local Host traffic.
+00:22:52 [W] Okay, I think we are.
+00:23:28 [W] Okay, there's a follow-up for that one can traffic inspection be done for encryption did application traffic if your application encrypted traffic itself. You should you need to
+00:23:51 [W] Somehow by using this application specific logic to export that here as keys.
+00:24:00 [W] I mean the egg encryption Keys.
+00:24:06 [W] there's some way to do that and having that cap like tcpdump when a traffic camera capturing stuff and combine them you should be able to do the inspection.
+00:24:13 [W] So, yes, it will be more steps to inspect the Catholic when things are encrypted.
+00:24:22 [W] Okay, we will slack for more crashing. If you have more will monitor.
+00:24:41 [W] Should I look for more crashing?
+00:24:42 [W] u.

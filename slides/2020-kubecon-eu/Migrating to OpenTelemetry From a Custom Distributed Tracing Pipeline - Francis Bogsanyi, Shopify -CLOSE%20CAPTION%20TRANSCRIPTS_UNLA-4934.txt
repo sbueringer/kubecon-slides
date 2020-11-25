@@ -1,0 +1,215 @@
+﻿Migrating to OpenTelemetry From a Custom Distributed Tracing Pipeline: UNLA-4934 - events@cncf.io - Thursday, August 20, 2020 12:44 PM - 65 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi, I'm Francis. I work on distributed tracing a chopper Phi and I'm also a maintainer of opentelemetry Ruby.
+00:06:33 [W] In 2016 Shopify built its own distributed tracing pipeline last year. We started migrating our entire tracing pipeline to opentelemetry.
+00:06:42 [W] This talk provides a historical background for that move why we chose to build Upon opentelemetry A migration strategy and what's gone right and wrong so far.
+00:06:51 [W] Let's start by taking a look at what we built back in the Dark Ages before opentelemetry. I'm going to assume familiarity with basic concepts of distributed tracing like traces spans and tags.
+00:07:04 [W] There's four major things.
+00:07:08 [W] We need to implement distributed tracing.
+00:07:10 [W] Firstly we need to instrument our own services at Shopify most of our services our rails applications.
+00:07:17 [W] So we needed instrumentation in Ruby.
+00:07:24 [W] Secondly, all the services need to agree on how to propagate Trace context between themselves if service a makes a requester service B and we want to trace that request a needs to pass along information about the trace and the clients pan so that be can create a child span.
+00:07:35 [W] span that's part of the same trees and has the correct parent.
+00:07:38 [W] Thirdly, we need a way to collect the spans that Services have recorded and send them to a tree storage back-end.
+00:07:44 [W] In some cases this is subsumed by the back end itself.
+00:07:49 [W] And finally, we need that back end and some mechanism to search and view traces.
+00:07:54 [W] When we started there wasn't much publicly available for Ruby the zip can jam it been abandoned and development had shifted to open Zipkin, but it was pretty early days Jaeger haven't been open sourced yet in it and it lacked instrumentation for Ruby. Anyway opentracing didn't exist for
+00:08:13 [W] And when it showed up later EAP, I didn't feel especially idiomatic to us.
+00:08:22 [W] Well generally instrumentation tended to be tightly coupled with the storage back-end while some commercial tracing back ends existed there wasn't a clear winner and they all provided their own instrumentation libraries given this landscape.
+00:08:31 [W] We did the obvious thing and wrote Our Own instrumentation Library.
+00:08:35 [W] The story for context propagation with similar the headers tended to be specific to the instrumentation be three multi-headed from Zipkin and X Cloud Trace contacts from staffer with the two obvious choices.
+00:08:48 [W] We didn't want to pay for a back-end while we're building out this functionality staff for either trace and datadog trees were free at the time with some limitations Zipkin was also a possibility, but we didn't want to get bogged down managing infrastructure while we were building stackrox a trace didn't require a
+00:09:06 [W] Tekton datadog Trace had an agent which was not too painful to deploy as a demon set of the time.
+00:09:11 [W] We ended up building a custom instrumentation Library inspired by opentracing. It had Auto instrumentation for all the things we commonly use at Shopify elastic search redis memcache rails my SQL and so forth.
+00:09:27 [W] We had just moved into gcp and it seemed like a good idea to leverage GCL B is tracing support.
+00:09:35 [W] So we use Dex Cloud Trace context for propagation.
+00:09:39 [W] We never really got much out of that and we migrated our load balances to nginx, but by then we were stuck with that propagation format and we had no good reason to change it.
+00:09:45 [W] Finally we hedged up that's for a while with back ends and had Jewel exporters to datadog and stacked Rover.
+00:09:51 [W] This was a good MVP for tracing. We spent some time promoting it inside Shopify and smoothing out the on-ramp for services to add tracing in most cases.
+00:10:09 [W] It was as simple as seeing a warning in the service catalog clicking a button to order fix which opened a PR to add the dependency and indemnity and initializer with a whole lot of friendly advice and information then merging that PR and applying
+00:10:17 [W] We soon stopped writing to horses and committed to stack driver at that point. The architectural pressure came from the mismatch between back-end API rate limits and the massive horizontal scale of our applications Google bump the limits for us.
+00:10:32 [W] Publicly advertised but it wasn't enough to keep up with our growth. We had to bite the bullet and build a collection pipeline to buffer spans batch them and send them at a Cadence that respected the back-end rate limits.
+00:10:42 [W] I'll solution was a trace proxy running as a demon set that simply dumped all incoming spans into pop song.
+00:10:50 [W] We then had a horizontally scalable forwarders are translated the spans into stacked Rovers format.
+00:11:05 [W] We took advantage of this opportunity will change to Define our own format, which was essentially are in memory format described as protocol of nothing particularly Innovative, but it gave us independence from the backend fairly early on.
+00:11:09 [W] this architecture had a couple of unexpected benefits firstly we had a bottleneck that allowed us to massage spans in different ways, like redacting pii cleaning up span names and remapping tag keys to things of the backend understood and treated specially
+00:11:25 [W] It also led us easily migrate between versions of the back-end API without interfering with the services that we use in our instrumentation.
+00:11:32 [W] Secondly, we could experiment with different back ends and experiment we did by building additional translate as and adding them as different subscribers.
+00:11:44 [W] We could easily Bake-Off different back ends with the same data.
+00:11:48 [W] I think we have five back ends running simultaneously at one point. We tried Zipkin Jaeger New Relic stressing service signal Effects light step and omniscient alongside stacked Rover.
+00:11:57 [W] So this was all pretty cool it gave us a ton of flexibility. And if you squint, it doesn't look a whole lot different from opentelemetry is architecture or Yeager's architecture. The one thing that should jump it out at you right away is that it is all custom.
+00:12:14 [W] We have to maintain our own instrumentation our own agent our own translators and we had to manage and scale this thing as our platform and Company groom.
+00:12:21 [W] And because this was all custom as third-party software LightCore DNS and nginx added tracing we couldn't turn on trees and ingest have it work.
+00:12:35 [W] And because this was all costume we couldn't Support Services written in different languages, although when a known as a ruby shop.
+00:12:42 [W] We have quite a bit of go of some Rust some nodes and pythons some Java we built a goat racing package early on that was compatible with opentracing but that was it for cross language support.
+00:12:48 [W] And every time we want to try out a new back end, we had to write custom translators and learn about new and interesting limitations as we often directed a fire hose of spans at a pool of proprietary collectors are satellites.
+00:13:02 [W] There was a lot of unnecessary redundancy and a lot of impedance mismatch and really when you think about it all this custom instrumentation and translation that we built and all these vendors also built a really just commodities
+00:13:15 [W] we weren't the only ones to realize this where opentracing expect an API and semantics conventions Google built a set of batteries included instrumentation libraries for a bunch of languages with pluggable exporters called senses.
+00:13:29 [W] They open source.
+00:13:35 [W] This is open census and some other folks got on board, including our mission who built a collector for the project.
+00:13:36 [W] This was just what we needed.
+00:13:40 [W] Ruby isn't exactly Google's things. So that library was in rough shape, but the JavaScript instrumentation filled a gap for us and the go instrumentation was much better than what we built.
+00:13:46 [W] We started with go and built a simple exporter in context propagation to make it work in our environment.
+00:13:54 [W] We then turned our attention to the collector.
+00:13:55 [W] In all honesty, we first experimented with the collector in the context of trying out omniscient as a back-end. So we slaughtered it in as just another forward at the end of our pipeline.
+00:14:07 [W] As we gain confidence, however, it became clear that the collector belong to the heart of our pipeline its ability to receive Trace data in different formats over different protocols solved our first problem receiving traces from third-party applications.
+00:14:25 [W] We still had to figure out context propagation, but it was a big step forward.
+00:14:29 [W] First of all, we have to migrate our pipeline.
+00:14:31 [W] We did this in a couple of steps.
+00:14:34 [W] We started by building a receiver for our custom trays format.
+00:14:39 [W] We already had most of the code for this in our Trace proxy conveniently written in go.
+00:14:44 [W] So we just had to pull out that at some configuration and translate to the collectors in memory format.
+00:14:46 [W] deployed the collectors in each cluster.
+00:14:49 [W] We then needed to shift traffic to the new pipeline.
+00:14:52 [W] We set up to export pipelines in the collectors want to Stack driver in one to our mission.
+00:15:00 [W] We added a reverse proxy to the trace proxy.
+00:15:03 [W] that's simply forwarded request to the Upstream collectors. And we added a mechanism in the trace proxy that led us dynamically control the traffic slid by adjusting the config map that was mounted as a file config Trace proxy proxy percentage.
+00:15:15 [W] After shifting with traffic we ran in this shape for a long time.
+00:15:20 [W] With a proxy percent set to a hundred and slowly removed our safety. Nets deleting all the custom forwarders removing the Old Pub sub topic and subscribers.
+00:15:29 [W] At this point we sold our second problem instrumentation in different languages are elastic search team built a trace and plug-in using the open senses Java instrumentation and a graphql proxy team added tracing using the open sensors JavaScript in instrumentation
+00:15:45 [W] In both cases, we only needed to implement context propagation.
+00:15:49 [W] And The Collector solved our third problem maintaining customer translators for every back end. We only needed to implement a single translator from our custom format to the collectors in memory format.
+00:16:00 [W] Ultimately, we wanted to replace our custom format as well and our custom instrumentation in Ruby.
+00:16:11 [W] So we decided to take on the challenge of maintaining open senses review. Our plan was to polish the existing code and then Port all our Auto instrumentation.
+00:16:17 [W] Right around the time we decided to take over maintenance of the open census Ruby project.
+00:16:24 [W] The open senses and opentracing folks got together and realized that there was a lot of overlap between the projects and they decided to join forces to build a third standard called opentelemetry.
+00:16:35 [W] So we got on board and started the opentelemetry Ruby project spoiler alert after a year of development.
+00:16:44 [W] We're almost ready to use it in production.
+00:16:44 [W] Now we're into the meat of our journey to opentelemetry halfway into our migration to open census.
+00:16:54 [W] We had to make this shift.
+00:17:01 [W] It was awkward to continue with the open senses collector because it had been placed into maintenance mode as code was copied over to the opentelemetry project and all development effort quickly shifted their also by this time. We had our own Fork of omniscience for the Upstream
+00:17:09 [W] And maintaining all this was a huge effort.
+00:17:12 [W] So while half our team started building opentelemetry opentelemetry Ruby the other half started porting Al components over to the opentelemetry collector.
+00:17:21 [W] We deploy The Collector into the same namespace and then pointed the kubernative service of The opentelemetry Collector instead of the open sensors collector.
+00:17:38 [W] Obviously, we did this starting with less important clusters gave it some soak time and then gradually migrated more two more and more important clusters.
+00:17:41 [W] I'm glossing over the Stress and Anxiety implicit in this process, but it worked well.
+00:17:44 [W] The downside is that we have an endpoint called OC collector or open senses collector production.
+00:17:51 [W] That's actually backed by The opentelemetry Collector, but it felt like an acceptable trade-off.
+00:17:54 [W] The next challenge was to replace I'll Trace proxy demon said with the opentelemetry agent.
+00:18:01 [W] The agent is really just a collector with a smaller footprint and a slim down pipeline. If you pair closely, you'll see an additional process that we built here called resource labeler this grabs metadata about the node and its environment from a couple of different places and augments pans with that information.
+00:18:20 [W] Things like the node name the cluster name gke version availability Zone something like this now exist in the Upstream project and we should probably move to that at some point and delete another piece of customer code.
+00:18:32 [W] In the meantime a team that owned the Shopify scripts runtime engine wanted to add tracing the runtime engine was written in Rust and for incidentally the opentelemetry Rus Sig had just released an alpha of the SDK and rust so with minimal hand-holding for us
+00:18:49 [W] An awesome can-do attitude from them.
+00:18:53 [W] We Shopify a hardcore rail shop shipped opentelemetry to production for the first time in Rust
+00:18:59 [W] this was actually awesome and a great validation of opentelemetry is value.
+00:19:04 [W] The most recent thing we've built is an OT LP exporter from our custom instrumentation Library iot LP is opentelemetry knative protocol for Telemetry data in large part.
+00:19:21 [W] It's a refinement of the open census protocol, but it's a huge step forward in computational efficiency, and it is also a lot friendlier to load balances.
+00:19:26 [W] I'll Journey hasn't been all sunshine and Roses previously. I glossed over the stress and anxiety of switching from the open senses collector to The opentelemetry Collector much of that was unwarranted in the transition was actually pretty smooth.
+00:19:44 [W] The agent has given us far more grief though.
+00:19:49 [W] We wanted the agent to listen on the same port as a trace proxy for our custom protocol.
+00:19:51 [W] So the initial deployment was nerve-wracking. We relied on custom. We relied on client application buffering spans and reconnecting to cope with brief outages on
+00:19:59 [W] Snowed as we deploy the agent and removed the trace proxy.
+00:20:03 [W] Demon said deploys in our environment terrible for everyone and rolling out a change across all clusters often takes a day or a lot of hair loss covid here helps me hide some of that.
+00:20:13 [W] Well, the trace proxy used well under a hundred twenty eight mega ram we needed to gig for the agents given how tightly we pack out nodes we couldn't afford to give it more CPU than the trace proxy had but by golly it needs more CPU throttling in the agent has been a major
+00:20:30 [W] Pinpoint the Crux of the problem is that it needs to deserialize from the receivers format copy and translate to the in-memory format and then copy and translate to the export as format before re serializing.
+00:20:42 [W] This is improved. But only if all parts of the pipeline are OT LP
+00:20:46 [W] Those improvements come at the cost of breaking changes in The Collector.
+00:20:55 [W] It has been a struggle to keep Pace with internal API changes in our custom receiver until recently.
+00:20:58 [W] There was also some churning metrics which increase Stress and Anxiety when rolling out upgrades.
+00:21:02 [W] And iot lpy amazing has experienced child of its own we successfully advocated for declaring the trace portion of the protocol is stable.
+00:21:18 [W] But in the meantime, we had to deal with children in the spec and mismatches between the Upstream Proto definitions and the version invented by The Collector that venturing has brought problems of its own since of ended version is the in-memory format in The Collector, but it can't be used from externally
+00:21:26 [W] components
+00:21:28 [W] there's some general misunderstanding of the iot lp Speck in SDK exporters to different languages, but those should be ironed out soon with some spec clarifications.
+00:21:37 [W] Now that iot LP is settle down a bit.
+00:21:43 [W] We're working to use it in production.
+00:21:48 [W] We're hoping for large efficiency gains from a pure iot LP pipeline.
+00:21:56 [W] If we get them that might save the agent but the operational overhead or maintaining the agent demon sets means we'll probably remove them our strategy there is to use Envoy for link aggregation in the client clusters and for client instrumentation to collect metadata and
+00:22:03 [W] Wait, the resources tax themselves.
+00:22:05 [W] Once we migrated all our services to export in iot LP. We can start deleting more custom code and eventually consider building directly from the Upstream repo opentelemetry Ruby is used by some companies in production.
+00:22:22 [W] We need to curate it a little for our environment, but we're close to trailing it in a few services.
+00:22:24 [W] Our previous success with open senses means that we have a few services instrumented with open sensors that we need to migrate to opentelemetry.
+00:22:35 [W] The last big hurdle we have to fully migrated to opentelemetry is replacing our context propagation with the w3c trasparent format.
+00:22:51 [W] This is a default for opentelemetry and should see increasing adoption across many third-party applications more specific to our environment.
+00:23:01 [W] We have a lot of clusters across fewer regions and rolling our code or configuration changes to the collectors across all of them is a maintenance headache even without the agent in particular some clusters are pretty small and don't order scale for a reasons.
+00:23:08 [W] So we invariably have to babysit deploys in clusters that our team doesn't know and there's also a lot of variability in traffic across these clusters. So one size really doesn't fit all
+00:23:18 [W] Instead we're building out Regional pools of collectors to replace the cluster local pools.
+00:23:27 [W] These will be in clusters that our team owns giving us a lot more control.
+00:23:27 [W] Finally all this work with opentelemetry has allowed us to explore custom analysis using bigquery as our storage back-end.
+00:23:37 [W] We've written a Jaeger plugin for bigquery so we can use it for search and visualization and we have a few expert users who use the bigquery console for some pretty interesting analysis that simply isn't possible with Commercial Services.
+00:23:48 [W] We learned a lot from this process.
+00:23:57 [W] Hopefully you can take advantage of some of these hard-won lessons. The first lesson. Is that a migration like this takes a long time particularly in our case.
+00:24:06 [W] We had a very small team and opentelemetry was new and changing rapidly. Some of that is likely easier now, but not all of it.
+00:24:11 [W] The second lesson is that working backwards from the end of the pipeline would really well.
+00:24:25 [W] We could simply extend our pipeline to use a collector. Then once we were confident, we introduced it into production clusters and gradually switched the pipeline over to use it then remove the old pipeline.
+00:24:30 [W] None of this impacted any other services or resulted in any significant data loss at that point. We already gained significant value and could replace other parts somewhat at our Leisure third lesson.
+00:24:39 [W] Is that fine grain traffic migration this process. Let us work a cluster.
+00:24:45 [W] A time and in comfortable increments which reduce both stress and the magnitude of any potential altitude.
+00:24:47 [W] Finally Trace instrumentation and collection is commoditized there's no value in building or maintaining this yourself.
+00:24:59 [W] The real value is at the end of the pipeline and Analysis and monitoring and alerting.
+00:25:03 [W] There's a lot of innovation and churn and consolidation in this space.
+00:25:04 [W] It's good to hedge. Your bets opentelemetry helps you do that.
+00:25:08 [W] Thanks for listening to this talk.
+00:25:11 [W] I hope it inspired you to look more closely at opentelemetry if you've already adopted tracing.
+00:25:15 [W] I hope you'll consider migrating to opentelemetry and that this talk helps you plan and execute that migration. If you're not already tracing in production, please consider doing so with opentelemetry and finally where the second most active cncf project by contributions. We'd love your help to make
+00:25:29 [W] Is number one?
+00:25:30 [W] So thanks folks a hope.
+00:25:46 [W] You've enjoyed the talk. If you have any questions, please ask them in the queue a box.
+00:25:52 [W] So there's a question here from Kevin new just want to confirm when you mentioned the two gigabyte memory requirement for the agent.
+00:26:46 [W] Is that your own agent or an opentelemetry agent. So our own Trace proxy, our original agents had a memory requirement of about a hundred twenty-eight Meg.
+00:26:59 [W] The two gig memory requirement is for the opentelemetry agent.
+00:27:01 [W] So Austin Parker asks, can you talk a bit more about the bigquery exploration plans to sorry.
+00:27:23 [W] Can you talk a bit more about the bigquery exploration any plans to upstream and exporter for that purpose?
+00:27:29 [W] Sure.
+00:27:33 [W] So we're using bigquery for some deeper Trace analytics.
+00:27:40 [W] So where we need to actually do aggregate analytics across a few.
+00:27:42 [W] But also not a few across a large number of traces.
+00:27:54 [W] for example, SLI extraction is a simple thing to do in bigquery, but we can really narrow it down to some very specific.
+00:28:02 [W] Some very specific constraints. So for example, we can look at a specific shop. We have well over a million shops on the Shopify platform and during a flash sale. For example, we might
+00:28:18 [W] I really just want to look at the performance of this a single shop or a single shot.
+00:28:27 [W] We may want to drill down into performance for a specific rails controller specific and point even some internal details about
+00:28:38 [W] Request that a may be hitting a specific memcached instance.
+00:28:41 [W] So those are some of the ways we can use bigquery.
+00:28:47 [W] We also use bigquery as just a general tree search mechanism.
+00:28:56 [W] We do have longer retention in bigquery than we do with our commercial provider.
+00:28:59 [W] So that's another another convenient set at the moment. Our export pipeline to be query goes through several hops, so we have a pub sub exporter from The opentelemetry Collector and then we have
+00:29:11 [W] A subscriber the dumps out into GCSE and then a batch upload to the query the primary reason for that is cost control.
+00:29:23 [W] So streaming upload to be queries expensive and it also has some limitations which we would exceed in terms of throughput.
+00:29:31 [W] So we are planning to open source parts of this pipeline.
+00:29:43 [W] We're also planning to get rid of the pub sub component of this or will do direct export to GCS buckets from from The Collector and I expect that we're going to open sourcing both of those components both the gcsx
+00:29:50 [W] Her and the pub subjects border.
+00:29:55 [W] We may do a streaming bigquery exporter as well. Just because why not?
+00:29:59 [W] And it's probably convenient for us.
+00:30:03 [W] It's probably useful for us for some future work.
+00:30:09 [W] So Patrick asks, do your services have explicit instrumentation like a library or do you have some automatic instrumentation?
+00:30:18 [W] So in our case where we have Auto instrumentation similar to what opentelemetry is developing in our customer instrumentation Library so users just need to
+00:30:27 [W] Call an initializer so they just require our gym and cold and initializer and then they get tracing of externals for free at that point.
+00:30:43 [W] The beyond that some more advanced users are providing custom instrumentation in their applications as well.
+00:30:58 [W] We do have a one service that is probably our highest volume service point which has entirely custom instrumentation.
+00:31:04 [W] They chose not to use Auto instrumentation in part because they really really wanted to have tight control over the overhead of the instrumentation. So
+00:31:14 [W] That has proved cumbersome.
+00:31:17 [W] In a couple of ways because they don't adhere to some antique inventions in their custom instrumentation.
+00:31:28 [W] often run into problems on the back end and need to end up doing maybe a fixed for the instrumentation library. But then also a separate fix for this service. It's providing its customers fermentation.
+00:31:39 [W] Richard Jolly asks surgery Implement distributor tracing you need a client library for a language and an opentelemetry collector.
+00:31:48 [W] Is that right?
+00:31:51 [W] Then you can choose your back into sin to correct?
+00:31:52 [W] Yes.
+00:31:53 [W] That's correct.
+00:31:56 [W] You need some kind of client library in some languages Java. I believe you can inject opentelemetry. So you don't need to build it like build your application specifically
+00:32:09 [W] Linking in the opentelemetry libraries. You can inject them in Ruby.
+00:32:16 [W] We just need to add a require and potentially some initialization code at this point. But then you also need the opentelemetry collector. You could conceivably export directly to a back end.
+00:32:30 [W] Um at the very start of our exploration process, we were exploiting directly from application processes to stack driver that hit some interesting
+00:32:45 [W] This pretty quickly you end up really wanting to batch spans or batch traces that are being uploaded to the back end.
+00:33:00 [W] So in that case having some aggregation mechanism is really handy and that's what the collector provides and then the collectors also that kind of bottleneck interface where you can do things like Pi redaction and translation for export.
+00:33:08 [W] Um potentially add some additional information if you wanted to add some infrastructure tags to all spans. You could do that there as well.
+00:33:19 [W] Pedro Sanchez asks have you extend at racing to include the network layer nginx load balances?
+00:33:29 [W] Yes, and no so we do have tracing turned on in our nginx load balances and that data is flowing through the that Trace data is flowing through the
+00:33:42 [W] The collectors and hitting our back ends.
+00:33:51 [W] So that's a yes bit the no bit is that because we are using a custom context propagation format.
+00:33:55 [W] Those traces don't actually participate in the rest of the distributor tracing kind of ecosystem at Shopify.
+00:34:10 [W] So it gives this sort of a way of examining the performance of nginx itself. It doesn't really give us a way of seeing that in the context of a request flow in general.
+00:34:19 [W] So yeah, that's that's another bit.
+00:34:23 [W] We do we have actually explored this a couple of times.
+00:34:35 [W] There are some patches to make it easier to trace nginx but nginx right now or the current implementation of tracing and nginx appears to be pretty tightly
+00:34:44 [W] Hold to I think either Jaeger or Zipkin as the the tracing library and it's not easy to replace a context propagation there.
+00:34:58 [W] Any further questions?
+00:35:15 [W] I'm just going to loop back to Austin's question.
+00:35:36 [W] I have a talk that is being broadcast as part of the Google Cloud next on hair series next week where I walk through some of the bigquery work that we've done and
+00:35:52 [W] really walkthrough
+00:35:54 [W] some example queries how we set that up how we use mode analytics actually tied to bigquery to kind of do data exploration or Trace data exploration in a notebook style format.
+00:36:09 [W] So we have a couple of minutes left if anybody's got any further questions.
+00:36:29 [W] Okay.
+00:37:03 [W] If nobody has any questions at this point, then I think we can probably end this session.

@@ -1,0 +1,199 @@
+﻿Prescriptively Benchmarking Kubernetes System and Application Using K-Bench: AHHN-1013 - events@cncf.io - Wednesday, November 18, 2020 3:52 PM - 30 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi there.
+00:00:00 [W] Welcome to our talk.
+00:00:03 [W] Kubernative is is experiencing an exponential growth. But the Benchmark tools to evaluate kubernative infrastructures are still catching up.
+00:00:13 [W] And stuff to kubernative platforms for a Target use case.
+00:00:17 [W] Do you wish there was one tool that can you know point and shoot at a kubernative cluster and get you all the key performance metrics summarized in a nutshell.
+00:00:28 [W] Well, then you are at the right place in this talk. We present K bench, which is a framework to prescriptively Benchmark a kubenetes platform. I am Karthik Ganesh son, and my co-presenter is Young Lee.
+00:00:46 [W] So when it comes to Performance, there are multiple aspects to look at.
+00:00:53 [W] Some aspects related to the control plane include responsiveness.
+00:00:58 [W] Meaning how long does a Target platform take to respond to my change request. Next is scalability.
+00:01:08 [W] how well does the control plane of this particular platform scale and say I want to deploy a thousand Parts concurrently can this particular platform handle that?
+00:01:19 [W] And then how resilient is this platform to recover from failures?
+00:01:25 [W] On the other hand when it comes to the data plane or application performance.
+00:01:30 [W] views are you know, what are the ioa and the network capabilities of the underlying infrastructure as these things can have a significant impact on the application performance say one has a network in terms of
+00:01:20 [W] How it is expected to perform on a particular platform or compare multiple platforms for this particular case to choose one.
+00:01:31 [W] And then comes aspects like resource efficiency.
+00:01:34 [W] Hey, can I pack more more pods on one platform or another without having a performance impact and lastly performance isolation characteristics are becoming more and more important
+00:01:50 [W] Performance be affected when there are noisy neighbors.
+00:01:53 [W] There are a multitude of small tools evaluate. Some of these aspects specifically some are reliable some are not some more accurate some only provide a very coarse grained picture and you can get quite
+00:02:08 [W] Wants to get the full performance picture, you know for a particular platform having gone through a know some of these pain points.
+00:02:14 [W] We rolled up our sleeves and started putting a versatile for framework together.
+00:02:20 [W] So that we can get all you can Benchmark all these various aspects, you know with ease. That is how we got 2K bench.
+00:02:30 [W] So what is K by h?
+00:02:32 [W] Kevin's is a configurable framework to prescriptively deploy and manipulate kubernative objects. And in this process it lets us Benchmark both the control and the data plane performance aspects with ease.
+00:02:48 [W] For example on the control plane side. You can ask a bench to deploy thousand nginx pods concurrently and observe part start of latency. Zat. Millisecond Graham, Larry.
+00:03:00 [W] Say for data frame. You can deploy a position volume and record a synchronous read Ray-Ban wedge to it from a pond.
+00:03:10 [W] Gibbons has an extensible design and provides a multitude of configuration options for the end user.
+00:03:18 [W] So using these options one can orchestrate pretty much any workflow with ease using your target workloads.
+00:03:26 [W] At the end of your run scavenge provides an intuitive set of performance metrics and a lot of detailed diagnostic data that can be very useful to you know, go ahead and resolve some of these performance issues.
+00:03:41 [W] Let's take a closer.
+00:03:33 [W] Look at the features offered by K bench separately for the control and the data plane aspects again for the control plane came inch provides accurate and fine-grained critical path latencies for your workloads. You know when you think
+00:03:48 [W] All of these Layton sees you can think of ignore.
+00:03:50 [W] Hey, what is the part scheduling latency prodyna chelation latency, you know start of latency cetera.
+00:03:57 [W] But if you think about it, right kubernative is a decorator system where you specify the target state of the cluster and the cluster eventually gets to this target State. We are a bunch of a
+00:04:13 [W] Events that happen in the system. So what is the latency for my trigger change?
+00:04:16 [W] Well, it is certainly not how long kublr will talk to, you know, say submit a request, right?
+00:04:21 [W] It is actually how long the cluster took to get to this final state that I desired.
+00:04:27 [W] So when it comes to measuring these latencies of triggered changes, we need to keep track of the various events in the system until the cluster reaches the target state.
+00:04:39 [W] Inkay, when should we use a novel methodology to keep track of both the client and the server side timestamps of all these different events to tackle this problem and provide meaningful control pad latencies for you.
+00:04:55 [W] For the data plane one can evaluate application performance using real containerized benchmarks in kubernative pants.
+00:05:04 [W] While one can use their own workloads, they can also leverage built-in workloads provided by K bench to stress specific infrastructure resources.
+00:05:15 [W] For instance you can use red is meant here that comes pre built in K bunch to stress the compute and the memory aspects or say the F5 IO Benchmark to you know, stress iron aspects cetera.
+00:05:30 [W] so using these apps artifacts one can you know scale up or scale out resource usage to study infrastructure performance scale up meaning, you know use a single pot to increasingly stress a particular resource category
+00:05:45 [W] Our scale out meaning, you know, add more posture system to consume resources, you know in a particular category.
+00:05:54 [W] Okay, which also includes built-in blueprints of workloads that take advantage of these benchmarks to evaluate, you know different aspects of data plane performance.
+00:06:08 [W] These aspects can include things like hey, can I you know, can I get a an info some information on what is the pot density that this particular, you know framework and I mean this particular platform can achieve Etc.
+00:06:23 [W] So now that I know having given a overview of cabbage young will discuss the different elements of K bench to construct a workloads.
+00:06:42 [W] I'm happy to be here presenting clip and control point.
+00:06:46 [W] First let's start with some basic and terminology.
+00:06:49 [W] We were talking about Cleveland reactions.
+00:06:52 [W] We are referring to the kubernative object life cycle in the dev operations such as crate delete list skill actions and be specific to Resource types.
+00:07:06 [W] For example, you can create any type of resource, but you can all on skill certain type of object like deployment.
+00:07:15 [W] Actions wrong with action and resource type specific options. For example, if you are creating a service you can specify service type and ports as options on the other hand if you are skating on deployment.
+00:07:31 [W] You Can Survive by number of Relic has an option Marvel actions wrong one after another for the same resource object from an action Chain Reaction chain is useful when you want to define a list of actions
+00:07:46 [W] That depend on each other. For example, you want to create a list of part before updating and deleting them.
+00:07:56 [W] Based on actions we Define an operation.
+00:08:00 [W] Operation K bench contain a collection of action chains and each action chain is executed for one particular resource type.
+00:08:12 [W] Action chains for different areas of types in one operation will run in parallel.
+00:08:20 [W] We also Define predicating cabbage which are conditions under which a particular operation will be triggered.
+00:08:26 [W] There are many different type of predicates.
+00:08:29 [W] For example, you can Define product that attract status of your running object.
+00:08:36 [W] You can also Define a predicate that run command and check the return status of the command and the only wrong operation under certain scenario.
+00:08:45 [W] You can even Define predicates that are examine a runtime environment inside a container.
+00:08:54 [W] Kubernative fine set of metadata before running your workload that attached operation thread ID that manipulate are certain set of object.
+00:09:06 [W] and later. You can refer those metadata as labels for futuring and selection perverse.
+00:09:12 [W] Of course, you can pass your custom. I Define the user labels and use your used for selection purpose later. Now.
+00:09:23 [W] Let's look at the overall design framework.
+00:09:28 [W] Here it's are running kubermatic cluster with a bunch of objects.
+00:09:33 [W] Cable to accept of tables config file along with standard kubernative. Yama files the kubermatic config posture and dispatcher logic is responsible for parsing. This config files depends
+00:09:49 [W] What type of resources you configure to measure and a benchmark?
+00:09:52 [W] It generates a list of resources managers. Each resource manager is responsible for managing the lifecycle events and resource metric collection for particular resource type
+00:10:07 [W] Pod will be responsible for managing poddisruptionbudgets.
+00:10:14 [W] And you can specify out for each resource type what actions and operations you want to run here for example for poddisruptionbudgets.
+00:10:31 [W] And for other types of resources, you can Define total different action list, you can put all them together in one operation and those actions for different resource type will run in parallel but action chain
+00:10:46 [W] For one particular race or type will run sequentially.
+00:10:51 [W] And you can specify concurrency and resource manager will track your concurrency configuration and maintain a straight pool of appropriate size for that resource type.
+00:11:05 [W] So you can use the cables key bench pre-attached labels and your customized defined labels for resource selection Peppers.
+00:11:17 [W] You can Define predicates to guard you are operations.
+00:11:20 [W] So all of those come together to form a very flexible action plan where you can Define workflow to be executed on certain type of resource at a certain concurrency.
+00:11:35 [W] And I'll give them condition.
+00:11:37 [W] against a pre-selected research resources
+00:11:44 [W] in addition K bench exposed container interface to our side users. So users can run command micro Benchmark inside the container animal performance recording lie.
+00:11:58 [W] We also integrate promises and will front for resource monitoring and triage purpose.
+00:12:06 [W] The framework is based on client goal and can run on different platforms such as we sphere openshift and gke kubernative offerings.
+00:12:19 [W] Let's look at a list of example resources actions and configuration options.
+00:12:25 [W] for portworx
+00:12:51 [W] For create you can specify image foreign policy image to use and yummy spec Iran for run action.
+00:12:59 [W] You can specify the command to run and for copy you can specify the passes Local Pass from containerd passes that are and for other actions. You can specify lables lable key in the liberal values Etc.
+00:13:14 [W] For deployment in addition to the other above actions that also support skill action.
+00:13:22 [W] Skill out and it is create action has some additional options like a number of replicas.
+00:13:29 [W] For replication controller in a state of set we provide similar set of actions and configuration options payment also support some other type of resource like namespaces service config
+00:13:45 [W] Etc
+00:13:49 [W] here's a use case example layout as a configuration file.
+00:13:54 [W] You want to Define your workflow to run more than six seconds.
+00:13:59 [W] That's a Timeout on the top.
+00:14:02 [W] And here you define a list of operations and you are first operation will be guarded by a predicate that's checks the running status of pods initializer.
+00:14:16 [W] And after that you define the body of you our first operation you want to hear you want to create deployment using this given yummy file at a concurrency for an imperial be that you want to
+00:14:31 [W] create pods and drawn a self script and attach this labels and concurrency of to
+00:14:41 [W] After your first operation, you can Define another more operations, which will run after one after another.
+00:14:51 [W] Keep introduce see compliant APM Matrix It reports 50% 90% 99% API latency latency sand API responsible time.
+00:15:04 [W] For certain operation also breaks down report fine-grain career path components for example for pollination.
+00:15:12 [W] They will report scheduling initialization image plane and startup latency on the Node.
+00:15:19 [W] It has improved accuracy compared to some existing benchmark.
+00:15:27 [W] Current currently kubernative Source, I'd only give a very coarse grained timing information runs tool second.
+00:15:36 [W] So when you want to study some metrics as millisecond level this is now surfacing so we rely both server and client side timing information and we use a even callback mechanism and
+00:15:51 [W] Actually triggering reason and condition under which the invented trigger and measure and it'll record timing information accordingly.
+00:16:02 [W] So for example here we want to start a the pot initialization scheduling latency different component C using an existing Benchmark. It just give us all zeros because the pulse
+00:16:17 [W] Alien is very short running operation.
+00:16:21 [W] on the other hand using K bench allow size to report the detail class item metrics as many second level four different components see
+00:16:33 [W] This is a pretty much about cape and control Point features.
+00:16:36 [W] And now I'm gonna hand it over to carsick talk about data plan features.
+00:16:42 [W] Thank you.
+00:16:46 [W] Thanks. Y'all.
+00:16:48 [W] Let's take a closer. Look at benchmarking that data plane using K bench with the rich containerd interface that K bench offers one can orchestrate pretty much any workflow say you have a use case in mind and you want to evaluate how we are use
+00:17:03 [W] Perform on the target kubernative cluster.
+00:17:06 [W] Okay bench can help you with that.
+00:17:08 [W] You can start with the create operation using which you can deploy your kubernative stress sources with your target containers and assign them some labels.
+00:17:19 [W] can just reuse the yama's pack of any kubernetes artifacts that you might have.
+00:17:26 [W] Labeling these resources helps us filter and select specific resources on which we want particular actions to be performed.
+00:17:34 [W] That way we can orchestrate different workflows with ease next you can copy any workloads artifacts or workloads specific configuration files for current run into your containers again, you can use
+00:17:49 [W] These labels to selectively, you know choose those kubernative Zar objects to which you want to apply this action.
+00:17:57 [W] Then you can run commands inside the pause to trigger your workflows.
+00:18:01 [W] One of my favorite features of K bench is the ability to trigger actions using conditional predicates.
+00:18:08 [W] These predicates can be kubernative system based or something that is evaluated inside a container say you have a particular server flawed deployed and want to generate load from a crane poddisruptionbudgets
+00:18:24 [W] Plug you can wait until the server pot gets to running or even better. You can wait until the server process inside the container gets to a particular State using these predicates.
+00:18:37 [W] Now maybe again you want to copy, you know your results out of these containers and to enter the client from which you are orchestrating all this and then you can go ahead and use the delete action to clean up your cluster.
+00:18:52 [W] Now having looked at you know how to orchestrate a workflow using your workloads in K bench.
+00:19:00 [W] Let's take a look at some of the be integrated workloads that come with K bands to stress different infrastructure Dimensions. These pre-integrated workloads are ready to be used out of the box.
+00:19:14 [W] as you can see on this particular table, you know, you have workloads red is meant here that can be used to stress CPU and the memory aspects you can get aggregate transaction through put across all the different parts in a particular cluster and you
+00:19:29 [W] Also get transaction latencies for in your deployments.
+00:19:34 [W] And with F5 IO you can get read/write bandwidth for various reasons ratios block sizes on ephemera land purchase. Some volumes eye-opening is integrated with K bench to get iot latency
+00:19:50 [W] If model and position volumes you have iperf 3 which can provide you in turbot tcp/udp bandwidth information and there are blueprints with varying pot Place man's on node zones regions Etc to get you in a more
+00:20:04 [W] So big information and that is cube of integrated and okay bench and it can provide a no entry Port Network latency. And again, there are blueprints with very important placement the can orchestrate a no-cook you before you
+00:20:21 [W] Typically, the end results are in.
+00:20:25 [W] Oh, the generated performance metrics only paint, you know the final picture right? If you notice an anomaly or a performance issue just this data is not enough analysis and I trade of improvements
+00:20:40 [W] the Deep infrastructure Diagnostics
+00:20:43 [W] kubeedge provides support inject performance and diagnostic data to dashboarding services like wave front and rear fauna.
+00:20:51 [W] These are done by using distributed Telegraph data collectors and they can be configured with you know, supported output plug-in to view results on your - boarding platform of choice. These Telegraph connectors are fed
+00:21:06 [W] Thousands of handcrafted performance metrics that can be monitored for Linux and ESX hosts. This data can be valuable when correlated with actual performance results to Deep dive performance issues and resolve them.
+00:21:23 [W] Having talked about the data plane features of cables.
+00:21:26 [W] Let's take a look at some example use cases where we have put K bench to produce K bench was used extensively in evaluating and improving vmware's kubernative products in this use case.
+00:21:39 [W] We deploy standard Java Benchmark inside multiple kubernative spots.
+00:21:43 [W] We use K bench to find the maximum cluster level aggregate transaction throughput for these Java workloads.
+00:21:53 [W] That can be achieved on a different kubernative clusters.
+00:21:56 [W] But with the same Hardware resources came and showed how a virtualized kubernative cluster can actually be the performance of a bad model cluster both using the same Hardware.
+00:22:08 [W] It also enabled us to get deep insights into what was the root cause for some of these performance differences some of the results generated by K bench.
+00:22:17 [W] who are so impactful that they were used by VMware see were bad girl singer for kubernative.
+00:22:22 [W] product announcements in the opening keynote of our annual conference
+00:22:29 [W] Eunice another example of a data plane pre-integrated blueprint called DP internode this blueprint automatically deploys to pods on two nodes using anti Affinity rules.
+00:22:42 [W] It uses a headless service to run type of three across the parts to provide tcp/udp bandwidth information and cube of 3 to provide the network latency information.
+00:22:54 [W] These Blueprints can be run all these different blueprints for both control and the data plane can be run as a Swede to get all these T Matrix just in a nutshell.
+00:23:07 [W] In summary, we presented K bench which is a highly configurable and easy-to-use Benchmark framework to evaluate kubernative performance can be valuable for carbon competitive benchmarking across multiple platforms to identify
+00:23:22 [W] Foreman's issues root cause them using Diagnostics and I try to give Lee improve your platform performance.
+00:23:29 [W] Okay bench is open sourced and we would like to welcome everyone to use the tool if you have a need provide us feedback and to contribute to the project.
+00:23:39 [W] We thank you for your time and we are happy to answer any questions you might have.
+00:24:04 [W] You want to start with some of the answers?
+00:24:09 [W] Sure, you can hear me.
+00:24:11 [W] Right right. Yeah.
+00:24:14 [W] So yeah, I think this party up ask escape and useful for managing the kubernative environment. For example, AWS eks Google TKS, so the answer
+00:24:29 [W] is definitely Yes, actually originally K bench was developed low within VMware Performance Group and we have Wonder specific components a logic, but before we
+00:24:44 [W] Course The Benchmark. We remove most of the winter specific logic components and now kubernative K benches that generic as long as the you're running cluster talks to The Standard kubermatic
+00:24:59 [W] You can use a paper punch to punch modular system. Maybe your system has when their specific extension like, you know, statistics scheduler extender or some customized controller of components.
+00:25:13 [W] But as long as if those are hiding behind the standard kubernative Nettie apis, you can still use K bench to pinch Mark your system.
+00:25:23 [W] Probably you need to add some customized measure X but largely you can still
+00:25:28 [W] Will ya use the K bench most of the features?
+00:25:35 [W] Yeah, I think that's for pipes question regarding whether kubectl can be used for manage them manage that kubernative environment.
+00:25:43 [W] I think we got another question from Sonia. So from controller from control plan perspective.
+00:25:53 [W] What's a men difference and the Improvement compared with kubernative? Perfect test cluster loader to?
+00:26:02 [W] Actually, when we start development of K bench, we were not aware of this cluster loader to but later on we cannot be aware of this similar work. I think that this indeed achieved some kind of similar goes at
+00:26:17 [W] Work especially from control plan perspective is trying to Benchmark the kubernative system itself and how different objects kind of performs under different scenario, but I can see at least
+00:26:32 [W] Too few major differences. The first one I can see is the granularity like, you know with clustering loader to my understanding is like they have kind of a
+00:26:46 [W] Determined ploop print for control plan test like a density test and QPS load or kind of stress test.
+00:26:58 [W] So with those configurations, you don't have much control over you have some cross grain parameters that you can pass into the class to learn load or two, but it won't allows you to do very fine-grained control.
+00:27:12 [W] Well K bench you can control
+00:27:16 [W] Which objects you are going to run which action you're going to run an ad which concurrency in parallel or sequentially and or in hybrid mode its kind of much finer control.
+00:27:28 [W] So another difference is or Improvement. I can see between these two Frameworks pay bench will you know, use both client-side timing and server-side timing?
+00:27:41 [W] Well, I'm not sure that class loader tool probably use server side.
+00:27:46 [W] Timing only right?
+00:27:48 [W] I'll you can you can connect correct me if I'm wrong, but that's what I'm aware.
+00:27:52 [W] Why don't you start a development of this framework?
+00:27:56 [W] Of course, there are definitely some kind of want a trophy using class or lower to maybe they have a customized metric.
+00:28:04 [W] This is what we are going to support maybe in the future but not available at this point and K bench is relatively at an early stage and we will come if you know
+00:28:15 [W] You're interested in Computing contributing to the benchmark.
+00:28:23 [W] Thanks young.
+00:28:26 [W] Let me answer that question from Kalman can K bench generate reload.
+00:28:34 [W] Yes, if you if you are using you know, the integrated blueprints that comes with a bench.
+00:28:40 [W] Let's say for example red is you could very well use that in order to generate load on therapy and aspects right or in I use IP of three or you know tools I guess I owe you.
+00:28:53 [W] A generate load to stress specific system resources it but if you are talking about load on the control plane said you could very well do that to write like this just by writing your own configuration file.
+00:29:05 [W] you could you know, you could keep you know, you could generate a lot of load to the API server using K bench.
+00:29:24 [W] I would like to thank everyone for your interest and all the great questions that you've been asking where on the slack Channel koukin performance. If you have more questions, or would you like to I would like to continue some of this conversation,
+00:29:39 [W] Please, you know, it is small. So on the cook on observability.
+00:29:44 [W] Thank you.
+00:29:45 [W] Thank you.
+00:29:59 [W] Leader has disconnected the conference will be terminated in five minutes.

@@ -1,0 +1,261 @@
+﻿Scaling Kubernetes Networking Beyond 100k Endpoints: ROXO-5773 - events@cncf.io - Tuesday, August 18, 2020 12:27 PM - 47 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:02:15 [W] Today we're going to be talking about scaling kubernative networking Beyond 100,000 endpoints.
+00:02:27 [W] My name is Rob and I'm going to be joined with men Han also my coworker from Google.
+00:02:33 [W] Today's talk is going to be divided into six different sections.
+00:02:41 [W] We've got a problem statement which will kind of give some background into why we did all this work then an endpoint slice API introduction just a very high level idea of why we designed the endpoint slice API and what it
+00:02:55 [W] And then I'll talk about how it works some of the key functionality involved and then I'll dig a bit deeper into how we could profile kubernative to dramatically improve the performance of these implementations and finally putting
+00:03:11 [W] Kubernative he's to dramatically improve the performance of these implementations and finally putting it all together talk about how that translates into performance at and even Beyond a hundred thousand endpoints and in conclusion
+00:03:20 [W] Even Beyond a hundred thousand endpoints and in conclusion, I'll talk about what's next what's coming up that is going to be based on this functionality and there's some really exciting stuff.
+00:03:30 [W] But with that I'll hand it over to Min Han to give some background.
+00:03:33 [W] All right.
+00:03:37 [W] Thank you rob for the intro.
+00:03:38 [W] So before we go to our solution, so let's understand what the exact pinpoint our users have.
+00:03:53 [W] So there are mainly two pain points when using Kuma Days Service as scale. The first one is that there's currently a limit for number of M Points within a single service.
+00:03:57 [W] So this is around 5,000 points in a single service.
+00:04:04 [W] So the second one is that the user may observe a significant performance degradation in-toto.
+00:04:05 [W] Very large cluster to be more specific and and point update of a large service containing 5000 M points in five thousand node cluster may freeze the control plane for a couple of seconds.
+00:04:20 [W] So both of these questions that these problems are originating in the same thing, which is the Employments API.
+00:04:30 [W] was designed in the very early days of kubenetes and the scalability was an important area of consideration at those days. So,
+00:04:35 [W] In short the problem lies in the fact that the Employments object contains a full list of all and points behind a given service.
+00:04:44 [W] And points in five thousand node cluster may freeze the control plane for a couple of seconds.
+00:04:51 [W] So both of these questions that these problems are originating in the same thing, which is the same points API.
+00:04:51 [W] The API was designed in the very early days of kubenetes and the scalability was an important area of consideration at those days.
+00:04:53 [W] short the problem lies in the fact that the Employments object contains a full list of all and points behind
+00:04:54 [W] even service
+00:04:54 [W] So that is the subset section of the employees API object.
+00:04:57 [W] So what's wrong with that right?
+00:04:59 [W] Let's walk through rough estimation.
+00:05:02 [W] So let's say there are p number back and poddisruptionbudgets object needs to contain a full list of M Points behind a service. Then the size of the endpoint object is proportional
+00:05:21 [W] rough estimation
+00:05:22 [W] So let's say there are p number back and poddisruptionbudgets object needs to contain a full list of importance behind the service. Then the size of the endpoint object is proportional
+00:05:24 [W] P so 1 & A half a megabyte of em Point object can roughly contain five thousand
+00:05:39 [W] um inside a service and that there's a various aspects like that can influence the size of the important object like then side the length of the name and the name space it's of those back and poddisruptionbudgets
+00:05:55 [W] six endpoint or ipv4 m point
+00:06:00 [W] So what happened when we go beyond one and a half one and a half megabyte?
+00:06:10 [W] So first of all, there's a limitation in the SCD for the maximum size of an endpoint of an object. Right and the default value is set to 1 Point 5 Mega byte. Although this value is configurable.
+00:06:26 [W] Mm size of an endpoint of an object, right and the default value is set to 1 Point 5 Mega byte.
+00:06:27 [W] Although this value is configurable the performance characteristics of SCD are started to getting worse.
+00:06:33 [W] So we don't want to do that.
+00:06:36 [W] So to summarize the limitation of the number n points inside a single cluster is actually the the the the consequence of the SED.
+00:06:45 [W] the SCD size limit
+00:06:48 [W] So let's take a look at the second aspect of the problem.
+00:06:57 [W] That is the performance degradation.
+00:07:01 [W] So in order to understand that we need to do a quick recap on.
+00:07:04 [W] how does the service control actually works within the communities behind the scene?
+00:07:12 [W] So when the source gets created and points object gets created.
+00:07:19 [W] So the pot gets created then pot gets schedule the kublr watches its own the pods running on itself and then kublr signals.
+00:07:21 [W] Containerd runtime to basically in the implement this container and this pot and the containerd runtime says it's running. It's running and healthy, then the kublr updates the pot status to be ready and the
+00:07:36 [W] just a pod and then updates the endpoints correspondingly and Cube proxy pick it up and program iptables ipbs and to implement kubenetes services, and then eventually the endpoint is programmed
+00:07:52 [W] Yes, and to implement kubernative services, and then eventually the endpoint is programmed.
+00:07:53 [W] So what happened is that each queue proxy running on each node needs to watch all and points of the whole kubernative cluster, right?
+00:08:08 [W] so this is because it has this this in these information is necessary for it to basically Implement kubernative service on each node.
+00:08:19 [W] And that translate to there are n number of nodes means n number of Watchers, right?
+00:08:30 [W] And because there's no magic in sending update through the network.
+00:08:32 [W] So and number of copies object copies will need to be sent from the API server to each watcher.
+00:08:38 [W] And combined with the number of back-end poddisruptionbudgets object, which is proportional done to the number of back and poddisruptionbudgets.
+00:09:07 [W] Megabyte which contains let's say 5,000 points then in each update.
+00:09:15 [W] We need to send 5 gigabyte of data.
+00:09:21 [W] back in poddisruptionbudgets
+00:09:24 [W] 5000 M Points then in each update. We need to send 5 gigabyte of data that is basically the size of the full DVD, right?
+00:09:26 [W] So for one endpoint object one endpoint update for a large servers and let's do a further estimation. Right? Let's say total by transmitted per update is fight gigabyte. And what about
+00:09:36 [W] One endpoint object one endpoint update for a large service.
+00:09:37 [W] And let's do a further estimation. Right? Let's say total by transmitted per update is fika yugabyte. And what about we do a rolling update Let's do let's do a roll out with this large service and this service.
+00:09:44 [W] Let's say have 5000 m points and that roughly translate to more than three thousand. Maybe more maybe less depending on what's your rolling update strategy then let's assume it's 5,000 updates right then that translate to 25
+00:09:56 [W] That is a lot of data in the contrary. The user what user expects is that he wants to run large services in large clusters and it wants to be
+00:10:13 [W] He wants to enable auto scaling. He wants to roll out frequently and that translate to high chain within a service and all of this should just work and kubernative should provide this kind of capability.
+00:10:29 [W] So so we look at this problem space and we at first we consider a few Technical Solutions for this problem and relate a realize those Technical Solutions
+00:10:42 [W] Downsides so we decided to reinvent the important API all together now, we are trying to let me quickly walk through what it's important slides if you are so the goal of the
+00:10:58 [W] the pi so the goal of the endpoints API the primary goal is to address the scalability constraints that we listed out in the previous section that is to support tens of thousands of back in and point in a cluster with thousands of nodes
+00:11:09 [W] Are basically Reinventing and redesigned the whole em Point em Point API.
+00:11:20 [W] we throw in a bunch of other extension points, which we wanted to address dual stack and topological aware services and things like that.
+00:11:30 [W] So we're going to talk about this a little bit later.
+00:11:36 [W] But first we focus on the first one, which is the scalability aspect of this. So at a high level we
+00:11:40 [W] want to slice a monolithic big and pointy object into multiple objects and each object is called endpoint slice.
+00:11:52 [W] So this is very similar to database sharding, but it comes with some cumin a specific flavors.
+00:12:05 [W] So Q proxy watches all employees slices which represent all and points behind services and when update endpoint update happens only the
+00:12:10 [W] Only in point slides gets shipped to all cute proxy and the rest doesn't need to be shipped and transmit it.
+00:12:18 [W] So with all that this is a very high-level intro to the important slice API and I will let Rob to talk more about how it actually works behind the scene.
+00:12:32 [W] Thanks, man.
+00:12:36 [W] Ha.
+00:12:37 [W] I'm just going to provide just a little bit more detail on how it actually works at the different pieces that come together to make this work.
+00:12:50 [W] So there's three core components that I want to talk about.
+00:12:59 [W] There's an endpoint slice controller that watches services and pods and creates or updates and points license.
+00:13:01 [W] This is very similar to the endpoints controller.
+00:13:04 [W] It's just managing and point slices instead. Then we have a newer controller called the endpoint slice of mirroring controller that watch is
+00:13:10 [W] custom and points and mirrors them over two endpoints license.
+00:13:17 [W] And finally we have qu proxy. This is not a new component, but we've added new functionality here.
+00:13:22 [W] So instead of watching end points, it can watch and point slices and update IP tables or ipbs proxy rules.
+00:13:34 [W] wanted to cover just a little bit more about the endpoint slice controller though the endpoints as controller had a couple key goals and some of it is not always
+00:13:42 [W] To it.
+00:13:43 [W] So we wanted to reduce and points licensure this lines up with what Manhattan was saying earlier every note is going to be watching and point slices.
+00:13:53 [W] So updates are very expensive.
+00:13:58 [W] We want to minimize the number of endpoint slices were updating because every single time we update it.
+00:14:02 [W] It has to get sent out to every node.
+00:14:07 [W] Many resources being updated and on the other hand if we have any point slices that are way too big it will result in a DVDs worth of data getting sent across the cluster even for the tiniest of changes and we'll be right back to the problem.
+00:14:25 [W] We had that to begin with so with that background I wanted to explain one relatively unintuitive part of the palace controller works.
+00:14:34 [W] So let's imagine an example where you have two endpoints license. Now keep in mind that endpoint slices by default can hold up to 100 and points.
+00:14:49 [W] So we have one endpoint slice with 70 and points and one endpoint slice with 80 and points and we have 50 and points to add now you would think well, this is a really straightforward update. You can just update those two
+00:15:01 [W] And everything will work fine.
+00:15:06 [W] But instead what the controller is going to do is create an entirely new and point slice because we prefer a single create over multiple updates.
+00:15:19 [W] There's a lot of extra detail in logic here. That means that this rarely actually happens often in an individual sink.
+00:15:25 [W] We're also updating and point slices and if we are we fill them up as much as we can, but if we're not updating anything we prefer.
+00:15:32 [W] To create something like new as opposed to run multiple updates.
+00:15:36 [W] So let's talk about how this actually translate it into performance. This API in this functionality was Alpha and kubernative 116 and it was it worked.
+00:15:53 [W] That was the good news. But when we actually start to look at performance things were just slower could proxy was very noticeably slower when using endpoint slices compared to end points and part of this made sense, you know, the
+00:16:08 [W] Imitation was more complex there was more to do and that was almost fine. But endpoint slice implementation is really showed been faster because we really wanted to scale this out.
+00:16:23 [W] So I did some profiling with a really cool tool called P Prof against could proxy just to see if there were any bottlenecks that we could get rid of.
+00:16:32 [W] So if you've run P profit before you're probably familiar with something like that looks a bit like this.
+00:16:45 [W] is the result of running a pproperty port on cou proxy specifically for CPU time. It can profile any number of components. But in this case I was interested in CPU time.
+00:16:54 [W] And with that background, I found three really important ways we could improve performance here.
+00:17:01 [W] First we had an endpoint IP function which was taking 43% of total CPU time.
+00:17:11 [W] That's an absolutely massive amount for doing something like that shouldn't have taken any time. I had thought that this function was just getting a string.
+00:17:19 [W] That's it.
+00:17:22 [W] But what it was actually doing was it was calling net parsec IP to parse an IP out of a string Port IP port combination. There's no reason we couldn't have just used the
+00:17:31 [W] IP port string here. So making that really simple change and it up really improving performance here.
+00:17:40 [W] The second big performance update was we had a function called handle update and point slice that was using 55% of CPU time and I should mention just to be clear that this was a 55% of CPU
+00:17:56 [W] After we fixed the previous issue, so we were calculating this new merged data structure every single time.
+00:18:09 [W] We got an endpoint to update to an end points lies. The problem was we weren't actually using that until we ran iptables updates or ipbs updates, which was a lot less frequently at least when there were frequent updates.
+00:18:21 [W] So changing this logic to only run when we needed it ended up making another very significant difference.
+00:18:33 [W] And finally there was this function called dystek detects tail connections, which after the previous two fixes was using 88% CPU time.
+00:18:43 [W] It was entirely necessary to clean up stale UDP connections, and it was pretty hard to optimize but one thing we'd missed is it was running for every connection and it
+00:18:52 [W] it only needed to run for TCP connect for UDP connections.
+00:19:00 [W] So we restructured this and that got rid of some very significant CPU time.
+00:19:09 [W] So if you look at what that resulted in the big tall long yellow line there represents my initial and point slice implementation and this is scaling from zero to 10,000
+00:19:16 [W] Points in the cluster and you can see that my important slice implementation was very slow and took three minutes longer to complete in addition to using more CPU for the entirety of its running time on the other
+00:19:31 [W] All the other implementations finished on time finished right as the scale of happened and they were reasonably efficient, but you can notice that the initial endpoints implementation was also not great the bottom two lines that are
+00:19:47 [W] Relatively flat are these improved and optimized implementations and you can see some significant improvements there, but I know it's hard to understand real numbers from chart.
+00:20:02 [W] So to take a look at real numbers. Here's what we observed.
+00:20:06 [W] The endpoint slice implementation was around 20 times faster than the Baseline endpoints implementation and 1.16 and he even still more than three times faster than the updated and improved and points.
+00:20:21 [W] Shin in 1.17, so very significant improvements just from some basic profiling.
+00:20:27 [W] But if you're at this talk, you're probably not just interested in 10,000 points because while we know that this works at 10,000 points, and it's pretty reliable at this point, but we really want to understand. Well, just how far can we push
+00:20:44 [W] Thing so let's talk about a hundred thousand eight points.
+00:20:49 [W] But before we get too far into this, I have to provide some caveats these results are absolutely not scientific. This is just what happens when wanted to know what would happen at this scale.
+00:21:05 [W] This is by no means an endorsement of running a service with a hundred thousand endpoints at least not in production, and I did absolutely nothing to tune this cluster for better performance at scale.
+00:21:18 [W] It was running with all the standard eat we test.
+00:21:20 [W] Settings. So if anything it probably was tuned I can't scale other some things like really verbose log levels which have to have some kind of negative impact on performance.
+00:21:35 [W] So with appropriate efforts to tune these components I'd imagine results could have been better.
+00:21:39 [W] So let's talk just briefly about how I set this up.
+00:21:50 [W] So I used Coop test with most defaults used for e 2 e test clusters and I ran this on a 1.19 Alpha pre-release.
+00:21:59 [W] So this is after code freeze but before 1.19 dot 0, so somewhere in that mix have a specific commit their if you're interested is what this is run against and you can see the command.
+00:22:11 [W] Used to spin up this cluster.
+00:22:12 [W] The end result was four thousand and two nodes. One of those was the master one of those obscure heat stir and there were four thousand nodes for everything else.
+00:22:27 [W] I should point out. These nodes were relatively small.
+00:22:30 [W] They're handing one standard once only one core of a CPU.
+00:22:36 [W] keep that in mind when you look at the numbers later on what we really did put a lot of pods on these notes on that pasta could have adversely affected performance.
+00:22:45 [W] So I learned pretty quickly on that although a hundred thousand pot pie moment doesn't work it at least in my case was impossible to actually get any information about it because if as an example you try
+00:23:00 [W] Run Coop cuddle get pods and policed in my experience. It would consistently timeout because every pot inside a deployment shares the same set of labels.
+00:23:14 [W] It was a very difficult to just get an individual Potter a small subset of pots.
+00:23:19 [W] So instead what I ended up doing is 10 deployments with 10,000 pods each and surprisingly enough there weren't any issues listing 10,000 Pods at a time.
+00:23:27 [W] And I targeted all those pods all a hundred thousand pods with a single no ports service.
+00:23:40 [W] It wasn't that poor service. But all my testing all my load testing was based on the cluster IP from within the cluster, but it did technically have no portworx analogy as well.
+00:23:49 [W] Now as you'd imagine as we're scaling up and points hit that at CD object size limit how to around 10,000 pots and this is what Min Han mentioned earlier. There's a limit to the size of an object in that CD and you can configure
+00:24:05 [W] That to a point but increasing that too much is just not going to help very much so you can see that we hit just over 10,000 end points and then just consistently got errors whenever the endpoints control their tried to update and
+00:24:19 [W] from that point on
+00:24:21 [W] But and point slices kept on working as expected and so we ended up with a thousand and six and point slices to store a hundred thousand and points and I have to mention this is Again by Design because the controller is minimizing updates.
+00:24:38 [W] And it's always going to create a new endpoint slice instead of updating multiple endpoints slices if that those are the two options.
+00:24:48 [W] So not every endpoint sliced was completely full but reasonably good distribution here.
+00:24:57 [W] Now, you have to you have to wonder at this kind of scale how crazy it does iptables look and well the answer is pretty crazy for 400,000 Total Lines and over.
+00:25:09 [W] And of those lines were probabilities now, if you're familiar with how cou proxies iptables implementation works?
+00:25:20 [W] It is really just decreasing probabilities.
+00:25:23 [W] So the very first item in this list would have a one in hundred thousand chance of going to that end point and if that isn't picked it goes one further down the list and there's a one and
+00:25:35 [W] 999 chance that old go to that and point in all the way down the list.
+00:25:43 [W] So just a really really long chain of probabilities.
+00:25:49 [W] It sounds really strange but it ends up being Fairly reliable and fairly perform it but at this point once we got into a hundred thousand probabilities of hundred thousand endpoints Coop
+00:25:58 [W] Updates were really slowing down.
+00:26:03 [W] So St. Proxy rules the actual code and logic behind Coupe rocks.
+00:26:07 [W] Well, I sent 50,000 requests across the cluster to this service and they averaged a 883 second millisecond response time.
+00:26:44 [W] So not exactly blazing fast, but it did work and I specifically used minhas Fork of hey because it includes this really cool functionality that allows you to see a response distribution and
+00:26:57 [W] Used appropriately you can see exactly how many different endpoints unique and points respond to your request. And so in this case my 50,000 requests were distributed across 12,700 pots.
+00:27:12 [W] Now I also had to test out ipbs because I was curious just how that performance might differ.
+00:27:24 [W] So there's a different proxy or mode include proxy for IP vs. And just enabling that it worked reasonably well.
+00:27:30 [W] Okay, so let's talk about IP tables.
+00:27:42 [W] We had a 50,000 requests sent across the cluster to that service.
+00:27:48 [W] We had an eight hundred and eighty three millisecond response time on average and the requests were distributed to 12,700 pods and the way I was able to determine that was with men hands
+00:28:02 [W] Fork of hey, I which made it very straight forward to see just how many pods we were able to reach with these requests.
+00:28:17 [W] So 12,700 unique pot. So this is not exactly blazing fast, but it did work.
+00:28:18 [W] And then for IP vs.
+00:28:24 [W] I had to try out Pete Ivey vs.
+00:28:26 [W] Proxy or mode and for that we sent another 50,000 requests again with the same library and the average response time was a bit slower, but the requests were more distributed going to 17,000 pots.
+00:28:40 [W] So again continue to work but a bit slower with ipps in this specific instance.
+00:28:47 [W] But of course, you're probably curious.
+00:28:50 [W] I know I said more than a hundred thousand Beyond a hundred thousand endpoints.
+00:29:00 [W] So this all continues to work well with a hundred and twenty thousand pots.
+00:29:07 [W] So in this case, we have 1200 and for total endpoint slices that we ended up with and it all generally worked but it's at this point that I have to provide a few caveats because as much as
+00:29:15 [W] This worked. It wasn't always pretty there were errors and I would be remiss not to mention.
+00:29:24 [W] So first it's worth mentioning that the API server would time out. This is one example of it timing out on an endpoint slice watch but there are other examples to where it would time out and eventually
+00:29:39 [W] Lee connection of be re-established and things would work but these errors became more common the further I pushed the limits.
+00:29:54 [W] So the closer I got to a hundred and twenty thousand the more frequently added surveyors like this and then there's kind of a trickier are around endpoint slice updates the way kubernative
+00:30:04 [W] Is controllers work is they use this shared cache of resource this dramatically decreases load on a pi server, but it does mean that sometimes a controller may be operating on resources that are not completely up
+00:30:18 [W] Date and if for example say the end points list controller chooses to try to update a resource that it has a stale copy of you'll get this kind of error message. The object has been modified. Please apply your changes and
+00:30:33 [W] again, so that makes sense, but it is something like that will appear more and more in log messages and we're working on ways that we can try to work around this but unfortunately with caching I don't think we'll ever be able to completely get rid of the possibility
+00:30:49 [W] This could happen and as you would imagine the more and more endpoint slices you get for a service the higher the likelihood of these events happening is and then finally as I already mentioned the
+00:31:04 [W] Points controller just kept on running into that at CD object size limit.
+00:31:19 [W] We're hoping to truncate influence in the future so that when you get to this large scale the controller stops trying at a certain point, but right now it'll just keep on trying and failing and that's just unfortunately what the story is at this scale right
+00:31:23 [W] So let's look at some real data these this is the results. I got over those few runs with a hundred thousand hundred and twenty thousand and points for both IP v s and IP tables
+00:31:38 [W] I should say these results are definitely not scientific.
+00:31:45 [W] They resent represent just a few runs and from a single node in a cluster.
+00:31:48 [W] that's running pre-release software.
+00:31:52 [W] Any number of factors could influence these.
+00:31:56 [W] So with that said I want to highlight a couple of things.
+00:32:00 [W] PV s update times were dramatically faster five seconds instead of 25 or 29 seconds with IP tables and you can also see the IP tables.
+00:32:10 [W] Formance hit as you gradually increase the number of endpoints becomes more and more significant at scale.
+00:32:19 [W] Whereas ipbs performance is relatively flat regardless of scale.
+00:32:21 [W] So that's great.
+00:32:26 [W] It works.
+00:32:26 [W] It works.
+00:32:27 [W] It works. Well reasonably. Well at high scale, but what's next let's talk about the really cool features that endpoint slices are going to enable.
+00:32:38 [W] We have some really exciting goals for kubernative 1.20. I realized there's a chance not all of these are going to make it in the kubernative 1.20. But at this point we're hopeful so we're trying to work towards a
+00:32:54 [W] For automatic topology aware routing and endpoint slice subsetting. These two features are really closely tied together and they're very related to everything we've discussed so far. So I'm going to follow up on those in a couple additional slides
+00:33:10 [W] But beyond that we also have some really exciting work to support multi cluster services and significant dual-stack updates. Both of which are going to be heavily reliant on endpoints license and if you're interested in using
+00:33:25 [W] And point slices on Windows. We're hoping to have Beta Support for KU proxy in kubernative 1.20.
+00:33:32 [W] But let's talk a little bit more about that automatic topology aware routing.
+00:33:40 [W] The concept is really simple right now. If you make a request any anywhere inside a cluster to a service you're equally likely to end up at any and point anywhere else inside the cluster so
+00:33:53 [W] Doesn't matter if it's the same zone or different Zone equally likely the idea is why not try to keep the zones as request as close to their organization as possible.
+00:34:06 [W] So n points less is already store that topology information for each endpoint and coo proxy can be updated to prefer and points that are in the same zone or region.
+00:34:21 [W] And as you can imagine this has potential for much faster routing and significant cost savings now, if you take this idea and add this next idea you have significant ability to save costs and
+00:34:31 [W] Serverless with subsetting the idea is what if not just topology aware routing but what if qu proxy could just select the endpoint slices that were relevant to it. So the ones that represent the closest
+00:34:47 [W] Points to it and if we can restructure and point slices a bit, I think this will be possible and this could result in very significant performance improvements and significantly less load on a pi server and
+00:35:02 [W] proxy
+00:35:03 [W] Even if you don't want to run a hundred thousand and point these performance improvements are going to be noticeable at all levels the upper limits of service size are dramatically higher now, so that's something to be excited about if you've been thinking about running
+00:35:21 [W] Is and have to be honest and point slices don't and can't solve all the bottlenecks, but they have solved a really significant one.
+00:35:37 [W] So new features like topology or we're routing and subsetting will result in really significant scalability improvements and I'm very excited about the future with endpoint slices and all the great functionality. We're going to build on top
+00:35:46 [W] this
+00:35:47 [W] thanks so much for your time.
+00:35:51 [W] I've enjoyed it.
+00:35:55 [W] I feel free to reach out to me or Min Han if you have any questions, thanks.
+00:35:57 [W] Hey, thanks for being part of our talk you have time to answer a couple questions that came in.
+00:36:12 [W] Thanks for all the questions again, I think guy you'll see in chat.
+00:36:18 [W] We're also going to be on the kubernative networking channel and cncf slack. If you have additional follow-up questions that we can't get to hear one question that came in relatively early in the talk is
+00:36:31 [W] Going Beyond 1 million endpoints is going to be possible in the future or even the near future and I think I think that's a great question.
+00:36:47 [W] What we can say is the endpoints API is no longer the bottle with endpoint slices. We've solved one of the bottlenecks here, but as this Toc kind of covered there are other bottlenecks that will run into
+00:37:01 [W] I as an example current implementations of could proxy or really not intended to reach the scale of a million endpoints.
+00:37:15 [W] And also there's some some other low that I say a pi server that may need some addressing. So those are some high level things that I know we need to address if we really wanted to support a million
+00:37:25 [W] I know if there's sufficient demand the open source Community is awesome and always working to improve the scalability of kubeacademy.
+00:37:40 [W] He's so maybe may not I don't know what you want to take on one more question.
+00:37:41 [W] Um, I think we're at time and then I have already typed in a bunch of answers to the questions.
+00:37:51 [W] there's one more.
+00:37:52 [W] Oh, there's a lot more coming in.
+00:37:58 [W] Okay, so okay.
+00:38:01 [W] Let me pick the first one.
+00:38:03 [W] I want to run 10K and Jack's web server pods for same application.
+00:38:13 [W] What should be preferred idea.
+00:38:21 [W] The first a is one cluster and run all 10K pods in same namespace on physical server be split using namespace with one Caper namespace distribute
+00:38:28 [W] A sea distribute 1 K on ten clusters, I need speed so I will.
+00:38:39 [W] It really depends on how your deployment model like we take these a lot of questions similar to this before. So basically, why do you need to run like 1 million and points behind the service in the first place,
+00:38:56 [W] Right.
+00:38:58 [W] I why can't you chop it up?
+00:39:00 [W] So like for instance one one aspect is to go one aspect to consider is like how to deploy do have a load balancer or some melty cluster service implementation that can Target.
+00:39:14 [W] Good back gets across different clusters, right?
+00:39:23 [W] And then how do deploy how do we rolling update through those like different deployments in different clusters?
+00:39:29 [W] So like more clusters definitely give you more availability and and hi like basically reliability built in but it takes like basically it's more painful to rolled out and then debug
+00:39:40 [W] And you can have I would say it really depends on your use case and then there's a balance between basically the number of Shard of our deployment and the number of your clusters.
+00:39:57 [W] Yeah, so the answer is probably depends based on your requirements of your reliability and how agile you want and then and then there are also some other bottlenecks on the deployment control itself that it
+00:40:12 [W] Support let's say a million pods behind the deployment. If you scale deployment to a million parts, we will basically keep on creating pods in the loop and takes 440 of take a while to actually realize those ten like a chameleon
+00:40:27 [W] So, yep, so sorry, we are at time. So I would try to type in some of the answers to the the questions.
+00:40:38 [W] Yeah, and I'm also seeing some questions come in on slack and we'll follow up there as well.
+00:40:47 [W] So thanks so much for the time. Thank you.

@@ -1,0 +1,278 @@
+﻿Stop Writing Operators: STEP-0878 - events@cncf.io - Wednesday, November 18, 2020 3:02 PM - 35 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] All right. Let's get this started.
+00:00:02 [W] My name is Joe Thompson. And today I'm asking you to stop writing operators.
+00:00:07 [W] Relax. What I really mean is stop writing operators by default for managing kubernative zaps.
+00:00:13 [W] Now, of course when I say something like that naturally people wonder who's this guy?
+00:00:52 [W] All right. Let's get this started.
+00:00:55 [W] My name is Joe Thompson. And today I'm asking you to stop writing operators.
+00:01:00 [W] Relax. What I really mean is stop writing operators by default for managing kubernative zaps.
+00:01:06 [W] Now, of course when I say something like that naturally people wonder who's this guy?
+00:01:11 [W] Although some people use a different word than guy and why do I care what he thinks about operators?
+00:01:17 [W] As a roundabout answer to that question, here's some basic info on me and that QR code has my contact info embedded in it as well in a nutshell.
+00:01:25 [W] I've been involved in some way or another with kubernetes since 2015.
+00:01:29 [W] I've worked at Red Hat Coral s Capital One and mesosphere and I'm currently a Solutions engineer for hashicorp.
+00:01:36 [W] But before I got involved with kubernetes, I was a system administrator and it consultant for about 15 years of my 20 and up it up to that point.
+00:01:45 [W] In short I've been around long enough to see some operational patterns emerge multiple times.
+00:01:52 [W] And a quick note. It looks like I'm not the only one who thinks the operator pattern may be getting a little overused right at this point.
+00:01:58 [W] I submitted this talk this past July and September Devon good one at Red Hat wrote a blog post called when not to write a kubernative operator then later that same month the new stack published an article titled kubernative
+00:02:29 [W] Hear what he thinks about operators.
+00:02:32 [W] As a roundabout answer to that question, here's some basic info on me and that QR code has my contact info embedded in it as well in a nutshell.
+00:02:40 [W] I've been involved in some way or another with kubernetes since 2015.
+00:02:45 [W] I've worked at Red Hat Coral s Capital One and mesosphere and I'm currently a Solutions engineer for hashicorp.
+00:02:51 [W] But before I got involved with kubernetes, I was a system administrator and it consultant for about 15 years of my 20 and up it up to that point.
+00:03:01 [W] In short I've been around long enough to see some operational patterns and merge multiple times.
+00:03:07 [W] And a quick note. It looks like I'm not the only one who thinks the operator pattern may be getting a little overused right at this point.
+00:03:14 [W] I submitted this talk this past July.
+00:03:17 [W] In September Devon good one at Red Hat wrote a blog post called when not to write a kubernative operator then later that same month the new stack published an article titled kubernative when to use and when to avoid the operator pattern which extensively
+00:03:32 [W] She's operators from other things.
+00:03:35 [W] And then a week after the new stack article.
+00:03:37 [W] I got the notice that this talk was accepted for Kube con to paraphrase the term William Gibson used about the invention of the steam engine suddenly. It seems to be operator skepticism time and result.
+00:03:49 [W] I'm recording this talk in October with a lot less apprehension that I had one submitting it because nothing cures your imposter syndrome about something it kubernative use like finding out the co-founder of Rancher agrees with you.
+00:04:02 [W] See you're writing are adopting an app to deploy and kubernative and you need to have some way to manage its operation.
+00:04:08 [W] This is where a lot of people start asking themselves questions about operators. Like what function should my operator perform what API permissions will my operator need to perform those functions.
+00:04:20 [W] What framework should I write my operator in I would like to ask you any time the concept of an operator comes up from now on to ask yourself these questions first.
+00:04:31 [W] Should this operator be written at all? And should I write it?
+00:04:39 [W] The rest of this talk is going to sound really dogmatic.
+00:04:43 [W] First of all, if nobody leaves here thinking I'm completely wrong about something I said, then I'll feel like I didn't challenge the status quo enough.
+00:04:50 [W] Or maybe just because your boss said right at your fired, although if they did that. I hope you send an emergency signal on your communicator and we can beam down and rescue you.
+00:05:00 [W] I don't want anybody to leave thinking I'm saying the operator pattern is garbage or anything like that.
+00:05:05 [W] I actually think exactly the opposite it's a highly useful pattern in the right circumstances.
+00:05:11 [W] But you can have too much of a good thing or have a good thing where it doesn't fit.
+00:05:18 [W] Now, let's start by distinguishing between an operator and things that are not operators.
+00:05:24 [W] Back in 2016 kouros put up a blog post introducing what they called the operator pattern by which they meant and I'm quoting here application specific operational knowledge encoded into software that leverages the powerful kubernative
+00:05:39 [W] the application correctly
+00:05:28 [W] Coral s applied this concept specifically to stateful apps because those are the ones that typically need this kind of hand-holding through their life cycle.
+00:05:37 [W] I want to really grind this axe for a few seconds because I've had conversations with people where they talked about wanting to write an operator for something.
+00:05:43 [W] I don't think needs one and when I dig a little bit they're using operator to mean any controller.
+00:05:50 [W] Prior to operators there was already a concept of domain-specific management of apps using extensions to the kubernative API called a custom resource controller. Now some of what I'm saying in this talk will indeed apply to stateless CRT controllers as well,
+00:06:05 [W] To be talking about stateful application operators and what a quagmire they can be.
+00:06:01 [W] So I wanted to try to reset the conversation for an instant and bring some Focus back to a useful distinction that starting to fade a bit but is very relevant here.
+00:06:13 [W] So first question should an operator for a given application exist. I think in several cases it shouldn't.
+00:06:21 [W] The mental model I used to think about these cases is operators are sort of like an adapter that you use to plug old VGA displays in the new monitors that only have digital inputs sure it works but it's not as efficient or functional as it could be
+00:06:36 [W] But is very relevant here.
+00:06:32 [W] So first question should an operator for a given application exist. I think in several cases it shouldn't.
+00:06:40 [W] The mental model I used to think about these cases is operators are sort of like an adapter that you use to plug old VGA displays in the new monitors that only have digital inputs sure it works but it's not as efficient or functional as it could be operators are a
+00:07:58 [W] Either your workload or your platform can't handle the other directly and I'll be up front here and say I have a bit of a professional bias against the whole idea of a dedicated manager process like an operator not things like cluster leader nodes but components that don't serve
+00:08:13 [W] It's directly at all and are there strictly as things like install managers?
+00:08:17 [W] It's a common model and there are places where it makes sense or is necessary for practical reasons, but I always prefer to have my resources available to benefit my workloads rather than reserved for managing them.
+00:08:29 [W] now.
+00:08:31 [W] When do you not want an operator? There are basically three sets of circumstances worth talking about here.
+00:08:38 [W] Case 1 there's no state that needs managing either.
+00:08:42 [W] The app is not stateful or everything stateful about it can be properly managed without outside intervention using the available kubernative Primitives.
+00:08:51 [W] There's really nothing for an operator to do here. You might go ahead and write a CRT for it to make everybody's life easier. But kubernative in the app together can handle everything that needs handling. You might not even need a CRT controller just a well-written Helm chart so judgment call there.
+00:09:06 [W] It's really up to you but
+00:09:08 [W] A retrospective case that's worth mentioning which I'll go into later and it has to do with that Clause. I snuck in there about available kubernative Primitives.
+00:09:16 [W] So you may in fact end up writing an operator with my approval here and really isn't that the only approval that matters next time you want to write some code and your scrum product owner says no tell them I said, it's okay.
+00:09:27 [W] Written Helm chart so judgment call there.
+00:09:30 [W] It's really up to you.
+00:09:31 [W] But there's a retrospective case that's worth mentioning which I'll go into later and it has to do with that Clause. I snuck in there about available kubernative Primitives. So you may in fact end up writing an operator with my approval here and really isn't that the only approval that matters
+00:10:28 [W] Can act on its own State better than anything outside it can if you maintain the app and it needs to grow new capabilities to deploy on a platform like kubernative then by all means give it those capabilities, but do it directly build that code into your app
+00:10:43 [W] An operator is just making life difficult for yourself as a developer as well. As for anybody that has to actually run and manage your app.
+00:10:51 [W] fundamentally. It's one more thing that can fail.
+00:10:55 [W] Some people would say well this is just a component of my app. It's a micro service, but I think there's an important distinction between operators as usually conceived and microservices.
+00:11:05 [W] You can pick any of various technical definitions. But the basic idea is that microservices typically are discrete components that interact using standard interfaces. The internal details of microservices aren't relevant to each other.
+00:11:19 [W] This is a useful abstraction as long as the microservices I'm talking to is talking back to me.
+00:11:25 [W] The API understand and Performing the functions. I ask it to perform.
+00:11:29 [W] I don't care what its internal state is or how it performs its functions loose coupling is part of the point of microservices to begin with operators break that abstraction wall down and tighten that coupling.
+00:11:42 [W] There's also another aspect to consider security.
+00:11:46 [W] and this applies to any cri-o controller whether it's an operator or not controllers need API permissions to do what they do, which my friend and former coworker Eric Chang pointed out back in January means if you have to pass a security audit at some point you just made your life that
+00:12:01 [W] Us operators break that abstraction wall down and tighten that coupling.
+00:12:04 [W] There's also another aspect to consider security.
+00:12:08 [W] and this applies to any cri-o controller whether it's an operator or not controllers need API permissions to do what they do, which my friend and former coworker Eric Chang pointed out back in January means if you have to pass a security audit at some point you just made your life that
+00:12:34 [W] Already controller you use and even if there's no auditor looking over your shoulder, you still have that much more attack surface to worry about if you're writing the app, you have the latitude to eliminate or at least minimize that attack surface that leaves everything
+00:12:50 [W] The app is stateful with complex functional needs related to its statefulness.
+00:12:54 [W] You don't maintain it and none of the available alternatives for managing it inside or outside kubernative Zar viable. But before you jump on this, let's look at what some of those alternatives are.
+00:13:08 [W] Okay, what can you do instead of writing an operator to make managing your application deployments easier?
+00:13:14 [W] Well trivially you can write a CRT controller.
+00:13:17 [W] Remember a basic CRT controller doesn't try to manage anything State fully that alone eliminates a lot of destructive failure modes, but as noted a lot of the above advice applies equally well to see Artie controllers.
+00:13:29 [W] So saying right one of those instead isn't where I want to stop this section because it doesn't address most of those things.
+00:13:37 [W] Probably the most effective option in a lot of cases is the default nothing don't write anything or at any rate if you have to write something right as little as possible.
+00:13:45 [W] This would be the case. For example, if what you're dealing with is a bunch of one-off issues that you never see twice or if what you have is so lightly touched that it would take longer to automate its operations than to just do them.
+00:13:57 [W] There's an XKCD cartoon for everything in Tech and this is a great one.
+00:14:01 [W] I keep on my wall that details this in chart form.
+00:14:03 [W] All code is a liability.
+00:14:01 [W] It has to be written.
+00:14:02 [W] It has to be tested.
+00:14:03 [W] It has to be maintained it can have bugs and those bugs can lose your data or Worse compromise other people's.
+00:14:11 [W] If what you're automating is a routine change a popular model for kubernative change management is the gitops model.
+00:14:17 [W] This was first described in detail by weaveworks you manage your cluster by applying an as code model to it and to everything running in it in a cluster external development environment and the most trivial case.
+00:14:30 [W] This could be just writing a Helm Charter other template at artifact to deploy and maintain your app then maintaining and using that as part of your ci/cd workflow.
+00:14:39 [W] You can add layers of other management as well.
+00:14:41 [W] for example using terraform to manage both the deployment of your Helm charts and changes to the Clusters.
+00:14:46 [W] You deploy them on this gives you a single source of truth about every change to every app you run and potentially every cluster you run them on but it's still instantiated essentially as management by Static artifacts rather than Live code.
+00:15:02 [W] There are now several Frameworks that take a no code approach to writing operators like kudo.
+00:15:06 [W] Generally, these are some kind of top level controller that implements operator Primitives in that sense.
+00:15:12 [W] It's the actual operator rather than the code you write.
+00:15:15 [W] Just make sure the Primitives you need are all there before you start.
+00:15:19 [W] You can also have a live management process of some kind running outside the cluster at first glance.
+00:15:24 [W] This sounds like just writing an operator in a different place, but there are real problems within cluster operators that this solves.
+00:15:32 [W] One of the issues I mentioned with kubernative operators is since they're running inside kubernative.
+00:15:36 [W] They take resources away from other workloads in the cluster, but there are also limited themselves by the Clusters Total Resource availability and by the inherit scale limitations in representing things that cri-o is and storing them in that CD.
+00:15:50 [W] You can end up needing a scale up your cluster not to handle additional workloads. But just to give your application operator Breathing Room move that operator outside and not only are you no longer limited by
+00:16:02 [W] In the kubernative cluster you now gain some additional flexibility in architecting your manager.
+00:16:08 [W] The one caveat is that now you've got something outside the cluster that needs to have credentials of some sort to authenticate to it.
+00:16:14 [W] So you have to take do care with how you handle those credentials and that Authentication.
+00:16:21 [W] All right, we've talked about when an operator isn't needed and what you can do instead when is one needed. I hear you asking to primary cases case number one when you don't maintain a stateful app and you have to manage
+00:16:36 [W] On behalf inside kubernative not the ideal situation to be sure but sometimes you just got to do the thing.
+00:16:39 [W] Get real familiar with whatever system the app maintainers use to raise issues because you'll be using it in proportion to how complex the app is to manage.
+00:16:47 [W] In fact, if you just need one or two State handling features, you should try to engage the maintainers and see if they're receptive to adding them in the app. It may turn out that they can do that for their own code faster than you can write an operator for someone else's.
+00:17:02 [W] Case number 2 when you do maintain a stateful app and you want to either start taking advantage of kubernative features that are in development but not released yet or you need to back Port an app two versions of kubernative that don't have some statefulness management needs.
+00:17:18 [W] In these cases the operator is a temporary shim that you're using to match up what your app wants with what the targeted versions of kubernative can do and you expect the discard it piece by piece and eventually entirely when you no longer need that support.
+00:17:34 [W] Okay, you had the meeting or you cashed in your right one operator card or whatever and the answer to the first question is yes.
+00:17:41 [W] We need an operator.
+00:17:42 [W] Okay, get to work.
+00:17:44 [W] No, no, wait a second.
+00:17:46 [W] Remember there's still one question.
+00:17:47 [W] You need to answer.
+00:17:48 [W] Should I write this operator?
+00:17:50 [W] Shim that you're using to match up what your app wants with what the targeted versions of kubernative can do and you expect the discard it piece by piece and eventually entirely when you no longer need that support. Okay,
+00:18:40 [W] With the idea in your head that I mentioned earlier that all code is a liability.
+00:18:44 [W] Okay, let's talk about why you shouldn't write an operator or possibly even some non operator automation that needs writing.
+00:18:54 [W] Reason number one you don't have a good grasp of the operation will need that's a really abstract statement.
+00:19:00 [W] So let me put it in here ristic terms. You should not write an operator to handle operations that you haven't spent at least as long recovering from failure or absence of as you realistically estimate it would take to write and thoroughly test the operator for
+00:19:15 [W] Very very liberal with that coding time estimate.
+00:19:19 [W] Why do I say to measure time recovering from failure specifically primarily because failure is where we learn what not to do and that's one of the most important things to know when automating anything.
+00:19:30 [W] It's where the smooth surface of a third party app that you can't see inside of has cracks and through the cracks.
+00:19:36 [W] You can see a little of what made them and maybe how to keep your automation from falling into them.
+00:19:41 [W] It's also where you find out what the failure modes of your own apps are in complex unanticipated real-world conditions.
+00:19:49 [W] This can be destructive and one of the most destructive things to have is a bug in is automated management.
+00:19:54 [W] One of the best illustrations of how hard this part of operators is ironically is the Etsy D operator Coral s wrote to introduce the concept.
+00:20:03 [W] It turned out that running at CD in kubernative in an automated fashion was so complex and had so many hard to anticipate and hard to recover failure modes that one of the hope for goals of the SED operator to make Etsy D in the kubernative control plane. Totally
+00:20:18 [W] Was abandoned eventually the operator itself was abandoned bike or Os as well.
+00:20:19 [W] This is a floor not a ceiling by the way.
+00:20:21 [W] I'm not saying when you hit that break even point it's time to fire up your code editor and get to work and if you get there and you realize you don't feel comfortable with your understanding of something in the apps behavior, of course, I say you definitely should not write that operator.
+00:20:37 [W] Somebody out there is thinking but I have these rountine tasks that I need to automate.
+00:20:41 [W] I don't spend a lot of time recovering from failure of them. But I do spend a lot of time doing them shouldn't I automate that with an operator?
+00:20:50 [W] I'm not saying you shouldn't ever do that.
+00:20:52 [W] But I think if that's all you're doing you shouldn't automatically look to an operator as the default way to do it the other options.
+00:20:58 [W] I covered earlier often work better for routine changes like that.
+00:21:04 [W] Reason number two. You shouldn't write a needed operator.
+00:21:07 [W] The app itself is not stable in a compatibility sense operators are not something you want to be writing for zero-point X versions of things with no forward compatibility promises.
+00:21:18 [W] You can end up in a situation where you have to update your operator every time the application updates and that's less useful than just adding the code into the application itself and maintaining it there. It might be a third party application that you can't just do that with and we'll talk about that in.
+00:21:33 [W] Minute, but in general avoid avoid avoid writing operators for non stable apps.
+00:21:39 [W] App is at one point x it doesn't mean it's actually stable because not everybody out there as following September and not everybody who claims to be actually is trust your gut and take anything that looks like a compatibility violations. Seriously when deciding how you feel
+00:21:43 [W] Reason number three for you, not to write code that needs writing. It's someone else's app and you have an Engaged with the team that maintains it yet.
+00:21:38 [W] The at maintainer will generally know best what the dependencies involving that app.
+00:21:43 [W] statefulness are and this is critical information.
+00:21:46 [W] You need to write an operator. Well
+00:21:48 [W] You may also find out there's either one already in progress or there are features coming that eliminate the need for an operator entirely in which case your best move maybe to sit tight stay engaged with the process on that code and wait for that release again as
+00:22:03 [W] Manned up forced into writing an operator in any of these situations by circumstance, but they're all to be avoided whenever possible.
+00:22:11 [W] Let's say you've looked at all the reasons not to write an operator and all of the things you can do besides right an operator and you still need to or just want to for whatever reason right one.
+00:22:21 [W] What does the landscape look like? And what should you do when you write it?
+00:22:26 [W] The first thing you need is a good understanding of crd is in controllers and to have a look around at the operator building landscape. The kubernative documentation has lots of good info on this and even links to some Frameworks for building your operator The
+00:22:42 [W] Controller Frameworks are kublr and meta controller more recently operator framework and Kudo have arrived on the scene to some considerable Fanfare and there are other Frameworks both older and newer that you can look at.
+00:22:49 [W] I'm not going to try to give you a flowchart of which framework to choose or none based on criteria a b and c but I will offer some general guidelines for evaluating any framework for fit does the framework allows you to write in a language, you know, well, I'd be
+00:23:04 [W] Try to give you a flowchart of which framework to choose or none based on criteria a b and c but I will offer some general guidelines for evaluating any framework for fit those the framework allows you to write in a language, you know, well, I'd be very
+00:23:25 [W] Of trying to get started on both a language and a framework at the same time the tools, you know best will tend to be the tools you do your best work with in most circumstances many Frameworks require you to write and go and if you don't have a lot of go expertise, that's a
+00:23:41 [W] Many Frameworks require you to write and go and if you don't have a lot of go expertise that's a recipe for bugs and extra stress.
+00:23:50 [W] Does the Frameworks model of the world makes sense to you and fit in with the rest of your operations?
+00:23:55 [W] for example, medic on troller is a little unusual in that it has you write your custom code AS web hooks that can call if this is how you already do everything or it feels right to you and doesn't conflict with other requirements. Great met a controller
+00:24:10 [W] Your custom code AS web hooks it can call if this is how you already do everything or it feels right to you and doesn't conflict with other requirements great medic on troller may be a good choice.
+00:24:22 [W] If not things may change later and another operator you write may be a perfect fit for medikit roller then.
+00:24:31 [W] Are their ecosystem Services the Frameworks maintainer provides around it that you want to take advantage of for example, consider the operator framework and operator Hub dot IO here, although strictly speaking.
+00:24:43 [W] You don't have to write your operator in the operator SDK to get listed on the Hub doing so does make passing the criteria for getting listed basically automatic. If you want to provide an operator for your application to the public easily these kinds of services
+00:24:58 [W] See you in choosing which framework to write it in.
+00:25:04 [W] Lastly when it comes to actually sitting down and writing your operator.
+00:25:09 [W] I want you to keep three things in mind maintain loose coupling.
+00:25:13 [W] You should not need to update your operator for every update of the application. It manages.
+00:25:19 [W] It's fine if the app gains major new features that need to be managed in the operator, but there should not be a routine need to update the operator as part of an app upgrade less is more.
+00:25:30 [W] This is what the third or fourth time.
+00:25:32 [W] I've said, you should write no code whenever possible. That's because I really really mean that not only should you seek to write as little
+00:25:39 [W] In the operator as possible.
+00:25:40 [W] you should actively push code out of it whenever you can either in favor of leveraging new features and kubernative that make it unnecessary or into the operator managed app.
+00:25:51 [W] Write what? You know, it's not just good advice for novelists. It's good for programmers to this means not only writing in a language and framework that are familiar and understandable to you.
+00:26:02 [W] It means beginning with automating the process has you understand the best then have the biggest impact as you work out these cases.
+00:26:10 [W] you'll learn the applications Behavior better and you can add other lesser used operations more confidently, but don't forget what I said in the last Point only write what you need to in the operator.
+00:26:21 [W] to the operator managed app
+00:26:23 [W] Write what? You know, it's not just good advice for novelists. It's good for programmers to this means not only writing in a language and framework that are familiar and understandable to you.
+00:26:33 [W] It means beginning with automating the process has you understand the best then have the biggest impact as you work out these cases.
+00:26:41 [W] you'll learn the applications Behavior better and you can add other lesser used operations more confidently, but don't forget what I said in the last Point only write what you need to in the operator.
+00:26:55 [W] This slide has references and further reading.
+00:26:57 [W] I know you can't click on the links and video, but don't worry. There will be a link to these slides coming out.
+00:27:05 [W] And with that thank you very much. This is the link. I promise that will take you to the slides for this talk or you can scan that handy QR code right there and I believe we now have some time for Q&A if anyone has questions.
+00:27:38 [W] All right.
+00:27:39 [W] I've seen a couple of questions come through in the chat.
+00:27:43 [W] I'll just recap a few of them several people asked where the slides are and definitely there there was that link at the end.
+00:27:50 [W] I'm happy to share that and select Channel as well. Once we're off the session and you know this discussion can continue there as well.
+00:27:57 [W] Let's see.
+00:27:59 [W] see. They said I just got started writing operators, you know, don't mean to rain on your parade and writing code is always good.
+00:28:08 [W] What Frameworks allow you to write in the program when I say what Frameworks allow you to write in a preferred language.
+00:28:15 [W] Do they all have their own concept of what language you need to write in or where you know how you need to write things?
+00:28:26 [W] And I'm just saying know what languages are available or what it requires you to write in and then pick one accordingly.
+00:28:35 [W] What exactly makes the operator security issue?
+00:28:39 [W] Can you elaborate that one?
+00:28:41 [W] that was a question of when you're talking about doing security audits one of the things you have to go through is basically what permissions does everything have to act on the cluster and what
+00:28:56 [W] Take on the cluster using those permissions.
+00:28:59 [W] And so if you are writing an operator, you're going to have to Grant it permissions beyond what normal workloads usually have so it can make your life more complicated if you have to pass a security audit.
+00:29:13 [W] Let's see.
+00:29:14 [W] Did you mention that Helm trucks can replace an operator?
+00:29:18 [W] Can you talk through a concrete example, so with that one I am talking about when I say he'll charts can replace an operator.
+00:29:27 [W] It's a you know, and we've had some discussion about this nice like Channel going on as well the whole idea of what an operator should and shouldn't do is a little squishy and you know to give some credit.
+00:29:37 [W] maybe a little squishier than I've actually allowed for in this talk, but I think there's a lot of
+00:29:42 [W] That people can do more declaratively with Helm charts rather than basically hand the job off to an operator to do you know, so to speak imperative lie.
+00:29:52 [W] And so I think there's value in looking at whether doing that declaratively with the helm chart will actually fulfill your needs see follow-up of my question isn't there a risk of having operators with different life
+00:30:07 [W] I'm not sure if maybe there was an earlier question that I missed.
+00:30:06 [W] on that
+00:30:08 [W] I'm gonna I'll see if I can't get that addressed in the select Channel because I'm not sure I need to think about that or maybe there's another piece of that, but I'm missing yet.
+00:30:19 [W] Let's see to do.
+00:30:22 [W] our operators useful for applications that are intended to be clustered components.
+00:30:29 [W] That's kind of a middle ground.
+00:30:30 [W] I think that might be a more compelling case for an operator because if you're actually building a cluster component you are in some sense already extending the cluster API.
+00:30:41 [W] So that's maybe a lower lift for the burden of writing an operator there. I still would look at whether you can do what you need to do without reading one but you know that that probably is a better case than the usual one.
+00:30:57 [W] Do you have feedback on Go versus Java client libraries for writing operators.
+00:31:03 [W] EG does it go client have something the Java client does not.
+00:31:05 [W] I don't know off the top of my head what the Java client stuff is, especially anything that would be relevant to writing an operator.
+00:31:16 [W] I know there's tons and tons and tons of it and go just because the kubernative community has embraced go in a big way, you know, I wouldn't want to sit down and tell you that one is better than the other.
+00:31:26 [W] Because I simply don't know.
+00:31:27 [W] Looking through we've debated using operators versus terraform any thought I have a little bit of a bias here.
+00:31:25 [W] I work for hashicorp.
+00:31:25 [W] My definitely Advocate using terraform for declarative and infrastructure management.
+00:31:31 [W] It depends really I know that's a kind of a non-answer but I think it's again one of those things where you look at your concept of the world in your infrastructure and depending on that concept of the world you
+00:31:45 [W] Maybe very strongly. We want everything to be declarative.
+00:31:48 [W] We don't want anything to be handled, you know with live operations. If you will everything needs to be declared of everything needs to be kind of a gitops workflow.
+00:31:56 [W] That's where terraform really shines. If you want things to be more kind of self automated that may be a case where you want to write an operator or CRT controller.
+00:32:08 [W] I do still draw a distinction there.
+00:32:11 [W] That's a discussion that's been ongoing in the slack, you know, again, that's really up to you and
+00:32:16 [W] What'd you think of the world?
+00:32:17 [W] Let's go down here do managing or bringing databases like postcards into kubernative need some assistance in things like Master selection or backup upgrade.
+00:32:30 [W] What is the alternative without an operator for the same use case? If you're bringing an existing application in you may have to write an operator just to get that application to run suitably and kubernative and databases are actually one of the original
+00:32:45 [W] Brought the operator pattern out to deal with so the typical use case would be something like I need to handle storage safety for my database or something like that.
+00:32:30 [W] I tend to Advocate though the idea that if you're writing an app from scratch or if you maintain an app and you're trying to bring it into kubernative you should build as much of that management into the app itself as possible
+00:32:45 [W] Of something like that is you know kubernative has The Primitives now to handle things like volumes that it didn't used to have it used to be that if you wanted to change volume management for an application.
+00:32:43 [W] You actually had to kind of re spend the deployment and now that's no longer the case.
+00:32:47 [W] So you have more options there and I think a lot of people kind of got into that mindset of what you need an operator for a database, of course you do and I don't think that's necessarily an automatic thing anymore.
+00:33:03 [W] I think let's see.
+00:33:06 [W] I'm going to go back and see if I can find the earlier.
+00:33:11 [W] To Anthony's question Anthony, okay, isn't there a risk of having operators with different life cycle handling?
+00:33:19 [W] I think I'm going to address that I'm going to address what I think that means and then maybe we can you know, talk about that more in the slack.
+00:33:28 [W] I think there is.
+00:33:32 [W] There should be a loose coupling between the life cycle of the operator in the life cycle of the application.
+00:33:36 [W] If you have to update your operator, every time you update your app, then you didn't really write operator.
+00:33:41 [W] You just wrote an additional piece of code in your application.
+00:33:43 [W] So I think you know maintaining that loose coupling so that you can decouple those life cycles is useful. Now that doesn't mean that you can leave that one operator, you know in place and never update it and never add any code to it forever and ever.
+00:33:59 [W] Till the end of time, of course, you know, it's going to eventually need to grow new capabilities, but they should be capabilities that you add as the operator needs them.
+00:34:04 [W] Not as the application needs them.
+00:34:06 [W] If you kind of follow what the distinction I'm drawing there.
+00:34:12 [W] And I'm looking to see if we have any more questions.
+00:34:17 [W] Somebody asked what do I think about Q Builder?
+00:34:19 [W] I don't really have any opinions one way or another.
+00:34:22 [W] I'm not deeply familiar with it.
+00:34:23 [W] So I wouldn't want to you know, try to shoot from the hip and give you an opinion on something. I'm not familiar with.
+00:34:31 [W] And let's see anything else that has not been answered.
+00:34:38 [W] I think that's everything.
+00:34:39 [W] I see in the chat.
+00:34:47 [W] And thank you very much to everybody who showed up for the session.
+00:34:51 [W] It was great.
+00:34:51 [W] I see there's a lot of activity going on in slack as well and I will be like I said, I will be available in the slack to answer questions.
+00:35:00 [W] Uh, particularly Anthony to hand the Hane. I'm sorry. If I pronounce your last name wrong, if you can, you know, maybe come over to the slack and it's a channel 2 - Cube Khan - active
+00:35:12 [W] And maybe get some more details on your question because it looks interesting and I want to make sure that I'm actually giving you a at least the answer that I knew to give.
+00:35:19 [W] Thank you very much to everybody who showed up and ask questions and listened and no doubt the people who are going to go away from here and go this guy is out of his mind.
+00:35:17 [W] It's totally wrong about operators.
+00:35:19 [W] That's fine.
+00:35:20 [W] I just want to get that conversation restarted.
+00:35:26 [W] And thank you very much.

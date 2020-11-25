@@ -1,0 +1,702 @@
+﻿Tutorial: Communication Is Key -- Understanding Kubernetes Networking: AJXH-0070 - events@cncf.io - Monday, August 17, 2020 10:55 AM - 189 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:01 [W] Welcome to communication is key understanding kubernative networking.
+00:00:07 [W] My name is Jeff pool.
+00:00:10 [W] This is a tutorial. So it'll be Hands-On. You can either watch me as I work or I'll give you the instructions so that you can try to work along with me.
+00:00:20 [W] Kubernative ziz distributed system, so it relies heavily on networking like all distributed systems.
+00:00:28 [W] But kubernative is also very pluggable. You can change all sorts of things about it including the networking plugins.
+00:00:37 [W] You can change whether uses IP tables or E B PF.
+00:00:42 [W] There's all sorts of knobs that you can tune in kubernative and terms of the networking stack which makes it even more complicated than a normal distributed system that has fairly fixed networking protocols and standards.
+00:00:55 [W] So this makes it challenging to understand the goal of this tutorial is to demonstrate how things are supposed to work.
+00:01:04 [W] To also gain show you how to gain visibility into how it is working.
+00:01:13 [W] And learn how to debug networking issues in kubernative as a result and application issues.
+00:01:25 [W] That could have a networking aspect to them.
+00:01:27 [W] So what I plan to cover here, I'm going to do a brief introduction to General networking network name space in the container networking mostly to make sure that we're on the same page and that I can use terminology without too much confusion.
+00:01:46 [W] Then I'm going to focus on kubernative services.
+00:01:50 [W] Do a little dive into flannel with vxlan encapsulation and then take a tour of Calico using IP over IP encapsulation.
+00:02:00 [W] So who's this for who should be attending this? So first I think anyone who sets up clusters and needs to know how they work.
+00:02:11 [W] It'd be hard to be in a position where you have to bring up a cluster and then not know anything about the networking just have to rely on it magically working for you.
+00:02:25 [W] Especially if you're bringing up on bare metal hosts or in a less package environment than perhaps one of the cloud providers easy.
+00:02:31 [W] Scale-up kubernative Services.
+00:02:41 [W] I also think that developers who want to understand the limitations and advantages of how networking works and kubernative.
+00:02:50 [W] I I have had various roles over the years and in my role as a software developer, I found that if I don't understand what's going on in the layers below my code.
+00:02:56 [W] It's often hard to understand problems that come up in those layers or whether there's a problem is location code or with the hardware operating system networking.
+00:03:06 [W] whatever so understanding how things work can help and then, you know understanding for example, can you send non IP protocols to other pods things like that is useful depending on what you're trying to develop then I also
+00:03:21 [W] I think operations and network Engineers who either are in charge of keeping things running and may have to debug them or just that, you know need to be able to understand cluster networking so that they can do their jobs whether it's
+00:03:36 [W] figuring Network equipment that the cluster uses whether it's configuring networking on the host, whether it's figuring out when things have gone wrong and you know,
+00:03:47 [W] It's a classic problem that your software developers want to say.
+00:03:53 [W] Hey, my code isn't working.
+00:03:54 [W] I think it's a network.
+00:03:56 [W] So you need to understand how the network is supposed to work so that you can tell them no. It's actually your coat.
+00:03:59 [W] I do expect a working knowledge of basic networking and Linux tools here.
+00:04:08 [W] Mostly because I can only teach so much without taking up all the time of introductory material.
+00:04:11 [W] So the environment that I'm planning on teaching in first if you want to follow along there's a repo here on the slide that you will want to clone.
+00:04:24 [W] It's GitHub and you can read the URL there and then once you clone that there are two options I've designed it so that you can run all this with Docker and a tool called Footloose Footloose
+00:04:38 [W] This is a tool from weaveworks that lets you spin up a bunch of Docker images that look like virtual machines.
+00:04:49 [W] And so this is the lightest weight way to get a kubernative cluster up and running on your machine.
+00:04:56 [W] One of the problems I ran into when I was trying out different environments for this is that
+00:04:58 [W] the amount of resources it can take to run several virtual machines at the same time.
+00:05:04 [W] It can be intense and I can't make any assumptions about what kind of Hardware people are running with so I can't be like, oh, well everyone out.
+00:05:17 [W] There's got 32 gigs of RAM. So, you know, no problem if we give for gigs to each VM.
+00:05:19 [W] that's probably not a viable option.
+00:05:26 [W] So this is the lightweight lightest weight way to do it the biggest downsides of this other than having to have Footloose running is that
+00:05:30 [W] There are some weird interactions between the containers and the kernel of the host for example iptables if the colonel the host doesn't match the version that IP tables in the container expects, sometimes you'll see some weird
+00:05:43 [W] So that can't happen.
+00:05:48 [W] Now if you've got a working vagrant in virtualbox set up.
+00:05:51 [W] I also have a vagrant file that should work that said it has been tested to the bare minimum.
+00:05:59 [W] So, you know, if you're comfortable debugging it great. If not, you can try either of these options and if all else fails I'll be around to try to help people out during this talk, but I also
+00:06:11 [W] I think that maybe the answer is you watch me do it and try to figure it out. Later.
+00:06:16 [W] You probably can do all these demonstrations on other kubernative clusters. But if you want to do the exact same stuff, I'm doing in the same environment.
+00:06:25 [W] I'm doing it then this is this is the best way to go. Obviously, you're probably not going to be a production kubernative cluster and swap out the networking layer.
+00:06:36 [W] So there's some things that would be hard to do in environments of people are depending on but certainly if you wanted to spin up,
+00:06:42 [W] That's a VM is in different environments. You can probably replicate these without using my tools at all.
+00:06:47 [W] I'm using k3s as my kubernative is layer.
+00:06:56 [W] It's a little bit different from vanilla kubernative.
+00:06:58 [W] He's however, it's lighter weight and very fast to Startup and for a networking perspective.
+00:07:03 [W] It looks very close.
+00:07:17 [W] There's also a project k3s D which is designed to run like k3s except in Docker. The only reason I didn't use that is because that leans on Docker for the networking and therefore it's really hard to actually look into networking
+00:07:17 [W] rules whereas this using k3s D and these Footloose
+00:07:23 [W] virtual machines for lack of a better term that containers look like virtual machines.
+00:07:38 [W] They actually think that they are basically virtual machines on a real Network. So it looks a lot more like what you would expect if you were setting up actual Hardware servers and connecting them with switches.
+00:07:43 [W] So this seemed to be the right trade-off for me in terms of having an environment that is relatively lightweight and easy to start up but also fairly true to how kubernative works.
+00:07:54 [W] Okay. Now I'm going to do a demo of how to get the environment set up and running.
+00:08:02 [W] Okay, let's talk about your options. If you want to do these Labs along with me the first thing you'll do regardless is you want to clone the repo where I put all the scripts.
+00:08:13 [W] super simple
+00:08:18 [W] now if you have a system where you have Docker installed and Footloose, then you're ready to go. Now. You can start running these scripts. I've got bootstrap bootstrap got
+00:08:35 [W] Crepes in each of these folders to start a foot loose cluster. If you're in an environment where they won't work or you need to have a pristine outer environment.
+00:08:50 [W] There's a few cases where this will matter. For example, if you look at IP tables in a Docker based virtual machine running footloose, and your kernel doesn't match what's in your host machine you sometimes get some weird
+00:08:59 [W] These are fairly small issues.
+00:09:07 [W] So the lightest weight way to run this is with Footloose, but if you need more you can
+00:09:12 [W] Run vagrant up and as a vagrant file.
+00:09:18 [W] It's got a plug-in.
+00:09:20 [W] It's expecting these virtual box set to use three gigs of RAM.
+00:09:25 [W] I if any of these things don't work for you.
+00:09:26 [W] It may not work out.
+00:09:27 [W] Like all sorts of weird stuff here in this case. I don't know virtualbox on this this VM, but you can run vagrant up big one SSH.
+00:09:37 [W] So after you run vagrant up and then vagrant SSH to get into the machine assuming everything works.
+00:09:45 [W] You can then.
+00:09:47 [W] Become root because Footloose has going to get unhappy with you. If you're not rude and then CD into the labs directory now, I'm not in my vagrant machine right now.
+00:10:01 [W] So that that folder doesn't exist. But / Labs will have mounted the git repo you started from so you will have all the same folders that you would have if you were just sitting in that cloned repo and writing this for Footloose.
+00:10:16 [W] Either option works.
+00:10:21 [W] Footloose directly is going to be the lightest weight version.
+00:10:30 [W] But if for some reason you need a compatible image on the outside that vagrant box uses Debbie and 10, which is the same image that's used in the Footloose Docker based VMS are quotes.
+00:10:36 [W] And so that will make sure that the host carnal and the guests kernels are compatible and you won't change anything strange.
+00:10:44 [W] Okay. Now let's cover some basic networking Concepts just like
+00:10:49 [W] I refer to them later.
+00:10:50 [W] Let's talk about how encapsulation Works in networking in general for the purposes of this discussion.
+00:10:58 [W] I'm going to assume we're talking about ipv4 over ethernet. IPv6 isn't super common yet and ethernet is the de facto standard for just about everything.
+00:11:08 [W] So let's say we want to send a packet via arbitrarily say UDP could be TCP just as easily we start with some data.
+00:11:18 [W] And then we wrap that in a UDP packet. So there's a UDP header and then a payload of data.
+00:11:26 [W] And then the UDP or TCP portion has the source destination ports.
+00:11:34 [W] That's part of the UDP or TCP level which is layer for
+00:11:37 [W] We then get that UDP packet and we stick an IP header on it.
+00:11:44 [W] That's layer 3 in the networking stack that has the IP addresses source and destination.
+00:11:48 [W] And this is the level at which routing happens.
+00:11:51 [W] Then we stick a layer 2 ethernet pattern on top of that.
+00:12:01 [W] And what this is used is to get your packet to the next hop on your local network.
+00:12:07 [W] So you either know the final destinations on your local network and address ethernet packet to that destination or you know what the next hop should be and you address your ethernet packet to
+00:12:18 [W] hop on your local network
+00:12:20 [W] When the packet gets to its to the next hop, if it's destined for that machine, then the ethernet packet ethernet header is removed. The IP packet sticking out and is handed to the IP stack on the
+00:12:36 [W] On the machine to to route to whatever process or the colonel or whatever needs to get that packet.
+00:12:44 [W] If it's just an intermediate hop, it'll look at the IP packet figure out what the next hop should be to get to that destination which may or may not be the final destination, but it's the next top that is reachable in the local network and it will put a
+00:13:00 [W] Ethernet header on there with its addresses the source address and that next top as the destination address.
+00:13:10 [W] So ethernet packets only last tufin a local network and the IP packet may be carried along in several ethernet packets along its way to the final IP destination.
+00:13:19 [W] Okay. Now let's talk about Docker or more generally container networking.
+00:13:24 [W] So, dr. Allows you to run a process with various forms of isolation from the host operating system, but for our purposes were really worried about Network isolation the other method other parts of it don't matter for a talk on networking. So
+00:13:41 [W] Containers are run in network name spaces.
+00:13:50 [W] This means that they don't have access to the host network adapters by default and networking media spaces allow you to isolate networking functionality.
+00:13:52 [W] The there's a default Network namespace often referred to as the route network name space and that's where everything is by default unless you put it in a different network namespace.
+00:14:03 [W] Let's talk about how Docker Works in bridge mode.
+00:14:08 [W] We have a node. It's got its route network name space and I'll say it has an ethernet adapter or F0.
+00:14:13 [W] When Docker comes up, it creates a bridge device generally called.
+00:14:21 [W] Dr. Zero & it allocates a block of ips to Containers the defaults 172 2.17 / 16.
+00:14:28 [W] / 16. So the that means the last two octet SAR available for detainers.
+00:14:30 [W] In this bridge device, it operates like an ethernet switch running in software.
+00:14:35 [W] So that bridgecrew is attached to the host network interface.
+00:14:40 [W] And Docker will create a new network name space for each container.
+00:14:45 [W] It's trying to create put into here just to demonstrate a little bit better.
+00:14:49 [W] Now Docker will then create a virtual ethernet pair. This is two devices that are effectively connected by a pipe.
+00:15:00 [W] You put data in one one of these devices. It comes out the other very simple.
+00:15:06 [W] So it attaches one of the devices to the docker zero bridge and the other moves into the containers Network names face and name. Is it ef-0 within that namespace?
+00:15:16 [W] If then gets assigned an IP from the range of IP addresses that that are associated with that bridge and then this means that the different containers have interfaces within the same subnet but with different IPS
+00:15:33 [W] I can talk to each other across that bridge just like two devices on the same subnet with different IPS can talk to each other across an ethernet switch.
+00:15:40 [W] Traditionally Docker doesn't really expose those container eyepiece anything off the host containers are wrong. There's there's all sorts of solutions for this and dr. Swarm obviously has some solutions you can do port forwarding but it's not really part of the base doctor functionality.
+00:15:57 [W] So getting traffic to and from containers on other machines is one of the problems that kubernative needs to solve to make this useful across a cluster of machines.
+00:16:07 [W] Okay.
+00:16:09 [W] Now let's take a look at container networking at the command line.
+00:16:12 [W] Okay. So let's take a quick look at how these interfaces work in the real world.
+00:16:20 [W] This is a fresh Alpine VM.
+00:16:23 [W] You can see if I run IP Adder there's a loop back and if that interface pretty standard each zero.
+00:16:29 [W] If I go ahead and install docker.
+00:16:35 [W] And I start it you'll see we now have a Docker zero interface.
+00:16:47 [W] And if I run bridgecrew troll show you can see it is in fact a bridge called Docker 0 Let's try creating a VM.
+00:17:01 [W] Okay, so let's just run an Alpine VM and Abbott sleep.
+00:17:17 [W] Okay, if I were an rpr you can now see yours new virtual ethernet interface.
+00:17:26 [W] It's interface number 5 and then to end with a pie of for this will be interesting.
+00:17:33 [W] So another thing we can look at the look at the bridge.
+00:17:39 [W] We now see that this same virtual ethernet interface is attached to it.
+00:17:45 [W] Now what happens if we exact into that?
+00:17:49 [W] container
+00:17:54 [W] Okay.
+00:17:57 [W] I'm inside the container. You can see inside here.
+00:18:01 [W] We have an interface.
+00:18:02 [W] It's just easier. Oh, but it says a high five and notice. This is interface for
+00:18:07 [W] this interface 5 in the route name space that we're name space.
+00:18:13 [W] Is it a virtual we've had device that says a bio for these are two halves of the same pair.
+00:18:24 [W] So anything that you send out this interface actually goes through this virtual ethernet interface.
+00:18:28 [W] to our Bridge
+00:18:30 [W] And you can see another example this if I go and create a second Alpine container.
+00:18:38 [W] You can see we now have another virtual ethernet interface.
+00:18:45 [W] We now have two interfaces attached or Docker zero Bridge.
+00:18:53 [W] If I go into this new container, you can see it's a its interface six user around I have seven.
+00:19:08 [W] Okay, seven to the route network name space.
+00:19:09 [W] is that pie of six? So you can see that these are the two halves despair. Another thing you can look at if I was to look at inside that other container you can see its IP address is 1/7 2.17 dot 0 dot to
+00:19:24 [W] Nice container.
+00:19:26 [W] I can go ahead and ping that and what happens is it can reach that other host through the bridge.
+00:19:32 [W] They're on the same subnet.
+00:19:35 [W] So they because they're on the same segment.
+00:19:37 [W] There's actually an ARP request that goes through if I do a
+00:19:40 [W] Show my IP neighbor table you can see that I see that one seven 2.17 out 0.2 IP address and I've got a MAC address for it.
+00:19:59 [W] That is what we see. In fact if I look in the other container.
+00:20:02 [W] That is the MAC address and showed there.
+00:20:06 [W] So you can see that just like two devices plugged into a switch on a normal Network.
+00:20:16 [W] These two containers can see each other across the bridge.
+00:20:17 [W] Okay, let's talk about IPS.
+00:20:21 [W] So there's really three main groups of IP addresses and kubernative.
+00:20:27 [W] note addresses poddisruptionbudgets for no two dresses.
+00:20:36 [W] It's pretty simple every every node. Every machine needs an IP address.
+00:20:44 [W] This is used for nodes to talk to each other and the outside world and it exists before kubernative to set up its really outside the scope of kubernative and it's designed by some outside process.
+00:20:51 [W] know, DHCP is an option can be manual a cloud provider.
+00:20:53 [W] Might just magically assign it somehow and you just know it has an IP when it boots up.
+00:20:58 [W] It doesn't really matter.
+00:20:59 [W] so poddisruptionbudgets
+00:21:13 [W] in the kubernative network model every pot receives its own IP address and ideas at all. These IP addresses are globally routable within the cluster. So any pod can talk to any other polynomial what machine it's on.
+00:21:24 [W] These addresses are going to be allocated through the ipam functionality IP address management of the cni-genie.
+00:21:51 [W] Sometimes networking plugins will do something fancier like allocate Dynamic IPS.
+00:21:56 [W] The kubeedge pi server process has a cluster cider flag which tells kubernative what the range of expected potties are across the cluster.
+00:22:09 [W] Okay about Services the kubernative services abstraction over a set of PODS.
+00:22:22 [W] Thing that you can talk to and get a pod behind it without having to know how many pods are there if there's even more than one if it's on your host or different host doesn't matter all non headless Services.
+00:22:30 [W] We have a cluster IP assigned to them.
+00:22:34 [W] These clothes dried peas are handed out for a pool based on this kubeedge Pi server flag service cluster IP range and the API server takes care of this.
+00:22:45 [W] Generally. The networking plugins aren't involved in IP address assignment for services.
+00:22:45 [W] At all because these Services have to be globally assigned within the cluster. Anyway, a service has one IP and the cluster.
+00:22:53 [W] So the API server will tell the kubelet processes.
+00:23:01 [W] what the service IPS are and what the endpoints are for them. And then the local networking stack on each node gets to be configured to support that service.
+00:23:11 [W] Okay, let's go take a look at it.
+00:23:21 [W] Okay, let's talk about getting the Footloose cluster up and running and look into how services do routing two pods through IP tables.
+00:23:25 [W] So this is the repo that we checked out.
+00:23:29 [W] If you look in here, we've got a Calico directory and a flannel directory. We're going to start in flannel.
+00:23:34 [W] And you'd see here.
+00:23:38 [W] We have a boot strap that bootstrapped sh file.
+00:23:40 [W] You can see here.
+00:23:45 [W] We have a bootstrap sh file and a footloose. Wamo file first.
+00:23:50 [W] Let's go to the Footloose dot e mo.
+00:23:52 [W] So this is the configuration for the Foot Loose cluster. Now this spins up a bunch of Docker images as if they were VMS, so it gives us a very lightweight way of having a cluster of VMS.
+00:24:06 [W] Just to show a few things here.
+00:24:08 [W] There's a cluster name.
+00:24:10 [W] I'm calling this Footloose k8s.
+00:24:11 [W] You tell it how many machines to create this is designed for creating sets of homogeneous machines.
+00:24:19 [W] So we're creating three machines.
+00:24:21 [W] We're using this Debian temp an image with a few extra things. I've built into it so you don't have to download them later.
+00:24:27 [W] all the nodes are going to be named node 0 1 2
+00:24:32 [W] we need privileged for some some functionality of the OS.
+00:24:40 [W] It's going to use a Docker Network called Footloose - cluster. And the rest of this is sort of boilerplate if I look at bootstrap that sh, this is the script you can run to bring this up. It creates the docker Network.
+00:24:52 [W] It will pull the image just to make sure you got the latest version.
+00:24:56 [W] It runs Footloose create which by default will use for Footloose not be able to configure it.
+00:25:03 [W] Once it's created the cluster.
+00:25:07 [W] I use Footloose SSH to Shell into node 0
+00:25:12 [W] and I run the k3s installer so that could set up as a master.
+00:25:20 [W] We're using k3s because it's a lighter weight distribution of kubernative. And well, it's got a few quirks such as it doesn't use at CD by default.
+00:25:32 [W] It's a compliant kubernative sister bution, and it's never behavior is very similar to what you would expect from a normal kubernetes distribution.
+00:25:37 [W] So it's a pretty good tool for this purpose.
+00:25:38 [W] After we set up the master, there's a process to get the node 2 token from the server which is what you need to authenticate agents or worker nodes against that Master and then we install k3s.
+00:25:54 [W] Us on the to worker nodes using that token and putting them to node 0.
+00:26:01 [W] Okay. So let's go ahead and run the bootstrap script.
+00:26:09 [W] So the first thing that popped out that long string is just the ID of the network Docker created.
+00:26:18 [W] Pulls the image fortunately.
+00:26:23 [W] already have pulled so you don't to wait very long.
+00:26:23 [W] You can see it's creating the three machines and you see how quickly it does it.
+00:26:30 [W] This is why I'm using Footloose.
+00:26:32 [W] It's running the initial installer.
+00:26:35 [W] Running on the second node, and third note.
+00:26:40 [W] We're already up and running.
+00:26:40 [W] We can now Footloose SSH root at node 0 and we are now on a node 0.
+00:26:49 [W] And just to prove it worked.
+00:26:51 [W] Okay, you can see I can run coop coop cuddle get nodes right now.
+00:27:05 [W] It's the masternodes fully up Node 1 is not ready all the way.
+00:27:07 [W] Okay, no one's ready. No to is not ready.
+00:27:09 [W] Okay, so we now have three nodes.
+00:27:15 [W] You can see they've got IP addresses 172 dot 19.0 and then two three and four.
+00:27:23 [W] Just to prove that things are running.
+00:27:28 [W] You can see that we've got a bunch of stuff running in Coop system that it started by default.
+00:27:36 [W] So now
+00:27:39 [W] Let's apply this hello kubernative.
+00:27:46 [W] Zml file.
+00:27:47 [W] I've got what this does. It creates a service and three web servers behind it.
+00:27:51 [W] And it creates a default namespace so I can just get po and you can see those are getting created.
+00:27:59 [W] Service, you can see here's the hello kubernative service.
+00:28:07 [W] It's got a cluster IP. That's at IP.
+00:28:09 [W] And it takes requests on Port 80. So standard http.
+00:28:15 [W] Okay, our pods are running. Now.
+00:28:21 [W] Another thing we can do is instead of get service we can get endpoints.
+00:28:23 [W] And you can see that we have these three n points behind that service.
+00:28:33 [W] If I get the service IP.
+00:28:37 [W] And I curl it see if we get a page back.
+00:28:45 [W] Now the part that's interesting here is it gives you its pot ID?
+00:28:51 [W] Its main reason I use this image.
+00:28:53 [W] So you can see.
+00:29:04 [W] if I keep running up
+00:29:06 [W] I can see three different pot IDs I end up getting so I know that by hitting that service IP. I'm getting to all three pods on the back end.
+00:29:16 [W] So the next question is how does that happen?
+00:29:24 [W] And the the standard way of doing that kubernative through IP tables?
+00:29:28 [W] There's a few other Solutions out there, but most kubernative installations right now.
+00:29:31 [W] We'll be using IP tables.
+00:29:32 [W] So let's take a look at the net table.
+00:29:37 [W] And in particular, let's look at kublr service.
+00:29:43 [W] Okay.
+00:29:46 [W] So we got a chain called Coop services.
+00:29:49 [W] And you'll see if we look down here.
+00:29:54 [W] We have some relating to hello kubernative.
+00:29:59 [W] Now this kublr Mark mask one. We'll talk about in a little bit, but just recognize that this only gets hit if the source.
+00:30:12 [W] Is not in the Pod Network.
+00:30:20 [W] So if you if we scroll up and look at these pods, they were 10.40 to dot whatever.
+00:30:24 [W] So this is saying if it's not.
+00:30:28 [W] In the 10.40 to network, which means it's not coming from the Pod Network.
+00:30:35 [W] We're going to hit this path because if the destination is our service IP, we're going to want to tag this to do some masquerading later.
+00:30:44 [W] If it is a pod we don't need to do the masquerading.
+00:30:48 [W] This next one says anything going to the server side p goes to this chicken.
+00:30:54 [W] Well, let's take a look at that chain.
+00:30:57 [W] So this chain has three three rules in it. And you may know we had three pots.
+00:31:05 [W] The first one gets hip with a random probability of 1/3.
+00:31:12 [W] So there's a 1 in 3 chance will go to the first one.
+00:31:15 [W] If you don't go to the first one, you only have two pots left.
+00:31:20 [W] There's only a 50% chance to go to the second. And then if you fall through both of those you always go to the third one.
+00:31:27 [W] So let's take a look at these.
+00:31:29 [W] So the first one here, it's also got a bark masquerade rule.
+00:31:40 [W] This one is the pods IP that where the destination.
+00:31:44 [W] So what does next rule does it's a Dean at so destination that it says hey if we made it here, we're going to change the destination from the surface IP port 80 to the this pods IP port 8080.
+00:32:00 [W] The reason we have this masquerade that matches at the source address is the same as iPods IP is that if a pod tries to talk to some service IP.
+00:32:13 [W] But destination gets changed back to itself and it gets that packet when it tries to respond. It's going to go I know exactly how to get there and try to send it locally.
+00:32:22 [W] It needs to go back through the net process or else when they return packet comes back with an address.
+00:32:31 [W] That's not expected. It things are getting really confusing.
+00:32:32 [W] So this makes sure that it gets routed back through the host networking stack.
+00:32:39 [W] Okay, so as you can probably imagine if I look at another one of these I will just see a different.
+00:32:49 [W] Thought I P so this one's that 1.4. And if I
+00:32:55 [W] grab the pods again
+00:32:59 [W] You can see that 10.40 two dot one dot for is the one running on Node 1 10.40 to that 0.7.
+00:33:13 [W] That's one running on node 0 if I pulled up the last one. It would have 10.40 2.2 2.3.
+00:33:19 [W] So this is how it gets for a destination service IP. The networking stack randomly picks one of the back ends.
+00:33:29 [W] One other thing just to show the details of what happens with.
+00:33:36 [W] the marking and masquerading
+00:33:40 [W] and I guess I should also pull up.
+00:33:49 [W] so
+00:33:56 [W] if any of those kublr Mark Mass girls get hit.
+00:34:00 [W] It will add hex 4,000 to the mark.
+00:34:05 [W] And then when you get to the post routing chain.
+00:34:09 [W] It will masquerade if it the mark matches 4,000 hacks.
+00:34:21 [W] This random fully thing is nice and terms of it forces the networking stack to use rate of source ports.
+00:34:30 [W] So, you know the cases where you have one pot talking to another pod things are fine because the address will get translated on the way out get to the destination poddisruptionbudgets.
+00:34:39 [W] When the traffic gets come back, it'll come back.
+00:34:43 [W] That will be the netting will be reversed and the original podcast can not know it's talking to some other IP.
+00:34:56 [W] But if the traffic was from outside the kubernative cluster or you're not a pod then we probably need the force it to go through the current node just to make sure that its handling both directions of traffic so it can reverse the
+00:35:08 [W] And if it's coming from the destination poddisruptionbudgets a sort of force it to go through the node, so it doesn't try to take a shortcut and skip that that netting phase.
+00:35:21 [W] So that's how Services work with IP tables?
+00:35:26 [W] Okay. Let's talk about flying a little bit.
+00:35:28 [W] So flannels, one of the earliest networking plugins and it's a decent choice for small clusters. There are some issues when you get too large in terms of having to make sure your or per table size is large enough and it's really the same reasons why you don't
+00:35:44 [W] Make one ethernet subnet, you know ethernet Lan too big but for small to medium-sized clusters just fine.
+00:35:59 [W] It's also the default for k3s, which makes it a great place for us to start because we don't have to do anything special to configure. It flannel runs at Layer Two ethernet and the networking stack.
+00:36:09 [W] all the pods can talk via Ethernet as opposed to only IP so you don't have to necessarily use an IP based protocol to talk between pods you can
+00:36:13 [W] Actually encapsulate non IP stuff between your pods.
+00:36:18 [W] Flannel uses a pod something that that set up the assigned each kubernative is node when it comes to IP address management. So a pod IP allocation decisions are local to the node super simple the default encapsulation for flannels vxlan which involves wrapping a
+00:36:37 [W] Two ethernet packet inside a UDP packet. So you have your IP packet typically wrapped in Ethernet, which then gets wrapped in UDP, which comes wrapped an IP which gets wrapped in Ethernet.
+00:36:52 [W] There's a lot of pieces there and then vxlan has a little bit of header in that UDP packet.
+00:36:54 [W] It's a little complicated and add some overhead but it works pretty well and that way you can transport raw ethernet packets between pods.
+00:37:04 [W] Okay, let's dig in and take a look.
+00:37:05 [W] Okay, so let's take a little bit of a look at how flannel works.
+00:37:14 [W] First let's take a look at the interface as we have.
+00:37:19 [W] You can see we've got a Docker zero, but that's actually just a leftover from having Docker installed. It's not actually being used right now.
+00:37:31 [W] We have an interface called flannel one.
+00:37:35 [W] And we have an interface called cni-genie and then you can see all of our normal virtual ethernet interfaces.
+00:37:43 [W] So
+00:37:44 [W] Quickly get our bridges since he dr0 is a bridge but it's not really doing anything cni-genie row is actually the bridge that this kubernative cluster is using and you can see that the virtual ethernet interfaces from all my pods are attached to
+00:38:03 [W] United zero
+00:38:04 [W] so
+00:38:08 [W] what happens if one part tries to talk to another?
+00:38:12 [W] Let's look at the routes.
+00:38:15 [W] Okay, so there's a couple routes here. We can look at the first 117 2.19.
+00:38:23 [W] 1:7 2.19 is the network that the nodes are on so this is the route that they take if we're talking node to node.
+00:38:35 [W] In this case, you can see this node is not too.
+00:38:39 [W] So if it's trying to talk to the other nodes or three or four it'll go out ethos zero.
+00:38:46 [W] makes sense
+00:38:48 [W] We can ignore the docker 0-1 because like I said, that's not really not really being used.
+00:38:55 [W] So 10.40 to is our pod no at work.
+00:39:00 [W] And it just so happens that 10.40 2.0 2.0 is attached to this node.
+00:39:08 [W] In fact, I can go.
+00:39:09 [W] Take a quick look at the note information and you can see.
+00:39:19 [W] the poddisruptionbudgets
+00:39:34 [W] so
+00:39:37 [W] We open up that route table again. 10.40 2.0 is going to go to cni-genie row.
+00:39:47 [W] That's our Bridge.
+00:39:52 [W] So it makes sense. If a packet is destined for a pod on this node.
+00:39:54 [W] We send it to the bridge and the bridge will figure out which interface it goes to to get to that pod.
+00:40:04 [W] Now if we're looking at a pot on a different node, those will be 10.40 to dot something else dot one and up two.
+00:40:07 [W] And you can see that both of these route via device flannel one.
+00:40:13 [W] So the question is what does flannel one do?
+00:40:16 [W] so by default flannel uses vxlan encapsulation
+00:40:22 [W] VX lamb encapsulates entire ethernet frames it gets them and it sticks them in a UDP packet that then sends the other side.
+00:40:37 [W] side. So the question here is how is this all going to work? Let's see if we can demonstrate it.
+00:40:41 [W] First let's take a look at our what we've got going on.
+00:40:47 [W] I killed by pot since last time.
+00:40:48 [W] So let's go ahead and get those installed.
+00:40:53 [W] Okay, so it's don't have IP's yet, but it looks like we'll get one on each node, which is perfect.
+00:41:06 [W] node 0 1 is going to be this guy.
+00:41:07 [W] I guess while I'm at it.
+00:41:10 [W] Take a look at the services.
+00:41:13 [W] That's our service IP.
+00:41:14 [W] Okay, so
+00:41:16 [W] Our pods up yet.
+00:41:19 [W] Great.
+00:41:19 [W] So, let's see what happens.
+00:41:22 [W] if I
+00:41:25 [W] different interface
+00:41:30 [W] so you I'm doing here.
+00:41:34 [W] This is T shark.
+00:41:36 [W] this is a terminal version of Wireshark now.
+00:41:38 [W] There are several tools you can use for capturing packets on the terminal tcpdump is probably the most standard and grew up as another one, especially if you're great. If you're looking at text based Network traffic and looking for like strings in a packet T shark.
+00:41:54 [W] Is place of the turnovers with Wireshark? So it's got a lot of extra capabilities, which is what I'm gonna take advantage of here.
+00:42:06 [W] So you may wonder I'm looking at Port 84-72. You'll see in a moment.
+00:42:09 [W] Okay, so our pods are running.
+00:42:13 [W] So let's do a coupe control.
+00:42:14 [W] exec
+00:42:17 [W] let's go into the Pod locally.
+00:42:22 [W] Because we want to see stuff on this node.
+00:42:27 [W] So I want to make sure I don't totally involve unrelated pods.
+00:42:31 [W] And then let's just do a curl.
+00:42:33 [W] Use the service IP.
+00:42:38 [W] and for fun, let's go and grow up for
+00:42:46 [W] Hello, kubernative. He's
+00:42:52 [W] And that's when I remember that I don't curl installed.
+00:43:05 [W] That's clean.
+00:43:19 [W] So let's take a look here.
+00:43:26 [W] So we got a bunch of packets.
+00:43:27 [W] So the No Time on so node 0 has the IP address ends in dot to it.
+00:43:34 [W] Tried to talk to this guy, which is Node 1.
+00:43:38 [W] And send a UDP packet and UDP packet came back and send another one.
+00:43:45 [W] That's another one another one back another one back.
+00:43:48 [W] This node Cent one cent another received one cent one. Okay, so you look at this and you think what in the world is going on here.
+00:44:01 [W] This isn't very useful and that's true.
+00:44:06 [W] So what we're seeing here is the vxlan traffic by default flannels going to use port 8472 for its vxlan traffic.
+00:44:15 [W] But as you can see here all week until this two nodes are exchanging UDP packets. So when you're trying to debug what's going on in a network running flannel you have to dig a little
+00:44:22 [W] Because right now all I can see is packets are flowing between two nodes and in a decent-sized cluster with a lot of PODS doing a lot of things.
+00:44:32 [W] You're just going to see a ton of UDP traffic and have no idea. What's talking to what
+00:44:36 [W] so
+00:44:38 [W] Let's try this again, except I'm going to add something else. This tells T shark that things on UDP Port 84-72 should be considered vxlan.
+00:44:52 [W] And t-shirt knows about vxlan, so that works.
+00:44:57 [W] So, let me try this.
+00:45:00 [W] Okay.
+00:45:03 [W] Now when we look at this packet capture, you can see it's showing
+00:45:10 [W] I should probably come up here and check.
+00:45:13 [W] Arno tarpaulin node 0 that we're running the request from has this 10.40 to 0.9 IP.
+00:45:22 [W] And we were we send that request to the one on Node 1 so we should be sending from 0.92 1.3.
+00:45:31 [W] So sure enough 0.9 sent a TCP syn packet starting connection to 1.3.
+00:45:41 [W] We got a syn ack back, which is next part in the handshake.
+00:45:49 [W] That gets sent and then because T shark Wireshark have advanced packet dissectors.
+00:45:58 [W] They can dig in there and go.
+00:46:00 [W] Hey, this was actually an HTTP request getting /
+00:46:03 [W] And then you can see that we got a response of a 200 OK and then the connection got torn down.
+00:46:09 [W] So by actually telling it to get these UDP packets interpret them as vxlan we can see what's inside them and for an extra level of detail.
+00:46:25 [W] We can use - capital V now. I'm only going to capture two packets here because this is really verbose so.
+00:46:30 [W] Let's run another one of these.
+00:46:33 [W] Okay, lots of stuff.
+00:46:38 [W] Let me just scroll to the top.
+00:46:38 [W] So it captured a frame so captured an Ethernet frame. Okay. Everything's pretty much ethernet at the lowest level here.
+00:46:50 [W] Inside the internet as an ipv4 packet. Okay, sounds good. And you can see this is between two node addresses.
+00:46:58 [W] Inside that ipv4 packet is a UDP packet.
+00:47:03 [W] I'm going to Port 8472.
+00:47:07 [W] Hey, look it interpret that as virtual extensible local area network or vxlan.
+00:47:16 [W] And so you can read the details of vxlan packet.
+00:47:21 [W] There's not a whole lot of data.
+00:47:24 [W] They are the main thing that you might care about. If you run multiple vxlan, that works. Is that the vxlan network ID V ni is right here.
+00:47:35 [W] So the V and I of one that's a default. You can change it if you have multiple vxlan that works, but that that helps you separate traffic if you need to.
+00:47:42 [W] inside the exam packet
+00:47:45 [W] Is an Ethernet packet member vxlan encapsulate layer 2 packets, so it encapsulates the entire ethernet packet.
+00:47:57 [W] This is interesting because there's some protocols you can't run over IP alone.
+00:48:04 [W] So things that rely on like multicast or you know, like DHCP, you can't run over IP. It runs over over ethernet. So
+00:48:09 [W] we have an Ethernet packet Insider vxlan packet.
+00:48:13 [W] I don't feel like looking up all the Mac addresses, but we could and it would we build to make some sense out of them if we did but you can see inside that you sent packet is an IP packet, and this one is going between pot I pas.
+00:48:26 [W] So we had IP packets between the nodes.
+00:48:30 [W] That had UDP payloads that were interpreted as vxlan that had ethernet packets that had IP packets between the pods.
+00:48:41 [W] And you can see also.
+00:48:44 [W] That inside this IP packet is TCP because HTTP requests rtcp.
+00:48:53 [W] So VX land uses UDP on the outside, but when you dig all the way in you're actually seeing TCP packets in the middle.
+00:49:00 [W] And then t-shirt can give you all sorts of information and then here we have the next frame which is another ethernet packet.
+00:49:11 [W] with another IP packet in it this one from our
+00:49:15 [W] destination node back to the node we sent the request from
+00:49:21 [W] inside out to UDP packet
+00:49:25 [W] going to Port 8472 note for vxlan. It's always the destination Port is 84-72 the source Port Is Random.
+00:49:32 [W] Or at least consistently defined it the source Port can be anything.
+00:49:38 [W] Here's our vxlan information that we found inside the UDP packet inside that another ethernet frame another ipv poor IP V4 packet.
+00:49:51 [W] The Source being the Pod that was running the HTTP server and the destination being where our client was running
+00:50:03 [W] Inside that as a TCP packet now in this case the source ports 80 80 because we made a request to 8080 and ascending response back.
+00:50:12 [W] And you can see that this one is a connection established acknowledge sin plus ack packet.
+00:50:20 [W] So the first one is the send packet establishing a connection.
+00:50:22 [W] This is the synack packet back so you can go through and you can pull apart all these layers and see the each individual piece of it so that if you ever need to debug this and in many cases if you just tell
+00:50:35 [W] A tool like T. Shark to interpret the packets.
+00:50:43 [W] It sees on UDP port.
+00:50:44 [W] 8472 as vxlan.
+00:50:47 [W] Then you can at least see what's inside and that's usually what you care about.
+00:50:53 [W] But if you really want to know everything that's going on.
+00:50:57 [W] You can actually dissect the whole packets and you can also do this by saving a pcap file and loading it Wireshark. If you don't want all this information spewing to your console and you can use that to see everything that happened inside
+00:51:09 [W] So you can see the outside packet the vxlan information and the inside packet and you know, you can also use this display the payload if you need to.
+00:51:17 [W] And that should cover the basics of flannel and vxlan.
+00:51:23 [W] I want to Calico.
+00:51:26 [W] So calicos easily the most common networking plug-in with tigrerra, which is the company that behind it claiming that you can use to some degree at least implied for Network policies in most cloudevents. Could Burnett is environments.
+00:51:40 [W] Runs at layer 3 IP in the networking stack.
+00:51:46 [W] So only IP traffic can be encapsulated and everything is routed.
+00:51:50 [W] There's no way to broadcast ethernet packets across your Calico your Calico layer.
+00:51:54 [W] for ipam Calico actually each node goes and asks, either the kubernative API server or its own NCD cluster for a block of IP addresses that can allocate out but it can keep going back for more blocks of IP addresses
+00:52:10 [W] As needed so it is nice because it lets you dynamically adjust how many IP addresses are allocated to each node.
+00:52:17 [W] And then as far as encapsulation the default encapsulation for calcio is IP and IP which involves wrapping a layer 3 IP packet inside an extra IP header.
+00:52:30 [W] So it's very low overhead.
+00:52:33 [W] All you need is an extra IP header not even TCP or UDP and definitely not an extra ethernet header, but I can only encapsulate IP packets.
+00:52:45 [W] Literally the protocol definition says this there's an IP header and inside it is an IP header, which then may have TCP UDP, whatever inside
+00:52:50 [W] Okay, let's take a look.
+00:52:52 [W] Let me show you how to start up the Calico cluster.
+00:52:58 [W] So first thing back in your flannel cluster exe run run.
+00:53:01 [W] Footloose delete
+00:53:03 [W] and that will tear down everything and assume you don't want to keep it running.
+00:53:09 [W] Nice easy way to clean everything up.
+00:53:12 [W] Okay.
+00:53:18 [W] So then if you want to the Calico folder so under the k8s net Labs get repo.
+00:53:20 [W] There's a Calico folder.
+00:53:23 [W] This one has a simple bootstrap Calico. So just like bringing up the Footloose one or the
+00:53:28 [W] Just like bring up the flannel one.
+00:53:34 [W] It's does everything for you creates a dock or network.
+00:53:36 [W] Images pulled it creates the cluster and it does all the stuff required to get k3s to properly initialize on the master and have the other nodes connect to that Master.
+00:53:50 [W] This one adds a few different flags.
+00:53:53 [W] So if I look at all first, let's take a quick look this Footloose Calico camel.
+00:53:56 [W] I named the network the cholesterol differently.
+00:54:03 [W] I put Calico in front of the node names. I use a different Doctrine at work just to keep everything separate but otherwise exactly the same as the last one the
+00:54:15 [W] up script
+00:54:16 [W] For one thing it passes this - see Footloose Calico EML to every Footloose command to tell it which file to use.
+00:54:29 [W] I just wanted to keep that clear because I originally had these in the same directory.
+00:54:30 [W] Then it does the same thing. But before it is H isn't to the first node, but it says flannel back-end equals none.
+00:54:39 [W] And gives it a cluster side or parameter.
+00:54:45 [W] That is the only thing you have to do in order to tell it to not use flannel and the cluster cider is needed for Calico to understand what you do.
+00:54:53 [W] And then we're going to SSH into the node.
+00:55:00 [W] So same as before Footloose, except I've got to use a dash C Footloose calculated EML and SSH root at Calico - node 0 because like I said, I named it differently this time.
+00:55:18 [W] So first thing do I have to note? Yes.
+00:55:23 [W] And I can even see their IP addresses this use as 1/7 2.25 got here, okay.
+00:55:33 [W] Now you can see I've got a bunch of stuff that's container creating and it's all on node 0.
+00:55:45 [W] Well, that's because I haven't actually set up Calico yet.
+00:55:52 [W] Okay, so we'll do cuckoo troll ply Calico k3s TMO
+00:55:56 [W] So this is basically the Calico gamble that came from Calico or from tigrerra.
+00:56:11 [W] It has one little tweak in it because you have to turn on IP forwarding in your pods for some of the stuff in k3s to work. So the difference between this
+00:56:14 [W] Now the default is just container settings allow an IP forwarding true so super simple
+00:56:26 [W] Okay, and now we actually have some pods starting up and a particular you can see I've got politicking on Calico node 0 1 & 2 so we'll have to wait a moment for for this tall start-up because obviously until Calico comes up.
+00:56:50 [W] We're not going to have a whole lot of luck getting the rest of our pods to come up.
+00:56:53 [W] There we go. So now we have
+00:56:57 [W] one Calico node running
+00:57:00 [W] And hope and this one running as well and this one running great.
+00:57:07 [W] Okay, so now we got two pots coming up.
+00:57:12 [W] So this will given us a Calico installation.
+00:57:17 [W] So let's take a look around and see see how this looks one thing.
+00:57:27 [W] That's interesting is with Calico. It names its virtual ethernet pairs starting with Callie.
+00:57:34 [W] That's just a preference I guess but it makes it look a little different but these things that I'll start with Callie.
+00:57:42 [W] Those are all the supply lines that were the same as the vth interfaces that we had in flannel.
+00:57:47 [W] Now you can see here.
+00:57:54 [W] It's like it's interesting. If we look at our bridges we've got darker 0 again, which yet again isn't doing anything nothing is attached to it.
+00:58:01 [W] So this is where Calico and flannel differ.
+00:58:05 [W] Calico does everything at layer 3.
+00:58:10 [W] It's IP based routing based. So because of that it doesn't rely on Bridges.
+00:58:16 [W] Whereas before if you look at the route table and flannel, you saw one route towards the bridge for all IPS that are pods that belong to this node and then you saw other routes for the other
+00:58:32 [W] Nodes that said he send them to the flannel interface.
+00:58:36 [W] Let's take a look and see what the routes look like here.
+00:58:39 [W] Okay, so first thing.
+00:58:45 [W] I should probably.
+00:58:50 [W] Clarify this let me grab the pods and grep for node zero.
+00:58:55 [W] You mean aside from Calico which came up with its own IP address because Calico wasn't giving out IPS then.
+00:59:04 [W] We have 192.168.
+00:59:09 [W] 1 43 addresses so Calico.
+00:59:13 [W] You tell you give it a block of IP addresses that can use.
+00:59:17 [W] And then using that CD in depending on how you have it set up it can either use the kubernative cluster at CD or can have its own ad CD.
+00:59:27 [W] It will each node will grab reservations from that block of IP addresses.
+00:59:38 [W] The Calico nodes can grab as much IPS as they need and in fact, if you look here you'll see that we've got a route for 192.168.0 3 that 128 / 26.
+00:59:48 [W] So we're flannel.
+00:59:55 [W] / 24 which means the whole last octet is usable by the node, depending on how you want to count it, you know 254 ish usable IPS there.
+01:00:05 [W] Calico actually grabbed two fewer bits of address space.
+01:00:10 [W] So this one's only more like 64 ish IPS, but it can grab as many of those reservations as it needs.
+01:00:24 [W] And then if you run out of Ip blocks big enough, it has a way where I can reserve individual IPS as needed. So what happened here is
+01:00:31 [W] no zero
+01:00:33 [W] appears to have gotten one ninety two dot one sixty eight dot 43.0 / 26
+01:00:42 [W] Which makes sense about 43.1 240 3.2.40 3.4 Etc node 0 got that block.
+01:00:51 [W] and then
+01:00:53 [W] node one
+01:00:56 [W] got this block dot 63 dot 128 / 26.
+01:01:03 [W] And no two got 180 6.64. So I was 26.
+01:01:09 [W] So they aren't even adjacent.
+01:01:15 [W] So it's one thing each each node.
+01:01:17 [W] Dynamically grabs blocks and I can have more than one.
+01:01:21 [W] watt. So when we look at this routing table, what else do we see? So like for example metric server is running here on 168 to 43.1.
+01:01:28 [W] We have a route here that says to go to this interface.
+01:01:33 [W] So instead of having a route that says oh this is a local podgorica the bridge and the bridge we'll figure out where to send you.
+01:01:44 [W] This one actually has a route for each pod going directly to that pods interface.
+01:01:48 [W] similarly
+01:01:50 [W] for things that knows our on
+01:01:53 [W] node node one.
+01:01:57 [W] Spits out styra.
+01:02:01 [W] Calico Node 1 as Dot 3
+01:02:05 [W] for things it knows that our Node 1 it knows what the IP ranges are all the IP ranges that node one has reserved.
+01:02:16 [W] So it sticks around in that says hey for anything going to this pod range.
+01:02:21 [W] We're going to send it via Node 1.
+01:02:24 [W] Dove tunnel zero
+01:02:28 [W] now if we look up here at our interfaces from IP Adder you can see we have this tunnel zero interface.
+01:02:37 [W] And it is mentioned link / IP IP.
+01:02:42 [W] This interface will encapsulate the packet in IP IP.
+01:02:50 [W] What does that mean?
+01:02:52 [W] Well, let's see if we can get an example of this.
+01:02:53 [W] Okay, let's see what happens if we do.
+01:03:04 [W] T shark
+01:03:06 [W] Let's see what that does.
+01:03:16 [W] Start up our hello kubernative service again, because why not?
+01:03:24 [W] This is going to be our service IP.
+01:03:35 [W] See what that does.
+01:04:03 [W] I forgot to tell what the capture on it captured on the IP over IP interface, which actually is useful because here you can see.
+01:04:08 [W] It went from a pot IP to a pot IP because that's what was sent to that tunnel interface.
+01:04:14 [W] like a lot of traffic here, so
+01:04:19 [W] I was going to Local Host.
+01:04:22 [W] Okay.
+01:04:23 [W] There we go.
+01:04:23 [W] Okay, so this actually properly decoded this packet.
+01:04:32 [W] Let's see if we can.
+01:04:37 [W] local
+01:04:47 [W] local
+01:04:50 [W] So, what's your random? Okay.
+01:04:54 [W] So you can see that here. I use - capital Y which instead of using a TCP dump syntax, which is very low level.
+01:05:04 [W] It uses Wireshark syntax.
+01:05:11 [W] And the reason I did that is Wireshark understands what HTTP is tcpdump really doesn't so in this case.
+01:05:15 [W] I told look for HTTP and it found this.
+01:05:16 [W] Now, let's see what happens.
+01:05:19 [W] If I decode it all the way.
+01:05:22 [W] To see everything including the payload.
+01:05:30 [W] I came up here to the top.
+01:05:34 [W] Okay captures a frame ethernet packet IP packet.
+01:05:41 [W] Now this IP packet is going from host to host.
+01:05:42 [W] inside the ipv4 packet
+01:05:47 [W] You have an ipv4 packet. In fact, if you look at here at the protocol listed in the the outer IP packet, it says it's IP over IP.
+01:05:57 [W] So what happens is this gets the whole packet the whole IP packet that you want to send into sticks another IP header on it. But if you look inside that IP packet, you don't see TCP or UDP. You see just another IP packet.
+01:06:13 [W] It's a very simplistic way of doing encapsulation. But you know, all your network devices are going to be routing the IP packet.
+01:06:27 [W] So unless you've got some sort of stateful firewall that's looking for the type of protocol or digging inside the IP packet.
+01:06:30 [W] It's going to go it's an IP packet. I know how to send that to the next hop.
+01:06:34 [W] So inside the outer IP packet is the inner IP packet. This one has the pot IPS in it.
+01:06:39 [W] And then you'll see the protocol inside.
+01:06:43 [W] That's TCP because it's HTTP runs over TCP.
+01:06:49 [W] So you've got there's your TCP packet destination port 8080 which is what the web server is running on inside these pods and then you can dig all the way down.
+01:06:58 [W] See it does a HTTP get on the other side the same thing anytime packet of an IP packet going between
+01:07:04 [W] the nodes
+01:07:05 [W] And then inside that is another IP packet going between the pods protocol and the other one was IP IP protocol in the inner one is TCP.
+01:07:15 [W] And then TCP packet. This is response coming back from port 8080 and it has a response in it.
+01:07:23 [W] Or package here because I told it to look for HTTP it ignored anything. It couldn't detect the HTTP in so if you look at these packets, for example.
+01:07:36 [W] The TCP Flags, there's no sin because the connections already established the connection got established and then it started sending enough stuff that teach art could say.
+01:07:46 [W] Oh that's HTTP, so it ignored the early packets.
+01:07:50 [W] But this is this way you can see what happens.
+01:08:02 [W] You have an outer IP packet with an inner IP packet immediately inside of it with whatever your actual page, you know payload TCP UDP, whatever is inside that but you can only encapsulate things that go over IP because the thing you encapsulate
+01:08:06 [W] Elite has to be an IP packet.
+01:08:07 [W] You can't encapsulate, you know, I PX or appletalk or any of those things that didn't use IP is an outer. You know, that don't have an outer IP
+01:08:21 [W] Or to them similarly you can't do anything that's raw ethernet packets where you actually have to get the ethernet headers to the other side.
+01:08:28 [W] So the other part that's interesting about this is that how does Calico know where to send all the different packets? Like what what pods are on what nodes?
+01:08:43 [W] And it actually runs bgp, Damon.
+01:08:47 [W] so for anyone doesn't know bgp is a routing protocol and it's the most common one across the internet in terms of when different networks need to talk to each other bgp is typically what they use you might use a different protocol within your network,
+01:09:03 [W] But if you want to exchange routes with Comcast or of AT&T or whoever you're going to use bgp, that's the standard protocol for for exchanging rounds. So
+01:09:17 [W] you can look here and see bgp using the lovely Etsy Services file runs on TCP Port 179.
+01:09:33 [W] So it's TCP is point the point and with Calico they connect in a full mesh.
+01:09:37 [W] So, let's see what happens if I let's do tcpdump this time just for fun.
+01:09:44 [W] Let's look at e 0 and let's look for portworx Sony on.
+01:09:51 [W] Calico node 0 on its bgp port
+01:09:58 [W] sent something to know too.
+01:10:04 [W] And presumably node to connected to node 0 that's why it's got an arbitrary Port here.
+01:10:10 [W] Let's see.
+01:10:14 [W] See what t-shirt finds.
+01:10:25 [W] Have to give it a moment.
+01:10:32 [W] Messages occasionally, but it's not something that happens Non-Stop.
+01:10:35 [W] If things aren't changing the network bgp, shouldn't be chatting too much.
+01:10:41 [W] It's either we got a bgp Keepalive message.
+01:10:47 [W] So this is how you can see that the different nodes all talk to each other over bgp.
+01:10:56 [W] Oh great.
+01:10:57 [W] So there we go.
+01:10:58 [W] That's what we needed.
+01:11:00 [W] So you can see we have a Keepalive message. That went between 4.2.
+01:11:03 [W] And the other way and then between the 3 and up to and then the other way, so this is showing you that node 0 is talking to both of the other notes.
+01:11:14 [W] If you build a big enough Network calicos ways, you can put in route reflectors because one of the problems you run into is that the number of connections you need is roughly on the order of N squared not quite but this gets a little bit out of
+01:11:29 [W] Way as that number gets closer to a hundred nodes or more.
+01:11:36 [W] So there are ways of creating route reflectors, which let a subset of nodes talk to One route reflector, but that's something you would want to do. If you were having to scale this but one of the nice things about bgp is it has been tried and true at internet scale for a very long time.
+01:11:49 [W] I'm and so the confidence that this will do what's expected is pretty high just for fun.
+01:11:56 [W] I'm going to delete a pod.
+01:12:07 [W] C1 is terminating ones running. Okay all done.
+01:12:13 [W] So we didn't exchange any bgp information then because none of the routes actually changed remember when we look at the routes.
+01:12:22 [W] You know, we have routes locally for the positive running on our local machine, but we only have routes to the subnets that these other these other machines have so the only way that we could get this to well.
+01:12:39 [W] Let's see if we can do this.
+01:12:40 [W] This may or may not work.
+01:12:54 [W] But hey.
+01:12:54 [W] So I can see I'm getting more and more of these individual routes.
+01:13:01 [W] The other note still only have one block of ips.
+01:13:07 [W] but we don't have that may pods so
+01:13:11 [W] actually
+01:13:17 [W] Turn it down this.
+01:13:27 [W] So that's the that's the route for node zero right now.
+01:13:37 [W] Act
+01:13:40 [W] I say we still have bgp Keepalive messages.
+01:13:48 [W] Okay, we have now hit dot 63.
+01:13:52 [W] This is a total of 49 pods running here.
+01:14:10 [W] So probably has a few IPS it could fill in that hasn't used it like UNC 61 wasn't used yet.
+01:14:14 [W] Here we go.
+01:14:24 [W] We did bgp update messages route refresh suddenly. Our nodes are trying to
+01:14:28 [W] There we go.
+01:14:40 [W] That's what I was looking for.
+01:14:41 [W] So one seven 2.20 dot 0 dot 2 is node 0 in it now has too many for its IP block so you can see it now got allocated another IP block dot 64.
+01:14:54 [W] Which gives it another?
+01:14:56 [W] 60 depending on how it use it could use up to 64 of those IPS, but
+01:15:05 [W] sometimes you don't use the first and last so it could be 62.
+01:15:09 [W] So anyway, that's what we got in actually.
+01:15:17 [W] Didn't realize that's also node 0 so node 0 now has 3 IP blocks.
+01:15:22 [W] node 2 has one IP block and I'm on Node 1 so I can't see my own routes but
+01:15:30 [W] looks like
+01:15:33 [W] it's still under control.
+01:15:36 [W] So just for fun.
+01:15:41 [W] I'm going to bring that back down so that my cluster doesn't fall apart.
+01:15:42 [W] Okay, so that's Calico uses bgp to exchange routes. Each node gets reservations of blocks of ips from either the kubernative say Pi servers at CD or its own
+01:15:58 [W] And it uses routes both to get to local pods and to get to other nodes and the standard installs encapsulating via IP over IP. Now Calico also supports Network policies
+01:16:13 [W] It also supports different encapsulation as well.
+01:16:23 [W] You know, you can actually get flannel to run an IP over IP and you can get Calico tzx Lon it's is not their standard standard configuration.
+01:16:32 [W] And so it made more sense to show you the standard configurations the to and get the see both flannel and Calico in action as well as both VX lay on and IP over IP in action.
+01:16:40 [W] Okay, so that brings us to the end.
+01:16:46 [W] This has been a quick tour through containerd networking service routing and flannel and Calico in particular kubernative networking is a huge topic.
+01:16:55 [W] So any talk can only cover a small slice.
+01:16:58 [W] there's other things. I would love to go into. You know, for example psyllium is fascinating.
+01:17:03 [W] There's a bunch of other.
+01:17:06 [W] I mean the list of networking plugins is tremendous we could have used several.
+01:17:09 [W] Other encapsulations, there's all sorts of new technologies out there.
+01:17:22 [W] We could have dug deep into our policies, but there's only so much we can do in the limited amount of time. But hopefully this covered the tools that would make sense for looking into any of these things and at least would get you started
+01:17:28 [W] On further exploration if you did want to go into these other topics.
+01:17:31 [W] This has been pre-recorded, so I can't sit here and answer questions live, but I should be available to answer questions throughout this and if you need to reach me after the talk, you can email me at Jeff and Jeff pool dotnet.
+01:17:46 [W] Thank you.
+01:17:49 [W] Hi, so I only have a few minutes here and I can only address so much in terms of questions.
+01:18:06 [W] I am hanging out in the to Coop con tutorials channel on slack.
+01:18:08 [W] So I should be able to answer questions there some things. I'll try to get together been a few questions about the commands that I used in this talk.
+01:18:18 [W] I will put them together.
+01:18:21 [W] You can either email me or something to just stick them in the GitHub repo. I'll do that as well. Just stick them.
+01:18:23 [W] Txt file.
+01:18:26 [W] So if you just want to watch the repo that will work as well. Once I didn't get to answer Calico communicates pgp over the node interfaces so node to node.
+01:18:40 [W] I actually have some good resources for learning networking. But the names of escaped me I was trying to member those a few books. So since I don't have my off the top of my head, let's get you can email me or you can find me on slack and I'm glad to
+01:18:55 [W] I ask the questions.
+01:18:57 [W] And trying to see if there's anything else I can.
+01:19:03 [W] Up it out there.
+01:19:05 [W] In general, I would say that the flannel tends to be more useful on smaller networks.
+01:19:18 [W] Just because you have to have your ARP table has to have a MAC address for every pot IP with flannel, but when it comes to Calico its scales almost indefinitely thanks to bgp. And you can use bgp route reflectors if you have to extend further than that.
+01:19:28 [W] There's a billion other networks and overlays that obviously I can't cover in depth, but please feel free to grab me on Slack.
+01:19:44 [W] I do this because I like teaching like learning and like talking with people. So if you guys have any more questions, I'm glad to do what I can.
+01:19:45 [W] Thanks.

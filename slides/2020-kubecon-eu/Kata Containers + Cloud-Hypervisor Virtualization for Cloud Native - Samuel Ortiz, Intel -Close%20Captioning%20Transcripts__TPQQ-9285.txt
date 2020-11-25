@@ -1,0 +1,227 @@
+﻿Kata Containers + Cloud-Hypervisor: Virtualization for Cloud Native: TPQQ-9285 - events@cncf.io - Thursday, August 20, 2020 6:59 AM - 54 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:42 [W] Good morning afternoon or evening to everyone wherever you are.
+00:00:49 [W] Thanks for joining this virtual session.
+00:00:51 [W] My name is Samuel Ortiz. And today I'm going to talk about.
+00:00:57 [W] Virtualization for the clown knative ecosystem and how we're trying with to project Keda containers 2.0 and Clyde visor.
+00:01:11 [W] We're trying to make hardware virtualization a cheap commodity for Club knative.
+00:01:17 [W] I work for Intel and I actually work on those to protect Keda containers 2.0 and that will carry containers and and cloudbees visor so before going into
+00:01:28 [W] Description of what Keda 2.0 is and how this makes this combines together with the cloudbees. ER let me quickly and hopefully very quickly recap how a container is actually manage and
+00:01:44 [W] To protect containers 2.0 and that will Keda containers and and Claudia visor.
+00:01:45 [W] So before going into description of what Keda 2.0 is and how this makes this combines together with the cloudbees. ER let me quickly and hopefully very quickly recap.
+00:01:46 [W] Kubernative so that we can see how Keda containers place in that picture.
+00:01:55 [W] So On Any Given node, you have the kubelet agent and this agent talks to a cri-o one time through the sea rise specification.
+00:02:06 [W] So typically as you run times, it's either continually or cryo.
+00:02:08 [W] And then this here I runtime will call into an actual containerd runtime and through the runtime class.
+00:02:21 [W] You can specify which runtime you want to use most of the time and by default people will call in to run see the the regular oci standard runtime and what we'll see is going
+00:02:33 [W] The creating a container well, actually a pod hosting here in that example a couple of containers couple of workloads that are isolated from the rest of the system through namespaces
+00:02:49 [W] Roads that are isolated from the rest of the system through namespaces and that forms the Pod now when we look at Keda containers, and I want to I want to describe this so that we understand what we're doing with Keda 2.0 and client visor.
+00:02:59 [W] Keda 2.0 and client visor and now when you look at the Keda containers, it's a very similar in some ways and quite different. In other ways. You still have accumulated agent calling it to continue to your cryo through cri-o.
+00:03:19 [W] Tell your cri-o runtime which container runtime you want to use you can you can tell it to use run t or you can tell it to use Keda continues and Keda containers are as a runtime instead of creating a
+00:03:35 [W] It's running on the host or a few processes running on homes that make the Pod Keda containers will use hardware virtualization as a containerd isolation layer.
+00:03:50 [W] So what it will do is calling into an IP visor or vmm and create a virtual machine where the part is going to run and the pot is going to manage is going to be managed by specific agent inside
+00:04:02 [W] Call The Academy agent and as you can see here, the pain is going to run its own pod Linux kernel because the virtual machine that Keda containers lounges is a full Linux Linux guest OS.
+00:04:18 [W] So when you look at this the quite a few components here that are very specific to Keda containers.
+00:04:29 [W] We have an agent we have a hypervisor.
+00:04:30 [W] We have a Linux guest Colonel.
+00:04:32 [W] We have a Keda runtime that is different from Ramsey and all those components add together and while they create some overhead, so he launched a virtual machine and that has its own overhead and inside this virtual machine
+00:04:46 [W] Keda agent that's adds to the overhead memory overhead, but also boo time latency additions and overhead you had complexity compared to the Run see setup. You have more
+00:05:02 [W] With Keda continues you have you have a virtual machine you have a few components running inside the virtual machine.
+00:05:10 [W] You have an additional protocol between the Keda runtime and the Keda agent inside the virtual machine to communicate through so that's that adds up in terms of complexity.
+00:05:20 [W] And you also have some compatibility issues potentially the whole Cloud native ecosystem is designed around the assumption that the container is going to be a process running on the host.
+00:05:37 [W] But here with Keda containers. We're building a complete virtual machine where the containerd workloads and the portworx loads are going to be running. So you you're going to have some issues trying to be compatible with all the
+00:05:49 [W] design for running processes on host
+00:05:53 [W] So what we're doing with Keda containers and what we're trying to improve in some cases incrementally in some cases much more than incrementally with Keda containers 2.0 and canonical wiser is to reduce the overhead.
+00:06:09 [W] Lake City and make the whole cat containers implementation fully compatible with with kubernative while doing this. We're trying to keep the Keda containerd security promises,
+00:06:25 [W] While doing this we trying to keep the cattle continue security promises, which is mostly around security.
+00:06:31 [W] We want to use hardware virtualization as an isolation layer, and this is for having a stronger isolation layer than the existing ones.
+00:06:37 [W] Okay, so
+00:06:39 [W] What we did with Keda continues to the zero is improving and working on many of the components that are specific to Keda contains.
+00:06:53 [W] One of them as I mentioned is the Keda agent.
+00:06:55 [W] This is an agent running of the virtual machine that manages the pot and the the pot workloads in the virtual machine and it communicates through specific protocol typically through a
+00:07:08 [W] socket that communicates back to the three Keda runtime and the guy agent basically you can you can see it's as a reduced version of run see much reduced version of Bronte running inside the virtual machine
+00:07:23 [W] Of runcie much reduced version of Ron Cey running inside the virtual machine and managing the Pod and the pod workloads.
+00:07:27 [W] So what we observed with the Keda agent?
+00:07:35 [W] Is that it was consuming about 10 megabytes of memory. So each and every pot that you laughs includes a Keda agent and that can I agent was consuming 10 megabytes of physical
+00:07:51 [W] Most so that's that's that's quite a bit of overhead that you induce with the with with agent.
+00:08:01 [W] So we did two things.
+00:08:03 [W] We are implemented Keda in rust from go the Keda agents are interest from go and we also switch from a grpc to teach grpc and when combining those two together
+00:08:17 [W] Significantly reduce the memory overhead.
+00:08:21 [W] That's the Keda agent added to the Regatta containerd project from roughly 10 megabytes to something between 1 and 2 megabytes. So with that new implementation of the guidance you save
+00:08:34 [W] about 80% of the of the agent memory foam pit.
+00:08:41 [W] So that's that's a significant Improvement.
+00:08:42 [W] We also simplify the the protocol between the the agents and the declare runtime to make it easier to maintain and also easier to understand easier to extend as well. If we ever need to we took a lessons from
+00:08:58 [W] X and understood what is really needed as a protocol between the host and the Keda agent and we can work on that and make it simpler.
+00:09:09 [W] Another component that we looked at is the virtualization layer the hypervisor, but here in that case for the hypervisor that are supported.
+00:09:26 [W] AVM a virtual virtual machine manager on top of kbm and actually one year back together with Andrea from high school from AWS represent it.
+00:09:42 [W] Third would be a clown knative hypervisor.
+00:09:47 [W] What we thought would be a DMM specifically crafted and designed for the clown native ecosystem. And we look at the cri-o specification and we basically map that down to a set of hardware
+00:10:01 [W] should teachers and the the boxes on the rights are the boxes that your advisor or UVM shoot Implement to support the entire cri-o specification and I was I was mentioning the incompatibility issues
+00:10:16 [W] May have been running parts inside a virtual machine and that is that is one one of them here. You need to have a DMM that supports a bunch of specific order virtualization feature to support the entire series specs.
+00:10:33 [W] Otherwise, you can have you won't be able to support all of it.
+00:10:36 [W] So we work on this we work on a new vmm called cloud provider which runs on top of kbm and which is based on the Upstream rust vmm project.
+00:10:48 [W] And qualifies ER is implementing the full cri-o specification it basically implements the the entire set of hard workers like the hardware virtualization features that I just highlighted and that allows us to support
+00:11:04 [W] Yeah, the cri-o specification Q mu is another DMM that cloud that Keda containers supports and that basically provides the full series support but the difference between clarifies ER and one of the main difference
+00:11:19 [W] is the false arrest report but the difference between clarifies ER and one of the main difference between cloudbees RN Q mu is the the language that is that it is implemented in cloudbees wiser is implemented in Rust whereas a q mu is
+00:11:29 [W] Riser is implemented in Rust whereas a commute is implemented in see rust being arguably one of the safest system programming languages out there.
+00:11:36 [W] And last but not least cloudbees izr is pretty fast.
+00:11:46 [W] So the boot latency are quite reduced with or minimized with the chiropractor and the memory footprint which is typically under 10. Megabytes per per VM with with cloudbees izr.
+00:11:57 [W] so another aspect that we looked at with with Keda containers 2.0 is observability and what we realize is that in order to deploy Keda containerd at scale and
+00:12:15 [W] A large scale you need to have a very solid way of gathering events and metrics and with Keda Wonder Dex.
+00:12:25 [W] We were missing quite a few of them.
+00:12:33 [W] But we were also missing a seamless integration with the existing tools like Prometheus and with Keda continues to the 0 we are making sure that there's a seamless integration with Prometheus but also that we now provide a
+00:12:43 [W] More complete set of metrics from the cattle containers components to to whoever is gathering those metrics from from Prometheus.
+00:12:55 [W] So what we added is a Keda monitor component and here it may not be super clean that diagram but there's one Keda Monitor componentconfig Road and that kind of monitor demon
+00:13:10 [W] The entire set of Keda containers running on your note.
+00:13:15 [W] And that's that cattle monitor implementation.
+00:13:20 [W] Integrates seamlessly with Primitives as I said and it provides a very interesting set of metrics from the hypervisor itself.
+00:13:31 [W] So from the whole virtualization layer from the agent, we get metrics from the agent as well and from the virtual machine from the gas running inside a virtual machine as well.
+00:13:41 [W] Another interesting features that we added as part of the of the cattle containers project is poured over head which allows us to specify through the runtime if your runtime class supports the port of ahead feature
+00:13:56 [W] If I how much a part is going to add into your memory and CPU consumption so that you can get more realistic measurement of the of the resources.
+00:14:12 [W] You're that your Keda containers are artists you.
+00:14:17 [W] Okay.
+00:14:19 [W] Another very interesting aspect of what we're what we another interesting feature that is going to be landing in Keda containers 220 eventually is how we fetch the container
+00:14:36 [W] So typically today the way containerd images are handled through Keda containers is that you pull the container images from the host and you expose that container image into the virtual machine because you need to run the pot inside the virtual machine. So
+00:14:53 [W] Virtual machine needs to have access to this to this container image.
+00:15:00 [W] So we expose the container image through typically virt iot could be virt ifs. One of the latest virt IO specific specification addition could be the Legacy 9p protocol or it could be something like
+00:15:12 [W] But basically your host is fetching the image is managing the images and then you expose that image or those images into the virtual machine and what we do with what we are planning to do with Keda containers.
+00:15:28 [W] 220 is to have an optional way to optionally be able to fetch the container images from inside the virtual machine.
+00:15:38 [W] So that sounds that some quite a good like a pretty big change and it is one but the idea behind all this but I'm pulling images from the port is to basically extend the
+00:15:53 [W] the virtual machine so that sounds that some quite a good like a pretty big change and it is one but the idea behind all this but I'm pulling images from the port is to basically extend
+00:15:55 [W] More we want to extend it to the point. Where as a tenant you no longer have to trust your CSP you no longer have to trust your host.
+00:16:08 [W] You can basically say I'm running my workload inside a virtual machine and when you combine this with Technologies like total memory encryption that are available to two virtual machines on many architectures.
+00:16:18 [W] Can basically ensure that your host no longer sees what your containers running no longer see what your the memory that you container is consuming.
+00:16:33 [W] And now if you can also pull the images directly from the virtual machine, you can guarantee that your that your host that you're CSP is no longer seeing what your container is actually run.
+00:16:44 [W] So we want to extend the thread model of Keda containers to where it is today to the point where it
+00:16:48 [W] and also protect the containerd workloads from the CSP itself.
+00:16:53 [W] Which is quite a interesting and also.
+00:16:59 [W] Interesting from a business perspective and from a technology perspective as well interesting features.
+00:17:07 [W] Another feature that we are working on with Keda containers 2.0 and clarifies.
+00:17:23 [W] ER is the way the container the cri-o runtime and the cattle containers runtime interact together.
+00:17:30 [W] It's I wouldn't say by default because this is this is already partly the case with Keda containers one attacks, but in some cases with with Keda containers one that X you may end up with this specific architecture.
+00:17:46 [W] Choose the VM.
+00:17:54 [W] Yeah, the link between the virtual machine and the cri-o runtime is done through a set of components a containerd e shim or container runtime shame and the Keda container ship and you basically have
+00:18:04 [W] A pair of shims for each and every process each and every container that you run inside your pot. So the bigger your part is the bigger your process overhead and the bigger you complexity on the host is going to be you're going to be adding up a
+00:18:20 [W] A lot of fear seems in your host.
+00:18:24 [W] What we did is is work with the cri-o one time maintainers the containerd E1 and the cryo on to move to a much simpler architecture and more much more scalable architecture.
+00:18:38 [W] We work on them runtime shim. API called runtime shame API V2 that allows us to have one.
+00:18:46 [W] Long-standing demon for Keda containers the cash in B2 and basically having it allows us to have one running demon for apartment.
+00:18:59 [W] So one single po one single deep single demon per pot instead of n / containers inside the pod.
+00:19:06 [W] So that's a much more scalable architecture.
+00:19:08 [W] It's also a much more much less complex architecture darker the docker CLI pot man kubenetes.
+00:19:16 [W] All can be interacted with through this one time. She met Pi so with Keda containers 2.0. We're going to be going sinb to all the way.
+00:19:30 [W] We're going to be using chin V2 all the way and switching to the chin V2 API exclusively.
+00:19:39 [W] So we will have one single cutter process per pot much simpler and also it provides a better security because you don't need to monitor that many processes anymore.
+00:19:46 [W] Read of the Keda containerd CLI support, which is a fairly complex overlays reporting in on top of Keda containerd to support the the oci CLI specification.
+00:20:06 [W] Dr. Run Docker stop Decker exact and so on now with the cat a container with the with the run the runtime shim V2 API.
+00:20:21 [W] API. This can go in this can all get rid of and get things much more simple, but simpler.
+00:20:24 [W] Okay, and done with this presentation, this is the set of Keda containers 2.0 and also combined with with cloudbees izr as a VM.
+00:20:38 [W] We planning to move forward the the virtualization support in the cloudevents ecosystem and make it even more seamless much lighter and much more transparent than it
+00:20:52 [W] Thanks so much for your attention and I'm not ready to take any further questions.
+00:20:57 [W] Okay.
+00:21:35 [W] Can you even better?
+00:21:55 [W] So I was saying
+00:22:16 [W] You want to generate your own virtual machine image?
+00:22:19 [W] your own kernel and well basically do pretty much what you want on the guests.
+00:22:27 [W] It has to be a fairly recent colonel.
+00:22:28 [W] where is there it's I think it's it's
+00:23:30 [W] Fairly complete probably not as complete as the actually six one, but it's there next question on the slide.
+00:23:41 [W] overall overhead on average
+00:24:12 [W] video engineer.
+00:24:28 [W] I hope this is better. You can hear me now.
+00:24:29 [W] Hello.
+00:24:50 [W] Okay.
+00:25:11 [W] Hello.
+00:25:17 [W] Okay.
+00:25:18 [W] Apparently the audio is much better.
+00:25:21 [W] So very quickly on the on the first question is about the the option to change the the virtual machine that holds the container then the answer is yes, you can you can change it to guess that's running the container pretty much as much as you want
+00:25:26 [W] Solution that holds the container then the answer is yes, you can you can change it.
+00:25:27 [W] The guess that's running the container pretty much as much as you want arm 60.
+00:25:27 [W] There it's and it's it's it's the I tested their another 64 964 CIF structure that's been provided by the arm Community next question that I'm going to take slides.
+00:25:44 [W] Billable. I just uploaded them to the website so you can go and take them from there.
+00:25:56 [W] What's the and I have a couple of question on the overhead on average.
+00:26:01 [W] There's no it's it's a hard one to answer because it's it highly depends on the on the kind of workload that you're running.
+00:26:11 [W] It depends on how big of memory footprint today it takes.
+00:26:15 [W] it
+00:26:17 [W] Memory bound it is ideal case is a is a regular sized workloads.
+00:26:48 [W] As for example with cloudbees izr and Q mu which are two of the main to of the of the hypervisor that collided at kind of containerd support.
+00:27:04 [W] Probably you want to look at device pass through and that's something that kind of continuous reports. But it's as I said, it's quite difficult to answer that on average because it highly depends on the on the kind of work that you're running.
+00:27:31 [W] It also depends on the on the visor that you're running the application adds up to the to the overhead.
+00:27:45 [W] So depending on the workload you might want to use a 1 hypervisor or the other or others more questions slides other.
+00:27:53 [W] Other infrastructure container inside a pod which end up inside the VM boundaries for example sidecar.
+00:28:07 [W] Is this a problem for the trust model especially in some of the future future model with the CSP is untrusted infrastructure. Can the question. Sorry. This is jumping up.
+00:28:15 [W] Oh, sorry.
+00:28:16 [W] I'm going to take that one first. Okay, let me repeat the question other infrastructure container inside a pod which end up inside the VM boundary for example sidecars.
+00:28:32 [W] Is this a problem for the trust model especially in some of the future modes confidential Computing where the CSP is untrusted?
+00:28:39 [W] I guess this could be this could be an issue especially for things like compute n shal Computing. Definitely when the CSP is entrusted. You probably don't
+00:28:47 [W] On to run sometimes something from the CSP inside the the Keda container security boundary. I guess.
+00:28:59 [W] I don't really have an answer for this.
+00:29:05 [W] A lot of people have been looking at this and running side car outside of the of the virtual machine boundary.
+00:29:08 [W] And yes it is.
+00:29:11 [W] It is a problem for the for the for the current trust model.
+00:29:15 [W] I don't think this is this is really a problem for the for the future poor well, but futurewei because it can
+00:29:17 [W] You really want to move that those infrastructure container outside of the of the VM boundary. I guess there's going to be some limitation there. Obviously, you won't be able to let you see SP see anything and
+00:29:39 [W] They're obviously you won't be able to let you see SP see anything and everything that you do and you made Bilu. You may be losing some of the metrics for example on what's Happening inside a virtual
+00:29:49 [W] What's happening inside a virtual machine?
+00:29:52 [W] Actually, you may be losing quite a bit of them.
+00:30:02 [W] But I guess this is this is kind of the there's always a price that you pay for security and I guess this could be a this could be seen as one of them another question.
+00:30:06 [W] Containerd without compromising security.
+00:30:14 [W] Yes.
+00:30:22 [W] It's it does allow for running as root or non roots or anything that you typically do in a in a container.
+00:30:29 [W] I would say that basically running routes inside a kind of container is as secure as running route inside a virtual machine, so don't don't don't be confused.
+00:30:37 [W] not saying this is more secure or or less secure than running.
+00:30:41 [W] You know, you know bare metal container is just that you basically running as root on BMX.
+00:30:47 [W] non-root, which means that you're protected by the by the hardware virtualization. So I would say that yes, this is as secure as running routes inside a classic Legacy virtual machine
+00:31:03 [W] Question, I think I only have a few minutes left is Keda 2.0 already available or still in development Keda 2.0 is available.
+00:31:16 [W] It's both it's still in development.
+00:31:22 [W] So there's a I can I can put it a link there.
+00:31:23 [W] I will put a link in the answer box. But really quickly to answer this Keda tubes or 2.0 is a work in progress the stable and prediction ready.
+00:31:33 [W] He version of Keda is still one that X but 2.0 is where most is where the the Keda continuous Community is trying to shift its efforts its development efforts.
+00:31:48 [W] So it's going it's making a very good progress and it's already usable I would say we can certainly not playing that it's that is production-ready but it is something you can go and build it yourself.
+00:32:02 [W] I could use for it as far as a as I know and you can you can try you can stop playing with it.
+00:32:11 [W] So it's still in development, but it's available for for early conception everything.
+00:32:18 [W] Okay more questions.
+00:32:20 [W] Regarding cloudbees ER what about firecracker use case to have two separate projects cloudbees are in firecracker share a lot of a lot of code there.
+00:32:34 [W] They're both consuming enough string project called Rusty.
+00:32:38 [W] vmm raspbian image is basically a set of virtualization crates that firecracker and cloudbees er are using
+00:32:46 [W] And the so they're sharing quite a bit of code.
+00:32:56 [W] They're they're basically aiming at different use cases.
+00:33:01 [W] I think firecracker is simpler and smaller it the Simplicity and the Simplicity comes with restrictions the things that you cannot do with firecracker for not
+00:33:12 [W] Director and try to peyser are using and the so they're sharing quite a bit of code.
+00:33:13 [W] They're they're basically aiming at different use cases.
+00:33:13 [W] I think firecracker is simpler and smaller it the Simplicity and the Simplicity comes with restrictions the things that you cannot do with firecracker for not
+00:33:14 [W] their technical reason for not do for not implementing that in firecracker, but it's basically because the firecracker Community doesn't see reason why implementing those features like for example device pass through
+00:33:27 [W] Or hosts file system sharing and that that creates limitation on what kind of kubernative workloads you can support.
+00:33:43 [W] So if you have to do a few work around Sports as much as many as many workloads as you would with cloudbees, er cloudbees, er, the supports device pass through it does Sports host?
+00:33:53 [W] Hosts Face it and sharing. Basically, it supports the entire cri-o.
+00:34:23 [W] so the hypervisor there to advisor today that are used a corn and KVM and acorn is an improviser on its own KVM is I would say most
+00:34:39 [W] Used Linux hypervisor and on top of KVM, then you get a continuous reports vmm, like cloudbees er firecracker qmu, they all run on top of kayvyun.
+00:34:54 [W] So basically the two underlying advisor are KVM an acorn and on top of kvn you can select what kind of vmm you want to use depending on the again the kind of workloads. You want to you want to use with kubernative qmu and cloudbees Ur support the
+00:35:08 [W] Speck and things like firecracker comes with some some limitation on what kind of part of the spec they support more questions check.
+00:35:23 [W] Isn't VMO higher costs to pay for the trust boundary?
+00:35:29 [W] Well depends on it depends on what you want to do.
+00:35:39 [W] So the question isn't avert are armed virtual machine a higher cost to pay for the trust boundary virtual machine.
+00:35:45 [W] people think about virtual machine as something very expensive and very costly I think with gallon containers we showing that virtually the virtual machine overhead is definitely not as high and and large as people think we
+00:36:01 [W] A Cadillac containers with tmu or firecracker or client visor in typically less than one second in the worst case.
+00:36:17 [W] The the memory overhead is can be very small depending on the workload.
+00:36:19 [W] So I think the there is a cost.
+00:36:22 [W] I'm not I'm not saying there isn't a cost but if you looking for having this additional isolation layer based on hardware and using hot
+00:36:32 [W] Our virtualization.
+00:36:36 [W] I think this is the kind of cost that that you willing to pay.
+00:36:40 [W] So what we're saying is that yeah, that would be my last question.
+00:36:43 [W] We're running out of time.
+00:36:47 [W] But what we're seeing is that people running in production Keda containers, they they run Keda contains four very specific security reasons.
+00:36:58 [W] They want to they want to run multi-tenant KQ Nettie's multi Harbor to Tennessee and they see Keda containers as
+00:37:02 [W] A very good way to implement this answering another question here.
+00:37:11 [W] But yes, it's if you're looking at this kind of this kind of use cases where you want to have this additional layer of security. This is typically the can
+00:37:17 [W] willing to pay. Okay.
+00:37:21 [W] I'm not of time.
+00:37:23 [W] Are all these questions without feedback from the audience.
+00:37:36 [W] I hope I didn't do too much of a bad job at it.
+00:37:40 [W] Thanks a lot for attending.
+00:37:41 [W] Hope to see you TC life, or maybe a virtual again soon.
+00:37:45 [W] Thank you.

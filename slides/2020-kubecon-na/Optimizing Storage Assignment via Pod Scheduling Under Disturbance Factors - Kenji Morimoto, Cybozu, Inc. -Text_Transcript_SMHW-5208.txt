@@ -1,0 +1,213 @@
+﻿Optimizing Storage Assignment via Pod Scheduling Under Disturbance Factors: SMHW-5208 - events@cncf.io - Thursday, November 19, 2020 2:57 PM - 31 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi everyone.
+00:00:01 [W] I'm so excited to share our experience of community service management with you.
+00:00:07 [W] The pain scheduling features of kubenetes and we tune the scheduler and the real-world disturbance factors.
+00:00:19 [W] First let me introduce myself.
+00:00:21 [W] I'm Kenji Morimoto.
+00:00:24 [W] I'm working for cyborgs, and I have an account morimoto's eyeballs at github.com.
+00:00:31 [W] Cyborg is a Japanese IT company, we provide group communication tools as cloud services and I've been working as an infrastructure engineer for eight years.
+00:00:44 [W] years. We have more than two thousand servers for our cloud services.
+00:00:50 [W] Our management tools were designed as a collection of imperative commands and we are facing a lot of manual operation tasks these days. So we are now renewing our infrastructure using kubernative and
+00:01:06 [W] Technologies
+00:00:57 [W] This is today's agenda first.
+00:01:00 [W] I introduce what we challenged.
+00:01:03 [W] We try to run a distributed storage system on communities. I'll recap the basic of volume Management in component s and Define the problem.
+00:01:16 [W] I'll describe a basic idea for the program and then inspect troubles in implementation.
+00:01:24 [W] We got an unexpected result under the real world disturbance.
+00:01:28 [W] So we turned the kubeedge scheduler configuration. Finally.
+00:01:34 [W] I'll give a demonstration how or tuning improved the placement.
+00:01:41 [W] First of all, let's take a look at one is a distributed system a distributed system organizes node local storage devices in a computer cluster and provides a unified storage
+00:01:56 [W] In the case of self, for example, the administrator defines object storage devices or osts in short using local disks and save gathers or SDS into a storage resource.
+00:02:02 [W] The management of the element discs in the distributive / is very tedious work.
+00:02:12 [W] Before seeing rook and save on communities. Let's recap the stretch hack texture of communities.
+00:02:19 [W] Uncle Burnett is 3G is obstructed as persistent volumes.
+00:02:25 [W] The strategies can be local disks Network storageos in the cluster or Cloud strategies.
+00:02:34 [W] Pods can Define the volumes by using persistent volume claims as data sources.
+00:02:41 [W] Process involving claims specify the requirements for underlying storageos through strange class names resource requests selectors and so on.
+00:02:53 [W] Kubernative finds or creates a matching PV for a PVC and bind them together.
+00:03:03 [W] We use Rook to deploy our self storage cluster Rook has a mod to configure osds through persistent volume claims.
+00:03:12 [W] At peavey's as osds Force F and then save constructs a unified strategic resource.
+00:03:11 [W] What we wanted to do was to deploy a distributed storage system owner on-premise servers.
+00:03:17 [W] We had experienced that the management of thousands of servers and disks was an awful task if that manually so we needed kubernative help for automatic management.
+00:03:30 [W] However, there was no standard profile to deploy distributed storage system on communities.
+00:03:40 [W] We can expect that Seth is responsible for replicating replicating data across Fair domains for robustness.
+00:03:50 [W] On the other hand Distributing local disks evenly is a task for the administrators.
+00:03:58 [W] So the challenge here is that we need to distribute processing volumes for local disks evenly through persistent volume claims.
+00:04:11 [W] It's easy to achieve even distribution if all disks all servers and all rocks evenly available.
+00:04:20 [W] Let's take six discs evenly from this.
+00:04:25 [W] It's easy.
+00:04:26 [W] discs evenly from this
+00:04:14 [W] it's easy.
+00:04:16 [W] But in reality, this is often not true because for example server node may have broken discs some discs some discs of the server may only be assigned for other use
+00:04:31 [W] Some discs of the server may only be assigned for other use or rock may have fewer healthy servers than other rocks.
+00:04:40 [W] So in the real world, we need to consider about an even availability of local disks.
+00:04:46 [W] This makes a change a hard one.
+00:04:52 [W] In order to achieve even distribution automatically we need help of kubernative.
+00:04:57 [W] The kubernetes does not directly schedule storage devices in contrast to storage handling kubenetes provides a very rich set of features to schedule pods.
+00:05:12 [W] Group scheduler is a kubernative component to schedule posts on nodes.
+00:05:16 [W] It can schedule pause based on several criteria including resource requirements known factors both affinity and anti fatigue and Tents and traditions.
+00:05:31 [W] Now jump into the basic idea.
+00:05:35 [W] Our basic idea is to specify wait for first consumer for the bottom binding mode in a stretch class.
+00:05:44 [W] But what is the volume binding mode exactly?
+00:05:48 [W] It can take out value of immediate or wait for first consumer. Let's see the behavior of kubernative for each mode in the following slides.
+00:05:59 [W] The different bonding bonding mode is immediate in this mode when the PVC is created communities immediately finds or creates a matching PV and bind them together.
+00:06:12 [W] This binding will work as a topology constraint for Cuba schedule when it's scheduled support that uses this PVC.
+00:06:21 [W] In our case, the PVC is bound to a local disk. So the consumer pot is bound to the disc snowed in effect.
+00:06:30 [W] The problem here is that we cannot control the matching of a PVC and the PV in terms of even distribution.
+00:06:41 [W] Another bottom binding mode is great for first consumer in this mode.
+00:06:47 [W] A PVC is not bound to a PV until report that uses. The PVC is scheduled we can control the policy during by several means
+00:07:00 [W] When binding a PVC tube TV, there is a constraint that the PV must be available from the node and the PV is not local in our case scheduling a pod is equal to scheduling a PV.
+00:07:16 [W] So we can control the location of a local strategy through pots cajoling.
+00:07:21 [W] By specifying wait for first consumer for the ballroom binding mode.
+00:07:18 [W] We can translate the problem of surge allocation into the problem of pots cajoling.
+00:07:24 [W] And as for the pot scheduling kubernative provides a rich set of features, and we can utilize those features now, our challenge is translated to Distributing pose with PVCs evenly
+00:07:42 [W] well, which type of scheduling criteria should we use to distribute post evenly one candidate is anti Affinity we can distribute one part per node by using and definitey, but we want
+00:07:57 [W] Well, which type of scheduling criteria should we use to distribute post evenly one candidate is anti Affinity we can distribute one pot pan owed by using entire finiti, but we want to
+00:08:10 [W] TV's on anyone not intervene T does not distinguish whether there are two ports or three ports of all five Barbara.
+00:08:22 [W] Much appropriate Criterion is part to produce bread constraints.
+00:08:27 [W] This feature was introduced in kubenetes 1.16 became better in 1.18 and is now stable in 1.19 a set of potable respect constraints compute the scheduling
+00:08:43 [W] Based on the skew so we can put a cap on the difference of the numbers of pods.
+00:08:52 [W] This figure shows how portable it spread constraints work.
+00:08:56 [W] This is cited from kubernative blog.
+00:09:00 [W] You can specify Max Q to describe the degree to which pose maybe unevenly distributed topology key to group posed by North Korea belts.
+00:09:13 [W] When unsatisfiable to indicate what to do if the constraints are not satisfiable and level selector to find Target pods in this example Zone 1 has two ports and don't
+00:09:28 [W] When unsatisfiable to indicate what to do if the constraints are not satisfiable and level selector to find Target pods.
+00:09:32 [W] In this example Zone 1 has two ports and don't to has one pod.
+00:09:38 [W] The skew between zones is one now. Here comes a new part.
+00:09:44 [W] If this new pot is scheduled to Zone 1 the skill becomes 3 this breaks the constraint.
+00:09:52 [W] If the port is scheduled to Zone to the skill becomes 0 the satisfy the constraint, so then you post should be scheduled to zone two as a result.
+00:10:04 [W] We can achieve even poddisruptionbudgets.
+00:10:10 [W] We can now distribute post evenly but when implementing distribution we need to consider the case we are the constraints are not satisfiable this let's see the details.
+00:10:26 [W] To keep evenness strictly may not be desirable in the real world as described before there may be an even number P Cube local disks or seven other may have broken discs some disks over
+00:10:41 [W] Father use or rack may have fewer healthy servers than others.
+00:10:46 [W] In this example, there are 6 servers each server has four discs and supper three a has broken disks. It has one healthy disc and three broken discs.
+00:11:01 [W] Let's start assignment lap one.
+00:11:04 [W] I can sign six poles with six discs one per node.
+00:11:12 [W] Lap two I can't sign five pots with five disks as you can see.
+00:11:18 [W] So the three a has no available disk.
+00:11:23 [W] I cannot start a lap three because assigning a Podium the disc will break the constraints no matter which server I choose.
+00:11:32 [W] Do I need to stop assignment here?
+00:11:35 [W] It's not desirable. I want to use as many disks as I can.
+00:11:42 [W] We can relax the portability spread constraints by using the parameter of when unsatisfiable this parameter indicates what to do. If a pot does not satisfy the constraints according to the
+00:11:57 [W] The behavior is described like this if the constraints are not satisfiable and do not schedule is fight kublr scheduler does not schedule the Pod.
+00:12:07 [W] This is the default Behavior.
+00:12:10 [W] If the constraints are not satisfiable under scheduleanywhere is specified could be scheduler still schedules the pot while prioritizing note that minimize the SKU.
+00:12:22 [W] Scheduleanywhere seemed optimal for us if it really worked as advertised. So we tried schedule anyway, not to limit resource usage into two uneven local disks.
+00:12:37 [W] We expected the behavior like this if the constraints are satisfiable could be scheduler always schedule the point within the constraints sounds obvious. Unfortunately, it did not work as
+00:12:52 [W] resource usage in due to uneven local disks
+00:12:33 [W] We expected the behavior like this if the constraints are satisfiable could be scheduler always schedule the point within the constraints sounds obvious. Unfortunately, it did not work as
+00:13:05 [W] Let's start with several posts already running in the cluster.
+00:13:10 [W] Red labeled posts are running not on all nodes.
+00:13:15 [W] Four nodes are used and the other two nodes are completely free the existing parts consume CPU resources to some extent say 60% and there is enough room for the new pot. We are now Distributing.
+00:13:30 [W] Newport will consume CPU resource 5%
+00:13:35 [W] the constraint we use here is a simple one keep the skew restaurant or equal to one among all notes.
+00:13:42 [W] Please note that this constraint is not applied for the existing red pods. We apply the constraint in order to distribute stretch management pause evenly.
+00:13:54 [W] The existing pods are just Computing.
+00:13:56 [W] They are not working for Stress Management.
+00:14:00 [W] Then deploy six pose for Stress Management.
+00:14:06 [W] The expected president is like this because the constraint is satisfiable six pose would be distributed evenly the skill would be zero here.
+00:14:17 [W] But the actual placement is like this all new pods are assigned to the unused two nodes. The max Q is 3 this breaks the constraint even though it seems satisfiable.
+00:14:34 [W] Why are the new strategy management portal scheduled in such a way?
+00:14:40 [W] We inspected the source code of a coupe scheduler and find the actual Behavior.
+00:14:44 [W] Google scheduler does not treat the constraining conditions as real constraints instead. The conditions are treated as a part of the scoring factors.
+00:14:51 [W] So as a result threatening CP resource usage took a higher priority, even though the spread constraint was certifiable the existing Computing post prevented even distribution.
+00:15:05 [W] This came from the prioritizing algorithm of kublr scheduler. So we need to tune it.
+00:15:14 [W] The most important criteria imposed scheduling for our case is the topology spread concerns.
+00:15:20 [W] So we turned could be skewer to where the constraints more heavily because Kuma scheduler is rapidly evolving. It requires different tuning configuration for its versions.
+00:15:36 [W] For kubernative one point 17. We adjusted the scheduling policy.
+00:15:40 [W] There is a wait wait parameter named even Port speed priority and its default value is 1 we increased we increase the weight to 500.
+00:15:55 [W] The scheduling policy is a global configuration.
+00:15:58 [W] So this modification requires extreme caution.
+00:16:01 [W] Could we schedule can't handle multiple profiles now, we can create a new profile and apply it only to the storage management pods.
+00:16:10 [W] From among the parameters in the profile. We set Potter OG spreads weight to 500 in communities 1.18.
+00:16:19 [W] In 1.19.
+00:16:21 [W] the parameters are slightly tuned by default.
+00:16:24 [W] So disabling no resources brands that location is suitable for us.
+00:16:28 [W] I attached the tuning configurations in this slide. Please check them from the sky.com link.
+00:16:39 [W] skip the configurations
+00:16:43 [W] then now I'll give a demonstration. I prepare the two environments one with default could be schedule and then with tuned quick schedule.
+00:16:55 [W] Let's see the default one first.
+00:17:05 [W] This is not tuned environment.
+00:17:07 [W] This is a default could be a schedule.
+00:17:13 [W] Sorry.
+00:17:21 [W] Yeah.
+00:17:24 [W] Check them from the sky.com link.
+00:17:15 [W] skip the configurations
+00:17:19 [W] then now I'll give a demonstration. I prepare the two environments one with default could be schedule and then with tuned quick schedule.
+00:17:31 [W] Let's see the default one first.
+00:17:41 [W] This is not tuned environment.
+00:17:43 [W] This is a default could be schedule.
+00:17:49 [W] I'm sorry.
+00:17:57 [W] Yeah.
+00:18:01 [W] This is demonstration environment.
+00:18:03 [W] Well.
+00:18:13 [W] First I'll see the notes.
+00:18:15 [W] There are four nodes here.
+00:18:18 [W] and
+00:18:23 [W] two competing pods are running.
+00:18:25 [W] They're running on two nodes.
+00:18:31 [W] The consume City resource on this cluster.
+00:18:36 [W] I deploy a distributed system rook and save I already have this ployed them because it takes too long.
+00:18:49 [W] There are many ports running for rook and safe including an operator manager monitors and so on positions volumes are assigned for OST ports.
+00:19:01 [W] I requested five processing volumes through five ports and five claims.
+00:19:08 [W] Yeah, five or seaports and five PVCs.
+00:19:15 [W] Well, let's see. We are the OSD puzzle running along with where the construction Computing points are.
+00:19:29 [W] First ci/cd the notes.
+00:19:31 [W] There are four nodes here.
+00:19:35 [W] and
+00:19:40 [W] two competing pods are running.
+00:19:42 [W] They're running on two nodes.
+00:19:48 [W] The consume City resource on this cluster.
+00:19:53 [W] I deploy a distributed system rook and save I already have this ployed them because it takes too long.
+00:20:05 [W] There are many posts running for rook and safe including an operator manager monitors and so on.
+00:20:14 [W] Position Marines assigned for OST ports, I requested five processing volumes through five ports and five claims.
+00:20:25 [W] You know five or seaports and five PVCs.
+00:20:31 [W] Well, let's see.
+00:20:33 [W] We are the OSD poster running along with when the construction Computing points are.
+00:20:44 [W] Five or is the poles and to Computing pods?
+00:20:54 [W] As you can see 500s deposits are distributed only two three nodes, although there are 4 available nodes.
+00:21:03 [W] It seems that the or supports avoided to coexist with the Computing pods.
+00:21:14 [W] This is because kubeedge caggiula put a higher priority on Platinum CPU resource usage. This is not desirable for distributed system.
+00:21:26 [W] Now, let's move into another environment.
+00:21:31 [W] The tune could be scheduler is running here.
+00:21:35 [W] Let's see where the occipital running along with we are the competing puzzle.
+00:21:43 [W] 500 SD port and two competing ports
+00:21:51 [W] 500s deposit distributed we're onto four nodes some of them coexist with the competing pods.
+00:22:01 [W] And this is what I wanted to do.
+00:22:11 [W] Let's wrap up with key takeaways.
+00:22:17 [W] 500s deposit distributed well onto four nodes some of them coexist with the competing pods, and this is what I wanted to do.
+00:22:37 [W] Let's wrap up with key takeaways in order to deploy a distributed system using Rook unsafe on on premise cluster.
+00:22:47 [W] We translate the problem of local sales distribution into the pond scheduling problem using worked for first consumer volume binding mode.
+00:22:57 [W] As for put scheduling we use the post project spread constraints for better distribution. In order to cope with could be scheduling scoring.
+00:23:07 [W] We tuned it to prioritize the constraints our configuration for rook and safe is open sourced in GitHub.
+00:23:16 [W] Please take a look.
+00:23:18 [W] That's all.
+00:23:19 [W] Thank you.
+00:23:35 [W] Hi there.
+00:23:36 [W] Thank you.
+00:23:38 [W] Thank you for your attention.
+00:23:39 [W] Well, let's start lab Q&A.
+00:24:13 [W] June
+00:24:20 [W] did you ever consider running strange inside the kubernative crust? For example in the face of Alaska G to avoid all of this?
+00:24:46 [W] No, because we are using iSCSI storage is in the old infrastructure and we have faced many troubles with that.
+00:25:02 [W] And we want to you tried so many utilities of kubenetes to manage the storage nodes and strategies and
+00:25:17 [W] Any utilities of kubernative to manage the storage nodes and strategies and conjunction storageos?
+00:25:30 [W] And second question is where can I find the exact configurations you use to spread the local TVs across nodes.
+00:25:43 [W] well
+00:25:52 [W] I attached the we schedule run and configurations to my slides and also.
+00:26:07 [W] We publish our kubernative configurations, including our infrastructure application manifest in github.com.
+00:26:26 [W] Adding to the URL.
+00:28:05 [W] My colleagues make the answers.
+00:28:29 [W] Yeah, the question number three and number four made by my colleagues because number five is also the answer to the question number two.
+00:29:44 [W] Well, it's a son Sergei.
+00:29:49 [W] Oh one more new Christian.
+00:29:57 [W] So your problem was that schedule prevented or support to reach nodes with comparable disc to manage?
+00:30:22 [W] And yes, there are many stretch nose with available discs, but the scheduler replaced with depose to very limited notes not all knows.
+00:30:42 [W] Well, thank you again for your attention.
+00:30:44 [W] I'll accept the Christians at slack slack Channel.
+00:30:56 [W] Hope number two cubic on storage. Thank you.

@@ -1,0 +1,188 @@
+﻿Return of the Kraken: Bioinformatics at Scale with Kubernetes: GDNV-6663 - events@cncf.io - Friday, November 20, 2020 3:12 PM - 34 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hey there, my name is cab.
+00:00:02 [W] I lead software team at day 0 Diagnostics where we're going to change the way bacterial infections are diagnosed and treated by leveraging whole genome sequencing machine learning and software like kubernative.
+00:00:14 [W] Informatics tools at scale So today we're going to talk about specifically about bioinformatics tool called Kraken which was developed in an academic research environment.
+00:00:25 [W] So it's development Johns Hopkins to solve some really complex and specialized problems, but wasn't necessarily designed for scale.
+00:00:34 [W] So here's where we're headed today.
+00:00:38 [W] We're first going to lay some really basic groundwork around microbiology and sequencing data.
+00:00:45 [W] Then we're going to talk about cracking both the complex technical problem.
+00:00:49 [W] Kraken is trying to solve and why Kraken is tough to scale and finally we'll discuss leveraging kubernative leveraging modern infrastructure to run crack and add scale which leads us into our primary.
+00:01:03 [W] Take away.
+00:01:04 [W] I hope for this talk and it's not a technical take away.
+00:01:08 [W] It's the recognition that some of our most complex and important scientific and Health Care problems.
+00:01:14 [W] which require specialized scientific expertise are going to necessitate researchers and Engineers working together to not only solve the problem, but find ways to solve these tough problems at scale and
+00:01:30 [W] I feel pretty confident saying that this is more important now than ever on the engineering side, especially in this community here at Cube con, which is focused on Modern scalable infrastructure.
+00:01:42 [W] I think we should reflect on whether we are holding holding up our end of that. Bargain.
+00:01:50 [W] Yeah, let's let's get into it for a long time the process of diagnosing and prescribing antibiotics to treat bacterial infections.
+00:01:59 [W] actions has been to actually grow the pathogenic bacteria in culture and perform tests on that grown bacteria to determine what bacteria is causing an infection in which antibiotics the bacteria is susceptible to or
+00:02:15 [W] resistant to
+00:02:16 [W] and one of the main issues with this is growing bacteria literally feeding them and having them proliferate and then testing them is not a very fast process.
+00:02:27 [W] So this generally takes two three four days to complete and during that time prior to having diagnostic information.
+00:02:35 [W] Physicians are forced to treat patients with bacterial infection infections with broad-spectrum antibiotics. So this is sort of like carpet bombing to just
+00:02:46 [W] That one of the antibiotics that you provide this bacteria is susceptible to not only is this toxic for the patient but contributes
+00:03:01 [W] a faster proliferation of antibiotic-resistant bacteria
+00:03:06 [W] However is now technically possible and economically feasible to instead sequence the DNA of the pathogenic bacteria and use that sequencing data along with bioinformatics software in machine learning to
+00:03:21 [W] And identify the organism causing an infection and determine what antibiotics that bacteria is susceptible to and for us add a zero, one of the Technologies we use to do that is an Oxford nanopore men on sequencer which looks a little bit like
+00:03:36 [W] This over here. It starts at $1,000 and can produce pretty significant amount of sequencing data in a few hours.
+00:03:45 [W] So yeah, that's our that's our microbiology State of the Union.
+00:03:51 [W] of the Union. So now let's talk a little bit about the data that comes off of the sequencer.
+00:03:58 [W] So what we get out of this men on sequencer is for each sample sequence a file.
+00:04:04 [W] that's somewhere between 500 megabytes and two gigabytes compressed and it looks a little bit like this it contains repeated sets of groupings called reads that each contain an identifier a sequence,
+00:04:19 [W] It's just a long sequence of a is tsg CSR for DNA bases and a couple of lines about the quality of those bases and a single sequencing data file will contain tens of thousands to hundreds of thousands of reeds,
+00:04:34 [W] Generally, totaling somewhere between a hundred million and two billion bases depending on how long a sample is sequenced.
+00:04:43 [W] and just for reference that little men on sequencer we looked at on the last slide can sequence over 90 samples concurrently on that one small device so each read here
+00:04:58 [W] Um that's in the sequencing data represents a small section of the Genome of the organism that was sequenced.
+00:05:06 [W] The reads that are part of that sequencing data aren't necessarily in any order.
+00:05:12 [W] They might be overlapping they may be duplicates and they generally vary in length.
+00:05:20 [W] if this sounds like a hard enough problem to figure out where these Reeds should
+00:05:28 [W] Be aligned to the organism's genome that you put into the sequencer. It gets much much harder when you don't know what you put into the sequencer. So if you don't know the organism that was
+00:05:43 [W] Sequence you really have very little information to work off of to make any sense of these Reeds. It's sort of like like having a hundred thousand piece puzzle made up of only four colors and we have no clue what the final
+00:05:58 [W] A simple puzzle looks like so they're dedicated Specialists thinking about how to effectively and correctly put this massive puzzle together.
+00:06:08 [W] These are the computational biologists and the bioinformaticians and they've produced an entire ecosystem of tooling to try to take these Reeds with very little information and turn them into something meaningful.
+00:06:26 [W] And one of the tools that's part of that ecosystem is called Kraken which is a taxonomic sequence classifier. So crack and takes reads and tries to determine what species genome a given read
+00:06:42 [W] Gwen's belongs to so given a sequencing data file like this one in the bottom. Right Kraken will say like this really belongs to this weird species and that really belongs to this other weird species all the way down
+00:06:57 [W] File and in a nutshell for each sequence of bases or read that crack and receives it looks at all of the sub sequences which are comprised of 31 bases.
+00:07:11 [W] and from there tries to determine all of the bacterial species whose genome contains each specific sub sequence after doing that for every sub sequence in the larger read it classifies
+00:07:26 [W] Read as belonging to the species that was assigned the largest percentage of subsequences.
+00:07:32 [W] So the entire Reed gets called as the species that got the most of these 31 base subsequences.
+00:07:45 [W] an actual process data structures are quite a bit more complicated than this but even just this probably guess is a pretty computationally intensive process, but on top of that
+00:08:00 [W] Fires a reference database to compare each sub sequence against and that crack and database can vary in size based on the number of organisms.
+00:08:09 [W] you want to classify and how confident you want to be in your classification and so our database at day 0 contains primarily the bacteria.
+00:08:19 [W] We're most interested in and comes to 350 gigs and total size and that entire database is loaded into memory.
+00:08:30 [W] At runtime of Kraken which in general is achieved using a ram back disc, which allows us to keep the database and memory over multiple executions of the Kraken command line tool.
+00:08:42 [W] So once that 350 gig data Bases Loaded into memory cracking might take anywhere from a few seconds to 10 20 minutes to classify all the reads in a sequencing file.
+00:08:55 [W] just based on the size of the amount of data that's given a crack in the end.
+00:09:00 [W] Somewhat based on the complexity of the data it McCracken.
+00:09:06 [W] So at this point, we've identified a complex and important problem and talk through the specialized scientific expertise both in sequencing data and tooling required to begin to attack this problem.
+00:09:22 [W] So now we can start to talk about how we might also try to attack this problem at scale and how we might leverage kubernative.
+00:09:34 [W] He's to do that.
+00:09:35 [W] So add a zero.
+00:09:38 [W] We're currently a software team of four working alongside computational biologists and bioinformaticians to reduce the computational turnaround time for bacterial species identification and antibiotic resistance.
+00:09:51 [W] Filing to less than an hour.
+00:09:54 [W] And so we want to not only be able to produce meaningful data in less than an hour based on input sequence data, but we want to be able to do this on lots of sequence data in parallel
+00:10:10 [W] And that's really a change from the early development at day 0 which was research-oriented bioinformatics pipelines that were didn't need to focus on scale.
+00:10:22 [W] And so we're focused mostly on the scientific this solving this complex scientific problem, which is a hard enough problem in itself, and so bioinformatics workloads
+00:10:37 [W] In a research environment at day 0 which generally run with process level parallelism on Standalone large virtual machines, but as we needed to scale considering our small engineering team, this is a great opportunity to
+00:10:53 [W] Kubernative he's generally and for these bioinformatics pipelines, we could leverage kubernative jobs, which give us dedicated repeatable environments. Each pipeline is decoupled from all other Pipelines.
+00:11:09 [W] and gives us obviously improved reliability with pretty limited engineering investment but
+00:11:24 [W] On top of that.
+00:11:25 [W] We knew that if we want to leverage crack in among the bioinformatics tools that we're going to use in these bioinformatics pipelines.
+00:11:35 [W] We've clearly got a problem each pod that we want to run cracking in would require three hundred fifty gigs of RAM and we're at day 0 where we're looking around fifty a hundred two hundred bioinformatics workloads in parallel
+00:11:52 [W] This just not not feasible to expect us to be able to deal with this large memory footprint at really any scale at all.
+00:12:08 [W] So instead we can centralize Kraken to control the parallelism of our Kraken service separate from the parallelism of our primary bioinformatics workloads.
+00:12:19 [W] And again, this allows us alongside our kubernative jobs that are running are bioinformatics pipelines and other bioinformatics tools. We can stand up our Kraken API so we can put together
+00:12:34 [W] cracking deployment that runs our API and stand up kubernative service easily in front of it and from our primary bioinformatics pipelines
+00:12:49 [W] Make make requests directly to our service and on top of that.
+00:12:58 [W] We can leverage kubernative and to support a cost effective way to manage Kraken by running our Kraken API on a node pool made up of large
+00:13:13 [W] Nodes to support this large memory footprint required by Kraken and so this is great.
+00:13:21 [W] This allows us to support our bioinformatics pipelines at some scale and run cracking at some scale on top of that we can take a step up a level and kubernative.
+00:13:36 [W] Is allows still are small engineering team to support an even more complex system that allows us to provide a variety of crack and workloads and
+00:13:51 [W] Use cases. So we do things like utilize Kata to add redundancy to are cracking deployment during work days when most active sequencing is happening.
+00:14:06 [W] And so we have a preemptable node that provides maybe a single replica generally of our Kraken API, but can be preempted at any time and take some
+00:14:21 [W] I'm to come back up. And in addition during the day we can spin up a non preemptable second. Replica of our Kraken API.
+00:14:31 [W] that gives us a little bit more reliability when sequencing is more likely to happen. Additionally.
+00:14:42 [W] We can deploy a second Kraken service alongside our original deployment with a database that contains fewer species for cases where we want to prioritize.
+00:14:51 [W] Speed over accuracy.
+00:14:52 [W] So this starts to become a pretty complex system that supports lots of use cases and some Dynamic use cases,
+00:15:07 [W] But it's still possible for pretty small engineering team. Although does require I think when we get to this system we get probably Beyond to the place
+00:15:22 [W] having engineering expertise work with the bioinformatics group in the computational biologist becomes critical to supporting these more complex systems and then
+00:15:37 [W] on top of that if there are use cases where
+00:15:46 [W] we need to have repeatable movable larger systems. We can step up another level and leverage Helm for example to support
+00:16:01 [W] HIPAA compliant and HIPAA compliant workspaces that include our bioinformatics pipelines are tracking deployments include tooling that comes alongside that like Kata and Prometheus and so
+00:16:18 [W] with some engineering support working alongside the research side we can we can move to where we can support pretty complex systems in real-world use cases
+00:16:34 [W] At some scale and and the value that Helm and kubernative.
+00:16:42 [W] He's Kata Prometheus provide to this scientific problem is pretty pretty massive.
+00:16:51 [W] And that's not to say that I think you know.
+00:16:56 [W] As we know leveraging kubernative, he's for these scalability benefits does come with some trade-offs.
+00:17:04 [W] We're having engineering expertise.
+00:17:11 [W] contributing to this scientific application is critical and so outside of the sort of standard normal kubernative complexities this you know, Kraken itself
+00:17:26 [W] As sort of some Edge use cases of kubernative feature. So we leveraged and in it container to load the 350 get crackin database into memory medium empty dear prior to the API,
+00:17:42 [W] Becoming available.
+00:17:43 [W] And so we have to deal with some features that may be a little less mature and a little non-standard and sort out how we're dealing with can effectively deal with some of these.
+00:17:58 [W] Edge case features of kubernative he's which is where engineering expertise provides. I guess where the
+00:18:13 [W] Engineering side will have to provide input and provide expertise to the bioinformatics and computational biology side.
+00:18:22 [W] So that's all say that, you know software like kubernative eyes. Like how like Kate up Prometheus working together provide pretty massive value for
+00:18:38 [W] Solving these types of difficult problems in real world scenarios and Kraken is a complex software.
+00:18:47 [W] So, you know, our our team is not going to reach into that database for performance Improvement is scuse me into that code base for performance improvements and instead scalable infrastructure is a really powerful
+00:19:03 [W] option for us to work together with our research side to solve some of these problems at scale so that brings us back to
+00:19:18 [W] Do that. Hopefully you take home once more which is that he's really hard but really important problems are going to require academic researchers and Engineers working together.
+00:19:34 [W] And I think in looking at the cube con 2020 schedule we have to you know, we should reflect on you know, whether we're baking a large enough contribution on the engineering side.
+00:19:47 [W] I think for me like I could only find sort of one talk that I thought fell into this category.
+00:19:54 [W] That was this this what sounds like super interesting talk about kubernative contribution to research around the
+00:20:05 [W] epidemic and by Chris nóva and dr.
+00:20:09 [W] Beta and so I hope that you know in the future and future Cube cons in in the future. We have the opportunity to see more talks like this at
+00:20:25 [W] Future Cube cons talks that highlight this community contributing to scientific research and health care.
+00:20:33 [W] So if you haven't already, please go see this talk because I'm sure it's going to be great and I'd encourage you to support talks projects initiatives that apply Best in Class infrastructure solutions to
+00:20:48 [W] Scientific research and health care and just in general. I think yeah that we should continue to make a concerted effort to be as welcoming as
+00:21:03 [W] Possible to other communities with non engineering expertise that would get huge value by leveraging software like kubernative to try to solve some of the problems.
+00:21:14 [W] They're trying to solve and if you're interested in Kraken in the intersection of research software software, like kubernative or just interested in some of the stuff we're working on it day Zero, please don't
+00:21:29 [W] Hesitate to reach out. I've also added to our Engineers from Day Zero.
+00:21:34 [W] Here's a contemn and they are two of the engineers that are working daily on some of these complex and specialized problems and how we can apply
+00:21:49 [W] Scalable engineering principles to our research to solve these problems.
+00:21:56 [W] So I think if you have questions about this these Zach and Tim are the the folks to connect with otherwise.
+00:22:06 [W] Thanks so much.
+00:22:15 [W] everyone
+00:22:21 [W] If you can, yeah, so maybe maybe you can hear me now, hopefully but if anybody has any questions, I'm happy to answer them.
+00:22:35 [W] all. So if anybody has any talks that sort of fall into that category that I missed and going through the schedule. I know there was a another talk in the performance track from from
+00:22:50 [W] One of the engineers at CERN that sort of definitely falls into that category then yeah be Keen to hear about them so I can I can go back and check this out as well to get one question.
+00:23:05 [W] and so from Pete interested in this has applications with individualized medicine, and I think I think
+00:23:20 [W] definitely
+00:23:24 [W] genomics specifically genomics and bioinformatics research is going to have an it is already especially in like oncology space.
+00:23:38 [W] Is the amount of data that's going to support individualized medicine is only going to grow and the like contribution of of engineering and the contribution of folks with
+00:23:54 [W] experience on experience it's more sort of traditional sauce pour space on how to effectively scale workloads is going to be it is already super important and I'd say for us like
+00:24:10 [W] In we're working specifically on bacterial genomics. I'd say for whole genome sequencing where you know towards towards
+00:24:24 [W] Bacterial genomes or smaller on the small side. So it's we're sort of at the at the front of the pack in bacterial genomics on being able to
+00:24:37 [W] leverage whole genome sequencing at scale to work towards more like digital Solutions or to like infectious disease problems, and the
+00:24:52 [W] The sequencing technology is only getting cheaper and faster and able to sequence it more scale and I would say like engineering is behind so
+00:25:07 [W] Pete like I think there's only going to be more application especially around, you know, genomics more sequencing data being available.
+00:25:23 [W] And then Eric think about using using spark.
+00:25:28 [W] We've definitely thought about like places we could leverage spark or task or like some clustered like highly parallel Computing
+00:25:43 [W] for this type of work and for genomics work in general and there's definitely some spaces where things like spark and to ask will provide high value for genomics, but one of the weird things
+00:25:58 [W] Things about sequencing data in the sequencing data ecosystem right now, which is which is kind of tough to work with is
+00:26:13 [W] It's very much file-based and software like Kraken is super complicated and like internally add a 0 we don't have the resources to
+00:26:28 [W] You like that's not a problem that the problems Kraken is solving takes a pretty big team to try to work on and pretty high level expertise in this specific area.
+00:26:39 [W] And so we sort of have to rely on that software which
+00:26:47 [W] which sort of expects it in a certain runtime environment, so
+00:26:55 [W] So that in some places like limits our ability to leverage some of them sort of more traditional patterns for paralyzing workloads.
+00:27:11 [W] Hopefully that answers now.
+00:27:19 [W] Yeah.
+00:27:33 [W] Otherwise Happy to answer any other questions or if there's anything I think the Talk itself is a little bit.
+00:27:42 [W] little bit General in terms of the actual implementation, so
+00:27:49 [W] There's anything specific happy to clarify that as well.
+00:28:15 [W] And otherwise for anybody that still listening, yeah, okay.
+00:28:22 [W] Eric other other problems considering are there other problems that we are considering using this approach for?
+00:28:35 [W] So in if I understand the question correctly, I mean, I think I think for us we are this approach of leveraging kubernative eyes to parallelize.
+00:28:50 [W] Is bioinformatics workloads where the actual sort of we don't have a lot of control or as much control over like this the software level implementation?
+00:29:05 [W] Asian we have much more control over the infrastructure level implementation.
+00:29:09 [W] We are sort of doing this using the same approach pretty frequently where we have a
+00:29:24 [W] Bioinformatics pipeline that's running as a kubernative job and we will take some bioinformatics software like Kraken and there's other software that does things like like
+00:29:40 [W] Have sequencing data and it tries to take this like jumbled up sequencing data and align it so that it's like organized as in order of the organism's genome.
+00:29:56 [W] And so like for that software, we will take that and sort of centralized it in an API like a separate a separate service deployment
+00:30:11 [W] That we can scale dynamically and that we can pretty easily deploy like multiple versions of that software and so our by our main bioinformatics pipelines will sort of
+00:30:29 [W] Talk back and forth with centralized services that provide like these various bioinformatics tools.
+00:30:36 [W] So we sort of we're trying to sort of reuse that pattern over and over and Sonia asking what's our Tech stack at day 0.
+00:30:52 [W] So yeah, so we
+00:30:58 [W] We are generally for like our production environments for vile informatics pipelines.
+00:31:07 [W] We are almost all of our workloads or written in Python.
+00:31:12 [W] We have sort of a computational biology team a data science team that's working on screw the machine learning side of our work and the software team and really python is the shared language between the three areas.
+00:31:27 [W] Of expertise and so for orchestration of our bioinformatics pipelines, we use either
+00:31:42 [W] Sort of one of the newer like I guess one of the newcomers to like the workflows but a space which is prefect.
+00:31:48 [W] I think prefect is like a offshoot from some of the airflow the folks that developed airflow originally and we also I think someone asked asked the question in here.
+00:32:02 [W] Oh Alex. We also use next flow in some places and
+00:32:12 [W] next flow is like a workflow workflow engine. I guess workflow management orchestration software.
+00:32:23 [W] That's pretty that's developed for bioinformatics specifically and so we use those next flowmill prefect for organizing bioinformatics workloads and both of those are
+00:32:39 [W] Are generally running on on gke on kubernative and that's sort of our our stack I guess and so and just
+00:32:53 [W] Alex you asked do we have experience with next flow from work running on kubernative eyes, and yep.
+00:33:00 [W] We've we've used next photo for some bioinformatics pipelines on gke and I know I have less experience than some of the
+00:33:15 [W] Bioinformaticians with next flowmill 2i I think kubernative zsasz like an Executor is pretty new and so
+00:33:31 [W] We've sort of tried to work out some work clothes on kubernative xand for next low. We've also just use VMS directly pretty successfully sort of like hybrid execution where we have a workflow running on a larger virtual machine and
+00:33:46 [W] And next one is managing getting preemptable preemptable VMS for sort of individual tasks running and that's that's actually work work pretty well.
+00:33:58 [W] So yeah, so I think we are at time. So the one last thing I say is like if anybody has any additional questions, there's on slack on the cloud native slack.
+00:34:13 [W] Is the number 2 Cube con performance Channel and happy to answer answer any any additional questions over there?
+00:34:26 [W] Anyway has any otherwise thanks.
+00:34:28 [W] Thanks so much.

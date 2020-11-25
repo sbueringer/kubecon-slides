@@ -1,0 +1,316 @@
+﻿Still Writing SQL Migrations? You Could Use A (Schema)Hero.: ZGYA-3557 - events@cncf.io - Thursday, August 20, 2020 12:42 PM - 107 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Today, I want to spend a little bit of time talking about databases and in particular database schemas and how we manage those in a kubernative knative environment before we get started.
+00:07:16 [W] I want to introduce myself.
+00:07:17 [W] My name is Mark Campbell.
+00:07:19 [W] I'm the CTO and co-founder of a company called replicated and the goal of this talk is to really present the idea of declarative schema management as a kubernative operator and in particular the implementation that we've open source in a project we've been working on it replicated called schema hero.
+00:07:31 [W] To help explain how I'm thinking about this problem.
+00:07:37 [W] I want to present a story of two different Developers.
+00:07:42 [W] The first developer is a Django developer, and she's writing in deploying an app to Heroku.
+00:07:43 [W] The second developer is a Java developer writing in a playing an app to a kubernative cluster.
+00:07:48 [W] When I walk through a couple of scenarios for the day-to-day of these developers the first scenario, they both these developers are adding a new feature that requires a database schema change our Django developer.
+00:08:04 [W] She's just going to editor python file add a new class save it and push it to Heroku what happens when she does that is Django is going to automatically deploy the database migration wait for that to complete and then start the new version of the application.
+00:08:13 [W] Our Java developer edits the source file of the Java class, but he also needs to make that database schema change separately.
+00:08:25 [W] He's using liquid base to manage those schema migrations.
+00:08:27 [W] So he goes ahead and creates a new migration.
+00:08:28 [W] This one's number 913 because it's a relatively mature project.
+00:08:32 [W] Modify the schema references stackoverflow probably and ends up creating this alter table statement which adds a new column with a default in a foreign key that references the other the other table.
+00:08:50 [W] That's great.
+00:08:51 [W] So he's using gitops because everything is automated. He commits that into Source control has a code review and let's once it's merged.
+00:09:00 [W] Let's flux automatically deploy a custom kubernative job and that runs performs the database migration monitors that and once it's completed that emerges is code chatbots.
+00:09:06 [W] Change and let that deploy in order to use the new schema.
+00:09:11 [W] So what's the difference between these two scenarios the Django developer? She doesn't need to know that ddl statement to create the foreign key.
+00:09:18 [W] She just adds it in using her orm and he our Java developer had to know the SQL statement in order to create that foreign key. Another difference. Is that our Django developer just deploys everything in a single Atomic unit as one commits and our Java
+00:09:31 [W] Using liquid base in a custom job has a brittle multi-phased orchestrated deployment.
+00:09:37 [W] He has to deploy that schema Monitor and then deploy his application logic business application change separately another scenario.
+00:09:48 [W] I want to walk through is both of these projects. They want to create a new environment.
+00:09:53 [W] They want to deploy their application into a new cluster are Django developer creates the database tables.
+00:09:57 [W] Oh, she just deploys it. Let's Django create all the tables and it's done.
+00:10:01 [W] Our Java developer has 913 migrations to run against this new empty postgres server, but it's ok. It's all automated.
+00:10:10 [W] He just creates it deploys it flux runs through 913 migrations and the end result is going to be the same right sort of in this scenario though in older migration number 474. So a few months ago depends on a poster as module that was implemented
+00:10:23 [W] That was later removed and Rewritten re-architected.
+00:10:28 [W] So we didn't need that in the end. But the migrations fail they fail at migration 474 for him because he needs that module in order to allow it to install it even though it's going to uninstall it a hundred migrations.
+00:10:40 [W] later.
+00:10:45 [W] There's a couple options he could do he could rebase these migrations he could delete that change cherry-pick through it. But this is a common problem that you run into the differences between the two here are Django developer just deploys the desired state of the
+00:10:54 [W] The database she knows, you know, here's our code.
+00:10:58 [W] Here's the class.
+00:11:00 [W] Let's the orm automatically deploy.
+00:11:00 [W] what's needed and our Java developer.
+00:11:03 [W] He actually deploys the history.
+00:11:06 [W] So he walks through everything that converges to that desired state in another difference because of this is the are Django developer doesn't need to all of the old dependencies that we ever needed and our Java developer needs everything that's ever been required.
+00:11:19 [W] So if a migration required a certain encoding or a module or a certain expected a specific version of the database engine, it's going to be needed.
+00:11:29 [W] Order to successfully complete unless we go back and rewrite that migration later.
+00:11:31 [W] Final scenario.
+00:11:32 [W] I want to walk through is auditing the schema.
+00:11:36 [W] So a questions raised. Is there an index on this column?
+00:11:38 [W] So both of the developers want to understand that to answer that question and of course we want to do this in a way without direct access to that database.
+00:11:45 [W] So our Django developer just looks at the python class looks to see if there's an index defined in the attributes on the class.
+00:11:52 [W] Using Code also, so he just opens up. His editor looks at the migration files.
+00:12:02 [W] It does have to you know, command shift F or whatever and search through 913 migration files for the table name read them reads them to see if that index has ever been created or dropped in like what order it is, and that way he can reconstruct the final state of that table to answer the question.
+00:12:15 [W] The difference is between here are that she just has a single place that has the desired State and he doesn't again he has all of the instructions that he can use in his head to converge on what that desired state is.
+00:12:29 [W] So this raises the question what if there was an orm specifically designed for database schemas some platforms have this today, right?
+00:12:40 [W] So Django as we just talked about has a built-in RM that manages database schemas flask apps for python. You can use SQL Alchemy and other tools
+00:12:44 [W] Java and spring have hibernate you can use that for schema management as an orm and node has a few projects.
+00:12:59 [W] They're a little bit fragmented in that ecosystem. You know, most most platforms do have some platform specific functionality to manage schema or RMS not all but they do Java being a popular language, you know question was asked on
+00:13:07 [W] Should I use hibernate to automatically manage schema and production and the highest answer back from 2016 said no, it's unsafe and the explanation is pretty detailed in the interesting part.
+00:13:21 [W] highlighted in red here says you actually do want the ddl to be generated automatically, but you absolutely want that change to be inspected by a human before you run it in production.
+00:13:31 [W] So I want to present a project we've been working on called schema hero.
+00:13:35 [W] Scheming hero is a language in neutral declarative State gitops friendly kubernative operator database schema orm. So that's a lot.
+00:13:45 [W] That's a mouthful.
+00:13:47 [W] We're going to like drill into it do a demo and kind of explain it.
+00:13:52 [W] So specifically what we're bill is a kubernative operator to manage database schemas in a language a language neutral State our system. So it doesn't matter whether you're running python or rails or node or go or rust or Java or any other language than any other tooling it
+00:14:03 [W] Scheming hero is a language and neutral declarative State gitops friendly kubernative operator database schema orm.
+00:14:04 [W] So that's a lot.
+00:14:04 [W] That's a mouthful.
+00:14:04 [W] We're going to like drill into it do a demo and kind of explain it.
+00:14:04 [W] So specifically what we're built is a kubernative operator to manage database schemas in a language language neutral State our system. So it doesn't matter whether you're running python or rails or node or go or rust or Java or any other language than any other tooling it
+00:14:06 [W] Hero is a tool specifically meant to manage the database schema, and it does it through a declarative state in a way that's gitops friendly.
+00:14:11 [W] How to scheme hero work it's pretty simple.
+00:14:18 [W] It's a kubernative operator. The first step is that you want to deploy a kind database.
+00:14:22 [W] So this is a kubernative custom resource scheming hero operator implements the reconcile Loop for it this kind database it you give it a name and you deploy it to a namespace but the key part here is that this just contains
+00:14:35 [W] For the database in a name.
+00:14:40 [W] So in this example that's on the screen right now. This is a postgres database and the custom resource is saying the connection URL the connection URI to connect to this postgres. Database is in a secret name postgresql in a key named Yoo, RI you can hard
+00:14:53 [W] In here using secrets, you can put them right in here.
+00:14:58 [W] You can use hashicorp Vault or AWS parameter store.
+00:15:08 [W] There's various methods that you can use but the database object just is a pointer to how to connect to the database whether that database is in the cluster or out of the cluster.
+00:15:08 [W] Next you want to deploy a kind table chances are you probably wanted to play more than one of these because most databases have multiple tables.
+00:15:17 [W] It looks something like this.
+00:15:21 [W] So this kind table references the database object that we just deployed and it defines what the schema what the desired scheme of this table is on the example that's on the screen here.
+00:15:30 [W] We have a couple of columns code and name.
+00:15:37 [W] So this defines what the columns are what the types of these columns are adding constraints on the columns. And in addition you can Define primary key index has unique
+00:15:43 [W] Dex is foreign Keys any other schema that's that you need on this table?
+00:15:45 [W] Once you've deployed this kind table, the next step is just a view and approve the migration.
+00:15:50 [W] So using the schema hero CLI, which is distributed as a coupe control plugin.
+00:15:59 [W] You can just view the migrations and then describe a migration.
+00:16:02 [W] So here we've deployed a migration and when I run Coop control scheme hero describe migration, you can see that the output shows the generated ddl statement and that's a create table command and then it gives you a couple of commands down towards the bottom to be able
+00:16:14 [W] Gration, reject the migration or recalculate the migration approving. The migration will actually just run that ddl statement that's presented on the screen that schema hero calculated rejecting the migration will mark it as rejected not run it in
+00:16:30 [W] Being executed then recalculate the migration tells schema hero to go take the desired state in in Connect compare it to the actual database schema.
+00:16:41 [W] that's running and regenerate the correct create table statement that may be useful if the underlying database schema has changed somebody manually altered it or another tool has edited the schema. So schema hero will then regenerate the
+00:16:56 [W] necessary
+00:16:58 [W] So help demonstrate this I want to show a little bit of a demo on how schema hero works.
+00:17:07 [W] So here I have a kubernative cluster set up.
+00:17:09 [W] It's an e KS cluster doesn't really matter.
+00:17:20 [W] This is kubernative 116 and I also have an RDS instance set up in the RDS instance is set up on the same V PC, but it's only on connected into my private Network.
+00:17:25 [W] So we look here and this is like I mentioned it's a community's 116 cluster running five nodes.
+00:17:29 [W] I'm going to now deploy schema hero and deploy a database to it.
+00:17:37 [W] So to start with I want to deploy a secret in the secret contains a connection string and this connection string is basically four encoded but it's to this test database instance that we have on our DS.
+00:17:51 [W] So if I apply that it may already be applied.
+00:17:56 [W] So that's secret is there that's great. And so the next up I want to do is deploy the schema hero operator. So I
+00:18:00 [W] control schema hero
+00:18:03 [W] already installed.
+00:18:15 [W] This is distributed as a crew plug-in so you can do keuken whole crew with a k' install schema hero and that'll give you the client side components for to manage a schema hero operator running in your production environment or any environment.
+00:18:21 [W] And the manager into the cluster.
+00:18:29 [W] Now that that's installed we can take a look back here.
+00:18:35 [W] I have a airline DB file.
+00:18:39 [W] So I want to you know, the the scenario that I want to present here is deploying a small database that that is you know could be used to managed airports in Airline reservations. So this CR D. This custom resource is the databases kind the
+00:18:50 [W] Airports in Airline reservations. So this CR D this custom resources the databases kind the database kind for schema hero and it references that secret that I just deployed.
+00:18:55 [W] So we're going to go ahead and deploy that now if we apply that.
+00:19:00 [W] Now we have that database object deployed and we have that hasn't done anything yet, except just point schema hero allow scheming hero to start managing this database.
+00:19:13 [W] The next step is I wanted to play a single table.
+00:19:20 [W] So this table is named airport, and we reference it that it's in the airline DB database and you can see here.
+00:19:29 [W] I'm identifying to Colorado declaring two columns that I want the code in the name.
+00:19:33 [W] So the airport code in the name of the airport and I'm saying that the primary key is the code key are the code column and that's an array. I can be multiple columns if you have a composite primary key, but in this example, this is a single Prime single column primary key.
+00:19:43 [W] So we're going to go ahead now and apply that.
+00:19:47 [W] And now that that's applied I can run Coop control schema hero get migrations.
+00:19:58 [W] When I run this I can see that the airport table in the airline DB was planned six seconds ago and so planned means that the schema Hero controller took that table Yeah, melin compared it to was actually running in my
+00:20:14 [W] In generated all the necessary SQL statements the ddl statements that are needed in order to migrate the RDS instance to the state that I have in Miami.
+00:20:29 [W] We can actually take a look at this migration if we just described that migration.
+00:20:35 [W] my do this you can see that the migration name is what I just provided and the generated ddl statement here is what it at what scheming Hero has calculated that it's needed to turn that RDS instance into the instance into the desired state and
+00:20:52 [W] Find that airport table because this is a new database and so it just generated the create table statement gives me a couple options.
+00:20:59 [W] I can approve this. I can reject it, or I can recalculate it if I need to I'm going to go ahead and just to prove it.
+00:21:06 [W] And now that I've approved it when I get migrations again, you can see that it was planned a minute ago.
+00:21:15 [W] I approved it for seconds ago and scheming hero executed it for seconds ago.
+00:21:23 [W] So I'm going to head over here to my UI that I use to look at my post as cluster postgres database and I'm going to refresh the tables that I have and you can see now I have an airport table.
+00:21:29 [W] I didn't have that before and it has these two columns code and name which meet the requirements and what I wrote in that llamo.
+00:21:38 [W] Now I want to show what it's like to edit this and so like I say, I want to add a new column into here and I want that Colin to be named. I don't know postal code.
+00:21:45 [W] And that's going to be a type text and let's add a constraint under this column and that is not null true.
+00:21:56 [W] So we're going to add a new column postal code Type text' not know and while we're at it, let's say that we don't want any duplicate names inside our airport table.
+00:22:06 [W] So I'm going to come into here and add an index.
+00:22:10 [W] And the index is going to be on the name column again.
+00:22:17 [W] it's an array because I can have composite indexes that span multiple columns in this case.
+00:22:20 [W] And that's going to be a type text and let's add a constraint under this column and that is not null true.
+00:22:24 [W] So we're going to add a new column postal code Type text' not know and while we're at it, let's say that we don't want any duplicate names inside our airport table.
+00:22:26 [W] So I'm going to come into here and add an index.
+00:22:27 [W] And the index is going to be on the name column.
+00:22:29 [W] And again, it's an array because I can have composite indexes that span multiple columns in this case.
+00:22:29 [W] I'm not doing that. I want that to be a unique index and I could name the index if I want to but I don't really have a strong preference about the name.
+00:22:32 [W] So I'm going to let's keep me here.
+00:22:32 [W] ahead and calculate that.
+00:22:34 [W] And now when I apply that migration again or that that yeah Milligan, I have an error because the key is actually named indexes.
+00:22:44 [W] So when I apply that uml again it runs that and now when I look at come back here and get migrations, you can see there's a second one a second migration for the same table that was planned six seconds ago and if we run qu control schema hero
+00:23:00 [W] Because the key is actually named indexes.
+00:23:01 [W] So when I apply that uml again it runs that and now when I look at come back here and get migrations, you can see there's a second one a second migration for the same table that was planned six seconds ago and if we run Coop control schema hero
+00:23:03 [W] Describe that migration.
+00:23:03 [W] You can see that it's generated a couple of new ci/cd L statements. It wants to alter the airport table adding the postal code column text not know and then it wants to create a unique index named this on airport with that name
+00:23:21 [W] And it gives me commands again to approve or reject it.
+00:23:27 [W] I'm going to go ahead and just to prove that for this demo.
+00:23:29 [W] So I approve it and if I run get migrations again, you can see that again. It was approved for seconds ago executed three seconds ago and when we come back here into our UI, and we refresh the tables that we have our airport
+00:23:42 [W] Postal code column and it has a unique index on name and it's like the the state that I just deployed is there.
+00:23:53 [W] It's great.
+00:23:57 [W] So schema Hero has a few options that we just talk through you can get tables and this shows you you can view all of the tables that you have and you can view the what the expected and the desired state of these tables. Are you can
+00:24:11 [W] You can filter them by database in case you're managing multiple databases and this shows you all of the different migrations that you've run describing a migration.
+00:24:25 [W] You can see here, you know an example of a little bit more of a complex one that we have where it's this one table has multiple alter table statement that it wants to run because that was all deployed and one iteration one version
+00:24:34 [W] table resource
+00:24:37 [W] Next I want to talk a little for a minute about migrating to or converting to schema Heroes. So chances. Are you already have a database running in production or that you want you're thinking this might be useful for and you don't have to this isn't only good for like new databases.
+00:24:53 [W] We put some effort into how do we migrate an existing schema in the schema hero?
+00:25:03 [W] So this Coupe control scheme hero generate command takes a URI to that database.
+00:25:06 [W] If you pass that URI in the coop control scheme hero plug-in is going to connect in view the schema of all of those different tables and write a uml file for each of those tables.
+00:25:19 [W] So this is a really easy way to export your schema from a running database into all of the mlperf that are necessary and then you could edit one of these Mo files and apply it and that would now you're managing that schema through a declarative state of scheming hero.
+00:25:31 [W] Things have agonized reviewing.
+00:25:36 [W] What a scheme hero do what does it enable That's Unique versus other ways imperative ways or writing SQL statements for database migration first.
+00:25:44 [W] It gives you a really easy way to do gitops for database schemas, whether you're using Argo or flux or Argo flux or any other gitops tool to handle deployment.
+00:25:54 [W] You could probably build this yourself today by running custom kubernative jobs deploying these that run the ddl statement.
+00:25:58 [W] talked about that a little earlier but scheming Hero has this all built-in you can now just run Kuma.
+00:26:03 [W] Tools deploy the mo and then you have a full gitops pipeline in order to man it to manage your database schemas.
+00:26:11 [W] It enables policy enforcement for database schemas using tools, like open policy agent gatekeeper or conf test or anything like this. Now that we have our database schemas defined as a declarative structured uml file instead of imperative statements.
+00:26:26 [W] We can run policy against those apply policies laws is to do unique things like have requirements and in foreskin requirements around primary key existence on on tables foreign Keys names types of
+00:26:41 [W] Anything that you want to be able to do that you can Define in a Rego file you can now in force against your database schema.
+00:26:49 [W] You can have easy approval process the demo.
+00:26:53 [W] I just showed and everything.
+00:26:55 [W] We've talked through is kind of walk through that that two step process where I deploy the yeah mlops file allow scheming hero to plan the SQL statement and then I decide to approve or reject it.
+00:27:04 [W] that's really useful if you want to monitor to see what's running, but if you have other environments Dev test environments or you know, different environments where you don't need that level of control you can actually have schema hero automatically approve the the
+00:27:18 [W] Is it calculates them?
+00:27:24 [W] So that gives you a full end-to-end automated schema management that does not require anybody to look at the ddl statement really useful if you pair that with you know policy at code time so that you're validating. The only certain policies are only
+00:27:35 [W] Be generated.
+00:27:38 [W] This removes the need to write D DL specific lie, like it's not a replacement for SQL your developers still have to write SQL or use an orm at the application layer, but the the syntax around creating foreign keys or complex
+00:27:54 [W] Our table statements there's lots of different ways that you could do this that could lock a table or not lock an entire table depending on how you write these migrations scheming hiroko defies all this up with best practices.
+00:28:09 [W] So it's able to generate like the most optimal ddl statements possible are that it is able to do
+00:28:13 [W] it eliminates the need to write these custom jobs, right?
+00:28:24 [W] And this is an example from a cluster that I've seen where you know, it's actually using goose in this case to run database migrations. If you're familiar with that tool and it every database migration runs as a job and then they sit there forever.
+00:28:30 [W] Hopefully your cleaning them up better than this but you know, it's not uncommon to be using kubernative jobs in order to manage database schemas right now and this eliminates that need
+00:28:38 [W] Scheme, here are currently supports, you know, the some popular commercial and open source databases from postgres cockroach DB in MySQL cockroach is very similar to post grads, but it is a little bit different and the schema management
+00:28:54 [W] Times so scheme hero creates some new options that we didn't have before one of them being to detect drift in their databases.
+00:29:08 [W] So now that we have the desired state of our databases deployed into other kubernative cluster. If something out of band has modified the schema schema hero will generate a migration to bring it back in to where we want it to be.
+00:29:17 [W] it'll remove that drift.
+00:29:20 [W] it's really useful to determine that to to use this as a tool to automatically see if
+00:29:24 [W] your database is not what you expected to be if the schema changes in unexpected ways.
+00:29:30 [W] you can also enforce an audit schemas using you know, tools external other cncf projects, like gatekeeper Comfort test and other tools, you know by for things like I mentioned before column names any kind of any kind of policy or best practices that you want to implement you
+00:29:46 [W] This you can do it in the in a gitops are in a you know, commit check now or in code review.
+00:29:51 [W] You can easily test schema on updated versions of database engines.
+00:30:00 [W] So as an example here, if you were running my SQL five six, and now you're looking to upgrade to mySQL 8, but there was a some functionality that was deprecated along the way and removed in 8.0. Your migrations are no longer going to work because if
+00:30:11 [W] Run that on a new MySQL 8 database it's going to fail because the the statement is no longer compatible with the ddl that MySQL 8 supports.
+00:30:26 [W] So think of this as like Auto rebasing these you could manually go back through every time you want to change database engines and recalculate all your migrations for the new version scheme here. I'll just does this automatically by nature of what it does and it's really easy to test the schema on a cloud knative version of the database
+00:30:35 [W] I didn't so if you're looking at migrating from say postgres to cockroach DB, but your there's some slight differences in the ddl statement and support between the two engines schema.
+00:30:50 [W] Hero is a good use for this because you can take this schema run it against cockroach DB schema hero understands how to calculate the migration commands in the in the create table and alter tables on cockroach TV versus post grads when there are little differences between the two or unsupported changes on so it's really
+00:30:59 [W] Easy to not think about that abstraction. Like let's keep me here will be that abstraction. So you don't have to like understand those differences of implementing the schema on each of them.
+00:31:09 [W] Scheming hero doesn't do everything though.
+00:31:18 [W] It doesn't do database migration or data migrations right now in particular. If you have business logic, you need to run around, you know, creating modifying data splitting columns doing something that actually involves writing code, you know, you're still today better using something like Goose or
+00:31:27 [W] Way or you know, another migration tool that can handle that data migration. At least for that layer.
+00:31:38 [W] We're super open to having this as part of scheming hero.
+00:31:39 [W] It's not there today.
+00:31:41 [W] There's a GitHub issue where we're discussing the plan and like the design for how we could do this.
+00:31:46 [W] love to have some help there and it does it's not an athlete scheme hero is not an application runtime orm. So if you are using an orm, so that developers don't have to write select statements and update and delete statements at runtime.
+00:31:57 [W] That's great. That's super compatible with everything schema Heroes doing scheming hero wants to really focus on becoming the schema or M.
+00:32:05 [W] So next we have some changes we want to add in.
+00:32:10 [W] We want to continue development of schema hero.
+00:32:12 [W] We're looking to add in additional database engine support.
+00:32:13 [W] So yugabyte spanner tidy be the Tas anything like this basically any relational database.
+00:32:28 [W] We think that you know, there's a schema for it and scheme hero would be a great tool to manage that we do plan to submit scheme hero to the cncf as a Sandbox project really soon like I mentioned before we're talking about adding data and server migration capabilities into
+00:32:34 [W] Mahiro, so that it can do more than just schema. It can handle all my Grecian all deploy time migration type tasks and we're looking for contributors in users really into the project. So if it's interesting, you know, we'd love to have you try it out and give some feedback
+00:32:49 [W] I can see you know, where it fits use cases in what changes we need to add into the project to to make it fit even more use cases.
+00:32:57 [W] That's it. Thanks everyone.
+00:33:01 [W] Great.
+00:33:07 [W] Thanks everyone for watching.
+00:33:09 [W] There were some questions that came in during the presentation and feel free to keep sending them, but we'll just go through the list right now.
+00:33:19 [W] First question is what other databases support is planned for the future to be able to unify a tool for migrations and like we mentioned in the presentation right now. We support post grads my SQL cockroach DB
+00:33:29 [W] So plans for additional ones really any database that has a schema.
+00:33:38 [W] We'd like to be able to support like that's our goal was scheming hero2 is to make it the unified tool for database migrations Mongo anything like that could potentially be a good fit.
+00:33:42 [W] A question from Sergio was is a migration approval step necessary can migrations be pre-approved absolutely. Can they're in the database object that you deploy you can have
+00:34:00 [W] Mediate deploy true the custom resource supports that in which case it automatically deploys.
+00:34:15 [W] In fact, that's what we do often in our Dev or are pre production environments here is will have that set to automatically deploy, but we just want like an extra manual process for the production deployment.
+00:34:18 [W] it's really it kind of defaults to a safe way where it will allow that manual intervention or require the manual intervention, but you can disable that that piece of functionality absolutely
+00:34:29 [W] The next question from Angela asked about having a column populated automatically with an expression based on other values in columns.
+00:34:40 [W] So it sucks.
+00:34:42 [W] Five the default value.
+00:34:55 [W] So if you have a static value or something that can be expressed as the default inside the ddl statement for post grads or MySQL or whatever. The database is. You can supply that and it's going to work fine if if it's has to be calculated based on
+00:35:05 [W] You know, that's where tools like goose and fly away and other migration tools still have the capability of running code schema hero can't run code during a migration today custom code scheme hero can only generate SQL statements and let the database
+00:35:20 [W] Do it.
+00:35:21 [W] Well that answers the question completely.
+00:35:23 [W] The next question from Victor asks, if a table resources deleted will scheme gyro drop the corresponding table.
+00:35:36 [W] And also is it possible to rename a column or table?
+00:35:38 [W] So the two questions there and they're both really good first scheme hero will if a table resources deleted it doesn't automatically delete that table.
+00:35:51 [W] We aired again on the side of caution there because outages in see I can happen and we would hate to say oh the directory was empty for some reason and so schema hero decided to drop every table in the database.
+00:35:58 [W] So you can change the entire schema Speck of a table to just is deleted true where you still have the name of the table, but your your declaratively saying that you want that table to be deleted in which case schema hero will delete the table.
+00:36:10 [W] Otherwise if it finds a table that's not referenced in but it's in the database but not referenced in the schema here o-jama little just ignore that table and leave it alone.
+00:36:22 [W] And then the second question around renaming a column or table. It's a good question sit today know.
+00:36:25 [W] Schema hero. If you were to rename a column it would see that as a new column.
+00:36:32 [W] Unfortunately in that would mean it would drop the existing one and add a new one.
+00:36:33 [W] That's not ideal.
+00:36:33 [W] Not good.
+00:36:37 [W] We there's an issue in the GitHub repo for it where we've talked about some options around being able to have alternate names or some other approaches that we could add in do a table column name and then a schema here would be able to detect that
+00:36:49 [W] And then find and rename it again.
+00:36:53 [W] Our goal is really to declare the our to have you write the declarative state of the entire table not worrying about previous state, but there's some of it that we need to have in there. If we don't want to always be able to pull the previous state in.
+00:37:06 [W] Great question asking if we can upload an initial test data with the tool again, that's a feature. We don't have in there today, but it's actually one of the top issues in the repo right now.
+00:37:24 [W] It's something we've been looking at around adding seed data to a table whether it's another custom resource or in the table definition.
+00:37:29 [W] However, we want to do it. It's definitely something that we think is important to do is probably not going to be great for you know adding a million rows of seed data, but you know a lot of
+00:37:38 [W] Best in Dev environment, sir pre prod environments have a pretty small set of seed data and we'd like to be able to figure out how to add those in.
+00:37:43 [W] Next question from Han asks, I understand.
+00:37:50 [W] This is for schema.
+00:37:50 [W] Only.
+00:37:52 [W] what about data DML migrations?
+00:37:57 [W] What if these migrations can only be applied in a specific stage of the database for example between migrations 313 and 361.
+00:38:02 [W] It's good question.
+00:38:05 [W] So today we don't do data migrations mentioned that towards the end.
+00:38:09 [W] So it is only for schema.
+00:38:13 [W] We did we'd love to be able to like figure out how to do database data migrations also so DML migrations
+00:38:15 [W] And if they can only be applied in a specific stage of the database, we'd like to bake that that concept into the declarative nature of schema hero.
+00:38:30 [W] So if you have these rules where I have this table that depends on this other table or this data migration in the future that depends on the schema to exist.
+00:38:39 [W] We'd like you to be able to declaratively state that in the migration because that will allow schema hero to deploy that against the database that's either empty or it has various States and bring it into that form. So let's keep me here.
+00:38:49 [W] Basically build that logic out, you know through hints and you know, the you declaring those dependencies inside the JAMA.
+00:38:53 [W] Next question from Xavier asks can schema Hero Run migrations over a database that has been previously created.
+00:39:03 [W] Yeah.
+00:39:03 [W] Absolutely.
+00:39:11 [W] Let's really one of our driving factors behind it it you know, if we had an existing database we ship it into on-prem environments a lot and if we have a database that you know, we don't know the current state of it.
+00:39:18 [W] That's where schema hero really can provide a lot of value also because it brings an unknown State back into a known State. You don't have to know what
+00:39:24 [W] Exists in the database schema hero does the the logic to figure out what indexes in columns and data types and everything need to be modified in order to to work?
+00:39:34 [W] Next question asks, is there a way to convert an existing SQL description of the database that required scheme hero? Llamo? Yep, there is I think that we demoed that towards the end again, there's a scheme hero generate if you can connect to your database, it'll dump out all of the
+00:39:51 [W] Willam oils in a way that hopefully you can just apply them and then there are no changes and then you can make changes to it and in start having a database managed by scheming hero.
+00:40:02 [W] We had an existing mySQL database that has you know, five years of migrations hundreds of tables and we did that and convert it over to schema hero without writing all that yamo manually.
+00:40:15 [W] Another question from pan asks about manual approval of migrations could be a problem in ci/cd pipelines.
+00:40:24 [W] How is this approached?
+00:40:27 [W] So that's a good question scheming hero in the it's probably worth talking about the implementation of scheme here for just a second.
+00:40:34 [W] We talked about two objects the database in the table, but when you modify a table schema hero creates a third custom resource automatically called a migration and so you can there's a
+00:40:45 [W] Status field on that that you can set to approved you. Can you can manually deploy migrations? You don't have you're not confined to the exact workflow. This scheme a hero has is you don't you can just have migrations referencing a database and it will just run those.
+00:40:59 [W] It's not really a problem around manual approval in a CD that we've set off to solve yet.
+00:41:05 [W] Definitely open to the conversation and ideas on it.
+00:41:10 [W] I think that with the way that scheming hero uses custom resources, it could be built together.
+00:41:12 [W] So do that right now.
+00:41:16 [W] I think we're gonna get through these questions.
+00:41:21 [W] So another question asks about performance of databases on kubernative and it's actually like scheme here doesn't require that the database Beyond kubernative is in the demo.
+00:41:33 [W] We showed here it had the database was RDS so schema hero runs on kubernative, but the database can be on kubernative Zaroff of kubernative is it really doesn't matter where it is?
+00:41:35 [W] I think we have a little more time.
+00:41:41 [W] So there's another question around can since it database contains passwords.
+00:41:51 [W] It's not good to leave it hanging around in the cluster.
+00:41:52 [W] Yep.
+00:41:56 [W] You can definitely use our vault integration. If you want to or store to them otherwise elsewhere don't out, you know, definitely don't recommend putting database passwords inside secrets in the cluster. We did that in a
+00:42:07 [W] MO is supports that it's definitely not production grade. But like, you know, like you can do that for a quick proof of concept or like in a Dev environment, but you can use hashicorp vault in order to keep, you know, a more secure
+00:42:21 [W] for managing those passwords
+00:42:22 [W] There's a couple other questions around.
+00:42:37 [W] How do we when do we plan to support data migrations, you know what would like and we're ready to we just don't there's open conversations about how we want to be able to do that.
+00:42:47 [W] So we'd love more more feedback more input more, you know participation in that issue in the GitHub repo to Think Through how we can support that in a way that's going to scale.
+00:42:55 [W] Sergei ask the question can I manually fix fix in quotes are generated query absolutely because scheming hero table generates a migration custom resource, you can then could control edit that
+00:43:13 [W] Migration if you want to ski me hero when you apply that migration, it just takes the ddl statement that's generated in that custom resource and applies it to the cluster.
+00:43:28 [W] So if it calculated something wrong, or maybe you know, like there's a way you want to be able to modify the lock on the table or customize it before it runs.
+00:43:37 [W] You can just use any tool you want to to keep control edit it or you know commit into a gitops pipeline anything you want to do there.
+00:43:41 [W] see
+00:43:45 [W] Another question. Is there a recommended approach for getting the ddl to be applied from kubernative describe why or that into PRS for?
+00:43:54 [W] Yeah more definition changes.
+00:43:55 [W] Absolutely you let's it's related to the question.
+00:43:58 [W] We just talked about you can run Coop Contra roll describe migration.
+00:44:13 [W] So in the examples we were showing kubevirt roll schema hero describe migration, which could displays the output of the approve recalculate in reject commands, but it is just a schema here. Okay.
+00:44:15 [W] Custom resource in the cluster.
+00:44:25 [W] So if you just did a coupe control get migration - oh, um well with the name it would it would print out the entire migration object that does include the generated ddl statement and then you could do whatever you want to with that. You can connected committed to a git
+00:44:32 [W] Have anything you want to?
+00:44:34 [W] Great, so can the migrations include installation of postgrads examples are postcards extensions. For example today know like today.
+00:44:49 [W] It's definitely built around the the schema itself. Each of the custom. Each of the database drivers is customer in in schema hero.
+00:44:58 [W] So there's my SQL in postgres today.
+00:45:05 [W] And so it's not an attempt to normalize this database schema to a single interface each of them are different. So if postgres
+00:45:10 [W] Specific demands to be able to enlist extensions and modify those you can you can we could extend the schema in order to do that.
+00:45:20 [W] So like it doesn't do it today is the answer to that question.
+00:45:23 [W] Definitely an option to be able to add in the future.
+00:45:26 [W] I think we're running out of time for the live Q&A but definitely invite everyone over to the slack channel to keep the conversation going.
+00:45:32 [W] I'm going to hop over there.

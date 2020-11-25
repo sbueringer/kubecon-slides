@@ -1,0 +1,273 @@
+﻿Improving the Performance of Your Kubernetes Cluster: FXET-8606 - events@cncf.io - Tuesday, August 18, 2020 12:22 PM - 55 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:07:24 [W] My name is Priya and a little bit about me.
+00:07:31 [W] I worked as a software engineer at Google for the past three years.
+00:07:34 [W] And in that time I've maintained minikube for the past year, which is a tool for running a local kubernative cluster on your machine.
+00:07:44 [W] I've also maintained other open source projects like scaffold and cannot go and if you're interested in keeping up with any of these tools, I have my Twitter and GitHub information at the bottom of the slide.
+00:07:53 [W] I also just want to preface this talk by saying that this talk is about improving.
+00:07:54 [W] Nettie's performance and when I first started delving into this at the beginning of the year, I was a complete beginner. I didn't know a whole lot about how kubernative itself works and I definitely did not know a lot about performance engineering so here a beginner as well or just here
+00:08:09 [W] Of these things you're definitely in the right place.
+00:08:13 [W] And since this is a talk about performance a little bit about my machine as well.
+00:08:24 [W] I calculated a lot of numbers and data, which we're going to see later in the talk, and it was all done on my MacBook Pro.
+00:08:27 [W] So a quick agenda for this talk as I mentioned before I was a complete beginner when I started learning about performance at the beginning of the year.
+00:08:44 [W] So I'm going to start by talking about the different Performance Tools that I learned how to use mostly focusing on Linux Performance Tools and go Performance Tools and then I'm going to talk about how I use the analyses from these tools to actually improve kubernative overhead.
+00:08:52 [W] So as I mentioned before I maintain a tool called minikube, which runs kubernative he's on your local machine and this talk is going to be a case.
+00:08:59 [W] Eddie and how I improve performance for minikube specifically, but I think a lot of the tools and techniques that I'm going to talk about are applicable to any kubernative cluster even not just a local single node cluster.
+00:09:14 [W] So yeah stick around if you're interested in performance.
+00:09:17 [W] So for anyone who might not know what minikube is I just want to cover what is really quickly.
+00:09:24 [W] So minikube is an open source tool used to run kubernative locally on either Mac Linux or Windows and the way it works.
+00:09:34 [W] Develop on kubernative as easily as possible on your local machine and typically users run a local single node cluster will become important later on in the TOC as it allowed us to make certain performance decisions.
+00:09:53 [W] So you might be wondering why we even wanted to improve minikube performance. And the reason is it was highly requested by our users.
+00:10:10 [W] I don't know about you, but when I'm developing under a nice especially locally, I'm also usually working in an IDE and streaming YouTube videos and responding to emails all at the same time. And this ends up taking up a lot of CPU and it
+00:10:18 [W] You're doing the same thing over the past few years.
+00:10:25 [W] We've gotten a lot of issues around minikube using up way too much CPU.
+00:10:35 [W] And the one that really stands out is the one on the bottom left VM has 50% resting CPU usage when idle and when you think about it, that's pretty bad.
+00:10:40 [W] means that just running kubernative on your machine already cost you around 50% of a core and that number is only going to go up as you actually start to deploy your application and develop on it.
+00:10:47 [W] That issue has 38 votes which considering that we have more than 400 issues open and our repo at any given time is both kind of sad and impressive so because of all these user issues that had opened up we finally decided to tackle overhead at the beginning of the year.
+00:11:02 [W] Goal was to reduce VM CPU overhead by 20%
+00:11:06 [W] This is pretty much how I imagine most of our users at the beginning of the year.
+00:11:12 [W] So the first step into improving overhead was you actually have a reliable way to calculate it and I wanted this for two reasons.
+00:11:24 [W] The first was I needed to know what our Baseline was.
+00:11:30 [W] I needed to know what current overhead was so that I could actually know when we had restart 20% goal.
+00:11:34 [W] And the second reason was that I needed to be able to prove that changes.
+00:11:35 [W] I was making to the code we're actually improving overhead.
+00:11:43 [W] So there were two scripts that we used to measure overhead throughout the year and the first
+00:11:47 [W] The simple go script that I wrote called track CPU, which basically just runs PS and keeps track of the overhead of a single process.
+00:11:52 [W] The other script that I used quite frequently was written by another minikube maintainer Thomas and it's called ceased at and seaside is basically a more precise iot stat and it calculates the overhead of the entire system and the way that we use it was we would use csat
+00:12:08 [W] Some overhead with minikube the system overhead without minikube and then we would subtract those numbers to figure out what the overhead of minikube was.
+00:12:16 [W] So the next question was where is overhead coming from? So as I mentioned before minikube works by running kubernative either in a VM or in a container, but I didn't know if overhead was coming from the VM or if it was coming from kubernative itself.
+00:12:34 [W] And so the first thing I need to do is figure out where overhead was coming from so that I knew where I should focus on trying to improve it.
+00:12:48 [W] So I started by just calculating the overhead of running a VM on its own and this was actually a pretty interesting as it.
+00:12:49 [W] And outrunning a VM on your machine is actually pretty inexpensive in terms of CPU running the VM on my machine only costed about zero to four percent of a core.
+00:13:04 [W] I then started writing kubeedge e up in that VM and overhead went up to around 10 to 15% over the course of a minute.
+00:13:09 [W] minute. And then finally, I calculate the overhead of all of minikube with all of the kubernative componentconfig Nats running like at CD and the manager and the stories provisioner and overhead went all the way up to 20 to 40 percent.
+00:13:19 [W] Sent him personally.
+00:13:27 [W] I was pretty happy with this result because it meant that the main contributor to overhead in minikube was kubernative itself.
+00:13:28 [W] Personally.
+00:13:31 [W] I felt a lot more capable of improving kubernative overhead than I did of say of yemeni.
+00:13:34 [W] In the overhead of running a VM on its own and this was actually a pretty interesting as it turns out running a VM on your machine is actually pretty inexpensive in terms of CPU running the VM on my machine only costed about zero to four percent of a core.
+00:13:40 [W] To add a pretty cool feature to minikube since we knew that running a VM is pretty expensive and that kubernative is is like the expensive part of running minikube in terms of CPU.
+00:13:54 [W] We realize that we could just pause kubernative in minikube when we didn't need it and this inspired the minikube pause for the minikube unpause command.
+00:14:01 [W] So the idea is if that if you're running kubernative, he's on your local machine and then you deploy your application and you realize that maybe you don't need grantees for the next 20 minutes or something. You can just run.
+00:14:09 [W] Run minikube pause which takes less than a second and it'll pause kubernative.
+00:14:18 [W] He's in your BM and your application is still running so you can still interact with it, but you don't have to deal with this unnecessary overhead of kubernative when you're not actually using it.
+00:14:22 [W] And this brings me to the main topic of this talk which is how do we actually improve the performance of our kubernative cluster?
+00:14:31 [W] So as a beginner, I realized that the first thing I needed to do is learn how to use Performance Tools.
+00:14:38 [W] I figured if I could first analyze kubernative then maybe that would help me kind of figure out where I should be looking for potential performance improvements and I focus on Linux Performance Tools and go Performance Tools.
+00:14:53 [W] So I'm going to talk about the Linux Performance Tools first and luckily there is a lot of really good information online around the next performance engineering and in particular Brendan Greg's website was
+00:15:02 [W] In your VM and your application is still running so you can still interact with it, but you don't have to deal with this unnecessary overhead of kubernative when you're not actually using it.
+00:15:11 [W] And this brings me to the main topic of this talk which is how do we actually improve the performance of our kubernative cluster?
+00:15:12 [W] So as a beginner, I realized that the first thing I needed to do is learn how to use Performance Tools.
+00:15:13 [W] I figured if I could first analyze kubernative then maybe that would help me kind of figure out where I should be looking for potential performance improvements and I focus on Linux Performance Tools and go Performance Tools.
+00:15:16 [W] So I'm going to talk about the Linux Performance Tools first and luckily there is a lot of really good information online around the next performance engineering and in particular Brendan Greg's website was
+00:15:20 [W] Really helpful for me and learning about different methodologies and different techniques that I could use to analyze kubernative and the three that I really focused on where the use method EVP of tools and fling graphs.
+00:15:27 [W] So the use method by Baron friend and Greg is basically a methodology which allows you to analyze the components of any Linux system. And I thought that this would be a really good place to start because he basically provides this really handy checklist which lists all of
+00:15:32 [W] You focused on where the use method if EPF tools and fling graphs.
+00:15:32 [W] So the use method by being friend named Greg is basically a methodology which allows you to analyze the components of any Linux system. And I thought that this would be a really good place to start because he basically provides this really handy checklist which lists all of
+00:15:34 [W] As you might want to check things like CPU or memory or iot.
+00:16:02 [W] Is looking at CPU of the system CPU of the minikube process memory and IO and there's some commands under that I ran to figure out what was going on with each of these components and some conclusions that I was able to make.
+00:16:15 [W] The next thing I looked at was where BCC tools so EPF stands for extended Berkeley packet filter and the recommended front end to use EV P FR B CC tools. And basically these are this is just a huge collection of tracing tools
+00:16:32 [W] Which help you profile and Trace the Linux kernel. So if you're interested in running VCC Tools in minikube, I have the link in that third bullet point on the slide, but the really cool thing about this is the number of tools and the number of components of your
+00:16:48 [W] But the really cool thing about this is the number of tools and the number of components of your kernel that you can observe and Trace with these tools.
+00:16:57 [W] I took that diagram from the readme on their GitHub page and there's just there were so many different commands and I ended up experimenting with running a bunch of them on minikube just to get a sense of what was going on.
+00:17:04 [W] And one of those commands was called bio Snoop, which is a command to trace block device IO and it includes the PID of the collar and the latency of the call and I noticed that when I was running this command in the minikube VM that
+00:17:21 [W] Writing to disk pretty frequently.
+00:17:25 [W] So keep that in mind.
+00:17:26 [W] The next thing I did was generate a flame graph of my of my system.
+00:17:34 [W] So flame grass are really useful for figuring out which code which functions in on your machine are contributing to overhead. And this is a fun graphic a generated of my entire Linux system over the course of a minute.
+00:17:47 [W] So if you look at the x axis, you can see stackpole file population ordered alphabetically and The Wider that a frame is the more often that code path came up. So if you look at the F5
+00:17:57 [W] Taxes, you can see that two CPUs are assigned to KVM and there are contributing a bunch of to overhead Chrome is contributing a bunch something called swapper is contributing a lot as well.
+00:18:13 [W] But since I know that minikube is running in a VM, and in this case, I know that minikube is running and KVM and I've assigned to CPUs to it.
+00:18:21 [W] I knew that the two stacks on the far left were coming from kubernative. So let's zoom in on one of those stacks.
+00:18:25 [W] So this is the zoomed in stackrox, one of the CPUs that was assigned to minikube and running kubernative.
+00:18:43 [W] And I noticed that a Cisco a called ioctl was taking up like a huge chunk of the stack and was like pretty much like it looks like it's almost around 75% of the entire frame with and so I was curious I was like,
+00:18:49 [W] I don't know so I Googled it.
+00:18:56 [W] I don't know about you, but I really think that like 75% of learning about kubernative and performance engineering for me has been Googling things and unsurprisingly ioctl has to do with ior operations, and
+00:19:08 [W] Googling things and unsurprisingly ioctl has to do with ior operations and those kind of reminded me of all the SED rights that I had seen when I was running bios new and in my use analysis as well.
+00:19:15 [W] It's that I had seen when I was running bios new and in my youth analysis as well.
+00:19:20 [W] I had noticed that SED was writing to disk a lot when I had run iot op as one of the commands. So at this point I had this Theory from all of these different sources that at CD rights were a big contributor to overhead.
+00:19:29 [W] But I had to prove it.
+00:19:31 [W] And so I needed to see if there was a way to tune how often at CPU writes to disk and I found this flag called snapshot count, which is the number of committed transactions to trigger a snapshot to disk.
+00:19:46 [W] So for my understanding, I think that Ed CD as a database once enough every once in awhile, it needs to save the the current status of the cluster to disk so that if the cluster goes down it has a backup available.
+00:19:57 [W] I thought that if I increase the value of snapshot count those backups will be saved to disk less frequently and maybe require less overhead.
+00:20:10 [W] So I tried tuning this value from values of 500 all the way up to a hundred thousand. And unfortunately, I like didn't see any performance Improvement. In fact for almost every single value overhead actually got worse and except
+00:20:21 [W] Is when snapshot countless 3000 but in that case there was only two percent Improvement.
+00:20:29 [W] So I didn't really seem statistically significant.
+00:20:37 [W] So at this point I have pretty much given up on Snapchat account as a flag. That would help me actually improve at CT overhead.
+00:20:40 [W] And this is a quick summary of what has happened so far in mean format.
+00:20:48 [W] I basically learned how to use flame crafts and BCC tools and all and I created a use analysis to kind of have a general understanding of the performance of minikube and of kubernative and from all these things.
+00:20:59 [W] I noticed that SED was writing to disk a lot and that it seemed to be contributing to overhead. So I tried tuning the snapshot count flag to see if it would reduce the number of eggs you do rights.
+00:21:09 [W] And there was no performance Improvement at all.
+00:21:15 [W] So I'm not gonna lie. I at this point I was a little bit discouraged because I had spent a lot of time investing in learning how to read a flame graph and trying to make BCC tools work in minikube.
+00:21:26 [W] So I decided to kind of go back to the beginning and just look through my use analysis and see if I missed anything.
+00:21:32 [W] and I noticed this graph that I had created it basically just tracks TPU usage of kubernative use over the course of a minute and I noticed that there were these spikes in the graph and I didn't know where they were coming from you can kind of see that the Baseline overhead is
+00:21:48 [W] I was a little bit discouraged because I had spent a lot of time investing in learning how to read a flame graph and trying to make BCC tools work in minikube.
+00:21:49 [W] So I decided to kind of go back to the beginning and just look through my use analysis and see if I missed anything.
+00:21:50 [W] and I noticed this graph that I had created it basically just tracks TPU usage of kubernative use over the course of a minute and I noticed that there were these spikes in the graph and I didn't know where they were coming from you can kind of see that the Baseline overhead is
+00:21:53 [W] And forty percent but then every few seconds, there's like Spikes all the way up to 80% and I wanted to figure out what was causing these bikes.
+00:21:58 [W] And so I ran this command called Hit stat 160 which had also been part of my use analysis and I noticed that every few seconds. There was a coup control command that was using a ton of CPU so you can see that they're kind of in
+00:22:15 [W] These two kubeedge all commands.
+00:22:25 [W] We're using 9% of a core and 4% of a core and this was significantly more than all of the other processes that were running.
+00:22:32 [W] So I thought maybe this could control command is causing the spikes because it's happening every few seconds and it seems to be using a ton of CPU compared to everything else.
+00:22:35 [W] So I attended the - L flag onto the command just to see where it was coming from and I noticed that the poop control command was cuckoo control apply and it was being applied to the kubernative add-ons directory.
+00:22:50 [W] And so I had a feeling that the add-on manager was responsible for running this command.
+00:22:59 [W] And the other thing I noticed is that this Coupe control Clyde command was exactly the same being run every few seconds as if it was polling.
+00:23:01 [W] So I looked into the add-on manager. So a quick bit of a little bit of background or on with the add-on manager is minikube basically uses a kubernative project kubevirt on manager to allow for enabling or disabling add-ons in the cluster.
+00:23:18 [W] The idea is once you spin up minikube you have kind of a standard kubernative cluster, but maybe you need some extra things in your cluster like Helm or tiller or
+00:23:26 [W] something else and so you can run minikube add-ons any Wilhelm tiller and what will happen once you do that is that minikube will copy the required kubernative manifest for help for tiller into the kubernative out on styra rectory and
+00:23:42 [W] Enabling or disabling add-ons in the cluster. The idea is once you spin up minikube you have kind of a standard kubernative cluster, but maybe you need some extra things in your posture like Helm or tiller or
+00:23:44 [W] something else and so you can run minikube add-ons any Wilhelm tiller and what will happen once you do that is that minikube will copy the required kubernative manifest for help for tiller into the kubernative add-ons directory and
+00:23:47 [W] At the animal control will run qu control apply on that directory and the required pods will pop up.
+00:23:49 [W] So at this point I had this hypothesis that the add-on manager was causing spikes in My Graph because every few seconds it was pulling to run qu control apply on the add-ons directory.
+00:24:07 [W] So I tried increasing full time to see if that would improve overhead and it actually did you can see on the bottom left that when I set pull time equals 30 seconds the spikes actually moved to be 30 seconds apart.
+00:24:17 [W] So at this point it became pretty clear that the add-on manager was creating these bikes and it really easy.
+00:24:24 [W] Presented itself. I could just increase pull time and the higher pull time was the lower average overhead would become but unfortunately this would create a trade-off between overhead and user experience
+00:24:37 [W] Manager is only pulling every two minutes for changes in the directory.
+00:24:47 [W] It could take users up to two minutes to see add-ons changes in their cluster.
+00:24:48 [W] Luckily. In this case. I didn't end up having to choose between the two.
+00:25:00 [W] I realized that we could remove the add-on manager entirely because as minikube users we know when users are making changes to the state of atoms in the cluster.
+00:25:04 [W] They have to physically run minikube add-ons enable or minikube add-ons disabled and I realized that we could just run the coop control applied command.
+00:25:08 [W] And ourselves whenever a user said they wanted to make changes to the add-ons.
+00:25:21 [W] So the end the solution was to just remove the add-on manager completely and rewrite it so that it was more efficient and met our use case.
+00:25:26 [W] This is a meme summary of what we did.
+00:25:31 [W] It's basically what I just said instead of increasing add-on manager bullying.
+00:25:32 [W] We just removed it entirely and rewrote a version that was better suited for what we needed.
+00:25:38 [W] And this actually resulted in the 32% reduction in overhead, which is really exciting because we pretty much met our goal just by removing one thing.
+00:25:52 [W] But at this point we kind of wanted to see like, oh how much further can we take this like are there more improvements that can be made?
+00:25:53 [W] A good place to start when trying to figure out where I should start proving something so you can see on from this pissed at output which by the way is that was probably my favorite command throughout this entire journey.
+00:26:22 [W] I learned a lot from it, but you can see that kubeedge Pi server is using up the most amount of CPU.
+00:26:30 [W] So I thought that a pi server would be a good place to start looking for performance improvements. And the other thing of interest is that there are two processes called Cordy nsmcon.
+00:26:38 [W] Yes, and even though they're not using a whole lot of CPU there are two of them and that's because the cortinas deployment by default spins up to replicas.
+00:26:53 [W] I realized that in our local single node cluster. This probably wasn't necessary like a regular user probably only needs one instance of core DNS for their application to work successfully and so I decided that
+00:27:03 [W] Onto one by default would be a pretty easy way to reduce overhead and not have to lose anything in terms of user experience.
+00:27:12 [W] Well, let's move on to the to the API server and how we improved overhead there before we do that.
+00:27:22 [W] I want to talk a little bit about Pete Prof.
+00:27:24 [W] So people off is a go tool for visualizing and analyzing profiling data.
+00:27:32 [W] And the way that it works is you basically import people off as a library into your go application. And then when you're as you're running your application every millisecond P process will take a stack trace of your application as it's running
+00:27:42 [W] Of collate the functions that were running the most and present them to you as in either textual or graphical visualization.
+00:27:57 [W] So you can see the textual on the bottom left and the visual on the bottom. Right? And basically the important thing is that people have helped tells you which functions are contributing to overhead and by how much
+00:28:03 [W] So in the text output, you can see that the biggest contributors to overhead in this go function was rounded where runtime not futex this called. It says call and runtime W sleeve and rents is called that syscall was running
+00:28:18 [W] the runtime W, Texas running 39.2 34% of the time
+00:28:23 [W] and so I generated p-pop data for the kubeedge pi server and if anybody's interested in generating this data for themselves, I have the commands that I ran up on the screen, but I basically collect a few pop data over the course of a minute
+00:28:39 [W] A pi server and the top contributors to overhead were a bunch of this calls things like runtime.
+00:28:50 [W] Not you Texans is called buses call and I did not really know what to make of this but likely I was working on this with another minikube maintainer Thomas and he was able to get somewhere.
+00:28:57 [W] So the cool thing about people off is that you can represent the same data as a flame graph as well and Thomas noticed that the API server was spending a lot of time dealing with incoming requests.
+00:29:12 [W] And so he wondered where are these incoming requests coming from because in theory if you can reduce the number of requests then maybe you can reduce overhead.
+00:29:20 [W] So to figure out where the requests were coming from, we basically set verbosity on the API server to 10 so that every request would be would show up in the logs and then we wrote some patch to figure out where the requests are coming from.
+00:29:36 [W] So that's like in command basically pulls out the user agent from every get request and then sort some in counts them and you can see that tons of requests were coming from Cube controller manager and Cube scheduler and all of
+00:29:49 [W] And so he wondered where are these incoming requests coming from because in theory if you can reduce the number of requests, and then maybe you can reduce overhead.
+00:29:51 [W] So to figure out where the requests were coming from, we basically set verbosity on the API server to 10 so that every request would be would show up in the logs and then we wrote some Pash to figure out where the request for coming from.
+00:29:54 [W] So that's like in command basically pulls out the user agent from every get request and then sort some in counts them and you can see that tons of requests were coming from Q controller manager and Cube scheduler and all of
+00:29:59 [W] on something called leader election
+00:30:00 [W] So what is leader election, so I looked it up in the kubernative documentation. Once we found this but basically leader election guarantees that only one instance of cube scheduler or Q controller manager is making decisions at any given time and this makes sense if you have
+00:30:10 [W] Stir It with lots of nodes and you have lots of instances of these things running but we realize that minikube is by default a single node cluster and we only ever expect to have one instance of Kube schedule or if you controller manager running anyways, so
+00:30:26 [W] Is not really necessary for our use case. So we wanted to know if we could turn your election off.
+00:30:33 [W] And it liquid is actually really easy to turn it off.
+00:30:41 [W] off. There's a flag on the controller manager and on the scheduler and so we were able to set it equal to false by default in minikube.
+00:30:44 [W] And this resulted in an 18% reduction and overhead, which is really exciting. Just returning leader election request off and from reducing core DNS replicas to 1.
+00:30:57 [W] And this is my meme summary.
+00:31:02 [W] We basically just that we were like two equals balls and it's awesome really great improvements. It was really nice.
+00:31:05 [W] so hopefully you remember because it's only been a few minutes since I talked about it, but the last time I looked at CD overhead it was because I'd been running a lot of Linux Performance Tools and they have indicated that Seda rights for contributing to overhead and I
+00:31:21 [W] Basically just that we were like two equals past and it's awesome really great improvements. It was really nice.
+00:31:22 [W] So hopefully you remember because it's only been a few minutes since I talked about it, but the last time I looked at CD overhead it was because I'd been running a lot of Linux Performance Tools and they indicated that Seda rights for contributing to overhead and I
+00:31:24 [W] To get anywhere with that I decided to look at SPD one more time this time with people off because I was little bit more familiar with it now.
+00:31:30 [W] So first, I looked at the Ed CD logs just because looking at the API server logs had been so useful, but honestly, it wasn't really able to make heads or tails of NCD logs.
+00:31:43 [W] So I just moved on to collecting the P prof. Data.
+00:31:48 [W] I have the commands on the slide again, if anybody wants to collect their own p-pop data on that CD, but this is what I got over the course of a minute and it looks like it looked like 40% of time was spent in Cisco about syscall, which I didn't really mean anything
+00:31:59 [W] Anybody wants to collect their own people opt out on and CD but this is what I got over the course of a minute and it looks like it looked like 40% of time was spent in Cisco.
+00:32:01 [W] that's his call, which I didn't really mean anything to me until I looked at the graphical version of the same data.
+00:32:04 [W] So this is the puke off graph. This is the entire thing which is obviously pretty big but I've cut and pasted the relevant bits and you can see that the 40% from the sis called us this call actually originated with a function in the HTTP Library
+00:32:19 [W] And you can see that the 40% from this is called us to school actually originated with a function in the HTTP Library called the right frame a sink.
+00:32:27 [W] So I kind of started looking through at GD Kudo to see where right from where the HTTP library was being called to see if maybe that was something I could tune. It kind of like the API server.
+00:32:36 [W] I was thinking that if I could reduce the number of HTTP requests and maybe I could also reduce overhead.
+00:32:41 [W] So searching through the code I was looking for calls to goes HTTP library, and I found a package called HTTP proxy and in that package.
+00:32:56 [W] I found a function called new Handler which basically proxies request to bof CD cluster and periodically updates its view of the cluster.
+00:33:02 [W] I notice that there was this argument passed into the function called refresh interval, which is by default 30 seconds and can be set by the proxy refresh interval flag. So if I lost you somewhere
+00:33:09 [W] Slide no worries.
+00:33:13 [W] The tldr is basically that I had this theory that proxy refresh interval was controlling how many HTTP requests were being made of at CD and I thought that if I increase the value of this flag, maybe the number of requests would go down or be more spread
+00:33:26 [W] Overhead would go down as well.
+00:33:29 [W] So I tried tuning this rag flag to see if anything would happen to overhead and I tuned it from the from thirty thousand milliseconds, which is the default all the way up to a hundred and twenty thousand milliseconds and I actually found much more promising data at this
+00:33:45 [W] Every value as oxygen refresh interval got bigger resulted in a decrease in overhead with a clear dip at 70,000.
+00:34:01 [W] And so I wanted to see my theory was oh maybe I can just set proxy refresh interval to 70,000 and enjoy decreased overhead. But of course, I did not want to I was worried that user
+00:34:09 [W] and and enjoy decreased overhead, but of course, I did not want to I was worried that user experience what suffer and I honestly like didn't really know what the repercussions of increasing the value of this flag would be
+00:34:16 [W] so I tried looking up in the documentation and GitHub issues.
+00:34:22 [W] what what would happen if I increase the value of this flag, but it didn't really find a whole lot online.
+00:34:36 [W] So I turned to the NCD slack Channel and I thought maybe somebody on their would know and be able to answer my question and luckily somebody did.
+00:34:41 [W] Thank you so much for responding to my question and what they said was if you increase the time it will take longer for any endpoints to be poddisruptionbudgets.
+00:34:47 [W] sit properly which wasn't exactly what I thought this flag did when I first started tuning it but it was really helpful to know and at this point, I just wanted to make sure that setting it to 70,000 wouldn't actually make user
+00:35:02 [W] thank you so much for responding to my question and what they said was if you increase the time it will take longer for any endpoints to be proxied properly which wasn't exactly what I thought this flag did when I first started tuning it but
+00:35:04 [W] A way of knowing how badly it would actually affect user experience.
+00:35:07 [W] So I decided to do a little test and basically test the time from starting minikube cluster to deploying an application to being able to visualize that application by a service URL and I tested it with epoxy refresh interval
+00:35:24 [W] Just the default and seventy thousand which is the value.
+00:35:28 [W] I wanted to change it to and in the end. It actually didn't seem to impact user experience at all.
+00:35:37 [W] 70,000 actually has actually ended up taking slightly less time.
+00:35:40 [W] It's time for the deployment to succeed.
+00:35:42 [W] So at this point, I feel pretty comfortable setting epoxy refresh interval equal 70,000 by default also because I knew that users could always change it back by the command line if they really needed to
+00:35:55 [W] and this resulted in a 4% reduction in overhead.
+00:35:58 [W] So we're nearing the end of my talk.
+00:36:09 [W] This is basically just a graph of overhead and 2020 since we began trying to improve overhead.
+00:36:12 [W] You can see that we ended up actually reducing overhead by Iran 52 percent and that removing the add-on manager and turning up leader election were the biggest contributors to that.
+00:36:21 [W] So some takeaways from trying to improve performance for the past eight months.
+00:36:31 [W] I'd say the biggest one is definitely that removing unnecessary work is really great. And we saw this with when we remove the add-on manager removing accordion has pot we didn't need and removing leader election, which we also didn't need removing that unnecessary
+00:36:42 [W] Reduced overhead because you've also don't risk losing anything in terms of user experience and that brings me to my second point which is that it's important to consider the trade-off between overhead and user experience and with like setting proxy refresh interval.
+00:36:57 [W] It was really important to make sure that we weren't sacrificing anything just for a little for a small Improvement in overhead.
+00:37:11 [W] And finally, I think this was probably just general to engineering or maybe anything really but collaboration is really
+00:37:12 [W] Ali helpful and important I never would have been able to figure out the leader election equals balls for the API server if I hadn't been working with other minikube maintainers and I wouldn't have been pointed in the right direction and less people in the
+00:37:27 [W] I'm willing to help answer my questions.
+00:37:33 [W] So thank you very much to everybody who who helped along this process.
+00:37:35 [W] And I just wanted to call out some of the websites online which really helped me learn about Linux performance engineering and Go performance.
+00:37:45 [W] I would highly recommend both of these blogs anybody's interested in either of these topics.
+00:37:52 [W] And if anybody's interested in related talks to us one.
+00:37:54 [W] there's a deep dive into minikube tomorrow, if you're interested in how it works or any of the cool new features, we've been working on and there's a really cool-looking performance.
+00:38:01 [W] talk on Thursday, which will focus on the perform on improving performance of a kubernative application itself.
+00:38:06 [W] So that pretty much brings me to the end of my talk.
+00:38:11 [W] Thank you so much for listening and I'll take any questions if anyone has them.
+00:38:14 [W] Hi everyone.
+00:38:24 [W] Thanks for listening.
+00:38:27 [W] I'm taking live questions now.
+00:38:30 [W] So if you have any please ask them, I'll just get started on it.
+00:38:32 [W] Sorry, so
+00:38:35 [W] A few people have asked if the slides will be available.
+00:38:40 [W] And yes, I think that they will be available.
+00:38:43 [W] There should be somebody responded with the link Frederick asks in which version of minikube these changes were integrated.
+00:38:50 [W] Hi everyone.
+00:38:58 [W] Thanks for listening.
+00:38:59 [W] I'm taking live questions now. So if you have any please ask them, I'll just get started on answering so.
+00:39:00 [W] A few people have asked if the slides will be available.
+00:39:01 [W] And yes, I think that they will be available.
+00:39:01 [W] There should be somebody responded with the link Frederick asks in which version of minikube these changes were integrated.
+00:39:02 [W] We kind of been integrating them as we found them throughout the entire year. But if you upgrade to the latest version, it should have pretty much everything Incorporated there.
+00:39:05 [W] Michael asked his people off me to run on each node, or just against the API.
+00:39:07 [W] Sorry, yeah, Michael asked as people have needs to be run on each node or just against the API server.
+00:39:19 [W] So P profit is run against a go application.
+00:39:23 [W] So when I ran it against the API server, it was actually running against the API server code and you can run people off on any application written in go.
+00:39:31 [W] Oh, Angela asked what happened during the period when performance degree that they I think thats related to the chart on this slide.
+00:39:51 [W] Honestly, I don't really know a lot of our measurements are not super accurate.
+00:40:00 [W] They're kind of like yeah, I guess that's like my that's my best answer is that a relatively graph was pretty flat between like February and June is in 2020. And that's because we hadn't really
+00:40:10 [W] super accurate, they're kind of like yeah, I guess it's like my that's my best answer is that a relatively new graph was pretty flat between like February and June is in 2020, and that's because we hadn't
+00:40:12 [W] Time so a lot of these like a few like whether it was like a few percentage points off. We didn't really take that as like a
+00:40:21 [W] I was like poblanas getting worse just kind of as like maybe a slight difference in the system that the numbers were being collected on on that day.
+00:40:29 [W] Well, as asks, what do you think about micro Kids versus kind for local Dev? And I think all the solutions are pretty good. It kind of just depends on your use case.
+00:40:48 [W] I haven't really used micro case before but I've used kind for integration testing for some of the other tools that I work on is really convenient to like use it to this but never cluster in Docker and then be able to like run integration
+00:41:02 [W] So that's like the only experience I've had with kind and then obviously I'm eating minikube.
+00:41:09 [W] So I have a lot of experience with minikube as well.
+00:41:11 [W] But it really depends on your use case.
+00:41:13 [W] We're getting its haves versus faces question is basis, but I don't really have a strong preference.
+00:41:57 [W] Oh God, we caught them ask 20 to 40 percent is a very wide range of minikube overhead.
+00:42:11 [W] Are there any clear patterns which I think is probably related to this slide where we were actually like measuring minikube ever had at the very beginning.
+00:42:24 [W] When sitting at ABS versus faces question is basis, but I don't really have a strong preference.
+00:42:34 [W] Oh God, we caught them ask 20 to 40 percent is a very wide range of minikube overhead.
+00:42:35 [W] Are there any clear patterns which I think is probably related to this slide where we were actually like measuring minikube ever had at the very beginning.
+00:42:37 [W] So I think like the range or like the spikes year were caused by the add-on manager, which was one of the things that I discussed later on in the talk, and then we actually have it which actually probably look at minikube overhead today.
+00:42:40 [W] And see if it stabilized a bit.
+00:42:43 [W] My guess is that it has because a lot of these look a lot of the things that were pulling have been removed. And so it would expect a little bit more stable now.
+00:42:44 [W] I'll take one more question.
+00:43:15 [W] Have you tried any of the openshift face local development tools like CRC or PD?
+00:43:17 [W] No, I haven't but that sounds really interesting.
+00:43:20 [W] I'll have to check those out.
+00:43:25 [W] So if I think we're coming to time on this session, but if anybody has any more questions, please feel free to move into the slack Channel and at me just at pre obatala and I'm happy to answer them there.
+00:43:32 [W] Thank you for coming.

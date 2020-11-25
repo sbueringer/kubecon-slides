@@ -1,0 +1,333 @@
+﻿Prometheus Deep Dive: VFSO-5725 - events@cncf.io - Wednesday, August 19, 2020 7:32 AM - 56 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:03:09 [W] Hello everyone.
+00:13:05 [W] Welcome to the Prometheus deep time. We are super excited to show you how to use Prometheus and how to take Prometheus usage to the next level.
+00:13:11 [W] Before we start a quick intro.
+00:13:15 [W] Hi, I'm Gotham.
+00:13:21 [W] I'm a software engineer at Griffin elapsed and I'm a Prometheus and cortex maintainer have actually started contributing to Prometheus about three and a half years four years ago and later.
+00:13:30 [W] I start working on cortex to provide a hosted Prometheus surface between Prometheus and cortex.
+00:13:37 [W] Hello everyone.
+00:13:39 [W] Welcome to the Prometheus deep time. We are super excited to show you how to use Prometheus and how to take Prometheus usage to the next level.
+00:13:40 [W] Before we start a quick intro.
+00:13:40 [W] Hi, I'm Gotham.
+00:13:41 [W] I'm a software engineer at Griffin elapsed and I have a Prometheus and cortex maintainer have actually started contributing to Prometheus about three and a half years four years ago and later.
+00:13:43 [W] I start working on cortex to provide a hosted Prometheus service between Prometheus and cortex.
+00:13:45 [W] I also was one of the initial authors of loci a logging project and open source logging solution inspired by Prometheus.
+00:13:47 [W] Amazing.
+00:13:49 [W] Okay.
+00:13:49 [W] My name is Martha spółka and I'm an engineer working in the monitoring team at Red Hat.
+00:13:50 [W] I love open source and solving problems.
+00:13:53 [W] I am part of the Prometheus profuse team. And I'm also a culture of Tano's and on the top of top of that. You might know me from them.
+00:14:01 [W] newly created cncf special interest group of severability where we focus on the cloud native observability topics, like and projects like, you know cortex.
+00:14:10 [W] Strong tunnels Prometheus opentelemetry also on so if you found this interesting, please visit us on on this developing story.
+00:14:25 [W] So let's start with the typical team in this case the demon which Kate and Tom are a part of so they're on an API service, they successfully built and launched that API service and it works really well, but a couple of days later this they
+00:14:34 [W] I'd buy Prometheus amazing.
+00:14:34 [W] Okay, my name is Bart a polka and I'm an engineer working in the monitoring team at Red Hat.
+00:14:35 [W] I love open source and solving problems.
+00:14:35 [W] I am part of the Prometheus profuse team. And I'm also a culture of Tano's and on the top of top of that. You might know me from them.
+00:14:36 [W] newly created cncf special interest group of severability where we focus on the cloud native observability topics like
+00:14:37 [W] Projects like, you know cortex chronosphere me to use opentelemetry also on so if you found this interesting, please visit us on on this git repository.
+00:14:41 [W] So let's start with the typical team in this case the demon which Kate and Tom are a part of so they're on an API service, they successfully built and launched that API service and it works really well, but a couple of days later this they notice that
+00:14:45 [W] What was the cause of it to debug this they were adding more logs and deploying into production to try to figure out where the error was being introduced now, this is not ideal. And this was frustrating Kate and Tom so Kate decided
+00:15:01 [W] Exist and the easiest way to fix this is to add monitoring in this case Kate actually chose Prometheus intifada the gold and Sach and she added an exporter in front of the load balancer in the database exposing all the metrics of the load balancer and database and
+00:15:17 [W] The application itself to expose Prometheus metrics Prometheus now collects all this data and Kate can now alert on 500 errors or other issues.
+00:15:29 [W] She also added dashboarding in on top of it.
+00:15:36 [W] So whenever there's an alert or an issue, they can directly look at all this dashboard with all the information to directly figure out. Okay, the database is having issues which is why we are throwing $500.
+00:15:45 [W] errors. So there are outages didn't stop but whenever there was an outage they could very quickly figure out what was happening. What was going wrong in what would you do?
+00:15:51 [W] Rook and they were very quick at fixing all these issues looking at their success. The other teams also started using Prometheus assess the Prometheus best practice each team was maintaining their own Prometheus.
+00:16:02 [W] They were maintaining their own turf Anna and all of this was working really well now all the teams in the organization were using Prometheus and as the usage of the organization and the application crew. They started deploying to several data centers.
+00:16:15 [W] Again as the Prometheus best practice you deploy a Prometheus for data center the next slide.
+00:16:20 [W] Yep this because Prometheus needs to be close to the application its monitoring.
+00:16:29 [W] So in this case, they were deploying to us Central one and u.s.
+00:16:41 [W] Point Kate and Tom wanted to figure it out how to aggregate the data on the global level from the multiple Prometheus servers, right? It was so let's imagine that Tom wanted to answer may be simple question.
+00:17:02 [W] right?
+00:17:03 [W] What is the error rate of of the HTTP requests made by or received by his service? Right and he want to Aggregate and know the rate across all the some of those rates across all day.
+00:17:18 [W] All the Clusters and and as you remember in NH of those there are prompt you servers so we have essentially we had to aggregate from more than one Prometheus ever see how to do that just in Premier just using Prometheus alone now.
+00:17:33 [W] Well, you cannot use Query API which is which is kind of the think the first thing you would you would try to use and this is because from Kuma elevation is made on the leaf nodes. So once you have the data from two sources,
+00:17:49 [W] Elevation is made on the leaf nodes.
+00:17:50 [W] So once you have the data from two sources, there is already procured from ql a valuation made. So you would need to have another layer of query evaluation to be made to adjust to add additional Aggregates like for example some
+00:18:01 [W] Channel aggregate like for example some to summarize those results together to tell you the overall error rate for example. Now, this is not trivial War because there are lots of catchy things and Cave it's like
+00:18:14 [W] On doing from ql and and resolutions and steps. So all of this is not easy to solve with using we using query API.
+00:18:31 [W] However, the Prometheus allows other apis to solve this problem. And first of those apis is a federation API, lets call it in this kind of scenario.
+00:18:39 [W] We are deploying another Prometheus server on top of those cluster maybe in another cluster may be in one of those clusters and
+00:18:46 [W] and you configure this parameter used to scrape a feather right endpoint that those Leaf Prometheus has Expose and it scrapes like a normal scrape very similar.
+00:18:58 [W] So even create a script configuration for that and this kind of works great until you have huge or like, you know bigger amount of data in those live from Deuces because
+00:19:11 [W] if you are scraping and replicating all of the data into the global Prometheus or like to the global Prometheus server it grows and the same with the same kind of pace as the leaf from accuses because
+00:19:27 [W] This data and suddenly you do that for the single instance that is running on the single machine.
+00:19:35 [W] This causes lots of problems.
+00:19:47 [W] So the thing that we suggest as Prometheus maintainers and the community you should only use Federation for only only four subsets of your data. And the easiest way to do that too is to essentially
+00:19:50 [W] So there the thing that we suggest as Prometheus maintainers and the community you should only use Federation for only only four subsets of your data. And the easiest way to do that too is to essentially
+00:19:52 [W] To record includes rules for the things that you want to have on the global level and also you can you know, thanks of that reduce the cardinality of the recorded data because you can some aggregate across those and and you configure Federation
+00:20:06 [W] Eight only scrape the rules by the parameter of mature and well because of that you need to also adjust the query that Tom has to make to query essential recording cruel not the data itself
+00:20:22 [W] The valid and the precise answer is available for come so tell me it's most likely happy.
+00:20:31 [W] However, there are other options as well.
+00:20:35 [W] The third option is really similar to the query API where you just provide a query that that has to be evaluated for your answer instead of that you are going deeper and trying to access the
+00:20:46 [W] Starting the database of Prometheus and this is the API that allows that is called promote treat so during that API you are using slight different payload is not a Json.
+00:21:00 [W] It's protobuf is actually should be familiar to you. If you are using grpc protocols and inside data API, you are specifying the Marchers.
+00:21:13 [W] So we are matching a certain data that you want to fetch and then you need to have some kind of automation that weaveworks.
+00:21:17 [W] We'll do some nice work from it and one example of the of the projects that allows you to do that is tunnels and essentially tunnels allows you to add aside Cartouche Prometheus that using
+00:21:32 [W] And inside data API, you are specifying the Marchers. So we are matching a certain data that you want to fetch and then you need to have some kind of automation that will do some nice work from it and one example of
+00:21:33 [W] Protocol and then expose it into the grpc that from G8 the tunnels is using and then you essentially elotl to create to deploy and Global query component
+00:21:47 [W] Relation on the grip and Global level having the data from each Prometheus as separately. So and this is how you can essentially transparently have the global view without recording Kroll's and without replicating all of your data multiple
+00:22:04 [W] However, you know, there are other challenges when we are thinking about you know, bit bigger adoption and more users. So at some point Kate was kind of annoyed that she has very short metric retention. Only
+00:22:21 [W] Weeks so she felt about hey, what about maybe longer one, maybe years of data so I can analyze my my data Maybe also some teams have that policy to store the
+00:22:37 [W] Whatever was like life period of your service so it is kind of crucial requirement for some companies.
+00:22:47 [W] So it would be beautiful if you would be able to just query those directly into coming to use and just just have those two years query working smoothly and I can tell you that this is totally doable just Prometheus.
+00:23:01 [W] There is a misconception that Prometheus is not suitable for long-term storage and you have to deploy some external sysdig.
+00:23:07 [W] Systems and have some integration that's not always the case because especially from Prometheus to and the recent versions of that of Prometheus.
+00:23:20 [W] We made sure that all the data that you store actually adds marking our resources when they are not used so whenever you are just querying short period of times and and
+00:23:31 [W] From our experience people are queries, you know, the very fresh data those older data even four years time are not really increasing your resources. So it doesn't the the resources and consumption of their see resources or
+00:23:47 [W] Kale with their attention that you give and to make it easier for you.
+00:23:54 [W] We would really recommend setting, you know, some large disk and precisely try to precisely affect current plan the capacity of the disk space because you want to avoid kind of you know resizes and things like that after
+00:24:08 [W] So it's totally doable and we have lots of users who are having, you know, two years data on their primitive server.
+00:24:20 [W] However, yes, there are some trade-offs after all Chrome. It use was mainly focused on the monitoring for Resident and data and alerting.
+00:24:31 [W] So there are some candidates one of it is that it's super hard to efficiently.
+00:24:33 [W] right, effectively plan capacity of your discs because there are lots of unpredictable spikes. It's hard to
+00:24:41 [W] Thanks control cardinality of the data.
+00:24:42 [W] You're ingesting.
+00:24:43 [W] So it's not the easy task after all.
+00:24:46 [W] The second problem might be back up. You know, if you have those discs Harbor can fail and you have to have some backup plan and operational kind of, you know structure of a some scripts alternation and it's not always the easiest way,
+00:25:02 [W] very mental
+00:25:03 [W] and last but not the least.
+00:25:08 [W] Well, there is no knative down sampling from you site, which means that the large range queries like for example for two year for two years will fetch all those samples into the prodyna ql engine and
+00:25:20 [W] Run for all those samples to calculate your response. And while this is doable, it will take some time and there is definitely some room for some down sampling that we reduce the resolution that you don't need
+00:25:36 [W] such a long time wrench
+00:25:40 [W] cool.
+00:25:50 [W] So now in the organization every team is using Prometheus and now more and more users want to use Prometheus and there are more use cases coming up. For example, let's say the marketing team comes to Kate and asked us if they could
+00:25:59 [W] The data leak or another database or maybe somebody someone wants to use the Prometheus data and store it in a replicated distributed database. That was that is much better storing long-term long-term storage.
+00:26:15 [W] How do you send all of this data to a different database?
+00:26:18 [W] How do you do this replication?
+00:26:20 [W] So Prometheus has a protocol called remote right?
+00:26:22 [W] It's an extremely simple protocol.
+00:26:27 [W] So in your previous configuration, you just add or stamps are called remote right? You name the remote.
+00:26:29 [W] Moat and point you have if you have any authentication on it you specify the authentication and then Prometheus will start sending every single sample.
+00:26:39 [W] It's great to this remote and point. Now typically your Prometheus will scrape millions of samples a second and sometimes you only want to send a subset of the data to the remote end point and doing that is also extremely use Easy you
+00:26:53 [W] Reliable conflicts too kind of specify what data you want to send over and what data you want to keep like what data you want to drop and it's a very powerful config. You can also manipulate the data before sending it over.
+00:27:08 [W] You can send as much or as little as you want. If marketing just wants to look at the UI level visits.
+00:27:19 [W] You can only send the metrics for the UI level visits or remote store.
+00:27:23 [W] And now this is extremely popular and we already have almost every single popular time series data base out there integrating with the Prometheus remote write and read natively. So we have a non-exhaustive list of
+00:27:34 [W] Popular time series data base out there integrating with the Prometheus remote write and read knative.
+00:27:36 [W] So we have a non-exhaustive list of projects like about 25 of them which kind of support Prometheus the read and Prometheus, right and you will most likely see all your favorite deity hdb's in there, but
+00:27:46 [W] And Prometheus, right and you will most likely see all your favorite dinner DST bees in there.
+00:27:52 [W] But in case you want to send Prometheus remote write data to a different database that's not in the list that doesn't have a existing integration.
+00:27:57 [W] It's extremely easy to build an integration.
+00:28:02 [W] We use the same protocol of if you're familiar with grpc will be familiar with this.
+00:28:06 [W] So in this case, we are basically sending a probe of message called right request.
+00:28:08 [W] Which is a list of Time series now, what is the time series A Time series is basically the labels for the time series and the samples in the time series.
+00:28:21 [W] So with this extremely simple protocol Futures create the protocols and send it across like Prometheus creates this photo of and cinch it across and if you can actually accept this Photograph, you can store all the data that Prometheus sense to you.
+00:28:32 [W] Now one of the typical use cases for this too is actually long-term storage.
+00:28:41 [W] This is also on the solution for the global view problem that bartek was talking before if you want to combine the data between us and blue one and USB Prometheus. You just basically remote right data from both the Prometheus to a central cluster and because all the data is
+00:28:52 [W] Quickly the single single Central cluster and you get all your data that you want one of the examples of the projects that you can use for.
+00:29:08 [W] This is cortex, which I help maintain its also a cncf project. You can also use stano's or entry or several different dynatrace databases out there.
+00:29:12 [W] So this is about remote right?
+00:29:17 [W] I just also want to talk to you about metadata.
+00:29:20 [W] This is extremely useful as you scale your teams.
+00:29:27 [W] So one of the things that we notice is new, we will come to the teams. They look at dashboards and sometimes it's hard to understand what a particular protocol careers to it from ql itself is simple, but if you don't understand what the metric means
+00:29:35 [W] so one of the things that we notice is movie people come to the teams they look at dashboards and sometimes it's hard to understand what a particular program kill curious do it from ql itself is simple, but if you don't understand what the metric means
+00:29:37 [W] Really hard to figure out what the query means and in most cases you will be able to figure out just by looking at the metrics for example node CPU seconds total.
+00:29:47 [W] So this you can kind of guess.
+00:29:49 [W] Okay. This is the CPU usage for node.
+00:29:57 [W] And the reason of behind this like week behind the obviousness is because we have an exhaustive and really nice guide on how you should label your Matrix and the labels.
+00:30:01 [W] Always follow the naming best practices, but sometimes when you deploy an exporter, it might not for follow the best practices or even after following the best practices.
+00:30:17 [W] Sometimes the name the the metric or the query is not clear.
+00:30:20 [W] For example Cube node status capacity. You kind of don't understand right away what it is to help with that.
+00:30:30 [W] actually expose the help and type information for every single metric as part of the
+00:30:33 [W] Position format so if you hit the / Matrix Bridge, you will already see it. For example, in this case you we can see that go GC duration.
+00:30:42 [W] Second is a summary of the past duration of garbage collection Cycles.
+00:30:48 [W] Go go routines is a number of go routines that currently exist. So we already have all of this information that is being exposed by all these all these applications.
+00:30:56 [W] For example, in this case you we can see that go GC duration.
+00:31:08 [W] Second is a summary of the past duration of garbage collection Cycles.
+00:31:09 [W] Go go routines is a number of go routines that currently exist.
+00:31:09 [W] So we already have all of this information that is being exposed by all these all these applications.
+00:31:10 [W] So in previous versions Prometheus was not able to store all of this data, but in the recent version starting 2.17, I think we actually store and expose all this metadata.
+00:31:11 [W] Side Prometheus itself.
+00:31:12 [W] So we have now we now have the metadata API where you can query for the metadata of a particular metric next slide here.
+00:31:23 [W] You can see it's / API slash V 1 / meta data you can specify the limit the number of metrics you would like to return and also if you want to look at the metadata of a particular metric you just pass in the metric name and it will it will give you the metadata for that.
+00:31:34 [W] Flash API slash V 1 / - data you can specify the limit the number of metrics you would like to return.
+00:31:35 [W] And also if you want to look at the metadata of a particular metric you just pass in the metric name and it will it will give you the metadata for that.
+00:31:39 [W] that. You can already use this like you don't need to hit this API you it is part of the UI in Turf on a 7.0. So if you are using reference 700 or the explore tab or even the dashboards whenever you type in the metric name, it kind of helps you figure out what the metric is.
+00:31:53 [W] Is in this case you can see this Cube node status capacity CPU cores is a gauge and it's a total CPU cores of the node.
+00:31:58 [W] So this is super useful, especially for newcomers to understand what is happening now just as an aside we are having a new react UI as far as Prometheus. So if you have running Prometheus, we have a tiny new shiny try
+00:32:12 [W] Button, just click on it and you will be taken to the new react you why we're actively developing this UI and the same feature the metadata expansion will be part of this you is well, and we would like we would like all of you
+00:32:27 [W] If you have bugs Please file issues and if your front end developer, please contribute to all the like all the issues around the new UI this is going to be the future UI of Prometheus and don't worry about breaking things. If something breaks, you can basically click on the classic
+00:32:43 [W] Of Prometheus and don't worry about breaking things. If something breaks, you can basically click on the classic UI and go back to the old you are.
+00:32:45 [W] Alright, so going to the future of metadata.
+00:32:52 [W] We are just not done with metadata yet.
+00:32:54 [W] So we currently store my data in memory.
+00:33:03 [W] But now in the future we want to purchase this metadata. So over time you will be able to see how the help text and types of each metric evolved.
+00:33:05 [W] We also want to be able to write this metadata, right all this metadata to remote systems like cortex or panels so that even when you are using the remote system, you have the same apis and same data. We already have a PR for
+00:33:19 [W] And there was a lot of discussion around how this PR should be structured or of contention. But in a recent Dev Summit that happened a few weeks ago.
+00:33:31 [W] We reach consensus and hopefully, you know in the next release or two, we will have remote right remote writing of my data.
+00:33:33 [W] Thanks God. I am so in the same Dev Summit.
+00:33:39 [W] We actually discussed more items and one of the further discussion points where backfilling and this is like very wanted feature of Prometheus.
+00:33:53 [W] So imagine that, you know our team and and Katie really wants to import the metrics into the Prometheus from other system. Maybe she's using, you know, some other Prometheus or some other systems. You want me great the data in-toto.
+00:34:04 [W] Her existing instance.
+00:34:09 [W] So how do I do it with Prometheus? Right?
+00:34:12 [W] Way of migrating and and allowing to query your data from the other systems using Prometheus is called remote read so you can configure your Prometheus to read from the external system.
+00:34:27 [W] For example influence the be so every time you query something it will go to that system, but this is not really back feeling right because back feeling means that you want to import of data into your Prometheus storage directly to persist that and use
+00:34:41 [W] So, how do I do this? Maybe it will be super amazing. If you know Katie could just put and write some CSV file which is easy to you know, play with and just generate and put it imported into the
+00:34:57 [W] Well, this is our will be possible very very soon.
+00:35:05 [W] So we started like the actual work on adding support for importing from to file format CSV and openmetrics, and it will look like this you will essentially have an
+00:35:17 [W] work on adding support for importing from to file format CSV and openmetrics and it will look like this you will essentially have an tool called
+00:35:19 [W] Use the be import and you just passed a file that will stream the data into the rose. That's a into the into the disc tool which will generate the blocks which is you know, kind of tourist and understandable
+00:35:32 [W] These DB database. So once you generate such a block such files you can just copy them onto the Prometheus working directory and Prometheus with the immediately read aloud that and
+00:35:47 [W] That access everything.
+00:35:50 [W] Okay. Now let's try to show you how it can look like once everything is merge and available.
+00:36:03 [W] So let's go to my terminal and let's play with it a little bit.
+00:36:09 [W] So let's imagine we have some data to import and well, I don't have any CSV file anywhere handy.
+00:36:13 [W] So maybe let's do something quick.
+00:36:17 [W] So I will go to them or robots perception server.
+00:36:18 [W] Speak some nice interesting metric to import.
+00:36:25 [W] I really like this one hour range of go routines for all four services.
+00:36:28 [W] So let's let's just grab that.
+00:36:31 [W] So let's just quickly wrote a very handy bash script which essentially queries that server and generate the CSV file from it. So let's quickly run that
+00:36:43 [W] I can specify and different fields and by headers and essentially let's let's show it you can see that I kind of Define the type of the field by by the field name and what they had in the header.
+00:36:59 [W] Slidell name label values are defining essentially what part of the CSV file field is is for label values or names or what are the actual where you put timestamp and we're cooked values and things like that.
+00:37:15 [W] So now we generate this like 1,000 rows of of data.
+00:37:21 [W] So let's install our T's db2.
+00:37:25 [W] You can install this via on such command, but I'll just go get and essentially I'm pulling a certain Comet that
+00:37:32 [W] as
+00:37:32 [W] He's essentially part of my for requests or ongoing work, but should be available soon.
+00:37:38 [W] Once this is installed. I can hopefully run these db2 to generate my my block.
+00:37:47 [W] Once this is done.
+00:37:51 [W] Let's check our help of such though. You can see the new available commands Imports openmetrics and import CSV.
+00:38:01 [W] Let's actually do that.
+00:38:01 [W] Right so we will cut our file into the TCB import tool and output that in some directory.
+00:38:09 [W] This is actually kind of fast and because we don't have much data it's only for series and it generated a Blog of one hour block essentially that
+00:38:18 [W] So I would just create empty configuration doesn't matter.
+00:38:35 [W] We just want to have something that will read them in the storage and just run the Prometheus. Yeah now, let's see if our data is available.
+00:38:42 [W] So as you can imagine up is not there because we actually uploaded go go routines.
+00:38:50 [W] And is this available?
+00:38:53 [W] So when we execute for our needed I'm wrench will see the data available for us and you can see and that this data is exactly the same as on our robust perception
+00:39:05 [W] I'm wrench will see the data available for us and you can see and that this data is exactly the same as on our robust perception server, but actually robust perception server has more of it
+00:39:10 [W] actually robust perception server has more of it versus, you know, our server has only imported only a bit of a
+00:39:15 [W] So that's a demo and this is the future.
+00:39:21 [W] So it's super exciting to explore and extend that idea further.
+00:39:26 [W] That was great to summarize.
+00:39:33 [W] We initially talked about how to do global view how to aggregate data between several different Prometheus has the different ways you can use to do that. And then we've talked about remote right and long-term storage how you can use just
+00:39:44 [W] How you can use remote right to write to a different server and how you can you do Global you through remote right?
+00:39:54 [W] We've talked about metadata one of the new features that I'm super excited about.
+00:40:04 [W] And finally we've also talked about backfilling and the future features that are coming into backfilling.
+00:40:09 [W] So this is something I'm super excited about again because it will help people migrate from older systems to Prometheus with all their data.
+00:40:13 [W] All right, that's it. If you have any questions, feel free to ask them now, or you can reach us via Prometheus Community or on GitHub.
+00:40:22 [W] Thank you.
+00:40:26 [W] Hello, everyone.
+00:40:31 [W] Yes, we can start answering questions.
+00:40:40 [W] Yeah, let's do it.
+00:40:43 [W] Okay, so maybe I can I can take the first one.
+00:40:50 [W] How did Define scraping also as mentioned in Federated scenario?
+00:40:58 [W] There is only single server.
+00:41:00 [W] What is a cello?
+00:41:03 [W] That's it. That's kind of two separate questions. So let's focus on first one.
+00:41:06 [W] So scraping you to find using certain yarmouk configuration.
+00:41:12 [W] And you do that by essentially specifying a scrape jobs.
+00:41:29 [W] So every every process of collecting metrics from various applications, you can separate into different jobs so we can say hey this job is responsible for
+00:41:35 [W] You need all the metrics from all the pots in the communities.
+00:41:41 [W] for example, and you can specify another job that is scraping a certain end points via static IP configuration the when you specify exact IP of the Pod that should be collected or anything that
+00:41:55 [W] In the when you specify exact IP of the pot that's should be called collected or anything that any endpoint that that exposed metrics page that Prometheus should go and scrape the from and I all those jobs can have different Discovery
+00:42:04 [W] And I all those jobs can have different Discovery mechanism. And this is how you configure, you know, what exactly endpoints as Prometheus who should have access to and this is how you define this pool method to
+00:42:15 [W] From choose who should have access to and this is how you define this pool method to what metrics should be scraped and from what places and we have plenty of Discovery mechanisms. And the most popular one is exactly like unit is API where you
+00:42:24 [W] It's great and from what places and we have plenty of Discovery mechanisms. And the most popular one is exactly a kubenetes API where you specify based on labels or literally many kind of metadata tags.
+00:42:31 [W] what exactly ports or maybe services or endpoints Prometheus should access to so but also we have DNS Discovery mechanism where you specify a tennis and point and and many many others
+00:42:45 [W] But also we have DNS Discovery mechanism where you specify a tennis and point and and many many others. We have Google cloud Jour and at that the u.s. Essentially, you know, you can specify
+00:42:53 [W] Cloud as your and NWS essentially, you know, you can specify certain vmsu certain labels and stuff like that question. But as mentioned infidelity scenario, there's only a single server.
+00:43:03 [W] Yes in this basic deployment model.
+00:43:05 [W] Yes.
+00:43:08 [W] have a Federated Prometheus, which is just single one that scrapes a portion of the data from the leaves and you are right like this is a single point of failure. That's why in some in some deployment models.
+00:43:19 [W] You would like to have to Federated servers that scripts those from it to your server. So have replicated data into places which kind of mitigate the risk right or you go to the systems. We talked about
+00:43:32 [W] The extension apis like remote treat or remote right to extend it further beyond the Federation pattern.
+00:43:41 [W] Cool.
+00:43:47 [W] Awesome. Do you want to take that bottom?
+00:43:55 [W] Yes, the next question. Is there any compatibility Matrix between Prometheus Christina and Thanos so I'm not sure what compatibility Matrix are bought. One thing is the Prometheus API is super stable
+00:44:04 [W] In just the core components haven't changed in probably a year or two.
+00:44:12 [W] So and Thanos exposes the same apis. So you should be safely able to use older versions of Prometheus with newer versions fauna and vice versa because the APA has been super stable.
+00:44:22 [W] And the same thing for Thanos because the same apis are exposed by all the projects.
+00:44:28 [W] So let me also try to answer the next question how to plan for dsst usage when we are dealing with Dynamic components like kubenetes and darker.
+00:44:45 [W] So I have a rule of thumb that I need at least one point three bytes per sample and if I know the number of series and if I know the scrape interval and if I know the retention period I kind of roughly calculated at 30% extra in allocate that
+00:44:55 [W] How to plan for dsst usage when we are dealing with Dynamic components like kubenetes and darker. So I have a rule of thumb that I need at least one point three bytes per sample and if I know the number of series and if I know the scrape interval
+00:44:56 [W] But especially in Dynamic environments in kubenetes, it's hard to estimate the number of active series or and things like that.
+00:45:06 [W] So for that we've added new configure option called this.
+00:45:12 [W] don't know you can actually specify the TSD be retention by disk space. So you can allocate a large disk and then say hey start deleting data. Once you're Crossing 80% of the
+00:45:25 [W] The shoulder and things like that so you can use disc-based retention.
+00:45:30 [W] fool
+00:45:33 [W] Perfect.
+00:45:35 [W] Perfect.
+00:45:39 [W] Perfect so I can take take next question.
+00:45:43 [W] So can the data Talent we've long retention electronic syseleven cup be so busy with external storage provision others instead of loading many expensive as this into internal nodes upfront
+00:45:54 [W] Cool, perfect.
+00:45:55 [W] Perfect so I can take take next question.
+00:45:55 [W] So can the data Talent with longer attention like planning sizing backup be so busy with external storage provision others instead of loading many expensive as this into internal nodes upfront any experience and cabbage with
+00:45:57 [W] Cabbies with this well, that's a very good point. Like if you are in running in some cloud provider cluster and you have you usually have a persistence volumes in a sense that there are persistent disks
+00:46:10 [W] so the cloud providers like Google and and Amazon and Azure and all of others gives you those those those this block storage which they they manage right and then manage, you know backups and replication and
+00:46:25 [W] And and a little bit of sizing the there is a little bit of dynamic city here.
+00:46:37 [W] However, still in most of the cases you need to set the size of those discs, right and you need to manually kind of copy the data around if you want to increase the size for example, so and this is kind of how blog search works
+00:46:47 [W] So keeping that in mind, but obviously it's better than then obviously playing with your own discs.
+00:46:56 [W] Let's go to the next one.
+00:46:58 [W] I can I can take it as well.
+00:47:01 [W] I use in flux the be for long term metrics storage Photon does versus Vania Prometheus Oh Thomas. Well youyou still Prometheus. So that's kind of important part and
+00:47:14 [W] So it's hard to compare just print queues and in place to be I think the main point is that if loodse Debbie has different API endpoints like you you don't have prom ql I think yet with all the features maybe gotten can no. Yeah.
+00:47:29 [W] So this is this is kind of the main difference. You need to switch their how you use this data. If you are suddenly kind of on in flux the be directly and using that data.
+00:47:50 [W] So so this is kind of the main part versus internal. So you have exactly the same API. So Griffon dashboards can be used in a similar way obviously grow fonder has data source for investigators fine, but you have kind of
+00:48:01 [W] User perspective for that. So I will be careful on this usage part interests is just about performance and different characteristic. But those are two to be honest details in comparison to how
+00:48:17 [W] Actually retrieve this data and how you can use those and the fact that in Prometheus is be different in flux. So I think that's the most important differentiator.
+00:48:26 [W] You want to take another run?
+00:48:32 [W] Yeah documentation says Prometheus local storage is not meant as a durable long-term store.
+00:48:44 [W] What what what does the keyword durable here means? It just it just makes Prometheus doesn't do any replication or repair.
+00:48:48 [W] it just writes it out to disk and if there is corruption in some of the data Prometheus has no mechanism to repair that data, but if you can take manual backups and have a backup restore.
+00:49:00 [W] Policy you can actually run Prometheus with lots of long-term storage.
+00:49:05 [W] You just need to be careful around Corruptions.
+00:49:08 [W] Absolutely, authentic sound go for it. Yeah, would it make sense to scrape Matrix from two separate instances?
+00:49:20 [W] Oh for long-term and short-term storage spectively.
+00:49:27 [W] I would say yes, and we are seeing a lot of the users do this.
+00:49:32 [W] This is what happens in Federation as well. So for example in the same Federated scenario, the leaf Prometheus nodes can have only three or four days or even 15 days of storage but the Federated Prometheus
+00:49:41 [W] Has lower number of Matrix it can have one year of one year of storage and this is a common scenario that you can run Prometheus with.
+00:49:50 [W] Who but exotic connection?
+00:49:56 [W] Okay, the next one is although storing data.
+00:50:03 [W] We've launched retention views does not increase usage.
+00:50:10 [W] They actual I guess resource usage the actual reading of those metrics for example graphs is very memory-intensive. Right?
+00:50:11 [W] you have a comment Hunter's he has that's a very good point like and this is why all those extension system actually emerged right because we've Primitives and just you know, one single since instance of Prometheus. You cannot scale the red buff horizontally.
+00:50:28 [W] Right and and you kind of just put more users into the same system and and expect it to use kind of constant amount of resources.
+00:50:41 [W] That's why the common technique is to actually scale out into your systems like cortex. Tano's only reflects the be and or others, but the key part is that you can still accommodate quite solid traffic into
+00:50:50 [W] into Primitives itself and you just need to plan cup of Duke some capacity planning potentially some load tests and query those those parameters heavily to learn how much resources that they will use we are
+00:51:05 [W] Hank heavily to make sure the performance is pretty low on the progress performance is high.
+00:51:11 [W] So the resource usage is low on each query so they are not using that much high of memory.
+00:51:19 [W] I would say it's more CPU intensive but it really depends how much you know cardinality metrics here. I mean do how much series you actually touching via our query so it's really really fence and the best is to try it
+00:51:32 [W] To end that check how it goes but yes, you should reserve some resources for querying for sure for especially for long-term storage use cases.
+00:51:41 [W] Is there a way to the next question sorry, is there a way to turn on the new react UI by default?
+00:51:51 [W] No, I don't think so.
+00:51:56 [W] Unless I'm wrong, but please propose this as some flag because I'll be super awesome. Yeah.
+00:51:57 [W] But also you can also use your reverse proxy to kind of read read at the path to default like whenever people open the Prometheus UI you can default to opening the new reactive.
+00:52:11 [W] I just by changing the path.
+00:52:13 [W] That's a stopgap solution for now.
+00:52:15 [W] Goodbye do item it. You are immediate.
+00:52:28 [W] How do I limit Prometheus s max memory usage.
+00:52:29 [W] We had to give our pots 30 GB memory each gesture start up after awhile it drop to 10 G 10 GB, but it spikes every night.
+00:52:40 [W] So the amount of memory Prometheus uses depends on how you use Prometheus. What kind of it depends a lot on query load not just in just load.
+00:52:49 [W] So if there is a spike every night, maybe you're running a Cron job.
+00:52:51 [W] querying a lot of data.
+00:52:55 [W] Prometheus and in general Prometheus is super lead in terms of memory usage. You can read like you can monitor a lot of data with 30 GB or 10gb of Prometheus memory.
+00:53:07 [W] So I would just say try to give your Prometheus pots extra memory.
+00:53:20 [W] But if you want to reduce the memory usage special, especially the query level usage may be run with Thanos career on top of Prometheus that just reads data from Prometheus, but the actual code is run on on the tennis court.
+00:53:25 [W] Here, that's one way.
+00:53:25 [W] It's also worth mentioning that with the new versions of Prometheus.
+00:53:31 [W] We improve this startup kind of research to judge and are mostly so you should try this out. And and we just make sure we check point the data when Prometheus gets down or things like that. So it's much more improved nowadays.
+00:53:46 [W] What is the best way to install Prometheus Helm chatbots both Prometheus and also the Prometheus operator?
+00:53:57 [W] That's a good question.
+00:53:58 [W] So so I would suggest if you already know Prometheus and are familiar with Prometheus. And if you consider yourself a fairly Advanced user of Prometheus, I would be use the Prometheus chart directly.
+00:54:13 [W] if you're just getting started with Prometheus, I would suggest the Prometheus operator because the operator abstract survey some of the complex configuration that the permit.
+00:54:20 [W] You said what needs especially when running with kubenetes you might need to do a lot of rehab relabeling to figure out the right targets to scrape the right things and all of that relabeling is abstracted out by the Prometheus operator.
+00:54:35 [W] So it depends on how confident you are with the Prometheus configuration. If you are not sure if the Prometheus operator
+00:54:40 [W] Yes, that's not to mention that you should be you should be consistent with what you are using previously.
+00:54:49 [W] So, you know, don't just you know start hand if you are using something else.
+00:54:59 [W] So if you are into operators use operator if you are into Helm is Helm if you are into Json that you just an ad or just different templating system. Please do that like
+00:55:02 [W] This you might be able to answer better the next question.
+00:55:08 [W] Okay, how manage Prometheus in a multi-time communities cluster to be how to manage current using the materials convenience custard to be able to reserve for metrics?
+00:55:20 [W] to only owner of his metric
+00:55:24 [W] I mean, it's really interesting this multi-tenancy kind of concept and how to put it into the Prometheus how to reserve metric to only owner of this metric. I guess it means all those I think the best way
+00:55:41 [W] To do multitasking used to think about apis right and think about okay.
+00:55:47 [W] How do I retrieve this data?
+00:55:58 [W] How do I operate on this data and allow this isolation behind so someone cannot, you know use the metrics from different tenants, right?

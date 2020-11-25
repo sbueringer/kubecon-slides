@@ -1,0 +1,168 @@
+﻿Multi-cluster Made Reasonable: Envoy Service Mesh Control Plane: QRPG-8906 - events@cncf.io - Wednesday, August 19, 2020 10:54 AM - 1183 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:23 [W] Hi, so welcome to our talk.
+00:00:28 [W] It's multi cluster made reasonable Envoy servicemeshcon Troll Play.
+00:00:31 [W] If I'm Paul Fisher, I'm the tech lead on the compute platform it lifts and I've been working on community since its Inception here at the complaints and multiple years that we've been working on the platform and also today Ashley.
+00:00:48 [W] compute platform it lifts and I've been working on communities since its Inception here at the company its and multiple years that we've been working on the platform and also today actually kazim will also be presenting
+00:00:50 [W] Also be presenting she'll take over later in the talk to do a demo of diploma.
+00:00:56 [W] Okay, and the agenda for what going to cover today?
+00:01:01 [W] I'll give an overview of lifts environment as well as our communities environment in addition to covering the lift Envoy environment and then actually will cover our multi cluster set up as
+00:01:14 [W] Diplomat which is our multi cluster control plane.
+00:01:20 [W] That's we'll talk more about and also go through a demo of diplomat.
+00:01:24 [W] Okay.
+00:01:36 [W] So those of you that might not be familiar with lift particularly if you're in Europe, so we're a Rideshare Network that's in all 50 US states Toronto Ottawa and we recently launched in Vancouver as well and
+00:01:45 [W] To the car ride Center Network.
+00:01:53 [W] We also have a scooter and bike sharing networks in the u.s.
+00:01:57 [W] Largest of which are a city bike in New York City as well as be wheels and the San Francisco Bay area.
+00:02:04 [W] We also have Transit Partnerships and 11 markets that includes things like bus schedules and so many times and the idea is just get is to get you between points as efficiently as possible and we also have
+00:02:18 [W] Have autonomous vehicle Partnerships and Las Vegas and Phoenix.
+00:02:21 [W] So now you talked about like serverless scale.
+00:02:28 [W] There's also the community scale that that we have.
+00:02:31 [W] So this kind of falls into three categories the first that migrated onto our platform is sort of machine learning which fits naturally with with kubernetes so our mlperf stupor notebooks
+00:02:43 [W] Words exist there and they were the first to migrate over.
+00:02:53 [W] there's also flight which was open source at the last coupon u.s.
+00:02:57 [W] There's lots of documentation out there about flight, but that's how I run spark And Hive and then sort of the largest set of clusters that we run here at lifts are related to the ride sharing platform.
+00:03:09 [W] And that's about 600 plus stateless microservices. We run multiple clusters.
+00:03:15 [W] Ders and each availability Zone and there's participate in a single Envoy meshmark.
+00:03:41 [W] so in terms of timeline of kubenetes at lift, we sort of started the containers ation effort if you will and making use of Docker back in 2015, we had a homegrown system
+00:04:01 [W] About like a Docker swarm.
+00:04:08 [W] It wasn't until 2017 that we start investigating options for running Kudo knees and I've us and in particular we realized that it was necessary to have networking platform that could interoperate with the existing Legacy stock
+00:04:19 [W] C stock today, and so we worked aggressively to to get that platform in place.
+00:04:30 [W] We open source that work and December 2017 and that part of our scene I stack em has on also released their open source ci/cd around the same time and the feature set is pretty similar between the two
+00:04:42 [W] The Bachelor mobile workloads where the first to sort of migrated over we've seen much finished our migration of all of our state list services to kubernative he's that was work that was done last year.
+00:04:57 [W] It's all the tr02 your one although all the core Services run on kubernative sit lift and this year we're focused more on stateful migrations combination of what we call Semi stateful and safe wholesome a stateful.
+00:05:09 [W] Things that just have a fairly low tolerance for poddisruptionbudgets.
+00:05:30 [W] Okay, so a little bit about our environment where on career day is 1/16 and sort of a never-ending upgrade trained.
+00:05:41 [W] We're currently working to get updated to 118. We run Fedora 31 currently.
+00:05:49 [W] So we like hang back one release from the current production version. We use cryo as our cri-o.
+00:06:01 [W] Ubuntu on the developer side, so it's basically like a fedora minimal Shamu ass running a bunch of containers for the actual list Services.
+00:06:12 [W] Everything is mutable and the floor world. We use Packer and in the chorus world we use ignition and all that sort castrated via terraform as I think I mentioned earlier.
+00:06:25 [W] We're knative u.s.
+00:06:31 [W] we use lots and lots of ec2 and UB S and S 3 and our primary build-outs are in u.s. East one and u.s.
+00:06:32 [W] Those clusters the back Lanes of those clusters don't communicate to each other and the goal there is to have the ability to do staggered rollouts and limited LaPlace radius.
+00:06:54 [W] So if we lose a single cluster, it doesn't affect the list Service as a whole.
+00:06:58 [W] It also means that if they're AZ issues with an AWS.
+00:07:01 [W] It's limited to 2/1 or just 2 set of clusters. And as I mentioned before we have our scene is back and this is really a sort of critical to allowing us to bridgecrew.
+00:07:09 [W] Ridge multiple clusters together because the pods are directly part of the envoy meshmark.
+00:07:16 [W] And related to that and the reason why we can sort of have this multi cluster environment that works as we have to keep well whether we've trusted to keep things as simple as possible.
+00:07:32 [W] So there's no overlay networks.
+00:07:33 [W] There's no bgp.
+00:07:34 [W] We don't use Nats.
+00:07:47 [W] Is for development or prove a concept inor like makes it so easy to get up and running.
+00:07:57 [W] running. We tend not to use that in production as we find it. It's scales better to keep things simpler.
+00:07:59 [W] IP addresses knative Network performance and the the two main plug-in options. There are our stock as well as the 80s to act.
+00:08:25 [W] This is really what allows Envoy to be able to wear the envoy measure space and multiple clusters.
+00:08:29 [W] And I'll cover a bit of the lift Envoy environment.
+00:08:35 [W] So we have two Envoy messes.
+00:08:41 [W] There's one stage meshmark very large production meshmark.
+00:09:06 [W] Stirs participate in the mesh and we have 1 V PC IP.
+00:09:13 [W] / Kudo knees pod and then our control plane as a software called Envoy manager, which actually will talk about here in a bit to cover our scene. I stock and this sort of comes with trying to keep
+00:09:26 [W] Simple as possible as we as we scale the Clusters out.
+00:09:33 [W] It's a very minimal design.
+00:09:43 [W] There's no demon sets and no pods but having run times. It's just a handful of go binaries and those developments been done here lift with cryo datadog is also done a decent amount of development and they run into production as well
+00:09:48 [W] But it's Ranch feature complete.
+00:09:54 [W] It's been running for for three years and has really enabled are set up to to work in terms of what the the mesh looks like on the production side.
+00:10:07 [W] So we have five main production clusters 1 / AZ for the for the state list side. That's where the bulk of the services are deployed to so when you deploy it
+00:10:20 [W] surfaces lift it ends up getting deployed across all of those core clusters and there's a bit of an abstraction layer where and developers don't have to really be concerned or worried about where their services are
+00:10:34 [W] In terms of when they can interact with them and addition to the match. We still have our Legacy stackrox.
+00:10:59 [W] Alright, so first let's start by going over some terminology a particular where there is some naming collisions across kubenetes and Envoy.
+00:11:14 [W] So can you get a little bit confusing?
+00:11:24 [W] So there's two types of clusters will be dealing with kubernetes clusters, which are a collection of worker nodes running pods orchestrated by one or more API servers, and then there's Envoy clusters. I'm going
+00:11:30 [W] Is are a collection of endpoints comprising a service and Diplomat.
+00:11:38 [W] We have mapped and Envoy cluster to a kubernative surface.
+00:11:40 [W] And on portfolio endpoint is an Envoy cluster member with a unique IP and Port pairing which in our implementation. We've mapped to a kubernative use endpoint.
+00:11:52 [W] A collection of worker nodes running pods orchestrated by one or more API servers and then there's Envoy clusters.
+00:12:05 [W] I'm going clusters are a collection of endpoints comprising a service and Diplomat. We have mapped and Envoy cluster to a kubernative service.
+00:12:06 [W] And on quote voice on point is an Envoy cluster member with a unique IP and Port pairing which in our implementation, we've mapped to a kubernative use endpoint.
+00:12:08 [W] And then as for Envoy itself, there's a few parts that we primarily are going to be dealing with.
+00:12:12 [W] The first is X BS or Envoy is dynamic Discovery API is the to XDS Services relevant to Diplomat rcds or clustered Discovery service, which registers Envoy clusters
+00:12:14 [W] The to XDS Services relevant to Diplomat rcds or cluster Discovery service which registers Envoy clusters and EDS or endpoint Discovery service, which registers Envoy endpoints.
+00:12:20 [W] Diplomat is implemented as an example in go control plane, which is a reference open source, go implementation of the XDS apis which can be used to build custom Envoy control planes such as
+00:12:35 [W] and go control plane, which is a reference open source, go implementation of the XDS apis, which can be used to build custom Envoy control planes such as a diplomat or Envoy manager
+00:12:40 [W] Measure the control plane that left front internally as Paul mentioned is called Envoy manager Envoy manager is implemented on top of go control plane
+00:12:51 [W] Is kubernative informers and our in-house career day is cluster Discovery implementation to watch pods status and Bridge the meshmark srn kubernative Clusters.
+00:13:03 [W] We're often asked if we're ever going to open source Envoy manager and definitely the answer that we have given is no for the simple reason that Envoy manager is very organization specific and
+00:13:19 [W] Of Legacy functionality that reflects the evolution of infrastructure at lift and therefore making it unsuitable for direct adoption elsewhere in addition Envoy manager predates though control plane.
+00:13:34 [W] Act adoption elsewhere in addition Envoy manager predates though control plane and as a consequence, it has not yet been updated to take advantage of all of go control planes features, which is another reason why it's unlikely to be
+00:13:43 [W] Go control planes features, which is another reason why it's unlikely to be open sourced next. We're going to dive into the implementation details of envoy manager a little bit.
+00:13:51 [W] so here we have a diagram that describes the architecture of the envoy manager deployment at lift lift service pods run it on by side cargo container and these sidecars use DNS to discover Envoy manager, which is
+00:14:08 [W] Who helped us community service?
+00:14:14 [W] Let's Services run pods on N clusters which are independent and redundant such as we are resilient to a cluster outage. Envoy manager is also fault tolerant or we have deployed multiple independent Envoy measure replicas
+00:14:26 [W] Is and our Envoy manager deployment can also scale with load.
+00:14:38 [W] I'm going managers kubernative support was originally implemented using endpoint informers, but has since switched to using pardon for MERS.
+00:14:44 [W] There's going to be a link later to a talk that goes more in-depth as to this design decision later later on in this presentation.
+00:14:49 [W] currently runs a single servicemeshcon ulcers pause across these and clusters are part of the same mesh. So let's take a closer look at
+00:14:57 [W] It's happening in this diagram here. The service Foo has two pods.
+00:15:10 [W] The envoy sidecar in each of them is going to discover their clustal cluster local Envoy manager via DNS where e/m that service that cultural local is a grpc load balanced across the envoy manager
+00:15:18 [W] Each employee manager is been talking to the API servers of Kuma days clusters 0 and 1 this means that each of these Envoy managers has a complete picture of the whole state of the world across the Clusters even though each kubernative
+00:15:35 [W] Is remain completely independent.
+00:15:38 [W] And now onto Diplomat Diplomat is essentially a minimal Envoy manager implementation which simplifies the Eds control Loop and strips out all that Legacy and with specific implementation.
+00:15:59 [W] Make it more generic and adaptable to the needs of other organizations and the open source Community like Envoy manager. It is based on the go control plane and it supports multi cluster and currently we have implemented.
+00:16:15 [W] I am authentication and AWS because that's what let's use the off implantation is extensible.
+00:16:25 [W] However, so with a bit of code other Cloud providers could easily be added.
+00:16:28 [W] So as I mentioned, the implementation of Diplomat is similar to Envoy manager at the start. It registers the end kubernative clusters that is configured to be aware of and spawns kubernative
+00:16:49 [W] Get them the informers Implement and and hook on endpoint update which collects the new endpoint data and known input data from the other clusters and then performs an update to the Diplomat
+00:17:04 [W] It's informing the service pod Envoy sidecars of the new Envoy by the new endpoint via the envoy endpoint Discovery service.
+00:17:14 [W] And then in this diagram we have n Korea s clusters and each of them has an endpoint in former. When an Informer detects a communities and point update it triggers the Diplomat XDS update logic if the update
+00:17:30 [W] Is a new service that the servicemeshcon not previously know about an Envoy Sidious or cluster just Discovery service update is perform to register the new service in the mesh if the Informer update
+00:17:46 [W] Into communities and point then Diplomat is going to trigger an Envoy TDS or endpoint Discovery service update.
+00:17:56 [W] You'll see an example on how this works in our upcoming demo. There are a number of improvements in the envoy and
+00:18:10 [W] Communities that are relevant to the Future roadmap for Envoy manager and/or Diplomat. The first is the beta introduction of endpoint slices and kubernative is 117 which provide a more scalable implementation for tracking larger
+00:18:26 [W] And points and then as I had mentioned earlier lift has kind of gone back and forth between watching poddisruptionbudgets in Envoy manager.
+00:18:42 [W] Envoy measure is currently using a pot and former, but we are aiming to move back to an endpoint Informer in the future an excellent deep Dives of the trade-offs of these approaches and our experience in making the list servicemeshcon
+00:18:52 [W] All can be found in the envoy con top that's linked.
+00:18:56 [W] Finally, the envoy option committee has an open issue around Envoy Health checking being unaware of kubenetes pod planned removal.
+00:19:10 [W] This is one of the main issues with using it and point in former with your Envoy control playing currently as kubernative points are updated only once a pod is torn down so you may not be able to update EDS and points fast enough to prevent Envoy from
+00:19:20 [W] Text from the draining pods and thinking that the service is in fact unhealthy.
+00:19:26 [W] And now we have a demo for you.
+00:19:34 [W] All right.
+00:22:28 [W] Hopefully this was valuable in providing a pattern to build multi kubernative cluster Envoy messes and the corresponding control plane.
+00:22:38 [W] The Diplomat source code can be found on lifts public Fork of go control plane on the Diplomat Branch contributions are welcome.
+00:22:42 [W] So please check it out. In addition lift is hiring and check out the link here to see more information on the opportunities.
+00:22:48 [W] All and thank you very much for coming to our talk.
+00:22:51 [W] It's not sure if there is audio or not on the demo.
+00:23:22 [W] If for some reason you didn't get audio on that we can upload the demo to slack so you can watch it back later.
+00:23:26 [W] Okay, I guess we should go through some of the questions that came in whether or not we're using increment elects DFS.
+00:23:47 [W] No, not currently.
+00:23:52 [W] question about
+00:24:03 [W] Sorry about the lag. Go ahead Ashley.
+00:24:12 [W] Yeah, so I guess the next question is about Envoy as containing clusters containing information about service and points from all clusters, which means configs are cutting huge meaning memory consumption for services that talked a lot of services
+00:24:29 [W] This true and this is I guess I like one of the reasons why incremental XPS is something that we need to move towards and then additional kubernative is coming out with the
+00:24:44 [W] And there is a proposal and Upstream Envoy to implement something that's like similar done Point slices in order to like kind of cut down on the amount of information that is getting complicated.
+00:24:57 [W] Next questions related to Diplomat being open source.
+00:25:10 [W] Yeah, it's been merged into the Upstream go control plane.
+00:25:15 [W] So yeah, just Google for left go control plane or rather Envoy a control plane and you should be able to find it. It's in the examples directory. One of the other kind of reasons for private diplomatic be open source, is it provides
+00:25:26 [W] Reference example of how to assemble your own control plane. So it's like a sort of like example code base.
+00:25:36 [W] for next questions related to what's the typical Network ever had around broadcasting XPS values the Forgotten what the current time frame is for convergence, we can follow a backup on slack
+00:26:06 [W] I think a lot of our health checks and stuff.
+00:26:11 [W] It's on the order of 20 ish seconds or so for health checks, but it's a couple of Route like multiple round trips, but we can follow up separately about that.
+00:26:20 [W] So I can talk to the next two of them.
+00:26:28 [W] The first is does diplomat talk to non-food a services.
+00:26:30 [W] This is currently not implemented.
+00:26:33 [W] However, this could be extended by adding. You know, whatever the equivalent is that's doing Discovery for your non-korean a simple structure.
+00:26:46 [W] And then the second is can we use diplomat on an Enterprise that up Diplomat is an example. So I think that while it's a
+00:26:53 [W] Basis for building your own custom control plane.
+00:26:57 [W] It's not necessary like tested at scale so thing and Beyond like your scalability concerns, it's probably not recommended to use just right on the box.
+00:27:04 [W] Oh, yeah, and then and then particularly we also have the original sort of like open source Discovery service that came out when Envoy originally came out and that's what was used for our Legacy
+00:27:22 [W] And so that was the the discovery Services what like the original versions of envoy manager and the control plane didn't actually speak kubenetes at all.
+00:27:37 [W] And so since we had since all the pods have BP cips, the early versions of kubenetes at lift would just register those IPS and to Envoy Discovery
+00:27:46 [W] Everything got bridged together.
+00:27:49 [W] Performance issues some it's questions related to have we had any performance issues watching all grenades clusters and control plane.
+00:28:11 [W] So when we were using and point informers no for poddisruptionbudgets also got mentioned in the talk, but there's a prior coupon talk
+00:28:20 [W] And Lita out lift that kind of goes into some more of the details on this but with the pot and former, there's just like a lot of events.
+00:28:35 [W] And so there's a lot of data that we have to filter out to get information that that we need.
+00:28:43 [W] So no, I wouldn't say there's like any real performance issue in in that sense. There were some issues with the envoy manager in terms of like how quickly it could scale up and keep the state of the world.
+00:28:52 [W] But most of those issues have been addressed of late.
+00:29:02 [W] It's pretty much I think just the the size of the mesh the concern particularly with related to memory usage within the envoy sidecar and that's the reason for moving out to the to this litmuschaos proach.
+00:29:10 [W] So the next question is how you deal with new deployments for each cluster.
+00:29:20 [W] This is where CBS comes in and simple implementation is you know, you annotate the deployment and you can inform the to watch for new employment and that deployments and then you generate an Envoy cluster
+00:29:33 [W] the new posters that are discovered
+00:29:37 [W] Okay. Next question is related to whether or not all of our clusters are in the US and I'll say of GDP are ya are clusters are in the US and lift is GPR compliant.
+00:29:57 [W] That was a large undertaking at the company.
+00:30:00 [W] I guess like a couple years ago. But yeah, we're just ER compliant.
+00:30:03 [W] I think that's it for all the questions that have come in.
+00:30:12 [W] So if there aren't any other questions, thanks everybody for attending and be sure to message us on slack if if you have any other questions.

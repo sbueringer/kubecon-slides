@@ -1,0 +1,313 @@
+﻿Mario Meets the Robocat: Lessons From Dogfooding Tekton: NFSR-8166 - events@cncf.io - Thursday, August 20, 2020 7:44 AM - 40 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:24 [W] Hello, welcome to today's talk.
+00:00:29 [W] The talk is called Mario meets the Robocat lessons from dogfooding tekton.
+00:00:31 [W] My name is Deborah Mukherjee.
+00:00:34 [W] I'm an engineer at Google working on the tekton project Andrea, and my name is my name is Andrea phreak Turley.
+00:00:40 [W] I'm an engineer at IBM. Also working on the tekton project Divya.
+00:00:45 [W] Sure.
+00:00:50 [W] So in today's talk, we will start with a brief introduction to tekton. We'll talk a little bit about Plumbing which is like an umbrella.
+00:00:52 [W] Can be used to describe our dog food experiments that is running using tekton for tekton.
+00:00:59 [W] We will do a deep dive into tekton continuous integration how we're using tekton for our own continuous integration will show a quick demo of our efforts and will end with some lessons learned and future work.
+00:01:09 [W] Over so what is tekton over 200 up?
+00:01:15 [W] So tekton is a framework for creating ci/cd pipeline.
+00:01:21 [W] The spirit pipeline can be run from in any kind of environment starting from your laptop or in a cloud whether there is some premise or public Cloud so it gives you full flexibility
+00:01:33 [W] Is an open source software which is hosted at the CD Foundation continuous delivery Foundation.
+00:01:42 [W] It was actually one of the founding project of the foundation itself.
+00:01:51 [W] So tekton benefits from a great community of contributors.
+00:01:59 [W] It comes from different companies, like Google rated cloudbees IDM, the Vidal and many more it also has a flourishing community of users. So apart from the contributing componentconfig.
+00:02:03 [W] Company, we also have a computer users like puppets or tikv to or other companies that are building products on top of
+00:02:18 [W] So what her the goals for tekton so tekton really revolves around were usability and standardizations.
+00:02:32 [W] So goal for tekton is not to take over the entire ci/cd space which is quite busy and there are a lot of dedicated solution for specific projects tekton tries to create building blocks that can be used in
+00:02:45 [W] Great. Well with many other solutions that are existing liked nginx scaffold initiative and so forth and it also tries to do the job on the specific building blocks very well to create like best practices for
+00:03:00 [W] On the specific building blocks very well to create like best practices for running tasks and Pipelines.
+00:03:10 [W] It also is not opinionated in the sense that it gives you complete flexibility in what you want to do in your pipeline.
+00:03:19 [W] So if you're building for is a container images, you don't you're not constrained to any specific tool you can use the tool of your preference.
+00:03:22 [W] You can deploy your
+00:03:25 [W] pipeline to different environments and you can use them to deploy your application in different kinds of environments.
+00:03:31 [W] Tia
+00:03:37 [W] Okay, so the tekton universe today consists of a few different projects at the core our pipelines which as Andrea mentioned are the core building Primitives for your ci/cd systems.
+00:03:53 [W] This includes steps pipelines and tasks will go into a little bit more detail about these in the next few slides.
+00:03:59 [W] We also have triggers which actually allows you to run these things your pipelines continuously.
+00:04:02 [W] that is it allows you to trigger pipelines based on events complementing that is the catalog which is where the community can share usable task and pipeline.
+00:04:08 [W] Emissions and other people in the community can reuse those things and then we have a hub which is a web interface on top of the catalog so think something like Docker Hub, but for your tekton tasks next up we have to link we have dashboard, which is a nice
+00:04:23 [W] Is for your tekton installation, you can look at your pipeline status Etc.
+00:04:31 [W] We also have TK n which is a powerful CLI tool for interacting with tekton.
+00:04:34 [W] We have an operator to manage your tekton installation and your tekton upgrades.
+00:04:38 [W] Finally we have experimental.
+00:04:39 [W] So this is a repo where we do a lot of our experiments with tekton.
+00:04:46 [W] So we examples of experiments would include things like storing task and pipeline Run results in a variable format experimenting with image formats for
+00:04:54 [W] Bundling your tekton task pipelines and other complimentary resources experiments with supply chain security such as signing and verifying bills, etc. Etc.
+00:05:07 [W] So now we'll go into a little bit more details about tekton pipelines.
+00:05:19 [W] So the most basic primitive is a step which is which is basically a command that you run in a container. You can specify other things such as volume and environment variables, but the Step is the most basic primitive.
+00:05:20 [W] Next step is a task a task is a sequence of steps that run in the same pod.
+00:05:24 [W] Test run to completion so or until one of the ten steps in it has Fields they usually map to a single kubernative spot task and Define and declared their own inputs and produce results, which is how you can change tasks in pipelines
+00:05:39 [W] Basically a graph of tasks with declared inputs and outputs. The advantage with the pipeline is that you can run your tests in parallel if needed or in sequential to form your entire ci/cd workflow.
+00:05:55 [W] So steps has and pipelines are basically how you define your ci/cd workflow how you invoke them is via caster and and pipeline drug.
+00:06:08 [W] drug. So pipeline run as the name suggests is one invocation of a single pipeline has run is the same for at asks you this is where you provide your inputs and
+00:06:10 [W] puts for your task and you actually run your pipeline to completion.
+00:06:17 [W] next step is triggers and over to Andrea for talking about triggers.
+00:06:22 [W] Thank you Divya.
+00:06:27 [W] So once you have your pipelines you might want to trigger them manually, so to say by creating a pipeline run but in the large majority of the use cases, you may want to run a
+00:06:42 [W] Consequence of a certain event that happened then can be anything triggered by a service in the cloud or service that you rely on that you want to react to so typically something like webassembly.
+00:06:58 [W] Borg gitlab for your get housing system. So tekton triggers was created as part of the tekton to handle this kind of use cases.
+00:07:12 [W] Also tekton triggers Define its own Primitives.
+00:07:23 [W] The first one is the eventlistener just a component which received the events. The vent is received over HTTP or https is composed by others and payload and can come directly from the publisher or
+00:07:27 [W] Broker and so the next bring me Dave is Interceptor because you may not want to process all the events that are receiving to your event listener.
+00:07:43 [W] So interceptors we redefined and we have a few stock ones like GitHub gitlab interceptors that are able to first of all validate that the request was received as valid and verified. The token
+00:07:55 [W] Correct one and also the they allowed to filter based on the type of event or the content of the event and they're accessible is possible to Define custom Interceptor.
+00:08:10 [W] You can also add extra content to the pay bill door to the other of the message.
+00:08:21 [W] the next the next primitive or the trigger Bindings that recommending a used to extract relevant information from the address and the payload of the incoming message.
+00:08:27 [W] In two parameters that are then passed to the trigger template, which is the final primitive triggers trigger.
+00:08:34 [W] Template are defined as the name suggests to create templates for the resources that needs to be triggered as a result of the event. So typically you will have inside I've been run definition that can build fee can be filled in
+00:08:47 [W] Is the final / medieval triggers trigger template are defined as the name suggests to create templates for the resources that needs to be triggered as a result of the event. So typically you will have inside.
+00:08:49 [W] The parameters that were extracted from the address and the body by the pendings.
+00:08:54 [W] So now that we have an overview of what tekton is.
+00:09:02 [W] We're going to look more into we're on our infrastructure for tekton that we call.
+00:09:07 [W] Let me of Mario's Plumbing.
+00:09:12 [W] So if you look in the dictionary Plumbing is a system of pipes tanks with paint another practice required for the water supply eating and sanitation in a building protecting.
+00:09:24 [W] This means the combination of tools and configuration.
+00:09:25 [W] That we use to build everything. We just need my tekton in terms of automation which means and includes the ci/cd stem that we use for tekton itself and all the city tasks.
+00:09:40 [W] come so, we do gitops reason skipping tekton tossing sink their cluster the release management and get a GitHub organization management Forest has
+00:09:56 [W] to you if you
+00:09:59 [W] Okay, so tekton the project was created out of the Canadian serverless project. And one of the consequences of that is we inherited the same ci/cd system initially that they use Sookie knative and a lot of icky knative kubernative and a lot of other projects in the This
+00:10:16 [W] It will pump out which is a kubernative space ci/cd tool that was built for the kubernative project.
+00:10:26 [W] It's very powerful is very flexible has a large share of plugins that you could use to do things Beyond just your basic ci/cd.
+00:10:38 [W] So that's where we started and our goal was to not get rid of proud initially. But to do like do this in a step-by-step basis. So we are first step in dog fooding was to actually start pleasing tekton by using tekton and to do this. We will the simple pipeline
+00:10:45 [W] Our binaries and our container images and our manifest using tekton and initially this was something that people would invoke manually so engineer would manually invoke the pipeline that would release tekton next up.
+00:10:59 [W] There was to set up a dedicated cluster for our top footing experiment.
+00:11:03 [W] So we set up a kubernative cluster just to do that. And finally, we also try to integrate tekton into proud so proud as a tekton plugin, so you could your single project could actually run your tekton pipeline if you're more interested in details of the early days.
+00:11:16 [W] Of our dog fooding in the previous keep Khan in San Diego.
+00:11:20 [W] we gave a talk about this portion of our dogfooding experiments.
+00:11:24 [W] So the next step once we had those basic dogfooding steps The Next Step was to actually run them continuously by this time. The triggers projects had his first release so we could start doing this the first step we did there was to create 90 releases for all of our tekton projects and we did this using
+00:11:40 [W] portion of our dogfooding experiments
+00:11:41 [W] So the next step once we had those basic dogfooding steps The Next Step was to actually run them continuously by this time. The triggers projects had his first release so we could start doing this the first step we did there was to create 90 releases for all of our tekton projects and we did this using a
+00:11:43 [W] Triggers the carpet lines and your standard kubernative con jobs.
+00:11:50 [W] So now instead of engineer having to manually invoke a release you could just have nightly releases every single night next up.
+00:11:56 [W] We aren't just your night releases. We started doing nightly builds for infrastructure containerd.
+00:12:02 [W] So this is not just good but your configuration and other infrastructure containers that we might need.
+00:12:06 [W] Once we had these nitrogen visas. We needed a place to deploy all of these stuff. So we created this cluster called the Robocat the river get cluster is where we do all of our canonical
+00:12:11 [W] Continuous delivery experiments.
+00:12:20 [W] So we set up our tekton triggers and our tekton pipelines to deploy on night Recon releases to the robot that cluster so we started with deploying just the releases but then we started doing more. So we started deploying our configuration data can fit
+00:12:29 [W] Such as tekton pipelines and tekton tasks so that they would remain in sync with the definition in our git repos and we did more than just that we also use gitops and in combination with tekton triggers and pipelines the automator or
+00:12:44 [W] Just that we also use gitops and in combination with tekton triggers and pipelines the automator or batchman. So today if you want to join the tekton CD or you add yourself to a file in our community repository open a poll request once the request
+00:12:53 [W] In our community repository open a poll request.
+00:12:54 [W] Once the request gets pushed.
+00:12:55 [W] We have a trigger listening and that that will which will trigger a test that will add you to the ark itself.
+00:13:03 [W] So that was how we ended up doing continuous delivery for for tekton using tekton the next step in our dog fooding Journey was to use tekton for our own continuous integration needs and this is where Andrea will describe in little
+00:13:16 [W] For the journey was to use tekton for our own continuous integration needs.
+00:13:18 [W] And this is where Andrea will describe in a little more little bit more detail about our ci/cd over to you.
+00:13:20 [W] Thank you.
+00:13:22 [W] Thank you.
+00:13:22 [W] Thank you.
+00:13:22 [W] Thank you.
+00:13:22 [W] Thank you.
+00:13:24 [W] Thank you. So indeed. We started working on focusing on see I am doing CI with tekton.
+00:13:29 [W] It was great that we could transition from brow using for some of our CIA needs to tekton and transition gradually.
+00:13:41 [W] So this is how the setup that we are using today.
+00:13:46 [W] Looks like as you may imagine. The entry point for our ci/cd up is the it's an event listener from tekton trigger.
+00:13:51 [W] That is set up as a saying that receives webassembly.
+00:14:20 [W] To the tekton city or not. And because not not all of the events from petabyte-scale tickle terms of content as well.
+00:14:33 [W] And so we need to do some work to adopt them.
+00:14:37 [W] Then from get up does not contain much data about the pr and but this data we need to run the CIA job when we do that in as a reaction to a comment.
+00:14:52 [W] So we use a custom custom componentconfig line with the overlay to add this information to the payload, which is then passed to the bindings the green boxes below.
+00:15:06 [W] We have multiple bindings here.
+00:15:15 [W] It's great that it is possible to use a combination of minding so that each finding a specific related to a specific source of information.
+00:15:24 [W] So in this case, we have one binding which is for General get up events and it contains information is available to all events.
+00:15:30 [W] And then we have event specific findings on top.
+00:15:35 [W] So the resulting set of parameters that is extracted from the Henderson payload of the gitlab event is then passed to a trigger.
+00:15:37 [W] Template and ultimately to the pipeline's the picture here.
+00:15:42 [W] So we have a few different trigger templates.
+00:15:51 [W] We have one trigger template which contains co-ops that are common to all the repositories and this is great because it allows us to Define future of search for checks that we want to enforce on algorithms eateries and then we
+00:16:00 [W] Char repo specific like fluentd.
+00:16:06 [W] Let me greet people we host our infrastructure.
+00:16:09 [W] We have a set of pipelines that are shown here in the middle, uh pipeline. We have the purple diamonds their conditions and they're used to optimize execution of cios in the sense that we don't
+00:16:21 [W] Shown here in the middle which pipeline we have purple diamonds their conditions and they're used to optimize execution of cios in the sense that we don't always need to run all the jobs that are
+00:16:24 [W] All the jobs that are defined in our infrastructure because forest and some of the job they will build a container image and we have multiple container images.
+00:16:36 [W] So we it only makes sense to run the jobs to build the container images that have been modified within the pr that we are testing.
+00:16:49 [W] So after the conditions are passed if their condition our past the actual see I jog in the blue box, which is a task is
+00:16:54 [W] Cuted thing they did things like lanting the go code and the gamble running unit tests building container images and so forth despite plans are also a noted with information from
+00:17:07 [W] Which is a task is executed so angered and things like letting the go code and to gamble running unit tests building container images and so forth.
+00:17:08 [W] despite plans are also noted with information from the original event like the pr number and the repository they were triggered on and this is useful because whenever a pipeline
+00:17:18 [W] event like the pr number and the repository the retriggered on and this is useful because whenever a pipeline is started or is completed it will send a cloudevents this red arrows
+00:17:23 [W] this cloudevents their the divert to an internal event listener, which will take the information out of The annotation and use it and use it to update the check status back into heat up so that when
+00:17:38 [W] Kilometer face, you can see the check and started to run and it's finished successfully or faint. And also when it starts to run it gets linked into the tekton - president you can stream the logs while the see I jog is running.
+00:17:55 [W] Because we did a lot of work in on CIA self.
+00:18:01 [W] It meant that we had to have a way to test the changes to the ci/cd stem itself.
+00:18:07 [W] And in the beginning we were just experimenting so we just did the task and the pipelines and all the resources in the class that directly but once we started having won two elections jobs, we could not do that.
+00:18:23 [W] So we didn't want to go really trial and error, but if I the job CeCe, I stood one that was not be able solution. So we decided to build a way to that allows us to test see I
+00:18:36 [W] Itself, which has a number of benefits.
+00:18:51 [W] So first of all, it removes the need to have access to the CIA cluster, which is also good practice, but also enables people who does not have access to the vaccine cluster to do changes on CIA in test and it reduces the need for own
+00:18:56 [W] Run a copy of ci/cd sand on your own infrastructure and it's also very helpful feature be shooting because imagine that you're doing a change even not to the ci/cd stem even two pipelines and you see a failure, but you don't have enough information in the logs to
+00:19:12 [W] No, so you can alter the CI a-- ugh to inject more verbosity for instance or inject more information.
+00:19:25 [W] So that the next time it runs it will show you the information that you need to troubleshoot what's going on?
+00:19:29 [W] So the way we achieve this it's that we deploy in isolation within a namespace a copy of the ci/cd stand which is seated out of the pr. So you contains the definitions that are in the pr itself and then we forward
+00:19:45 [W] It's that we deploy in isolation within a namespace a copy of the ci/cd stand which is seated out of the pr. So it contains the definition that are in the pr itself and then we forward cloudevents.
+00:20:01 [W] We start the same information that we would extract from the original event and possibly this hype lenses are able to run them based on the definition.
+00:20:11 [W] That is an LPR.
+00:20:14 [W] pr. So, let's see this in action going to share my screen.
+00:20:20 [W] So I'm I'm going to demonstrate this using the plumbing Group which is where we store all our infrastructure definition and our container images definition as well.
+00:20:34 [W] So I have a ranch ready here.
+00:20:36 [W] That's very small change to one of the our container images.
+00:20:42 [W] It changes the release version.
+00:20:44 [W] This is for the Hubble image that we use.
+00:20:49 [W] let's push this as a PR to get the temple so cute come 2020 sounds good.
+00:20:55 [W] Okay, so the PRS created and here I'm watching the tekton CI namespace which is where we run our CI jobs and you can see that five pipelines are started right away.
+00:21:10 [W] This test tekton CIA which is a special job, which is used for the testing see I use case and otherwise we have Hub bills they can build and keep C delta T in those pipelines are they are to run to build container images and then
+00:21:27 [W] Answer they are to run to build container images and then we have the gold and the interior and you see that some of the jobs are completing right away very quickly in few 20 seconds or so, and if you look at the list of the tasks,
+00:21:37 [W] And if you look at the list of the tasks are running in this namespace, you see some of them are very long names include check give check names and some of them are failed.
+00:21:50 [W] So these are actually the checks the diamonds in the picture that I showed you earlier and they're filtering out some of this he I chose and this explains why some of the jobs where failing so quickly and you can see that the hot build is still running because we
+00:22:01 [W] Image and the linkerd is still running.
+00:22:05 [W] Oh, no, it's actually just finished and we can go and look at this into it up directly.
+00:22:13 [W] We refresh we have already moved the are here.
+00:22:15 [W] So we open the pr and we can see here are three ci/cd olives and if I look click on the details for the hub for instance.
+00:22:23 [W] I can see here in the tekton CI namespace.
+00:22:30 [W] Our pipeline is running and the build image stopped asking is running.
+00:22:38 [W] So unfortunately face so I click on it and have a look at what went wrong.
+00:22:39 [W] So I got a lot of information in for the does. These are probably not very relevant to me.
+00:22:48 [W] it just says okay failed and here it's a bit abrupt I guess and here is the error so well, it looks like
+00:22:54 [W] Release to was not really a great idea.
+00:23:01 [W] So maybe we should try to make this guy jump a bit more friendly and rollback or changes as well as a Next Step.
+00:23:04 [W] Okay, so let's go back to our PR.
+00:23:09 [W] So this is
+00:23:17 [W] So what I'm going to do, I want to make them job little bit more friendly.
+00:23:36 [W] So I will adders tap into it.
+00:23:38 [W] Let's call it.
+00:23:43 [W] Hello.
+00:23:43 [W] keep coming, and then probably just need is a box simple command that we want to run.
+00:23:55 [W] At the count 20 and we go and then let's remove information.
+00:24:10 [W] We don't need from canonical so we can probably set the verbosity.
+00:24:14 [W] To be arrow and I update this yar.
+00:24:24 [W] And there go and you can look into.
+00:24:43 [W] In a space you'll see that five new pipelines are starting right away.
+00:24:53 [W] By burning pipeline run. This isn't the tekton C is system, and then we can look at the metadata.
+00:25:12 [W] using JQ
+00:25:15 [W] Sorry, Jack you one first.
+00:25:30 [W] Yamo.
+00:25:33 [W] Okay, so you can see we have a number of extra invitation on this job that include all the information that was from the original data event, like the type of event delivery ID and so forth.
+00:25:49 [W] And if you look at the pipeline's that ranked the second time in see this one was more to say that tekton CI was Market succeeded and all the others are marked as completed completed is a sign that something was kept inside the
+00:26:06 [W] And in fact, if you look at the tasks, you will see that we are several failed ones so that this means all these jobs were not executed only this tekton ci1.
+00:26:18 [W] So why is that?
+00:26:20 [W] It's about this the lock.
+00:26:22 [W] So what?
+00:26:36 [W] What this job does it creates a new name space as I mentioned and it deploys entire ci/cd stem end of it.
+00:26:57 [W] then finally once the new ci/cd stem is up and running it will send a cloudevents to it here.
+00:27:03 [W] And you can see the name space is a different one.
+00:27:07 [W] So if you go look at the pipeline's in that namespace instead of tekton CI.
+00:27:18 [W] You can see that the jobs are running here in this new namespace. So if we go back to the ER and see the jobs running
+00:27:30 [W] And this time we can notice that the name space is different here.
+00:27:44 [W] You got PR 28 and the job looks a bit different.
+00:27:48 [W] So we have our hello keep gun stuff and then the building push still fail because I did not update the release number, but we don't have all the information that was there before and we don't need
+00:27:58 [W] so we could test a new CIA change life and this completes the demo.
+00:28:04 [W] So, what did we learn from this to you D be able to tell us more about sure.
+00:28:17 [W] Thank you again for that demo.
+00:28:21 [W] So fixing our pipes AKA future work. So first off, what did we learn in the beginning?
+00:28:25 [W] We made all the mistakes actually still we are making all the mistakes, you know, simple things like not verifying inputs overriding our previous release etcetera. So basically all of the manual errors that you can imagine, so we sort of fixed some of that by using
+00:28:39 [W] automation triggers Etc.
+00:28:52 [W] We also Beyond just your tasks and pipelines. We also realize the importance of automating our entire infrastructure setup after we had a security incident that had that for which we had to basically refresh all of our Long Live Secrets.
+00:28:54 [W] Getting we made all the mistakes actually still we're making all the mistakes, you know, simple things like not very fine inputs overriding our previous release etcetera.
+00:29:07 [W] So basically all of the manual errors that you can imagine, so we sort of fixed some of that by using automation triggers Etc.
+00:29:08 [W] We also Beyond just your task and pipelines. We also realize the importance of automating our entire infrastructure set up after we had a security incident that had that for which we had to basically refresh all of our Long Live secrets.
+00:29:13 [W] There is a lot of ammo if you notice the diagrams that aren't really sure there is a lot of moving parts.
+00:29:15 [W] So there is a lot of boilerplate we have started using customized which helps quite a bit but in the future we are looking at custom tasks or Ps else that might actually make this stuff a little bit more concise.
+00:29:20 [W] testing changes to the ci/cd up is hard especially locally the with a system like the one that under our demo that becomes quite a bit easier tracing is a big problem. So you have started we heavily use labels like undershirt levels annotations and standard kubernative.
+00:29:26 [W] Stealing but some kind of like borin built integration would be very very nice.
+00:29:36 [W] We also realized that not everything needs to run as part for tasks such as like a weight tasks that you probably don't want to create a part that just waits for two hours.
+00:29:38 [W] So we are working on that.
+00:29:42 [W] We also realized the value of documentation as always like there's always documentation. There's could always be more
+00:29:46 [W] So based on some of our our lessons we are doing a lot of work, so we're looking at what we call the new pipes that were building.
+00:29:59 [W] So we have test results which will allow us to clean up do cleanup of our name spaces Etc and things like notifications much more easily.
+00:30:07 [W] We have SIMPLE conditionals where a new condition does not spin up a new pod.
+00:30:08 [W] We are looking into exploring more complicated pipelines using switches and Loops. We are looking into bundling your tekton task your
+00:30:15 [W] Planes here conditions for years all of that into a bundle that can be referenced into like a image registry sort of similar to a darker image that would help a lot.
+00:30:29 [W] Your pipelines your condition strangers all of that into a bundle that can be referenced into like a image registry sort of similar to a darker image.
+00:30:37 [W] that would help a lot.
+00:30:37 [W] We're doing a lot of it more experimentations on metrics and debugging and tracing and how to do that better.
+00:30:38 [W] We mentioned custom tasks where users can bring in their own kind of tasks that don't necessarily have to spin up a new card each time.
+00:30:42 [W] We're experimenting with making triggers easier so that we get a user
+00:30:44 [W] can just write their trigger configuration without having to deal with how to expose the event listener for the event listener.
+00:30:55 [W] We are looking at using event listeners as a Canadian service. So you get all the benefits of a serverless service.
+00:31:07 [W] finally we looking at ephemeral credentials so that when something goes wrong, you don't have to change all of your long Rook Secrets at once but instead we have security built in by default by using short-lived tokens using something like the GitHub app.
+00:31:13 [W] Specifically for the dogfooding ci/cd, we are also looking at making our log parsing test result dashboard may be built again test fake analysis, which would make it easier to debug problems instead of just having to parse through all of the locks for
+00:31:28 [W] Looking at tree using more tasks from the catalog instead of building. Our own tasks.
+00:31:37 [W] We are looking at using end-to-end tests for tekton pipelines easily testing not just tekton changes to your CI point, but infrastructure containers running our tests on more clouds instead of just Google Cloud improving.
+00:31:51 [W] See I service monitoring improving that monitoring of RCA services.
+00:31:58 [W] So when something goes wrong, we have an easy, you know easily what's going wrong and finally moving some / / comments to using tekton instead of prom. So with that I'll turn it over to Andrea for the final couple of slides.
+00:32:11 [W] Yeah, so thank you DBL. So we are in to be friendly and welcoming community.
+00:32:20 [W] So come and join us.
+00:32:23 [W] I mean whether you're a user you want to share your use cases or your stories issues that you have encountered or whether you want to come and contribute code that you can maintain station or just hang out with us.
+00:32:35 [W] We are on slack and here is a link to join the community owns like
+00:32:40 [W] And so yeah, so here is a thank you for listening to the our talk today.
+00:32:52 [W] and thank you Christy for the great drawings that you provided us with for I've talked and yeah here is a number of links and references you can use to get started and tekton and to get in touch with us and
+00:33:03 [W] Sighs will be shared after the conference.
+00:33:10 [W] So don't worry. You'll have access to the oldest links and thank you again.
+00:33:11 [W] Goodbye.
+00:33:12 [W] Okay.
+00:33:27 [W] Hello everyone. Thanks for coming to our talk.
+00:33:36 [W] Thank you.
+00:33:37 [W] Alright now we can go through some of the questions.
+00:33:41 [W] Okay, we just gonna yeah, we're just going to go start with the oldest one first and go through them.
+00:33:54 [W] So I'm going to read out the oldest version First Andre if you want to answer then maybe you can switch our we can figure that up.
+00:33:56 [W] Okay?
+00:34:00 [W] So first question was we are a green field starting with openshift.
+00:34:04 [W] Do you think we can capitalize on tekton for cin CD?
+00:34:06 [W] Yeah, so tekton is available as part of appreciate is called open shifts pipelines and I think I believe since openshift version dot 4.3 was initially
+00:34:23 [W] Concerning their so you definitely can use tekton as part of a makeshift.
+00:34:29 [W] and maybe the next
+00:34:33 [W] so there is also another questions on right out of my sheet provides tekton Argo City both as operators to they complement each other.
+00:34:50 [W] you can use them both. And yes, you can they don't specifically integrate with each other, but you can definitely complement the tools and you can use tekton for automating some
+00:35:02 [W] Ci/cd for Easterns intensity Argo City from the city needs.
+00:35:08 [W] Yep.
+00:35:11 [W] I can jump to the next question.
+00:35:17 [W] I saw there were a few questions about getting the link to the slides which are now up on shared. So please go check that out.
+00:35:22 [W] I'll skip to number seven, which says tekton can be user in a vanilla.
+00:35:29 [W] Whey defining knative pipelines, but is also hidden in other tools that abstract. It's functionalities like Jenkins X, is that right? Tekton is
+00:35:33 [W] The foundational project in the sense. It can be used to build other ci/cd tools.
+00:35:38 [W] Yeah, you are correct. So like we showed in this demo you can use tekton by itself, but it's also not very opinionated so it can be used as like the foundation for building other tools as you mentioned tekton sets another
+00:35:52 [W] Okay, so we had a question about the SML archive you pipe and runs the keptn C or D inside the cluster.
+00:36:13 [W] So this is a very good questions and do we clean up unnecessary ones?
+00:36:16 [W] So today for cleanup we used chrome jobs basically to clean things out and you can use labels are annotation to select things that you want to keep the new planetscale.
+00:36:25 [W] Service, we don't have in a different facility for that.
+00:36:30 [W] We do have an experimental project.
+00:36:32 [W] It's on tekton see the experimental for a result CPI in the DAC exactly to Archive type and run some test runs outside of ci/cd.
+00:36:41 [W] So this is something that is being worked on and be able to deploy it soon now the footing caster.
+00:36:46 [W] Okay, next one was using triggers may also trigger task instead of pipelines.
+00:36:54 [W] And yes, absolutely.
+00:36:57 [W] You can trigger past Trends and by playing grunts both next step.
+00:37:08 [W] I see a question about if I consider now which CD tool to use looks like that down and Argo Syria to popular candidates.
+00:37:13 [W] When should I use each to which types of work is tekton most suitable for?
+00:37:14 [W] hanks.
+00:37:15 [W] Okay, I can't take this one too.
+00:37:20 [W] for the caster
+00:37:23 [W] Okay, next one was using triggers may also trigger task instead of pipelines.
+00:37:23 [W] And yes, absolutely.
+00:37:23 [W] You can trigger past runs and by playing grunts both next step.
+00:37:25 [W] I see a question about if I consider now which CD tool to use looks like tekton and Argo Syria to popular candidates.
+00:37:26 [W] When should I use each to which types of work is tekton most suitable for?
+00:37:26 [W] Thanks.
+00:37:26 [W] Okay, I can't take this one too.
+00:37:27 [W] So tekton as CBS DVD set is tends to be not very opinionated.
+00:37:30 [W] So with other Solutions, you might find some more constraint or more opinions how you can set up your pipelines whether they are ciosed pipelines.
+00:37:42 [W] So depending if you need like a big head start and uncovered something that you get up and running really fast on a full solution.
+00:37:45 [W] Or you want to have the full flexibility and building blocks and visibility.
+00:37:52 [W] So you may go One Direction or the other so you can for sure also use tekton for certain aspects and Argo City for others as well.
+00:38:05 [W] So you can have to adjust early necessarily choose between the two it very much depends on your use cases. And the next question is how do you manage permission inside tekton dashboard?
+00:38:15 [W] To each team's see only their tasks and pipelines so we don't have ability in - Bertie day to like
+00:38:30 [W] And the next question is how do you manage formation inside tekton dashboard to each team's see only their tasks and pipelines so we don't have
+00:38:31 [W] But it is possible to deploy the dashboard within scope on specific name spaces so you can have multiple instances of your life for that are only accessible by different teams, and they can then restrict visibility.
+00:38:45 [W] Of my clients in tasks also dashboard can be deployed both in full mode.
+00:38:57 [W] Also in read-only mode which were using the public dashboard for tekton that allows the only to see pipelines that not start humans.
+00:39:03 [W] Okay moving on.
+00:39:11 [W] Do we require a kubernative cluster for running tekton Pipelines?
+00:39:22 [W] The answer today is yes, though. We the way we build our apis today is to make sure we are not super couple to kubernative so that in the future we can support more but today you in the kubernative cluster to run tekton
+00:39:28 [W] Next up is is tekton CLI image supported on Multi architecture platforms.
+00:39:39 [W] I know we've been doing some work on like supporting like ibmc series Etc. And that's like ongoing work.
+00:39:43 [W] Yep.
+00:39:44 [W] Yeah. Yeah. Yeah it did. So we keep it up the effort there.
+00:39:48 [W] So next up is does tekton have batching really strains yet or ever if there isn't yet would it fit in as a trigger? That is called by other triggers?
+00:40:00 [W] I can take this one.
+00:40:06 [W] So as I was saying tekton is not really opinionated. So it doesn't like really give you like of the shells structure like pipelines for doing City, but you can definitely automate this kind of

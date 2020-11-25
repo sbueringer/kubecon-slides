@@ -1,0 +1,230 @@
+﻿Security Kill Chain Stages in a 100k+ Daily Container Environment with Falco: TUUQ-3196 - events@cncf.io - Wednesday, November 18, 2020 3:52 PM - 36 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, everyone. Today. We're going to talk to you about mapping a security to kill chain to a hundred thousand-plus daily containerd environment with using Falco. We've been using Falco for since about
+00:00:32 [W] Since about 2018 and we'll talk to you today about tomorrow Lessons Learned how we map these things and how we can identify security risks. Hopefully you can take something away from that and apply it to your own environment.
+00:00:44 [W] So before we get started, let's do quick introduction.
+00:00:48 [W] My name is Eric Hollis.
+00:00:50 [W] I'm the team lead for the extended detection and response team at math works as part of the larger information security group.
+00:00:57 [W] Some of my interests are Cloud security Automation and threatening.
+00:01:03 [W] And hi, I'm Nats.
+00:01:04 [W] I'm a software engineer and math works and I work with Arabic to ensure that all our cloud services are secure. Oh.
+00:01:13 [W] So I managed a kubernative cluster and within our Custer. We have a lot of containers and some of our containers manage traffic from the public Cloud.
+00:01:26 [W] we dynamically scale our container to be able to handle all the traffic load on a very busy day. We have over 100,000 containers running in our cluster.
+00:01:40 [W] now because
+00:04:14 [W] Hello everyone.
+00:04:15 [W] today. We're going to talk to you about mapping a security to kill chain to a hundred thousand-plus daily containerd environment with using Falco. We've been using a Falco four cents about 2018 and we'll talk to you today about
+00:04:31 [W] And how we map these things and how we can identify security risks. Hopefully you can take something away from that and apply it to your own environment.
+00:04:28 [W] So before we get started, let's do a quick introduction.
+00:04:31 [W] My name is Eric Hollis.
+00:04:34 [W] I'm the team lead for the extended detection and response team at math works as part of the larger information security group.
+00:04:41 [W] Some of my interests are Cloud security Automation and threatening.
+00:04:47 [W] And hi, I'm matched. I'm a software engineer and math works and I work with Arabic to ensure that all our cloud services are secure.
+00:04:56 [W] So I managed a kubernative cluster and within our Custer. We have a lot of containers and some of our containers manage traffic from the public Cloud.
+00:05:10 [W] we dynamically scale our container to be able to handle all the traffic load on a very busy day. We have over 100,000 containers running in our cluster.
+00:05:24 [W] Now because we handle public traffic security is one of our top priority and we follow many security best practices.
+00:05:34 [W] We make sure to properly configure our control plane.
+00:05:40 [W] And we regularly scan our applications and kernel to make sure that there are no known vulnerabilities.
+00:05:49 [W] I'll make sure to configure our cloud provider to only accept expected traffic.
+00:05:36 [W] now
+00:06:31 [W] We're going to talk to you about mapping a security to kill chain to a hundred thousand-plus daily containerd environment with using Falco.
+00:06:40 [W] We've been using Falco for sense about 2018 and we'll talk to you today about tomorrow Lessons Learned how we map these things and how we can identify security risks. Hopefully you can take something away from that and apply it to your own environment
+00:06:55 [W] Security risks. Hopefully, you can take something away from that and apply it to your own environment.
+00:06:56 [W] So before we get started, let's do quick introduction.
+00:07:00 [W] My name is Eric Hollis.
+00:07:02 [W] I'm the team lead for the extended detection and response team at math works as part of the larger information security group.
+00:07:09 [W] Some of my interests are Cloud security Automation and threatening.
+00:07:15 [W] And hi, I'm matched. I'm a software engineer and math works and I work with Arabic to ensure that all our cloud services are secure. Oh
+00:07:25 [W] So I managed a kubernative cluster and within our Custer. We have a lot of containers and some of our containers manage traffic from the public Cloud.
+00:07:38 [W] we dynamically scale our container to be able to handle all the traffic load on a very busy day. We have over 100,000 containers running in our cluster.
+00:07:52 [W] Now because we handle public traffic security is one of our top priority and we follow minikube best practices.
+00:08:02 [W] We make sure to properly configure our control plane.
+00:08:08 [W] And we regularly scan our applications and kernel to make sure that there are no known vulnerabilities.
+00:08:18 [W] We also make sure to configure our cloud provider to only accept expected traffic.
+00:08:25 [W] now
+00:08:26 [W] despite all our effort to make our system secure.
+00:08:30 [W] Oh, there's no such thing as a perfect security and one day there could be zero day vulnerabilities in the kubernative version that we use and the kernel version that we use or our developer might want they misconfigure
+00:08:46 [W] Unity cluster
+00:08:28 [W] and also the could be a security bug in our application or the package has to be including our containers.
+00:08:39 [W] So here comes 2020 and not everything in 2020 goes exactly according to plan so there could be an attacker and one of the steps that the attacker
+00:08:54 [W] Is the following the attacker could port scan and maybe identify a service with vulnerable code execution?
+00:09:03 [W] The attacker could NEX can access to the system and install packages like, Metasploit?
+00:09:13 [W] And then could leverage Colonel vulnerability to break out the container.
+00:09:20 [W] And lastly replace our service with a malicious program to steal data.
+00:09:28 [W] so how do we Trace back the attackers and more importantly, how do we improve our system so that we end in fi the attack at the earliest stage well to be able to do so we must be able to answer the following questions at different
+00:09:43 [W] Tack and that's when we look into Falco as the potential solution to answer. These questions Falco is a clown knative runtime security project and it can be deployed to the cluster
+00:09:54 [W] detects abnormal activities in our cluster based on the API server audit events and the system calls
+00:09:56 [W] Falco is kubernative sand container where and it allow us to write detection rules based on the group unities context and containerd. Mayadata Falco also offer flexible alert Integrations.
+00:10:11 [W] But how do we strategically and effectively use Falco to monitor these events to make sure we catch the attack at the earliest stage?
+00:10:22 [W] That's a good question. Notch.
+00:10:24 [W] Let me walk through our strategy with Falco.
+00:10:26 [W] So we take an iterative approach to design our Falco rules to maximize Security observability in our system and to reduce false positives.
+00:10:35 [W] So we have this cycle here that kind of constantly feeds itself and we are constantly analyzing our environment to better improve security prevention and detection.
+00:10:46 [W] So we'll go through each stage as we move through this and I'll give you a better understanding.
+00:10:51 [W] Of what that looks like. So let's first focus on system analysis.
+00:10:57 [W] We follow this workflow to analyze our application both at the container and cluster level.
+00:11:01 [W] So if you take a look here, you know system can be very complex.
+00:11:06 [W] Sis, we follow this workflow to analyze our application both at the container and cluster level.
+00:11:07 [W] So if you take a look here, you know system can be very complex.
+00:11:12 [W] There's a lot of moving Parts a lot of different services that you have to really understand. If you're going to build out your own Falco detections. It's can be really environment Pacific and doing a system analysis can really help Drive how
+00:11:27 [W] Doing a system analysis can really help Drive how you would look at potential security risks in your environment.
+00:11:32 [W] So some of the things we want to look at the container level is in the network.
+00:11:38 [W] We want to look at inbound and outbound connections.
+00:11:42 [W] We want to understand what port should be open what connections we allow we want to be able to get an understanding of that so we know what to monitor for file system.
+00:11:52 [W] We want to look at things like sensitive files and you know make a
+00:11:56 [W] One of those white list those or you know make a list so that we know what to closely monitor.
+00:12:04 [W] For memory and CPU.
+00:12:06 [W] we want to have an understanding of workloads characterization.
+00:12:08 [W] So what we would expect from the workload and then start to monitor the unexpected for the at the cluster level.
+00:12:18 [W] We want to monitor things like role-based Access Control.
+00:12:21 [W] We want to see you know, who should have access if anyone into a production environment and we want to really have an understanding what that is so that we can then monitor more closely. We also want to whitelist our container images, so
+00:12:34 [W] If there's an unexpected image in the environment, then we can further investigate and so really getting an understanding of your entire stack and application and cluster.
+00:12:44 [W] you get a better idea of what you should be looking out for.
+00:12:48 [W] Or the at the cluster level we want to monitor things like role-based Access Control.
+00:12:52 [W] We want to see you know, who should have access if anyone into a production environment and we want to really have an understanding what that is so that we can then monitor more closely.
+00:13:02 [W] We also want to whitelist our container images so that if there's an unexpected image in the environment, then we can further investigate and so really getting an understanding of your entire stack and application a cluster you get a better idea of
+00:13:17 [W] of what you should be looking out for
+00:13:21 [W] So after we have that understanding of our system, we can then start to map that to a cyber security kill chain to analyze where our potential security risks are. So I'll go into more detail about the different phases of the kill chain and give you an understanding of what that is.
+00:14:04 [W] Is the kill chain and give you an understanding of what that is?
+00:14:07 [W] So we've mapped to the Lockheed Martin cybersecurity kill chain, there are seven stages and we'll go through all of these starting from reconnaissance.
+00:14:20 [W] This is the common pattern that an attacker would use to compromise the system.
+00:14:25 [W] They might not go through every phase here, but they're ultimately going to start at reconnaissance, which is fingerprinting the system looking at what operating system is running any
+00:14:33 [W] Ports that are open what services are running their ultimately going to move their way down to delivering an exploit exploiting the system, you know, potentially installing malware and so on until you can start to map your different
+00:14:49 [W] Ports that are open what services are running their ultimately going to move their way down to deliver an exploit exploiting the system, you know, potentially installing malware and so on until you can start to map your different
+00:15:17 [W] To this kill chain and then start to identify where the risks are and build Falco rules off of that.
+00:15:22 [W] So let's just go through a quick description of each stage here.
+00:15:26 [W] So reconnaissance, like I said, this is the fingerprinting stage where you know an attackers just trying to figure out what's going on in the system what it's running, you know trying to figure out is it a containerized application and that
+00:15:41 [W] The next phase is weaponization.
+00:15:42 [W] So this is building out the exploit to use in the attack. So, you know coupling malicious code with a known exploit a vulnerability delivery is just getting that malicious code or that exploit
+00:15:58 [W] That they're looking to Target.
+00:15:57 [W] Exploitation is the you know, successful attempt at exploiting a vulnerability or a Miss configuration installation is once they've exploited the system and they want to install some malware or something,
+00:16:13 [W] You know affects the host and move on with some of the other tests that they want to do command and control is about establishing a communication Channel between an attacker and the system so, you know, they exploit the system, but then they want to be able to
+00:16:27 [W] Between an attacker and the system so, you know, they exploit the system, but then they want to be able to establish communication so that they can continue on with whatever they're trying to do. Once they've compromised the host then action on objectives is
+00:16:40 [W] Action on objectives is you know, the action related to the goals of the attacker. So this is a could be a pretty wide variety.
+00:16:49 [W] The attacker could be looking to exfiltrate and steal data.
+00:16:52 [W] They could be looking to you know, mine Bitcoin. They could be looking to just establish persistent and then get it in a wider broader feel for what environment they're in and what else they can compromise so we want to monitor at all of these stages.
+00:17:07 [W] It's really worth, you know pointing out that to pour into buildpacks shannan detection throughout this whole kill chain to you know, better protect your system and the earlier that you can prevent an attack or you know
+00:17:22 [W] Back on this kill chain the better off you are so you know, someone's just poking and prodding and their reconnaissance phase and there's a way to you know, block IPS that are constantly Port scanning your system.
+00:17:35 [W] That's much better than if you detect it later on and they've already exploit the system.
+00:17:42 [W] So now mapping the attack scenario that Notch outlined earlier to this kill chain, we can start to identify where these all land within the within the kill chain. So for the first step of the attacker scanning a port to identify
+00:17:57 [W] With a vulnerable remote code execution. This would be reconnaissance.
+00:17:50 [W] They're scanning the system.
+00:17:51 [W] They're trying to get an idea of what's going on and that would map directly to reconnaissance for stage 2 with a Metasploit installation.
+00:18:01 [W] This would likely fall under the delivery stage where they're pulling down something to then use to exploit the system.
+00:18:11 [W] Leveraging a kernel vulnerability to break out of a container. This would be part of the exploitation phase where they've now leverage some malicious code as part of in this case Metasploit and they've exploit a system broken out of the container.
+00:18:27 [W] And the fourth stage about replacing a running service with a malicious program to exfiltrate data.
+00:18:32 [W] This will be an action on the objective. So their intent is to steal data from the system and you want to have some rules in place for that.
+00:18:44 [W] So now that we understand how the system behaves and the steps the attacker could take to compromise the system.
+00:18:50 [W] It's time that we write some Falco rules. We need to have these in place. We want to map these to those different phases within the kill chain.
+00:18:58 [W] So here's an example of a Falco rule.
+00:19:01 [W] Code as part of a in this case Metasploit and they've exploited system broken out of the container and the fourth stage about replacing a running service with a malicious program to exfiltrate data.
+00:19:05 [W] This would be an action on the objective. So their intent is to steal data from the system and you want to have some rules in place for that.
+00:19:17 [W] So now that we understand how the system behaves and the steps the attacker could take to compromise the system.
+00:19:23 [W] It's not that we write some Falco rules.
+00:19:26 [W] We need to have these in place. We want to map these to those different phases within the kill chain.
+00:19:30 [W] So here's an example of a Falco rule.
+00:19:34 [W] I'll break down the different components of it. And this one specifically is mapping to the first step of the attack which is the reconnaissance phase with scanning ports to identify Services running.
+00:19:46 [W] With a vulnerable remote code execution and this is specifically this rules looking at unexpected traffic over the SSH Port. So if an attacker is scanning a host and they scan Port 22 for SSH this
+00:20:58 [W] And this is specifically this rules looking at unexpected traffic over the SSH Port. So if an attacker is scanning a host and they scan Port 22 for SSH this would alert on that so to break it down a little bit.
+00:21:13 [W] The first section here highlighted in red is a macro to define a white list of allowed SSH hosts. So in this case, it's looking at an entire / 24 cider block and you could also do individual IPS.
+00:21:26 [W] However, you need you could have nothing here in any time someone tries to connect or scan on Port 22.
+00:21:32 [W] If this would trigger every Falco rule has to have a rule title a description. The condition is the
+00:21:43 [W] At that, it's actually true, you know triggering and monitoring and alert on.
+00:21:47 [W] on. So in this case, it's looking at either inbound or outbound network connection. So I can SSH Port which is defined as ports 1 T 2 and then it's looking at anything. That's not on the allowed SSH hose.
+00:22:05 [W] for the output this is what's going to get logged when an alert or an event is triggered and this is can be customized to capture, you know specific information that you need priority is really so that in your own environment, you can classify the severity of
+00:22:20 [W] an event so this can go all the way from emergency all the way down to informational or debug and in you can then use this to you know, determine what the severity of the the incident is you
+00:22:32 [W] You can use this to just group your ruleset you could actually use this to if you wanted to map to the different security kill chain phases. You could name this you could tag this with reconnaissance that can be helpful as well.
+00:22:40 [W] So here's another example for a potential reconnaissance example of scanning a port. So this is looking at unexpected API server traffic for the kubernative API server the API servers a critical component of
+00:22:55 [W] And you know from our system analysis, we identified and white listed all of our applications so you can see here. We've whitelisted web app one and web app to and those are allowed to communicate to the API server.
+00:23:06 [W] And so we have this rule if anything else is attempting to connect will get alerted.
+00:23:10 [W] You'll see here.
+00:23:11 [W] This is where we're specifically saying anything that's not in our known contact list of accepted applications then
+00:23:20 [W] Iran alert
+00:23:23 [W] All right. So an example for the Metasploit installation detection.
+00:23:28 [W] This is the unexpected package installation rule. So this is a default rule that's provided by Falco.
+00:23:33 [W] And again, we can add a list of known package managers that are okay in this environment, but we can then trigger on anything, you know, someone were to do an apt get install on a Metasploit package and pull that down
+00:23:49 [W] We would get alerted to it and and we can then, you know investigate further.
+00:23:51 [W] For stage 3 for leveraging Colonel vulnerability to break out of a container. One of the things that we can monitor for is the creation of a symlink over sensitive files if there was an exploit on the system there could be some system
+00:24:06 [W] Is that would occur and siblings to you know malware other things that could be leveraged to then break out of the container so we can monitor that similar to the other rules.
+00:24:11 [W] This has the same components there and for stage four with replacing a running service with a malicious program to exfiltrate data and example of something we can monitor is kubernative deployment being deleted. We are
+00:24:26 [W] Deployment being deleted we are also rules to look for a deployment being modified or created and so this could be an attacker attempting to replace a kubernative deployment with malicious code
+00:24:38 [W] A kubernetes deployment with malicious code to then look to exfiltrate data. And so we want to detect an alert on that as well so we can take all of these rules. We can start to map them to the kill chain.
+00:24:51 [W] There's a lot of great Falco rules, you know right out of the box as well as the ability to customize and focus in on exactly what we're looking for based on our system analysis.
+00:25:07 [W] So next notches going to talk about testing and qualifying are rules as well as provided demo.
+00:25:14 [W] Thanks, Eric.
+00:25:15 [W] We saw so many Falco rules for different stages of these security Q chain. This is great. But how do we verify that Falco rules and Falco itself behave as expected?
+00:25:29 [W] At math works. We staged Falco rules before we release them to production. Let me show you how we manually test Falco rules and how we automate them using Falco even generator.
+00:25:42 [W] All right, so we have two windows open or use one of the left to show output logs from Falco and I'll use the right window to run commands.
+00:25:51 [W] So the first thing I'll do is to port scan it service running my cluster Port scanning tool lay and map is a great way to get to know the system.
+00:26:03 [W] So as you can see fog, what does detect a traffic to the SSH Port from the host that it doesn't recognize this can be a good sign of someone trying to perform a Recon on your system.
+00:26:20 [W] Next let me introduce you to my nginx service this nginx service routes outside traffic to the other services inside my cluster.
+00:26:28 [W] Let's assume that it has the remote code execution vulnerability.
+00:26:33 [W] I'll examine to my nginx pot to run arbitrary commands.
+00:26:46 [W] Okay, I have code execution access in the system. The first thing I might want to do is installing packages late tcpdump.
+00:27:02 [W] I'm not going to install it but as you can see Falco detects the package installation.
+00:27:07 [W] This is a good detection as all containerd should be immutable. So we don't we do not expect any additional installation. Once the continuous running.
+00:27:18 [W] I could also try to replace files in the bin folder.
+00:27:22 [W] As you can see Falco detects any activities to these sensitive file system.
+00:27:27 [W] Now, unfortunately, this nginx pot is not properly configured.
+00:27:34 [W] The nginx service routes traffic to the other services in the cluster, so it shouldn't have to talk to the API server.
+00:27:41 [W] However, it service account has the permission to list pots and it's service account token is also mounted to the file system. The attacker can use the service account token to connect to the API server.
+00:28:07 [W] Or the attacker could use the service account token to list the pods?
+00:28:17 [W] And even worse the attacker could maybe use the service account token to delete pots in the cluster?
+00:28:25 [W] This nginx pot to the API server. It shows the exact API requests in the pot ID the request originated from
+00:28:34 [W] I have shown you Falco in and actions and ways to manually test the detection rules now in a large scale system.
+00:28:42 [W] Testing rules manually may not be scalable. Fortunately Falco has a project named Falco event generator that you can use to automate testing.
+00:28:52 [W] The best way to use the project is to run it inside a container as some of its action can make changes to your file system.
+00:29:02 [W] You can use the list command to show all the actions that the generator supports.
+00:29:09 [W] As you can see the project can perform a few system calls and kubernative use action.
+00:29:21 [W] Let me show you Falco event generator in action pay attention to the Falco log on the left hand side for this demo.
+00:29:28 [W] I'll show you an example of a system called generated by the project.
+00:29:38 [W] I just used the project to make changes to the bin folder.
+00:29:41 [W] As you can see the project can perform a few system calls and kubernative action.
+00:29:31 [W] Let me show you Falco event generator in action pay attention to the Falco log on the left hand side for this demo.
+00:29:39 [W] I'll show you an example of a system called generated by the project.
+00:29:48 [W] I just used the project to make changes to the bin folder.
+00:29:58 [W] Now the event generator also supports integration tests against a running Falco instance here.
+00:30:05 [W] I mount the Falco grpc socket file to the event generator so that it can receive Falco events and validate the alert.
+00:30:15 [W] The event generator runs system calls tests.
+00:30:18 [W] This is a good way to ensure that any rule changes and vocal version changes. Don't impact your security detection.
+00:30:26 [W] They Venture narrator is a very exciting project and you're very welcome to contribute to the project by adding more test cases.
+00:30:36 [W] So this wrap up the demo I have shown you ways to manually test the Falco detection rules and also ways to automated them with the project called Falco even generator.
+00:30:49 [W] All right, and now I'm going to talk about security observability and alert analysis.
+00:30:55 [W] So after we you know go through all these phases we've analyzed their system map things to the Cyber kill chain Weaver in a bunch of rules.
+00:31:06 [W] Not just showed how we can test and qualify those rules and move things into production. And we really need to have a system in place that we can distill down all of this information. You know, we get a
+00:31:20 [W] So this wrap up the demo I have shown you ways to manually test the Falco detection rules and also ways to automated them with the project called Falco even generator.
+00:31:33 [W] All right, and now I'm going to talk about security observability and alert analysis.
+00:31:41 [W] So after we you know go through all these phases we've analyzed their system map things to the Cyber kill chain Weaver in a bunch of rules.
+00:31:50 [W] Not just showed how we can test and qualify those rules and move things into production.
+00:31:55 [W] And we really need to have a system in place that we can distill down all of this information, you know, we get a we could generate a lot of logs for events and we need to be able to kind of bubble those things up from a security perspective to to
+00:32:10 [W] The things that really matter so, you know, we've given you this picture of how Falco can help in this complex environment.
+00:32:18 [W] And so we're going to talk about security Incident Management.
+00:32:21 [W] One of the benefits is that there's a really flexible or Integrations we can log things to syslog to push into a Sim or a log aggregator their standard out which was you know, just in the
+00:33:02 [W] Better so, you know, we've given you this picture of how Falco can help in this complex environment.
+00:33:10 [W] And so we're going to talk about security Incident Management.
+00:33:13 [W] One of the benefits is that there's a really flexible alert Integrations. We can log things to syslog to push into a Sim or a log aggregator their standard out which was you know, just in the
+00:33:28 [W] Terminal there's web hooks so we can integrate in with things like slack or teams or other Tooling in your environment as well as TLS grpc, which can be used to open a socket for testing for things like the
+00:33:42 [W] Things like the Falco event generator as notch demonstrated.
+00:33:46 [W] So let's take a look at our - boarding system that can be used to monitor some of our event and further, you know investigate through the findings.
+00:33:59 [W] So you'll see here. We pull in information on the top row here around file system violations, and then we're mapping those over time then below.
+00:34:13 [W] We're looking at Network traffic violations and again mapping them over time.
+00:34:16 [W] One thing you'll see is that we capture the container ID here. And so if something suspicious pops up we can then pivot through some of our application logs are containerless locks and we can start to correlate this data to really try to figure out if
+00:34:29 [W] was a security event in addition we can use some of the other tooling that can come along with some of these applications so we can use machine learning to take a lot of data and start to look at outliers in
+00:34:44 [W] Bill to do manually and identify potential security risk there as well.
+00:34:49 [W] So I'm going to show you an example of how we do that and generate an email alert.
+00:34:54 [W] The other thing worth noting is that we can you know, in addition to the dashboarding which is good for monitoring. We can also trigger the emails but also, you know generate a page or alert teams in other manners as well.
+00:35:10 [W] For monitoring we can also trigger the emails but also, you know generate a page or alert teams in other manners as well.
+00:35:09 [W] So here's an example of an alert where we are looking at outlier. So we're monitoring for system commands and we are then getting an average.
+00:35:24 [W] some commands and we are then getting an average of how many system command we would expect to see in our environment on a in a one of our systems the average is
+00:35:40 [W] And then we're defining a threshold using the machine learning module which will define an upper bound.
+00:35:48 [W] So anything over 13 .59 system commands all one of our hosts should then become an outlier and trigger an email and this case you're seeing that there are 14.
+00:36:02 [W] So 14 system commands which then triggered an alert and you'll see we also capture the container ID. So this alone, you know, it could be
+00:36:11 [W] an administrator making changes in a production environment and we want to be able to follow up with them because that shouldn't happen or it could be that there's something malicious going on so we can take this container ID and we can start to correlate that and try to figure out what's going on in our environment and how we can
+00:36:26 [W] You know figure out exactly what's going on.
+00:36:31 [W] So with that that's it for our talk today. We'd like to thank you for attending and hope that you can take something away from this.
+00:36:39 [W] We learned a lot in this journey.
+00:36:41 [W] I think it can be super helpful for security teams to work with Dev teams to integrate something like this to you know, help improve security and will be available for QA.
+00:36:54 [W] Thank you very much.

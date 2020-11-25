@@ -1,0 +1,283 @@
+﻿Bypass Falco: WYVP-3518 - events@cncf.io - Friday, November 20, 2020 3:11 PM - 35 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello everybody, welcome to this cheeky new tow, it can sound strange but it all of these stories to share with you the findings of an experiment finding new ways to bypass a cncf cool to cold Falco Falco is a runtime secret project
+00:00:15 [W] Dad I'm one of its Outdoors, my name is Nadia not oh, but people usually shortened my name, so feel free to just call me Leo.
+00:00:23 [W] Here's a photo of me moving ends like a real Italian usual promise Focus walk to the first one guessing the exact meaning and writing it to my Twitter direct messages what I do daily while I'm an open source software engineer sysdig where my daily job
+00:00:38 [W] Guess what write code for Falco and maintain it? Maybe you confused at this point what I meant a no Falco talking on how to bypass it.
+00:00:31 [W] I know crazy times be alive.
+00:00:34 [W] I firmly believe that challenging your software really hard is only way to actually improve it but just being me some minutes and they're completely explain to you the reasoning behind this approach.
+00:00:44 [W] In the meantime.
+00:00:45 [W] You can find me on Twitter where I treated these slides with a nickname loaded. Oh, feel free to drop me a line. Follow me ask questions about
+00:00:52 [W] but Falco BPF Colonel, whatever no problem at all. First things first. Where does Falco come from Falco is Alan time secret project originally creating 2016 by sysdig the company that pays me a salary.
+00:01:07 [W] A nickname loaded or feel free to drop me a line.
+00:01:07 [W] Follow me. Ask questions about Falco BPF Colonel, whatever no problem at all. First things first.
+00:01:14 [W] Where does Falco come from Falco is a runtime secret project originally creating 2016 by sysdig the company that pays me a salary.
+00:01:23 [W] I don't know why then in 2018, it was donated to the cncf branch of the Linux Foundation that's becoming the for cncf sandbox runtime.
+00:01:34 [W] 80 project it started to gain some sort of structured to the point that the other maintainers and I had to even start weekly Community calls to which by the way I invite anyone to participate every Wednesday at 5:00 p.m. Italian time
+00:01:49 [W] There's and I had to even start weekly Community calls to which by the way I invite anyone to participate every Wednesday at 5:00 p.m. Italian time this past January Falco was the first-ever runtime secret project to be promoted
+00:02:04 [W] Demoted to the cncf incubation level the next natural step is to bring Falco to a level of maturity.
+00:02:11 [W] So as to make it possible to graduate it, but in order to do this, it's absolutely essential that we identify and assess its folds.
+00:02:20 [W] It's also with this in mind that I told about this experiment in this talk stressing our software challenging its limits. So to be able to improve them is the first step.
+00:02:32 [W] And I invite anyone here to try Falco challenge it and report back to us into the Falco Community the findings so we can get more and more awareness in the end. Breaking things is the best way to understand how to fix them.
+00:02:46 [W] Isn't it?
+00:02:46 [W] Anyways the plan for the next 20 minutes is to look up photos of my beautiful Homeland in southern Italy. The time is so much remembering the good old times when we were all free to travel around and pandemics. We're only a movie thing.
+00:03:01 [W] In the meanwhile, I'll approach the reasons behind the choice to stress Falco.
+00:03:06 [W] Well, I think this is the best possible approach to make a runtime security software more and more solid day after day in order to do so. We also need to briefly get skinny or now Falco solves the runtime security problem even for the cloud native
+00:03:21 [W] Bananas and the way to do this is by looking at how it actually works under the hoods.
+00:03:27 [W] I mean, that's the way to go when you really want to understand things not to mention when you want to bypass them will also reflect a bit on the security landscape in general shortly after this page.
+00:03:40 [W] I'll demo some of the possible ways to bypass Falco.
+00:03:45 [W] Developing them as accounted for the most of the work that went into preparing this talk.
+00:03:50 [W] So please be kind with me.
+00:03:52 [W] I'll also pregnancy and some mitigation and even fixes that we put in place to prevent you from using my ideas to bypass my blood Falco in the future consider it an encouragement to find and develop your own.
+00:04:06 [W] As soon as this tall got accepted.
+00:04:09 [W] I told my dad look Papa.
+00:04:11 [W] I'm gonna teach people how to bypass the software.
+00:04:13 [W] I bailed I'll spare you the details, but what ensued was a fairly predictable and stereotypical Italian family drama is started yelling at me and shut it that to do such a thing with a grave and unforgivable mistake that since they call that should have fired
+00:04:28 [W] even conceiving something as Twisted as this
+00:04:21 [W] in the according to him presenting in public the shortcomings of the software contribute to creating amounted to admit some sort of failure either mine or of my team or of my companies wall in his eyes it was
+00:04:36 [W] the product of a subversive attitude
+00:04:30 [W] I tried in vain as it will still shouting to explain that a constructive attitude begins with a quest for our weaknesses.
+00:04:37 [W] It's the first necessary step in getting self-awareness.
+00:04:41 [W] It's all about getting to really know our limits that we can help to overcome them.
+00:04:45 [W] It's only after having looked into The Ravines long enough that we can imagine ways of film and it's a matter of epistemic Anger of knowing that a path to real Improvement is almost inevitably convoluted difficult even painful.
+00:05:01 [W] Software development can be conceived as a process was main feature is the continuous try for the attainment of perfection that is by definition and attainable.
+00:05:11 [W] The life of software is really over only when it's no longer fixed or improved.
+00:05:17 [W] Any software will always present some glitches but broken does mean unfixable softer is improved over time it made more robust and reliable by this continuous process of tinkering playing fixing improving.
+00:05:31 [W] This is the case in every subfield of computer science, but even more so in a real mess dynamical Security in which every day care is the possibility that our Solutions suddenly become Obsolete and in a need of a fix
+00:05:46 [W] The an improvement when I think about this often kids suji pops to My Mind kid. So G is an ancient Japanese art consisting of repairing broken pottery by amending the iris with powdered gold silver or platinum it
+00:05:59 [W] Getting broken pottery by amending the IRS with powdered gold silver or platinum it threats breakage and repair as part of the history of an object rather than something to these guys.
+00:05:58 [W] In a very real sense this Japanese practice that fascinates me captures. The core of what I said so far indeed developing software is a total petabyte-scale stat in scribes the way we deal with imperfections glitches
+00:06:14 [W] Real sense this Japanese practice that fascinates me captures. The core of what I said so far indeed developing software is a total petabyte-scale that inscribes the way we deal with imperfections glitches Fisheries
+00:06:50 [W] Sense of our software making it more precious and more solid as a result, but let's come back to real world now. Okay.
+00:06:58 [W] So what does security mean to me how to characterize the security problem?
+00:07:02 [W] I don't know about you, but I personally would want anything to happen to my system without me even noticing it at least in this context.
+00:07:10 [W] I want to be able to determine what things can happen and what cannot since pre-empting control is not always possible.
+00:07:17 [W] also want to possess deep visibility.
+00:07:20 [W] And so as to be able to know what just happened as soon as possible, basically, I think of security in terms of chubaofs longing ssion and detection. What does these two words have in common?
+00:07:34 [W] Policies both concept used some kind of policies to describe the allow or disallow behavior for a process in terms of system calls their arguments and US resources assess the main differences. Is this
+00:07:49 [W] Prevention is connected to the concept of enforcement. In other words.
+00:07:53 [W] They're not allow some actions to take place to up in a tone because of some policies Tools in this category such as seccomp seccomp BPF see Linux a farmer or even authorization mechanism like kubernative hair back or the kubernative policy-based as Mission plugins.
+00:08:09 [W] Change the behavior of a process by preventing actions. Sometimes see schools from succeeding are in some cases. Also killing the process trying to perform those actions.
+00:08:09 [W] on the other end the second approach to secure these to use the policy to monitor the behavior of a process and notify when it's epsagon side the policy Falco belongs to the second group a topic that especially in Cloud native
+00:08:25 [W] Yet maybe you're wondering now can focus all all our security concerns. Honestly, not at all software is made of layers.
+00:08:30 [W] Sorry security.
+00:08:32 [W] This is even more true in the current cloud native environments, as you can see the scheme on the slide part Celsius English containers and sewn up and down. These are environments that Embrace change as their fundamental component constantly opening the doors to
+00:08:47 [W] So Falco exist to enable us to detect intrusions malicious behaviors security threats in general at runtime.
+00:08:51 [W] Let me also be clear that since security is made of layers.
+00:08:56 [W] My suggestion is to combine Falco with prevention tools the supplying a defense in depth strategy.
+00:09:01 [W] The idea is to define a system against any particular attack using several independent methods the first specific example that comes to my mind is using Falco to identify malicious attempt to assess sensitive resources.
+00:09:14 [W] Smoke serving the would be aware of your environment.
+00:09:16 [W] And then right appropriate enforcement policies for example are more profiles for your containers that will prevent episode to happen again in the future basically implementing a sort of feedback loop continuously improving the security posture
+00:09:31 [W] Mence so what's right I'm securing with this door. I refer to the practice of using detection tooling to detect unwanted Behavior such that it can then be prevented using prevention techniques.
+00:09:40 [W] So to continuously improve your threat model its last line of defense. This means that in case it is not able to promptly detect and alert you of malicious attempts you will end up like sitting ducks defenseless.
+00:09:54 [W] Let's try with a metaphor.
+00:09:55 [W] She scaly. Look how beautiful she was.
+00:09:58 [W] Hi. I'm locks on my door and also an Alum think of them as compliance rules, but she let's me when things and going right policy violations when little bro is misbehaving think of him like a compromise
+00:10:14 [W] She's clearly look how beautiful she was.
+00:10:09 [W] I am locks on my door and also an Alum think of them as compliance rules, but she let's me when things aren't going right policy violations when little bro is misbehaving think of him like a compromise
+00:10:36 [W] Something suspicious happening outside earlier by a normally elotl 0d.
+00:10:40 [W] She detects runtime anomalies in my life at home, and she was may she rest in.
+00:10:45 [W] peace very very serious about a job as you can see the picture.
+00:10:49 [W] So why prevention is about locking the doors that action is about continuously monitoring the inside and the perimeter still bad people were able to enter my house and put her to sleep.
+00:11:04 [W] I think I made myself a bit more clear now sadly because you're still not convinced that there's no such thing as perfectly safe and perfectly secure software and a layered approach is the best possible strategy for software security.
+00:11:18 [W] just allow me to emphasize a few points how to trust Cloud providers and their ability to detect malicious or compromised insiders how to prevent an undisclosed vulnerability or a zero day back that allows someone to
+00:11:33 [W] CV still happens Linux kubernative name and open source software that has not experienced a CD and suffered an Explorer Falco had one too.
+00:11:42 [W] I think it's clear. Now that prevention tools are not enough alone. Neither our detection tools alone.
+00:11:49 [W] Good computer security Czar and it requires a lot of technical knowledge and takes a lot of time and effort and at the end of the day that we always still be weaknesses in your system.
+00:12:02 [W] This means that you should never below the into false sense of security thinking that you're working on a secure system.
+00:12:10 [W] Your system can be more or less secure but a perfect one doesn't exist.
+00:12:15 [W] This does not mean that you should do nothing. It's just about
+00:12:20 [W] Eyewitness and surely there are ways to harden your runtime.
+00:12:24 [W] for example, dropping capabilities.
+00:12:26 [W] So preventing things to happen when a container starts, you know we to harden it, but that's just one side of the coin when you have a goal of reinforcing the isolation between the container and the AWS towards using a container more like a Sandbox
+00:12:42 [W] Is Cisco monitoring, right?
+00:12:35 [W] Surely somebody could still argue but why tracing the Cisco because in the end whatever program you're an it will end up making a lot of Cisco loodse Cisco tools are the way programs asked the colonel where everything really happens to perform some task
+00:12:50 [W] Networking.
+00:12:40 [W] I you processes and so this does matter.
+00:12:44 [W] Your Falco enters the game Falco is designed to leverage lips experience to add a layer of security on top of your containerless and your notes.
+00:12:53 [W] It's approach for the technique security threats is to go at the lowest possible level and Trace all the footprints and the context in which they happened.
+00:13:01 [W] The limbus experiments are a special augmented structure containing in folk painting by tracing the sea schools going on in the kernel plus container and time and kubernative metadata related to do.
+00:13:14 [W] Glance it is his nose even to match a rule is that you can Define with a simple yet expressive language as we will see very soon at the moment Falco can receive those event entry altinity ways that we call drivers.
+00:13:29 [W] A kernel module with any BPF probe or with a Petros based driver called P dig that's really helpful in environments where you can't install the other two drivers just mentioned.
+00:13:39 [W] Anyways, Falco can also use other input sources at the same time.
+00:13:45 [W] I'm referring to the kubernative soda clogs in particular that proven to be very useful when leveraged by Falco to improve visibility into your kubernative clusters.
+00:13:56 [W] Us so we will ship also are in input API that will allow the focal Community to create even more input sources.
+00:14:08 [W] I mentioned the Falco loodse language in the previous slide, right?
+00:14:11 [W] So maybe you're asking yourself.
+00:14:13 [W] Okay, Leo. But how do we Define policies?
+00:14:16 [W] How do we describe?
+00:14:18 [W] What's a security threat for us?
+00:14:19 [W] The Falco rules are very simple to write since they are basically Yemen and this makes them very easy to write to learn and very very hard to invent correctly, but that's llamo fault.
+00:14:31 [W] Not ours.
+00:14:32 [W] ours. Don't blame me Falco rules proven to be very straightforward.
+00:14:37 [W] The to adopt I like the policy languages or whether it's towards in the security space we mentioned early. I mean have you ever tried writing C Linux policies and things like that in a Falco ruleset you can right conditions you can group them
+00:14:52 [W] Use later. You can Define least you can give names to roles customize the output message and the details it has to contain and so on you can also override and mix things totally or partially finally
+00:15:00 [W] Huge room set for reasons. We are going to explore and understand better in a bit in case you want to jump into reading thousands of lines of llamo.
+00:14:56 [W] I put a link in the slide footnote.
+00:14:59 [W] You're welcome.
+00:14:59 [W] For example here. We have a rule to detect and Trust the shell being spawned below and on social application.
+00:15:08 [W] By looking at its condition we can see that aside from specific application that are allowed to spoon shell this rule. Mmm. It's not good taller in case
+00:15:19 [W] The micro spoon and this could process evaluates to True which means an exact BAC school was detected which in turn means a program has been executed.
+00:15:29 [W] The name of the current process is one in the shell and the school products list.
+00:15:34 [W] So bash - and so on the current process as a parent one.
+00:15:41 [W] The name of the ancestor of the current process is one of those listed by protected shall spawning binaries list the first thing that catches my eye, er is the spoon and the school process macro the totally checks
+00:15:56 [W] Even these Cisco is part of the exact family.
+00:15:59 [W] It executes a program referred to by the path name given to it as the first argument but exactly as siblings in this family.
+00:16:08 [W] Let's see if we can circumvent this rule by using a brother or a sister of the exactly a Cisco.
+00:16:16 [W] Are you ready demo time?
+00:16:19 [W] So this is micro the got our internist it only checks for exactly.
+00:16:29 [W] It's the first operand in the condition of the ranch Alan trusted So the plan is simple we suspect that a process is putting a shelf rule exactly heart remains a notice it by Falco thinking deeply about this rule. I
+00:16:44 [W] Ideas, like changing the name of the process pulling a shell to one of the names treated as Exception by this rule or seem linking the shell to analyst named but I like these are exercises at all in this little
+00:16:36 [W] Current development release of Falco basically, it's Master Branch from the tub in particular. We are Falco version 0:26 one - 4342 comets head of the latest release driver version to a 88.
+00:16:44 [W] Let's check if we already have the kernel module inserted. We have perfect Falco can start.
+00:16:52 [W] Let's start Falco with one of its default rule sets. And Falco is zero.
+00:17:01 [W] Let's verify now the target rule works as intended to do so, we'll use the image generator project.
+00:17:07 [W] It's a nice go to Lynn Falco securitization that helps you easily generate a variety of suspect actions detected by the default Falco roadsides.
+00:17:15 [W] I quickly changed this comment to make the shallot spoons create a towel file inside the tent test directory.
+00:17:23 [W] Let's check. The show file is here. Let's remove it.
+00:17:30 [W] To make things more clear we can easily trigger these Falco rule again.
+00:17:36 [W] I'll go this way.
+00:17:38 [W] Let's create a signaling to the even the generator name httpd.
+00:17:42 [W] create a pizza file.
+00:17:46 [W] Will Parker Road sides, I quickly changed this common to make the shallot spoons create a child fight inside the tent test directory.
+00:17:53 [W] Let's check the show file is here.
+00:17:59 [W] Let's remove it.
+00:18:01 [W] To make things more clear we can easily trigger these Falco rule again.
+00:18:07 [W] How this way, let's create a symlink to be integer a to name httpd.
+00:18:13 [W] Let's create a pizza file.
+00:18:18 [W] Which is a simple script that basically calls the even generator run shall common.
+00:18:25 [W] Let's make it executable.
+00:18:30 [W] Executing this script. We just created Falco shoot detective anyway.
+00:18:38 [W] In fact, it does as you can see there are two alerts the one that we just triggered by launching the pizza script and the previous one now.
+00:18:49 [W] What if we are going to execute these through exactly at Cisco? My kernel is this one so have the exactly axis: disaster because it should be there since version 3.19 of the Linux
+00:19:04 [W] There are two outlets the one that we just triggered by launching the pizza script and the previous one now. What if we are going to execute these through exactly at Cisco my kernel is
+00:19:26 [W] It operates in some way as exactly a except for some differences in the handling of the path name.
+00:19:34 [W] Let's see if our cab driver traces it already or not.
+00:19:43 [W] Oh as you can see it doesn't Hello.
+00:19:47 [W] We have a very strong candidate for our bypass.
+00:19:49 [W] I know you all were waiting for this.
+00:19:53 [W] This is time to write some beautiful C code.
+00:19:56 [W] I'm joking.
+00:19:57 [W] I already written it.
+00:19:58 [W] Let's just take a look at it.
+00:20:03 [W] As you can see a bunch of includes as usual urm, basically calling the exactly at Cisco telling it to execute tab test httpd these two arguments.
+00:20:17 [W] Let's compile it.
+00:20:21 [W] Okay.
+00:20:24 [W] Let's execute it.
+00:20:26 [W] Who seems to have executed as you can see there is no rule launched by Falco.
+00:20:37 [W] Back, do we have the shall file?
+00:20:39 [W] Yes, we have so it worked but God and not said by Falco.
+00:20:44 [W] So we discovered together.
+00:20:47 [W] I'll see schools are the joy and torment at the same time for Falco.
+00:20:51 [W] Is based upon them and will not be possible otherwise, but aside from the fact that tracing all the see skulls from a user space perspective often is not that comfortable.
+00:21:01 [W] These should really she's that there are a lot of schools and with every cover release they can change gained a new parameter new Cisco can be introduced old ones that the pocketed and things like that so it can be really really painful
+00:21:16 [W] Seniors to keep Falcon track, for example, we still miss the copy file range C School.
+00:21:16 [W] This can be used to bypass Falco rules looking for sensitive file names a malicious actor could use it to copy all the bytes of a sensitive file and Falco will not be able to detect it because it only looks for a name or any
+00:21:31 [W] Schools in the renamed macro also renamed at to was missing until two months ago.
+00:21:33 [W] We had the support for it in Falco 0:25.
+00:21:36 [W] So we're putting an effort to support more and more see schools before releasing Falco 1.0.
+00:21:43 [W] Especially the ones that could impact detection abilities of Falco.
+00:21:47 [W] You can read more about it in the issue a link in this slide.
+00:21:51 [W] We definitely need the help from the community from you to cover as many schools as possible.
+00:21:57 [W] Evil, this is a wonderful opportunity to contribute to Falco.
+00:22:00 [W] Don't miss it.
+00:22:01 [W] I think it's useful now to quickly show you how how to determine which schools are not supported yet by Falco drivers.
+00:22:08 [W] Otherwise, you won't know where to start right?
+00:22:10 [W] I provide you this little best script.
+00:22:14 [W] Don't forget to clone sysdig r+ where the Falco drivers live scenes and leaves cup still reside but expect to find them soon in the focus acute organization as you can see on the right Falco 0:26 the one yugabyte.
+00:22:27 [W] In the previously male dancer part yet exactly at Cisco has said needed support copy file range, but it supports renamed at to then. We surely should talk a bit just a bit about the idea
+00:22:42 [W] Something more than Cisco says yes, there's more in the Linux kernel neuvector cool apis like iot ring and Landing. The iron ring is a new a synchronous API with very very little however add that. I'm store
+00:22:50 [W] the current select Paul eyeball AAU family of system codes but I suppose this is a topic for an x-torq right
+00:22:46 [W] I imagine it's way more useful now to show you how to add support for a new Cisco right when you hit the manual page for named Cisco you got no surprises in fact as name suggests they allow us to rename a file moving it between
+00:23:01 [W] When you hit the manual page for named Cisco, you got no surprises. In fact as name suggests. They allow us to rename a file moving it between directories in this family.
+00:23:10 [W] We also have the Ranae Matt and Ranae Matt.
+00:23:13 [W] You siskel's the renamed at Cisco operates in exactly the same way as renamed as except for some differences in our the file paths the old ones and the new ones are handled the name a choose. Cisco is equivalent to the
+00:23:28 [W] Not to Cisco is equivalent to the Limit. It only has an additional Flags argument used to specify whether the name should be Atomic or not.
+00:23:36 [W] Whether you want to allow the override of a fight and so on.
+00:23:41 [W] Let's briefly take a look at how support for rename a to was added in Puerto Rico see 1654 so that maybe you can easily contribute your additions to let's look at how we added support for the Cisco
+00:23:56 [W] To the first thing to do is modifying the dryers PPM events public either by adding constants to the PPM even type in on table for the entry and exit fillers of the renamed up to Cisco and
+00:24:11 [W] For the Relay Matthew Cisco to the PPM Cisco code in a table here.
+00:24:10 [W] We also need to define the name are two flags and distract for Rolling them.
+00:24:16 [W] Now we can populate in the flags table C file this tract.
+00:24:23 [W] While in the Cisco info table C file inside limbs cap. We need to instruct lips cap about those flags.
+00:24:33 [W] It don't forget to increment the number of supported Cisco rules.
+00:24:39 [W] At this point in the driver Phyllis table C file. We need to match the feel of constants.
+00:24:48 [W] We did actually implementations so that Falco drivers know which code to execute at the entry and the exit when the target Cisco is detected.
+00:24:58 [W] We also need to represent the name app to Cisco into the driver even table see fi how by editing the GE event info array adding twenty two items one for the
+00:25:14 [W] For the exit each line should represent the signature of the Cisco.
+00:25:16 [W] We are adding so it's arguments and its return value.
+00:25:20 [W] For example, we are we are telling the Falco driver to look for the Ranae Matt two flags to acting since we declared before when it looks for their name at two flags bitmask argument.
+00:25:35 [W] now go into the Cisco table C file and edit the reference table for 32 and 64-bit architectures first add their name at to item to the Cisco table
+00:25:50 [W] Now go into the Cisco table C file and edit the reference table for 32 and 64-bit architectures first add their name at to item to the Cisco table
+00:26:06 [W] with references to the Cisco lantry and exit fillers, then we also need to edit the Cisco code routing table adding an item for Ranae Matt to Cisco and
+00:26:21 [W] Code we are seeing to it.
+00:26:24 [W] Last but not least. We need to Define our fillers but for the Falco BPF driver and for the Command Module one for Bradley, we're going to look only at the filler for the Command Module the 140. BPF driving is very very similar.
+00:26:36 [W] just uses some different apis for collecting the data and pushing them to the user space.
+00:26:44 [W] In this case, we only defined the exit filter because we grab the renamed at two parameters only when it completes as you can see here, we get the value of all the effect the old path nudie file descriptor, New Path and flags
+00:27:00 [W] in this case, we only Define the exit filter because we grab the renamed at two parameters only when it completes as you can see here, we get the value of all the effect the old path nudie file descriptor, New Path and flags
+00:27:26 [W] I mean to during buffer with Val to ring me Todd.
+00:27:30 [W] So copulating a new event that Falco will use to detect renames made with Ranae Matt to Cisco at this point.
+00:27:38 [W] We're done but good luck with the compilation now in the Falco default rule set.
+00:27:43 [W] We also ship this rule in this line to let you detect when someone is using the package manager inside your containerized environment.
+00:27:51 [W] It's very simple. It fires when a process is Pond inside your container, and it's
+00:27:56 [W] Name is one in the list.
+00:27:57 [W] You can see on the left.
+00:27:59 [W] So apt-get update Teague APK and so on let's bypass it. Now this time will not use and supported see schools rather something way simpler.
+00:28:11 [W] So this is the Falco role that triggers when someone is launching a package manager inside your containers as you can see, there's the spoon process macro.
+00:28:21 [W] but this time will Target the package management products macro.
+00:28:28 [W] That monitors if the process name is one of the element in the package management binaries list.
+00:28:38 [W] so start again vocal
+00:28:41 [W] I need some space to the standard out with weighted by default. It emits alerts when we run an Ubuntu container spawning a shall into it.
+00:28:51 [W] Falco detects it but when we run a PT update
+00:28:57 [W] Promptly omitting the alert of the Roll we're targeting let's exit from this container.
+00:29:07 [W] Since we know Alpine is the most used basic image in the world. Let's try with an Alpine.
+00:29:16 [W] We know that the package management practice macro checks whether the process name is equal to AP K. In this case. Let's simply try to create a symlink named people to it.
+00:29:33 [W] if we don't beep update we see that Falco do not detect we're launching a package management process in this container just because we call the people anyway if we actually install
+00:29:49 [W] thing
+00:29:37 [W] Falco alerts us that someone somehow modify the file below a binary directory, but it does not tell us that someone used the package management tool of Alpine
+00:29:52 [W] Your little retarded it as flows and it should be more precise.
+00:29:41 [W] As we have just seen maybe we need to make Falco rules.
+00:29:45 [W] Also monitor the symlinks.
+00:29:46 [W] We're thinking to build something inside it that automatically does it this way.
+00:29:51 [W] We don't have to edit all the rules and we don't have to remember to also monitor the same link every time I roll looks for a binary or a file Etc, but we need to make a bigger conversation and we'd love your feedback to so please join the Falco Community codes
+00:30:06 [W] That fall color is not enough, but this is something we already knew furthermore.
+00:30:08 [W] Its rule set are the one using can be incomplete or ineffective.
+00:30:14 [W] There's a huge interconnection between different rules.
+00:30:17 [W] Maybe you bypass the one detecting the usage of package managers in containers as I just did but then the one monitoring binary styra Rector, he's alert you so think about it when you disable rule, maybe you don't need it directly for your use case.
+00:30:32 [W] But drool at least notifies you when someone broke the rule monitoring you use case for example around that detects the execution of specific bunny is okay alone all if it also monitors the copy the same link and the real name of that file.
+00:30:47 [W] As I just did but then the one monitoring binary styra Rector, he's Alex you so think about it when you disable rule maybe you don't need it directly for your is case. But drool at least notifies you when someone broke the
+00:31:45 [W] Cisco because someone could think to cut that binary into another five even more a very malicious actor called pipe from the outside a base64 encoded binary and recreate it line by line inside the container
+00:32:00 [W] Best script with their shebangs better prevent to in that case like removing barriers from the container reducing the tax office by creating the containerd image from scratch.
+00:32:10 [W] Not from Alpine, even if you love it, then put inside them the read-only bunny that has to act as the entry point of the container make only one specific path writable and also restrict it to contain on executable files with flag Nats
+00:32:25 [W] You can create a Falcon rule that monitors. The only binary executing in that container is the entry point you intended this way. You should have reduce the lock the odds of an attacker now another little bypass the mo very different from the others.
+00:32:39 [W] It's last one.
+00:32:37 [W] I promise for this demo.
+00:32:40 [W] We don't mind selecting a particular focal wall since we're ambitious and we intend to be able to bypass all of them.
+00:32:47 [W] Anyways for the sake of this demo.
+00:32:51 [W] We're going to select this room. It detects when something runs with the Privileges of the owning user or group, which means it has said Tweedy are set GD bit set. I'm not using Falco build from Source this time.
+00:33:05 [W] Rather I read installed the Falcon from its Deb repositories.
+00:33:10 [W] on the entry. Let's now trigger the rule. I create a new file in the temp directory.
+00:33:19 [W] I start Falco.
+00:33:22 [W] and then I said the group ID on then plea or Phi as you can see Falco other charges, maybe you don't know but when Falco get installed, it puts the default llamo rule sets in the ATC directory, but
+00:33:37 [W] It puts some very important rule of files inside user share Falco. Luau.
+00:33:45 [W] The output dot Louisville, I should catch our tension. Let's edit it.
+00:33:58 [W] We commend this line which is the gate from which the output me tugs of Falco pass through save the file and exit.
+00:34:09 [W] He f****** for some reasons restarts.
+00:34:12 [W] It will not send any more.
+00:34:16 [W] Any output to us look you out of it.
+00:34:25 [W] I know to bring on this attack. The malicious user shoulder already have a lot of privileges on the target tossed. It should already be able to manually kill the Falco process for example, but that's not the point.
+00:34:37 [W] The point is that it's way more likely that malicious attacker will do more selective things in the output to a file that we had.
+00:34:45 [W] Did like excluding only some rule alerts or even modifying the output messages this way your attention will not be drawn because you'll probably continue to think Falco is still operating perfectly as intended.
+00:35:01 [W] Anyways, Falco should at least alert has it has been restarted from who and now don't you think so how to solve the problem of you are God.
+00:35:01 [W] We already did it.
+00:35:02 [W] No worries.
+00:35:03 [W] We're abroad the complete outputs modular Falco in C++ starting with the next release of Falco.
+00:35:09 [W] The Gate of the outputs will be built inside the Falco binary. We plan to also write the pasta and the engine completely in C++. This will enable us to reduce the
+00:35:21 [W] This is of face of Falco removing lure related dependencies to so stay in touch and in case you want to take a look at how we did it.
+00:35:29 [W] I put a link to the Precast in the slide as usual.
+00:35:31 [W] So thanks anyone for being here. This talk was really tough even to prepare and to listen I had me, but I hope you enjoyed my Approach my findings and my considerations.
+00:35:41 [W] you soon. Let's open Parson. In the meantime. Follow me on Twitter join the Falco calls and let's keep in touch.

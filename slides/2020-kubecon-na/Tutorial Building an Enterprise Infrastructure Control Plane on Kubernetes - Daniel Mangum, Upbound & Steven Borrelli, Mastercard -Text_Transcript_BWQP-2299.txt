@@ -1,0 +1,606 @@
+﻿Tutorial: Building an Enterprise Infrastructure Control Plane on Kubernetes: BWQP-2299 - events@cncf.io - Friday, November 20, 2020 5:06 PM - 80 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Well Welcome to our session today.
+00:00:01 [W] I am a Steven Burleigh from MasterCard.
+00:00:05 [W] And I'm Daniel Megan from outbound.
+00:00:08 [W] Talking about a project that I think is really cool.
+00:00:11 [W] We're going to be talking about building your own Enterprise control plane and basing that on kubernative and we hope to show you that this is actually a really powerful and really easy to do so really that's kind of our goals for this talk first we want to talk about this is really one of the fundamental concepts of kubernative, but we
+00:00:26 [W] Want to talk about why controllers are really one of the best ways to manage internal infrastructure and we want to kind of show just how easy it is given a lot of the Tooling in libraries around kubernative right now.
+00:00:38 [W] So just really quick what our agenda is today.
+00:00:40 [W] This is an eighty five minute session. I'm going to do a few minutes of an introduction just basically talking about what infrastructure is and how people are doing it today.
+00:00:49 [W] Then we'll really get into a lot of coding what we'll be talking about actually developing grown controller and during that we're basically going to walk through all the parts of doing that that's from defining your custom resource definitions talking to the remote API that you
+00:01:04 [W] Manage actually how you get into the guts of a controller and Duke read operations. And then finally we can do some more advanced things like packaging your controller up so you could deliver it to clusters. And then finally there's some really cool higher level abstractions we could do where you could take other people's
+00:01:19 [W] Controllers at other peoples kubernative objects and combine them to make more complex infrastructure.
+00:01:23 [W] So there's really very powerful thing. So we hope to show you that this is actually fairly easy to do and that you can really make a very powerful platform on top of this.
+00:01:34 [W] So first when we talk about infrastructure, what do we mean?
+00:01:36 [W] If you look at now, what a lot of companies are provisioning what's in the scope of infrastructure teams?
+00:01:42 [W] It's usually things like storage and virtual machines and folks will be asking for firewall rules and networks and DNS records.
+00:01:49 [W] So whenever someone wants, you know, an application team wants to deploy something they're usually asking for a lot of these things and if you look at how infrastructure teams that used to do these manually and then slowly they've been getting into automation. So what you see is usually in most
+00:02:03 [W] Enterprise is what companies are doing is they're writing these things in scripts that doing some you know Chef for Python and Ruby and you know, or you know, some of the newer companies like a newer efforts things a lot of these tools are migrating
+00:02:18 [W] folks usually do is build like custom scripting on top of devops tools like chef and symbols very popular and probably one of the most popular provisioning tools recently has been something called terraform, which is really good for managing remote apis, and then finally like the
+00:02:33 [W] Time for these platforms is usually a ci/cd mm. So what happens is somebody commits something in to get to see I see some sees it and you know fires off these scripts. So this infrastructure that you're building on top of your custom scripting using some devops tools is usually fired off.
+00:02:48 [W] You know what this guy pipeline so, you know and this is basically what it looks like kind of logically, right?
+00:02:55 [W] So usually what happens is you'll Define your own spec and you know, I've been on demo days where every single team defines their own spec. So we'll have 5 different spec files introduced during one demo day.
+00:03:07 [W] So this is you know, we generate a lot of these next thing is in your pipeline. You usually have some code especially systems like Jenkins and allow you to do things like groovy code.
+00:03:18 [W] That you'll start seeing running shell scripts in here doing some Advanced logic.
+00:03:24 [W] And then finally, it's the stuff you want to do right? Like you're you have to like compare.
+00:03:29 [W] You have to connect to the remote API. You have to compare what you have to that and they have to do something.
+00:03:34 [W] So that's usually what these infrastructure pipelines look like today.
+00:03:39 [W] So we're going to talk about some of the problems that we're hoping to solve with the controller approach.
+00:03:44 [W] Just you know, what we see is an existing the kind of the issues that are with these kind of see I based appointments. And the first thing is like when everyone has their own spec file, there's usually validation is not done, you know, it might be done at the Json level, but it's usually not a schema level
+00:03:59 [W] Validation the next thing is a lot of these things are very command line driven and it's very hard to expand export these as an API to developers, right?
+00:04:07 [W] So the developer experience usually involves opening up a ticket or committing something to get and then finally tooling is very basic, you know, you might be able to edit the files in Json but there's not a lot of other devtools that supported this type line
+00:04:23 [W] Usually the main thing running this and probably the most important thing about this.
+00:04:29 [W] It's like these fire off on changes in get not in changes of desired state.
+00:04:33 [W] So, you know, it doesn't care whether you're adding a comment or whether you're making large changes.
+00:04:38 [W] It's still going to fire it off and usually what happens is it runs only once so, once you deploy this, it doesn't go back and check. It doesn't check if anything is drifted or anything like that.
+00:04:47 [W] And then finally, there's a lot of you know, especially with homegrown tooling.
+00:04:52 [W] there's a lot of issues around reconciliation and State Management and usually operations is you know, besides sending out an email to someone if a job fails is pretty much the most of the Operational Support that a lot of these tools have so that's kind of if you look at what the vast
+00:05:08 [W] Charity, like internal tools are right now.
+00:05:09 [W] It's pretty much like this.
+00:05:10 [W] So what we want to talk about since we're in kubernative who want to talk about how do we do this in a way that you know is kubernative Centric and that, you know takes advantage of the kubernative platform.
+00:05:19 [W] So the first thing is that we talk about the controller approach, right?
+00:05:23 [W] What if we could take all those things that we want to provision them and model them as carbon and he's objects.
+00:05:28 [W] So, you know, we'll have a SQL database kind we will have a storage bucket kind and you know for this demo we'll have like a GitHub team time.
+00:05:36 [W] The kind and as part of that we can have a spec defined we could have metadata. We could have annotations all the good things about kubernative.
+00:05:43 [W] He's we can have this in our files and we don't have to think about the spec file anymore because it's handled by somebody else.
+00:05:49 [W] Then what we could do is we could put kubernative there and then, you know, a lot of the great things about kubernative.
+00:05:54 [W] It has an API that supports a lot of different tooling it can watch for events for you.
+00:05:59 [W] It can look at changes and things like that and notify, you know, whatever back end you want. So that's kind of a powerful pattern.
+00:06:06 [W] And finally what we want is that for each one of these things that we want to manage will probably have a controller running and this will be constantly trying to reconcile whatever desired State you put into the system talking to the external API.
+00:06:19 [W] So things like observability failover. There's a whole bunch of features you get in a kubernative controller that basically spending all its time trying to get to the state that you've asked so it's a very powerful pattern of that way.
+00:06:34 [W] So what we're going to talk about in this tutorial today is basically how we build and all the layers of this controller.
+00:06:40 [W] So at the very bottom level, you know, we have kubernative itself, which will run our controllers which run a doctor containers and I'll handle things like well base access controls. If you want to put a firewall in front of this or a load balancer. The next thing is if you haven't worked with kubernetes before like done any
+00:06:55 [W] Having there's this entire thing is concept of Machinery, right?
+00:06:59 [W] This is how all the apis are composed and there's a lot of great things here, but probably one of the most important things that's emerged recently is this idea of custom resource definitions or CRTs.
+00:07:09 [W] You're going to hear these a lot and this is how you can make custom objects look like knative kubernative.
+00:07:13 [W] So lets you want to Define your own type like a virtual machine type.
+00:07:17 [W] You can just apply to kubernative and it'll look like anything else on top of that is this Library called controller runtime, which is
+00:07:25 [W] Recently become probably one of the main libraries and almost everyone who writes kubernative controllers at least uses to some part and this takes care of things like what happens if someone applies a change to one of the kubernetes objects, it watches it helps you do reconciliation
+00:07:40 [W] Super Daddy, so it makes it very easy to have these controllers that respond to changes when your customers, you know want to ask for something different to your infrastructure automatically get notified whatever is watching it and then finally probably one of the most interesting things about this
+00:07:55 [W] Because across plane runtime itself and crossplane makes it really easy to manage external apis.
+00:08:01 [W] Most of the other kubernative things make it easy to manage kubernative objects for cross-claim makes it really easy to say find any API out there and then do these operations and treat it like a kubernative managed infrastructure.
+00:08:13 [W] So this is really one of the most exciting things that makes it really good for building your own software because really the benefit of this approach is that basically you only have to focus on kind of the logic in your
+00:08:24 [W] roller and you get extremely full featured control planes just by building on the rest of those things that are constantly reconciling things that are validated via open API at the client level. So this is a very powerful platform and you can spend a lot of your time.
+00:08:38 [W] Just focusing on your logic.
+00:08:42 [W] And finally, you know, it has to be said that you know, when you have knative kubernative controllers for your infrastructure suddenly, you could use all kinds of great tools.
+00:08:49 [W] I use customized a lot personally. The Amazon cdk is really interesting too.
+00:08:55 [W] I'm a big fan of Argo CD for deploying things to any cluster. It does ifs of Valero could back it up.
+00:09:00 [W] There's crossplane demos using open policy agent.
+00:09:04 [W] it's a lot of exciting things.
+00:09:08 [W] So finally summary there's a massive ecosystem support cri-o is let you expose infrastructures kubernative objects, and really there's libraries at like you build really full-featured powerful software. So really in summary, this is really an ideal platform for managing about any infrastructure
+00:09:24 [W] All right.
+00:09:24 [W] So before we get too far into the tutorial, I just want to walk through taking a look at what crossplane is and how we can get it installed and start extending some of its functionality.
+00:09:33 [W] So I'm here on the crossplane website and you'll see the main thing that we're going to propose doing with crossplane is managing our infrastructure from kubernative.
+00:09:42 [W] If we go over to our documentation, we have a helpful getting started guide, which we're going to run through shortly right here. So I'll start off by going ahead and spending up a kind cluster if you're not familiar with
+00:09:53 [W] Kind it's a great way to run a local kubernative cluster.
+00:09:57 [W] So it's actually going to start a cluster running in Docker for us.
+00:10:00 [W] So while that's coming up, let's go ahead and take a look at what crossplane kind of proposes it will do for you.
+00:10:06 [W] Alright, so the first thing is provisioning and managing your infrastructure and that's the primary thing.
+00:10:11 [W] We're going to be looking at today at the end of our tutorial.
+00:10:13 [W] We'll talk a little bit about how we can package that up and install it into different crossplane clusters to extend that functionality. But the first thing we want to do is
+00:10:23 [W] The kubernative Zaid on install crossplane into our kubernative cluster.
+00:10:28 [W] So you'll see here. We have the alpha and master channels.
+00:10:30 [W] just being the latest release which is 0.13 as of this recording so we can go ahead and create a namespace and I've already added The Cross by an alpha repo here. So it's just going to be one command to helm and stall cross fine.
+00:10:46 [W] So, let's see if our cluster has come up here.
+00:10:48 [W] It looks like it has so I'll create that namespace cross flane system, which is where we like to install cross fine.
+00:10:55 [W] And then we can go ahead and do the helm installation.
+00:11:00 [W] So after a moment here, you'll see that it gives us a little bit of information as well as a chart description and you'll see we're using chart version 0.13 if we look at the pods that are now running in our cluster.
+00:11:11 [W] We should see the crossplane pot which is kind of the core functionality of crossplane and then the are back manager having these two separate processes allows us to really lock down security because managing our back is completely dedicated to the our bank manager, which are allows cross plan to
+00:11:27 [W] With lesser permissions than cluster admin. If you'd like to manage those permissions yourself instead of having this automated workflow with the our bank manager.
+00:11:35 [W] You're welcome to just deploy the crossplane poddisruptionbudgets.
+00:11:41 [W] Alright, so now we have all of these pods running and if we look at our CRT is here.
+00:11:46 [W] We still haven't installed very much and the terms of new API types.
+00:11:50 [W] You'll see some kind of meta cri-o types like packaging for configurations and providers, which we're going to look at momentarily, but you don't see any external Cloud infrastructure yet.
+00:12:01 [W] That's because crossplane comes out of the box without supporting any individual provider. So it differs from other Solutions in that regard than maybe proprietary tufin.
+00:12:10 [W] A single cloud provider or something like that.
+00:12:12 [W] We have a provider model, which is what we're going to be designing today. But we also have a number of providers for common Cloud infrastructure that crossplane as a community maintains so we can go ahead and go into the documentation here.
+00:12:27 [W] And the first thing we do after installing crossplane and checking the status is install the cross plane CLI.
+00:12:32 [W] This is a cube control plugin.
+00:12:33 [W] So you'll just be able to do Cube control crossplane and a variety of commands and this makes it really easy to add new functionality.
+00:12:40 [W] So we have two types of packages and cross plane and we're particularly looking at provider today. And so you'll see here. We want to install a provider provider AWS.
+00:12:51 [W] Packaged up and in oci image and we're going to use the latest stable version of Provider AWS, which is 0.12.
+00:12:58 [W] So I'll go ahead and copy this over into my cluster.
+00:13:02 [W] And once again, we see that we have these cri-o and just across playing pods running.
+00:13:06 [W] We're going to go ahead and install the provider what's happening behind the scenes is that crossplane is unpacking the contents of this provider that we created and it's going to install cri-o as and also start controllers to watch those cri-o these and take action based on events
+00:13:21 [W] That take place in the cluster.
+00:13:23 [W] So let's go ahead and take a look at the CRTs.
+00:13:25 [W] You'll see we have far more now and if we actually scroll up you'll see that there are lots of AWS specific ones such as repositories for ECR ec2 security groups.
+00:13:37 [W] I am roles Dynamo tables RDS instance has Etc.
+00:13:41 [W] So we've just extended the functionality of our kubernative cluster quite a bit by being able to ride alongside our deployments and other knative kubernative types create external infrastructure, which we
+00:13:53 [W] Then used to manage our Affairs on those Cloud platforms and connect that to our crossplane instances.
+00:14:00 [W] And once we have provider AWS installed we can see what cri-o is it brought with it and we can also see that there is a controller running for provider AWS.
+00:14:11 [W] It's going to be reconciling those resources.
+00:14:15 [W] Alright, so the next thing we want to do is to be able to actually provision resources on AWS.
+00:14:20 [W] We need to create a secret with our account information.
+00:14:24 [W] I wish we have a helpful command here to use the AWS CLI to do and then we're going to create a provider config which basically informs Cross Way and how to reach out to the AWS provider and here we're going to use the secret credential source to be able to do that.
+00:14:38 [W] So I'll just run these commands real quick.
+00:14:41 [W] And we can make sure that we get something installed.
+00:14:45 [W] A generic secret from it and are kubernative cluster.
+00:14:50 [W] And the last thing we want to do is go ahead and use this provider config and we have this helpful command here where you can apply it from a remote URL.
+00:14:57 [W] I would normally advise you to check the contents of something before you apply it against your cluster. But since we have a local cluster here and I put this link here will go ahead and do it.
+00:15:09 [W] All right, so we have our default provider config here and the next step is to actually provision some resources.
+00:15:17 [W] So let's go on to the next section and look at provision infrastructure and you'll see what we're going to provision is an RDS instance on AWS and we're going to tell it where to write our connection secret. So that's another big part of crossplane, which we're going to see later on we're designing our own provider is
+00:15:32 [W] And you know credential information so you can connect this to your workloads.
+00:15:36 [W] You can have a deployment that talks to the database.
+00:15:38 [W] We're going to show a simple example here.
+00:15:40 [W] So we're just going to provision the database and see what happens.
+00:15:47 [W] All right, we run this command.
+00:15:49 [W] It looks like our RDS postgrads instance was created and we have a couple of shortcuts that will help you get resources more quickly.
+00:15:57 [W] So you could do something like K get AWS here to list all of your AWS resources, which is frequently has large gaps in it.
+00:16:04 [W] So let's do something more specific and just get an RDS instance.
+00:16:08 [W] All right, so we have our RDS instance that we just created you'll see some information about that importantly we have are synced value, which is
+00:16:16 [W] Aang is our crossplane controller and the fact that we've specified for this resource consistent with what is happening on the external infrastructure, and then ready is indicating that it's false and that's basically just to let us know that this resource
+00:16:31 [W] Is not available for consumption yet?
+00:16:33 [W] And since we specified that the connection information should be written to this secret when the resource actually becomes ready.
+00:16:41 [W] We should be able to get secrets. And in this case in the cross flane system namespace and see that it's there.
+00:16:49 [W] And we'll see here that we don't see the secret at this point.
+00:16:52 [W] Actually we do it's already present.
+00:16:53 [W] So that was given to us by the actual create operation when this is finished provisioning.
+00:16:59 [W] We're going to see more connection information in there and you can look up the documentation to actually see all the connection information than RDS instance publishes to it secret and then you can specify via environment variables or something of that nature
+00:17:14 [W] Get the secret into your deployment. So your application can talk to it.
+00:17:19 [W] So that's kind of an overview of what you can do at the basic level of cross fine. And you can write whatever provider you'd like to fit into this ecosystem and crossplane will actually manage installing it and upgrading it and and managing all of its different resources
+00:17:34 [W] We're going to extend that today, but you can also do things like packaging up your infrastructure abstractions, which is another layer on top of these Primitives which are these cloud provider resources that we've installed into the cluster at the end of our tutorial.
+00:17:47 [W] I'm going to circle back and show you how we can create some of these Primitives and package them up.
+00:17:54 [W] Alright, so now that we've gotten a look at how crossplane works and how you can extend its functionality with providers.
+00:18:00 [W] Let's look at take a look at one of the providers that we're going to work on today this provider gethub.
+00:18:07 [W] We're calling a cube con provider GitHub here and to kind of motivate the discussion we're going to have and the work that we're going to do today and hopefully inspire you to go write your own providers.
+00:18:16 [W] Let's take a look at what this can do. So if you take a look at the CRTs in our cluster, you'll see that we have our provider config and
+00:18:24 [W] Ryder config usage which are kind of the plumbing which we'll talk about a little bit but the primary thing we're going to work on today.
+00:18:30 [W] Is this team's resource here and this team basically represents a GitHub team and we're going to want to be able to create and manage teams on GitHub from our kubernative cluster. So just like you would with AWS or gcp you go and create a database.
+00:18:45 [W] Today we're going to look at creating, you know Cloud resources in a GitHub organization.
+00:18:51 [W] So I'll go ahead and start off.
+00:18:52 [W] I actually have an example prepared here for us.
+00:18:56 [W] So let's look at the contents of that.
+00:18:58 [W] This is a pretty simple resource here.
+00:19:01 [W] You can see it's just of kind team and the or group and we're going to use the name which is going to represent the name on of the team in GitHub and we have some fields to configure it specifically the Org the description and the Privacy will look at
+00:19:15 [W] how those get set and how they can be modified later on. But for now, we just want to show that we can create one of these.
+00:19:22 [W] So go ahead and apply.
+00:19:26 [W] At resource and you'll see over here that we've got some log messages coming from our controller which is running against a local kind cluster here and the important thing we want to see that are external resource is up to date.
+00:19:38 [W] So essentially that saying is we went and first we created the resource and then we check to make sure that it matches the configuration that we specified since we just created it.
+00:19:49 [W] It's likely that that happens on the first reconcile, but it's controller is going to go ahead and make sure that this stays in sync and if we
+00:19:56 [W] Look at our team we can say that we have a sink team here. And if you look at the status we can get a little more detail here.
+00:20:05 [W] Can see that there's some information about when it was last reconciled and we can customize this to give more information. If we want. I also want to show that this team actually does exist in our GitHub account.
+00:20:19 [W] So if you look at the configuration, we had we named it was cross plan and we have our description and then we've also seen that it's a secret account.
+00:20:29 [W] So we'll show how you can maybe modify that in the future.
+00:20:33 [W] But before we jump into that too much weaveworks,
+00:20:35 [W] I've seen how these resources and different apis get added to a cluster.
+00:20:40 [W] so Steve and I wanted you to give us a little bit of insight on to what is a CRT how they structured and how does a controller kind of look at the two different main parts of a CRT to drive its action.
+00:20:52 [W] Yeah.
+00:20:53 [W] Yeah. Thank you then. Yeah. So this is one of the really interesting things about this pattern is that you're going to hear this term a lot of you haven't heard it before and this is a custom resource definition and this is basically taking things that are outside of kubernative.
+00:21:05 [W] He's and making them look like kubevirt at ease and what we're going to show you right now is actually the code for doing that. So one of the most important things here is like when you and this is pretty much the pattern not only just for crossplane, but pretty much almost any controller that you're going to
+00:21:21 [W] Seeing that written for kubernative. So you'll have this directory called apis and in that is usually where we have the definitions of where we Define our Series.
+00:21:28 [W] So what we're going to do is we're looking at a file here called types that go and there's just a few important Fields here that we want to put out first.
+00:21:36 [W] It says parameters and observations, right? So this here is if you look at the example that Dan showed before we had the name of the organization the description and the privacy settings, right, so
+00:21:50 [W] When you create a CRT what the way it works with kublr is that it looks at your go code and then the make files generate the CRT the ammo for that then you apply to your cluster.
+00:22:01 [W] So this is how everything gets mapped. And this is how you create your own custom kubernative objects. Then you could apply to a cluster and have controllers manage so you can see here. We have word description of privacy. The next thing is observations like what it's an
+00:22:16 [W] Servation an observation is something that your controller is going to go talk to a remote API and observe the state of that and based on that.
+00:22:25 [W] It's going to decide you know what it needs to do in terms of reconciliation.
+00:22:27 [W] So those are kind of the key things in terms of what you store in terms of settings and the value and there's another to important field that you'll see on this is pretty much present in all kublr type controllers.
+00:22:42 [W] There's a speck and a status so the spec.
+00:22:46 [W] Is the desired State that's what you provide to the cluster say. This is what I want things to look like and that's the thing that the user provides and then the status is the thing that the controller comes back with it goes talks to a remote resource
+00:23:01 [W] And it comes back and gives to the state to it. So these are two of the important Concepts about building out of kubernative API C re
+00:23:09 [W] Absolutely, and and one of the things that Stephen pointed out there is that we have the parameters and observation and we have the spec and status you can think of it as the parameters and observation being the provider specific fields and they kind of roll up into the spec. So we
+00:23:24 [W] Our parameters for the provider specific in this case.
+00:23:27 [W] It's GitHub that's rolling up into our spec here.
+00:23:30 [W] Then the status we're going to have the at provider fields. And this is just a cross playing pattern we have and then within the crossplane ecosystem.
+00:23:38 [W] We also have these embedded structs that we poke put in R-Spec and status and that just provide some uniform Fields across all of our resource types, and they're used to do things like connect to the external provider
+00:23:53 [W] Via the provider config, which is another type which we can look at quickly here. If you saw earlier, when I created the team, we had a list of cri-o s including provider config and provider config usage. So once again, we're seeing
+00:24:08 [W] Things that Stephen just mentioned this is kind of a special resource in the Crosspoint ecosystem.
+00:24:14 [W] It tells you how to connect an external provider. So it has some credentials method in it. And once again you're seeing we have this embedded struct and these embedded types these different things that we're going to kind of have abstractions presented for us are from
+00:24:29 [W] Spain runtime which will take a look at in a minute, but the provider can fig spec is going to include usually a kubernative secret but you can also provide different authentication methods and the status is basically just going to show you that it's able to connect
+00:24:44 [W] We look at an example of what a provider config looks like here.
+00:24:49 [W] We're using a secret to authenticate.
+00:24:51 [W] So we're creating a secret and across plane system namespace and then you'll see that we'd have base64-encoded credentials. In this case for GitHub you provide an API access token, so we create this secret and then we reference it in the provider config.
+00:25:07 [W] and then if we go back to this first type the team type that Stephen was talking about and we look at this embedded type you'll see that we have a provider config reference which basically builds in the fact that we know we're going to have to reach out to an
+00:25:22 [W] Journal credential provider for every managed resource and a crossplane provider
+00:25:30 [W] and one of the nice things about the provider can vague is that you could have multiple providers right that you can be managing multiple backends.
+00:25:37 [W] Even if they're the same platform.
+00:25:38 [W] They could have different credentials.
+00:25:40 [W] So you could use the same resources and apply it, you know, using two different accounts. If you want some kind of Dr. Something like that. So what providers do is abstract out the connections that it gives you a lot of flexibility to separate out your resources from the
+00:25:55 [W] Can providers so it's a very nice pattern to implement.
+00:25:58 [W] absolutely and in some of the other providers where they actually have kubernative clusters themselves will have things like use I am roles for authentication and that sort of thing which can be really useful and some of that separation of concern this team was mentioning and get Hub. You may have two different
+00:26:13 [W] Access tokens that you want used for different organizations and that kind of separates you from you know, creating something in the wrong organization or something like that.
+00:26:22 [W] But if we look in an example actually hear of our team resource, so this is what we created just moments ago.
+00:26:28 [W] We actually don't have a reference to provider config and that's because cross plan also provides the ability to if you create a provider config with the name default that provider is going to go ahead and use that one if none is provided. So
+00:26:43 [W] There's little goodies like that.
+00:26:44 [W] They're kind of sprinkled throughout the crossplane runtime ecosystem that make things a little bit easier for you.
+00:26:50 [W] Alright, so we've gotten a good look at these different API types, but you may be wondering how those translate into actual crd s existing in our kubernative cluster.
+00:27:01 [W] So a crd is a resource in itself.
+00:27:03 [W] It's a custom resource definition and there's a controller running in kubernative that watches for custom resource definitions and basically your dynamically adding neuvector.
+00:27:13 [W] You API types, so we have to create those custom resource definitions to then be able to create something like a team.
+00:27:20 [W] We have those custom resource definitions in this CR DH directory in our provider GitHub here and you'll see that it's generated and looks like probably any other custom resource definition that you would see you'll see that those
+00:27:36 [W] Different fields in the Ghost Shark.
+00:27:37 [W] we're actually used to create this schema here that we have which allows us to have validation when we create instances of our team resource and will look a little bit more if that down the road, but Stephen, did you want to talk a little bit about
+00:27:52 [W] What some of these different annotations specifically the cube Builder ones do for us and that generation process?
+00:27:59 [W] Yeah, if you look in the code before and this is a feature of cute girls there you can see here that there's there's validation fields and kubeflow der.
+00:28:07 [W] There's print columns.
+00:28:08 [W] There's object. So basically we're building Upon A lot of the cube Builder project here. And what it does is you give these annotations here and this instructs when you build out your cre is exactly how to represent them.
+00:28:21 [W] there's lots of things as we said, you know what has recent versions of kubernative with the CRTs are imposing open API.
+00:28:29 [W] validation on everything which suddenly means that now that you build this out some of you have validation not only to serverless will but do versions of kubernative actually have the client doing validation now to so basically all that work is going to be handled before you and all the tooling we can automatically validate from these cri-o s
+00:28:44 [W] So that's something very powerful.
+00:28:46 [W] Yeah, that's basically it. I think Dan could show some code about how the there's when you run make and a lot of these clusters.
+00:28:53 [W] There's actually some hints of how to generate it and we'll look right here at this controller Jen and angry Jet and maybe we could show how to make in generate the CRTs.
+00:29:04 [W] Yeah, absolutely.
+00:29:05 [W] So it's even point out. There are some commands kind of built in this is probably an opportune time to mention that this entire repository right here in
+00:29:14 [W] In kind of still see my get dis here is generated from a project that we have in crossplane called the provider template.
+00:29:24 [W] So I'll go do that real quickly and it basically has a mock provider for you here that you can just refactor for your own purposes.
+00:29:35 [W] And this is a template repository. So to actually create this repository that we are looking at for provider GitHub. I just went ahead and click use this template and created a new Repository.
+00:29:44 [W] A story in my account and then refactored some of this provider template stuff to be what we wanted for GitHub.
+00:29:51 [W] You'll see that instead of having a team resource.
+00:29:53 [W] It has this sample my type resource.
+00:29:56 [W] So it just gives you kind of a boilerplate to get started but one of the things we do in that is we provide this generation code, which you'll see he just has to go generate statements which will basically, you know run for you when you run go generate
+00:30:11 [W] And this is a convenient way to actually pin external binaries that you need to run generation methods.
+00:30:17 [W] So controller Jen is kind of the cube Builder flavored generation that's creating these deep copy methods for us as well as generating the crd S according to those directives that we were just pointing out there and you'll see that we provide some information to controller Jen here
+00:30:32 [W] To tell it where we like those cri-o use to go Angry jet is our crossplane flavor of that and that does things like generate are managed. Go here RPC dot go which are basically helper methods to help us interact with these different
+00:30:47 [W] Masses of resource commonly called duck types in the kubernetes ecosystem, you know resources that are different but they kind of follow the same patterns, which we can treat similarly to how we treat go interfaces.
+00:30:59 [W] So this is basically just generating methods to satisfy those interfaces.
+00:31:03 [W] So once we have these API types to find next thing to do is to Define how we're actually going to talk to the external provider. So frequently, there's going to be a SDK for whatever provider you're talking to and you can just
+00:31:16 [W] and of look at the Go types are and how to authenticate and follow that pattern in your controllers in crossplane.
+00:31:26 [W] We generally like to separate our clients and controllers into two separate directories.
+00:31:30 [W] It's a little bit trivial in this case because our client is very small for GitHub, but you'll see in many other providers that will have all of our methods for translating between these ghosts trucks that we defined and the API type for
+00:31:46 [W] External provider also in this client directory, so to generate this.
+00:31:50 [W] I basically just looked at the Go GitHub repo here.
+00:31:53 [W] So we'll go ahead and open that up.
+00:31:58 [W] And here's the Godot for it and it basically gives you a convenient way to authenticate and you'll see that it just uses the general HTTP type to be able to authenticate and you just provide your access token.
+00:32:12 [W] So we've created this new client method here, which essentially just accepts an access token and it's going to give us back a type of GitHub client here.
+00:32:22 [W] So after we've defined how to connect to the external API, we actually want to use that in a controller so importantly we saw earlier and I believe it's still running over here that our controller basically continuously runs and output some information
+00:32:37 [W] And what it's doing is watching these API types that we've defined.
+00:32:42 [W] And so we have a single entry point is you generally will forego binary.
+00:32:46 [W] So let's take a minute to look at what we're doing here an important thing to realize is where heavily relying on controller runtime which basically gives you a general framework for running a bunch of controllers together and what they call a manager so some different options
+00:33:01 [W] Ends that you can supply here to the manager.
+00:33:03 [W] We're just saying the sink period so we're not configuring it too much.
+00:33:06 [W] But the important thing to note here is that we have the controller manager and then we're adding our apis to this game.
+00:33:13 [W] So right now that would be our provider config and our team resource and then we're doing our controller setup and then we're starting our manager, which is basically going to run all these controllers anything we provide in the setup here and keep those
+00:33:28 [W] And watching the resources and though it will be notified by the kubernative API server when events happen on those resources.
+00:33:37 [W] So the setup method this is just kind of a wrapper around some other set of methods and what it's doing is actually setting up these controllers and registering them with the manager.
+00:33:47 [W] So we're not going to look too much at the config set up today, which basically just watches provider configs and take some actions based on that essentially confirming that they're not in use when they're cleaned up because if you lost connection while you're still trying to reconcile a manage resource type like the
+00:34:02 [W] That would obviously be a bad experience. We're primarily going to look at our org setup method here, which is for our team and this is going to take us into our controller directory.
+00:34:14 [W] so in this setup method, you'll frequently see in a queue Builder project that someone has defined a reconciler and they're basically populating it with whatever Fields they need and then they're doing this new controller managed by and specifying the
+00:34:29 [W] Resource they want to watch instead here. We have a call to this manage dot new reconciler method.
+00:34:35 [W] So when I talked earlier about these different methods that were generated for our managed resource types, which are just all of our types that represent an external API having those methods allows us to use a generic manage reconciler which basically takes care
+00:34:51 [W] Of talking to the kubernetes components of your controller.
+00:34:54 [W] So obviously when a resource gets created you want to take action based on that and you may want to call different external methods based on the status of your really the specification of your resource in your kubernative cluster and then
+00:35:09 [W] Major reconciler takes care of a lot of that for you.
+00:35:13 [W] So Stephen. I know you have a lot of experience with writing kubernative controllers will look especially into the different implementations of the different methods that are part of the manage reconciler that we Define in crossplane runtime,
+00:35:28 [W] But you want to do you want to talk in general a little bit more about the difference between a generic kubernative reconciler and maybe a manager resource reconciler in crossplane.
+00:35:37 [W] Yeah, actually one of the things that really attracted me to Cross play in the beginning was that if you've ever read the control yourself, there's a lot of manual things you have to do in terms of reconciliation logging creating events, you know
+00:35:52 [W] We're in a lot of infrastructure software.
+00:35:53 [W] You just kind of repeat the same patterns over and over again, and actually as we walk through this will find out that there's a very structured way that crossplane does it that layers on top of kubernative controllers that makes it very easy, you know to understand the logic so I think that's good
+00:36:08 [W] Most important thing to understand is that this controller is basically a piece of software that's going to run in your cluster that when we look at that set up it basically when you bring it up it registers and says I want to listen to anything
+00:36:23 [W] That defines a team, right?
+00:36:25 [W] That's what the setup does right here.
+00:36:27 [W] You know, that's the most important thing because when you first look at this, there's like 15 different concepts that you have to understand but most important thing to understand is that you want to e c if you look at line 55 you're looking and you'll see this group version kind here. This is pretty common
+00:36:42 [W] Kubernative this is the you also see it like GVK in some of the source code and this is basically like a kind would be the team, you know, the version would be you know, the group would be it would be combination of you know hatched and you know
+00:36:57 [W] Get her bio and the version which is API version. Yeah.
+00:37:04 [W] So you'll see this a lot.
+00:37:05 [W] Yeah, you'll see this terms. You'll see these a lot in kubernative.
+00:37:08 [W] I remember the first time I did like when I was playing with customized it kept giving me GVK errors and I had no idea what those work. So to save you some pain that's this is what it comes from here.
+00:37:20 [W] here. Yeah. So that's basically at this this a core of this setup. There's a lot of things that have to be called here. But if you look at it, it says we're going to reconcile teams with an external connector, which means we're going to connect to the GitHub API and then you
+00:37:34 [W] With logger and recorder and these are nice Fields because basically this sets up all your logging and events.
+00:37:40 [W] Yeah, and that's basically yeah, so there's a lot here, but that's basically what this part is doing. You know, you're saying I want to subscribe to these events and I'm going to use this external API to manage it.
+00:37:50 [W] And I like these different methods that we have here these with methods which are basically saying I'd like to provide this kind of like customize option for this thing.
+00:38:00 [W] But if we actually look over to the new reconciler code here, there's a lot of sane defaults that we provide for you one of those being things like defaulting to that provider config that has the default name if one is not specified.
+00:38:13 [W] So we have a lot of different hooks to customize this behavior and if we scroll down here a bit, this is
+00:38:20 [W] Leave that the reconciled that you'd see a little more traditionally in a queue Builder controller or something like that.
+00:38:27 [W] You'll see we have some default Fields here things like setting finalizer, which you don't have to worry about it all when you're writing a crosswind controller because we'll take care of that. You can obviously provide your own API finalizer to do that another important one. I wanted
+00:38:43 [W] To point out here, which isn't going to be relevant for us today because there's not really connection information for a GitHub team.
+00:38:49 [W] But if you're provisioning a database or kubernative cluster or something like that, there's some connection information that you want to get back into your cluster so that you can reach out and communicate with that resource you've provision.
+00:39:00 [W] So we have a default API cgroup publisher, which is going to publish those secrets into the kubernative API and then, you know, you can run a deployment that consumes that either through an environment variable.
+00:39:12 [W] Durable or by getting that resource directly or you could say I'd like to ride my own secret publisher, which is going to you know, send these secrets to vaults or something like that.
+00:39:24 [W] So you can override any of this Behavior, but you're going to get a really good work in controller just by using the defaults here and then you can iterate on that.
+00:39:31 [W] So it's kind of zero to working controller as fast as possible. Yeah, and the secret propagation is really a great feature because it's very underrated like when you deploy a new system and you get some credentials
+00:39:42 [W] Back, how do you actually get that back to the user who requested, you know, like you give them a database and they're like well now I'd like to have the credentials and then usually somebody has to go log in somewhere and generate them or hook up, you know some external system. So it's really a nice feature to have
+00:39:57 [W] Of absolutely and you'll see here.
+00:40:00 [W] This is the new reconciler method that were running and we're passing in that controller manager and then our manage kind so that just Maps directly to what we're looking at here are controller manager and our manage kind and this is an important.
+00:40:15 [W] Thing about reconcile here and then refer to it slightly is that if you look at a classic, you know kubernative controller, they usually have a pretty light reconciler and then expect you to put all the logic in there and there's a lot of corner cases in logic that you
+00:40:30 [W] Think about when writing your old reconciler especially for like infrastructure tasks.
+00:40:35 [W] So this actually makes it a lot easier to go through the common patterns of managing and provisioning infrastructure.
+00:40:41 [W] So the reconciler is actually very powerful definitely and if you want to dive into some of the actual work that's happening here in the reconcile Loop, which we're going to get into a little bit more in a moment.
+00:40:53 [W] But this is your generic reconcile Loop that the controller manager is going to say, okay. This thing has registered for events that happened on tikv.
+00:41:00 [W] Teams every time I send an event I need to run this reconcile Loop.
+00:41:04 [W] So that's what's actually getting called. And we're just basically configuring this reconcile Loop in our controller.
+00:41:13 [W] so Stephen alluded to this a bit earlier but there's two main kinds of types that you need to satisfy to be able to run a manage reconciler the first being the connector and the second being the external the connector basically has a
+00:41:28 [W] Single method which just is connect and this is telling me how do I get this external struck which has our crud methods on it that are going to be called by our manage reconciler and then the external obviously is what's returned by the connect and has all those
+00:41:43 [W] It's defined on it.
+00:41:44 [W] So before we get into external, which is kind of the meat of how we talk to the external provider.
+00:41:49 [W] Let's look a little bit about the connect method.
+00:41:52 [W] So we've already alluded a little bit when looking at the API types to the fact that we use this provider config to get credentials to talk to an external API.
+00:42:02 [W] So you'll see that we have our provider config type here.
+00:42:06 [W] So this is referencing our apis directory that's even mentioned earlier and we're basically using our kubernative.
+00:42:13 [W] Client to be able to get that provider config.
+00:42:16 [W] So as I mentioned every managed resource has a provider config ref and we're using that here in the example. We were showing that provider config ref is being set by default for us.
+00:42:28 [W] I'm so this would use name default and I had already created provider conveying that last example, once it gets this provider config.
+00:42:36 [W] It's going to look at the secret reference on the provider config, which if I can go back to an example here. It's basically looking at this part of the struct.
+00:42:48 [W] and
+00:42:49 [W] it's going to be then get that secret from the kubernetes API. Our secret has our API token on it. And this is a bite slice here that we're converting to a string and we're passing that to the new client method that we defined earlier.
+00:43:04 [W] It basically takes the string and gives us a GitHub client in return.
+00:43:09 [W] Kind of moving some of this client logic which like I said is admittedly very small here out of our controller body is that it allows when you have many many controllers not have to duplicate all that code.
+00:43:22 [W] So basically we're just going to return from our connect method are external struck populated with our GitHub client, which is now authenticated.
+00:43:33 [W] So now's the real kind of meat of what we're doing when we talked to the external API and that's our current methods.
+00:43:41 [W] So we have observe create update and delete. So I guess it's not really Krug because we're using observe instead, but they basically get called in Fairly sequential order that you'd imagine and so when
+00:43:56 [W] Return this external struck. The managed reconciler is going to say, okay.
+00:44:01 [W] I see that you connected successfully and now I have this external type and I'm going to call these in a logical order.
+00:44:08 [W] So the first thing we're going to do is observe the resource and based on the result.
+00:44:14 [W] We get back from that we're going to take further action.
+00:44:16 [W] So if the resource was deleted in the kubernetes API, then we're going to call the delete method on the external that was returned.
+00:44:25 [W] And we'll skip over some of this other Logic for a moment.
+00:44:29 [W] If the resource does not exist, so if we observed in said hey, I couldn't find this in the external API.
+00:44:34 [W] We're going to call the external create method and do some operations.
+00:44:40 [W] And then the last thing that we're going to look at is is there resource up to date. So if the observation says hey this resource exists, but it doesn't match that spec that we were talking about earlier, which is our desired state of the resource.
+00:44:52 [W] Then we need to issue an update and it's going to call that update method that that you supplied.
+00:44:58 [W] So you saw that we skipped over quite a lot of the other things that are happening throughout this reconciler and that's kind of the benefit right? You don't have to worry about these until you get later down the line and maybe once
+00:45:10 [W] Custom behavior and they're doing things like publishing the connection or cleaning up the connection secret or doing things like initializing the resource and populating Fields that you know are set by the external provider
+00:45:25 [W] Or updating the status of the resource like showing us that it's synced, which we showed earlier when we were demoing.
+00:45:34 [W] All right.
+00:45:34 [W] So what do we actually put in these different methods that we were talking about?
+00:45:38 [W] So the first thing is our observe method here and we've defined our GitHub client which has a team service which has all of the different methods that we're going to want to call.
+00:45:49 [W] So within our observed method since we've embedded this GitHub client in our external struct were able to call any of these methods that we want.
+00:45:58 [W] So you'll always want to make sure that you have the information necessary to make all of the API operations that you're going to do present on the API type that you've defined.
+00:46:09 [W] So here we're going to get our team from the API.
+00:46:14 [W] So you'll see that we're providing that org and the name of the resource, which we want to also represent the name of the team on GitHub. And if we get an error back from the GitHub API, we're going to go ahead and say we're
+00:46:27 [W] go ahead and return our external observation, which is that struck type that the manage reconcile is going to check and you'll see it has these three Fields here resource exists resource up-to-date and connection details.
+00:46:39 [W] They do pretty much exactly what you think if the resource exists is false, then it's going to call the create method if the resource up to date is false.
+00:46:47 [W] Date method if connection details are populated and it's going to create a connection secret with those details.
+00:46:54 [W] So here we're saying it doesn't exist.
+00:46:56 [W] So we need to actually create it.
+00:46:59 [W] So let's go ahead and follow this Branch a little more before we continue down the observe method So eventually the manage reconciler is going to get to the create method and say I need to call this because the resource doesn't exist yet and you'll see that we're once again using
+00:47:14 [W] Steam service from the GitHub client to create our team with the configuration that we've defined in our API type.
+00:47:22 [W] And based on the result we get back from that. We return an external creation, which once again allows us to supply additional connection details if needed and we also return an error.
+00:47:31 [W] So if the manage reconciler gets an error back, it's going to say OK. I see that I tried to create this resource, but it didn't work.
+00:47:37 [W] So I'm going to try again in a little bit and some of this timing and the delays that happens between reconciles.
+00:47:43 [W] Those are also defaults that we set that seem to be common accepted patterns for the manage resources that crossplane provides, but you can also
+00:47:52 [W] Override those just like any of the others with providing your default weight and that sort of thing.
+00:47:58 [W] And I want to come at something here this pattern here because usually when you write a lot of infrastructure software usually have like if then statements here when you're comparing things one of the nice things about this is that this returns immediately and puts it in the reconcile Loop. There's times if you're provisioning
+00:48:14 [W] Like VMS that might take you know, 20 30 60 minutes to do something this you could actually keep observing it and you know and come back with different kinds of status like other tools will just block a lot of times and not return.
+00:48:27 [W] Where is this usually you have this like reconciliation Loop thing where it can keep just checking in the background for you.
+00:48:32 [W] So that's very nice. So this is kind of a different pattern if you know spent a lot of your career doing if exist then this this is a slightly different but
+00:48:43 [W] It makes a lot of sense. Once you understand how crossplane Works absolutely and why are things you mentioned? There is something I really like to point out the the packet.
+00:48:53 [W] Well, I guess equinix metal now provider is maintained by the the packet equinix metal team there provisioning of their bare metal instances actually has different stages of provisioning and since we have this status portion of our
+00:49:08 [W] API types here. We have the node ID, which will show actually populating and just a moment.
+00:49:13 [W] But in that status we have I think a stage filled for their bare metal device type and we update that as you were saying as it goes along so you can kind of monitor the, you know success of your resource provisioning and it actually provides you a
+00:49:29 [W] Are bare metal device type and we update that as you were saying as it goes along so you can kind of monitor the, you know success of your resource provisioning and it actually provides you a percentage value.
+00:49:40 [W] So it's really nice to do your Kube control described and CEO. My VM is 77% you know provisioned and go from there.
+00:49:49 [W] Not all API types are that generous with the information they give you but that's one of my particular favorites.
+00:49:57 [W] So one of the more tedious Parts I'd say of the manage reconciler is checking whether the resource needs an update and there are a few tricks to get around this we've seen folks actually generate Json strokes and then use libraries to kind of dip them here.
+00:50:12 [W] We've only defined two fields in R-Spec besides the org which has to be up-to-date essentially because we're providing that is the way to call the methods, but here we're basically just saying if we have provided a description in our
+00:50:26 [W] Resource and if the team description which is the the representation we get back from GitHub is nil or the team description does not equal the one that we have.
+00:50:38 [W] We want up-to-date to be false.
+00:50:40 [W] And then we do that same check for the our privacy field here and then based on that we're going to return whether the resource is up-to-date if we return false there then we're once again going to call the update method which is going to use this edit.
+00:50:56 [W] Call here to be able to edit our team and set it to the fields that we want.
+00:51:01 [W] Once again, you can provide your connection details.
+00:51:04 [W] We actually don't need to do that here because once again, we don't have any connection details.
+00:51:09 [W] SLI when you delete a kubernative resource, if it has a finalizer on it, which is kind of like an annotation or label up there at the top and the metadata it is going to hang around even though you've deleted it until that finalizer gets removed.
+00:51:23 [W] So cross plane is going to go ahead once again, you can override this but it's going to go ahead and put a manage resource finalizer on your resources.
+00:51:30 [W] And when you delete them in the kubernative API, it's basically going to keep them around until it can guarantee that that resource was deleted externally and so what
+00:51:38 [W] It's going to do is it's going to check for the deletion time stamp on your kubenetes resource, which gets set when you issue your Kube control.
+00:51:45 [W] delete command, and then it's going to call the delete method that you've defined in your controller in this case.
+00:51:51 [W] delete team by Slug and if that returns successfully then it's going to say okay. I can now see that the resource no longer exists and I'm going to remove that finalizer which then allows kubernative to garbage collect that resource.
+00:52:06 [W] So I think that was a pretty good overview of what you can do here with the controller and we've got a pretty full working controller here with not too many lines of code and a lot of it boilerplate that we just populated ourselves.
+00:52:21 [W] Delete command and then it's going to call the delete method that you've defined in your controller in this case.
+00:52:23 [W] delete team by Slug and if that returns successfully then it's going to say okay. I can now see that the resource no longer exists and I'm going to remove that finalizer which then allows kubernative to garbage collect that resource.
+00:52:38 [W] So I think those are pretty good overview of of what you can do here with the controller and we've got a pretty full working controller here with not too many lines of code and a lot of it boilerplate that we just populate ourselves.
+00:53:28 [W] We actually maybe change a little bit the behavior here and try and rerun it again and we can see how this helps us and how this continuous reconciliation works.
+00:53:39 [W] So one of the things that I pointed out earlier, so we have this node ID field, but we don't actually set the node ID anywhere in our controller and if we looked at the JAMA lout put here, you'll see that are at provider just empty and
+00:53:55 [W] I´d just because sounds interesting.
+00:53:57 [W] So, you know to populate our status. We usually do that in the observe method here. So
+00:54:05 [W] We can do that by just saying okay, so if we got to hear our team exist, so we'll say cri-o.
+00:54:22 [W] And our node ID.
+00:54:26 [W] Is equal to that of the team actually hit caps lock there.
+00:54:32 [W] team dot node ID
+00:54:37 [W] All right.
+00:54:38 [W] So let's actually do a check on that. Make sure it's not nil.
+00:54:44 [W] Does not equal nil then we'll go ahead and set that and I'm actually just going to go ahead and show some of the methods that we Define to also make this development experience really nice for you.
+00:54:55 [W] So when you clone from that provider template, we have a make file in here just have some really simple targets.
+00:55:01 [W] I like to do this macron one, which is going to regenerate your crd s apply them to the cluster. In this case. We have no changes and it's going to start your controller.
+00:55:11 [W] So if I hop back over here, I'll go ahead and stop my controller do make run again here.
+00:55:17 [W] That and I'm actually just going to go ahead and show some of the methods that we Define to also make this development experience really nice for you.
+00:55:23 [W] So when you clone from that provider template, we have a make file in here just have some really simple targets.
+00:55:29 [W] I like to do this macron one, which is going to regenerate your crd s apply them to the cluster. In this case. We have no changes and it's going to start your controller.
+00:55:38 [W] So if I hop back over here, I'll go ahead and stop my controller do make run again here.
+00:55:45 [W] We see it's using go generate and it's just using my Cube config to go to talk to the cluster.
+00:55:49 [W] So we actually have cluster admin here, which is a little bit different than when we showed earlier installing a provider.
+00:55:55 [W] So it looks like our external resources up-to-date which we would expect and let's see now we have that node ID present in our at provider so you can provide any information that the API gives you back in this
+00:56:09 [W] But one of the things I want to do is show how when you modify a resource outside of your source of Truth, which in this case is your crossplane kubernative cluster that cross one is going to make sure it drives you back to this specification specification that
+00:56:25 [W] Information that the API gives you back in this field, but one of the things I want to do is show how when you modify a resource outside of your source of Truth, which in this case is your crossplane kubernative cluster
+00:56:40 [W] So something we might see is someone going into a GitHub team and taking the Privacy from secret to closed which is the two different values. They give you closed basically just means it's visible.
+00:56:52 [W] So let's go ahead and hop over to our Cube Khan in a
+00:57:00 [W] org here
+00:57:03 [W] and modify this little bit and see how crossplane drives it back.
+00:57:08 [W] And this is a bit of a trivial example. But Stephen have you seen any kind of like different examples in your experience that are a little more powerful and demonstrating this functionality. Well, I think this is good just for compliance purposes, right like the
+00:57:22 [W] Like immediately like one of the biggest concerns we have is that people are making changes manually. Like they're adding users are changing permissions and we want to make sure that if that happens that gets corrected pretty quickly and thanks to like having
+00:57:37 [W] Kubernative you could actually see what's happening, right you could be notified.
+00:57:41 [W] So I think that's probably one of the best use cases for it.
+00:57:47 [W] You know this constant making sure that what your desired state is is actually out there for sure.
+00:57:52 [W] I totally agree with that and a nice thing is we're using the default wait here which basically checks every minute to make sure that things are up to date you can obviously configure that to what you see fit.
+00:58:04 [W] So if you said, you know, I need to be more stringent or I really only need to check this resource every so often, you know once a day maybe and see if it's been updated that works for you as well.
+00:58:16 [W] Basically, if you modify the resource in the kubernative cluster, then that's going to be an immediate action taken, but I'm going to go ahead and set this to visible and save the changes and we should see that this is now visible. You'll no longer see that secret if
+00:58:31 [W] Here are last status here was external resources up to date.
+00:58:19 [W] But if we actually wait a few minutes you can see our time here.
+00:58:23 [W] So we should be coming back on a reconcile again.
+00:58:25 [W] We actually set that field back to secret and will see that updated.
+00:58:32 [W] and while we're waiting on that we can also do the opposite right and modify these fields in our resource and then see that propagated to the external resource, which will show momentarily
+00:58:47 [W] Alright, so there we see that we got a successfully requested update of external resource.
+00:58:53 [W] This information is just because we're actually printing out the struct for you know a demo purpose here, but we should see if we hop back over here to the org.
+00:59:04 [W] That it's once again in secret mode.
+00:59:06 [W] So it's basically making sure that you stay compliant and this gets really powerful and this is one of the benefits of standardizing on that kubernative API when you leverage other projects as well.
+00:59:15 [W] So a demo we like to show a lot is integrating with Opa and one of the examples we've shown there as creating a database that you know, you want to have a limit on the size of a database someone can create so you don't have you know, gcp Cloud SQL instance.
+00:59:29 [W] that's 500 gigs or something like that costing you a lot of money in a development environment.
+00:59:33 [W] It's one of the benefits of standardizing on that kubernative API when you leverage other projects as well. So a demo we like to show a lot is integrating with Opa and one of the examples we've shown there is creating a database that you know, you want to have a limit
+01:00:22 [W] Or something like that and put limits and then have those checked in your resources because once you have everything defined as a kubenetes resource, you can integrate with any project that uses kubernative API another place we've seen this is backing up your
+01:00:38 [W] A project like Valero you can just save your infrastructure and restore it into a new cluster and get crossplane managing it continuously there as well.
+01:00:48 [W] So let's try one other change here.
+01:00:50 [W] I want to go into our team diamo and let's just change our description.
+01:00:55 [W] So right now it's our description and we'll say some other description if I can type here and we'll save that and I'll go back to the terminal and like I said when you change the speck in your kubernative
+01:01:10 [W] Immediate action taken on that behalf because the controller is getting an event from the kubenetes API server. So we'll say examples or team and we should see that that immediately request an update of an external resource.
+01:01:23 [W] Samples or team and we should see that that immediately request an update of an external resource.
+01:01:24 [W] So will quickly see that propagated now, it says some other description and we can also manage the deletion of our resource.
+01:01:33 [W] So I'll do okay delete Team all here and you'll see that we successfully requested deletion of external resource and it's actually going to reconcile again here in a moment and make sure that that's actually been
+01:01:47 [W] Eated externally and then allow this resource to be cleaned up.
+01:01:53 [W] But if we go and refresh here, we're going to find that this team no longer exists. So you could really do a lot of management. The GitHub API has a lot of different endpoints.
+01:02:03 [W] I want to things that we've looked at doing for the Crosspoint organization where we frequently spin up new repositories with similar permissions. We've talked about having a crossplane cluster basically manage those for us and then having a gitops pipeline, that's nobl9
+01:02:17 [W] Some of our, you know Cube control changes basically through it that create new repositories update teams update permissions Etc.
+01:02:27 [W] If we go back over here, you'll see that our team has been deleted.
+01:02:32 [W] and
+01:02:35 [W] see no resources found for our team.
+01:02:39 [W] So we've cleaned up all of our resources.
+01:02:41 [W] So I just wanted to summarize here.
+01:02:44 [W] The CRTs that could be applied to your cluster.
+01:02:47 [W] So we take your infrastructure and we model It Whatever features and parameters that you want to manage whatever things you want to look at and those automatically get generated in to see our Deeds that you apply to your cluster.
+01:02:59 [W] also have multiple providers that you can talk to on the back end with different kinds of credentials. If you want to segregate out which accounts can do what different parts of infrastructure. So that's the first part to finding our API then we Define the controller.
+01:03:14 [W] And the controller has three main functions. One of those is to talk to the kubernetes API and look for events for our type. Our team. The next thing is the connector where it actually talks and creates a connection a
+01:03:30 [W] Hub where it's going to talk to the API, and then finally we have our managed events, right?
+01:03:33 [W] We observe the external resource and based on what happens when external resource, we either create update or delete the resource. So these are the core parts of the controller and you can see here.
+01:03:46 [W] This is about just a little over two hundred lines and we have a controller that's basically managing the entire lifecycle of an external resource.
+01:03:55 [W] Pretty much within you know 60 seconds of any change that it observes on the outside.
+01:04:01 [W] So that's kind of the end of our Deep dive into this controller and then it's going to talk about some other topics related to cross the line.
+01:04:11 [W] Okay.
+01:04:12 [W] So now that we've built our provider out.
+01:04:15 [W] like to show how we can package it up push it to a registry and install it just like we did with provider AWS before we did this tutorial. So we have some helpful commands here.
+01:04:24 [W] And to start off we need to build the controller binary which is what's going to run in our pot and manage our crd s package that into an image and then push it then we're going to push our actual package image which has the metadata and instructs crossplane how to install the CRTs.
+01:04:39 [W] To start the controller.
+01:04:31 [W] So to start off.
+01:04:33 [W] Let's go ahead and make this version 0.1 0.1.
+01:04:36 [W] And these are just some helpful make commands to make it easier for us to go through this process.
+01:04:42 [W] So we're going to build the go binary. We're going to create the image and then push it and we're going to use the crossplane CLI to actually push our specialized. Mh4 our provider here, which has some information that cross plane is going to look at and then unpack the
+01:04:57 [W] Appropriately and so we're going to want to use this exact controller image that we built. So I'll specify here that we want V 0 dot 0 dot one.
+01:04:52 [W] Okay, so switching over to our terminal first thing we need to do is make build and you'll see that we are running the build their and while we're doing that we can actually go ahead and go into the package directory and start the build of our other
+01:05:07 [W] Have a reference to this one which will exist after we push it.
+01:05:05 [W] So it looks like that build a still going.
+01:05:07 [W] So let's go ahead and build our package image.
+01:05:10 [W] So we have some helpful commands and the Crosspoint CLI here we can say create K crossplane build provider. And since we're in this package directory, it's going to go ahead and look at the cross find out you animal and know how to produce
+01:05:25 [W] All right.
+01:05:23 [W] So if we look we should see that we now have this x package directory, which is basically a specialized tarball which isn't oci image that can be pushed and the crossplane CLI is going to know how to do that in format it correctly.
+01:05:34 [W] But before we do that, let's go ahead and finish making our image here.
+01:05:40 [W] So that was a pretty quick image build and I'll go ahead and make push that make image. Push I believe is the command we want.
+01:05:51 [W] All right. So it looks like that's been pushed up with Casey provider GitHub controller or referencing that in our provider package here so we can now K crossplane push provider and since we're in this package directory, there's only one
+01:06:06 [W] All right, so it looks like that's been pushed up with Casey provider GitHub controller or referencing that in our provider package here so we can now K crossplane push provider and since we're in this package directory, there's only one
+01:06:30 [W] I'm it's going to know to use that one and we just need to give that the tag we want so hashed Dan Casey provider.
+01:06:38 [W] GitHub and we want that version and we should see that this is pushed successfully and we also have a con cluster already running here.
+01:06:51 [W] Let me scoot this over a bit and we can look at what we have.
+01:06:58 [W] I already installed cross plan.
+01:07:00 [W] So we have the crossplane pods running and let me go ahead and just close out this window.
+01:07:05 [W] So it's a little easier to see so we have our crossplane pods running and just like we did before the tutorial to install provider AWS. We now want to do the same thing with provider GitHub.
+01:07:16 [W] So we can do K crossplane install provider and I'll specify that image that I just push which was hashed an Casey provider GitHub.
+01:07:30 [W] and we want V 0 dot 0 dot 1
+01:07:33 [W] All right. So it looks like that was created will take it just a moment to get installed.
+01:07:37 [W] So you'll see it doesn't have a status yet.
+01:07:40 [W] But if we keep watching this will actually see that it does come available.
+01:07:44 [W] So it's installed.
+01:07:45 [W] It's not healthy yet.
+01:07:46 [W] We check again.
+01:07:47 [W] It looks like it is healthy now and we can see that cross plane has looked into the contents of our package and it's gone ahead and started our controller for us.
+01:07:57 [W] We can also see that we've installed cri-o is they were specified in our package.
+01:08:05 [W] So here we have our provider config provider config usage and our team cri-o.
+01:08:18 [W] GitHub or again?
+01:08:24 [W] I want to make sure that that team that we previously created has been cleaned up.
+01:08:28 [W] It looks like it has so we don't have any team here.
+01:08:33 [W] So once again, I'm going to create my provider config which has my access token in it.
+01:08:38 [W] And so that's its Secrets config diamo.
+01:08:42 [W] Alright, so we've created my provider config and this is the same workflow.
+01:08:45 [W] We are going through with Dev, but now we've been able to install this Casey provider GitHub, which also allows other folks be able to consume this provider and us to be able to distribute it easy.
+01:08:54 [W] So I'm going to go ahead and create our team again.
+01:09:00 [W] That was an example zorg team.
+01:09:04 [W] And we should be able to K get team.
+01:09:08 [W] And see that it is synced and if we go back over to our GitHub org.
+01:09:14 [W] We now have our team here again.
+01:09:17 [W] GitHub AWS and gcp installed and you can easily reproduce that across kubernative clusters after you've installed cross blind.
+01:09:08 [W] All right, so we have our team President.
+01:09:11 [W] We have our pods running and we have our crd s installed in the cluster.
+01:09:15 [W] And now what we want to do is add more cri-o s and update our controller push a new version of it to our registry install it and have crossplane updated in place without modifying our existing infrastructure.
+01:09:27 [W] So we want this team to stick around but we want to add new functionality as well.
+01:09:30 [W] So I've added a new type here and memberships type which basically allows us to specify an organ team in a
+01:09:38 [W] And Associate a specific user with that team that we created in the last step.
+01:09:43 [W] for example, and so what we want to do, I've also added a new controller to manage this and what we want to do is publish a new controller image as well as a new package image.
+01:09:56 [W] So you'll see I've updated to V 0 dot 0 dot 2 here and we'll also want to make sure that our make file commands here are going to update as well.
+01:10:07 [W] So I'll go ahead and run those again.
+01:10:10 [W] We need to rebuild our binary.
+01:10:12 [W] And it'll take just a moment here.
+01:10:16 [W] Alright, so it looks like that completed next thing we want to do is do our make image and that should go pretty fast since we're using a lot of the same layers here.
+01:10:28 [W] See, I've updated to V 0 dot 0 dot 2 here and we'll also want to make sure that our make file commands here are going to update as well.
+01:10:25 [W] So I'll go ahead and run those again.
+01:10:28 [W] We need to rebuild our binary.
+01:10:31 [W] And this will take just a moment here.
+01:10:34 [W] Alright, so it looks like that completed next thing we want to do is do our make image and that should go pretty fast since we're using a lot of the same layers here.
+01:10:47 [W] I do have a little bit of latency.
+01:10:49 [W] It looks like on my side but shouldn't take too long.
+01:10:54 [W] Obviously. It would be a good thing to cash some of these module dependencies here in the future.
+01:11:02 [W] And once our image finishes building we can go ahead and do make push make image push think I forgot that one twice now.
+01:11:11 [W] Alright, so that's going to push that up to our registry with v 0 dot 0 dot 2, and the last thing we're going to want to do is rebuild our package image here to point to that.
+01:11:27 [W] And I wish my network was a little faster, but it's almost done. It looks like.
+01:11:35 [W] All right, let's go into that package directory.
+01:11:40 [W] Okay, crossplane build provider.
+01:11:43 [W] Once again, we see it here you'll see that the digest has changed and we're going to go ahead and push that up to the registry. So push provider and this time it's going to be hashed and Casey provider GitHub.
+01:11:58 [W] Casey provider GitHub and V 0 dot 0 dot to so we're going to match that controller image and we should see that pushed up successfully.
+01:12:10 [W] And now what we want to do is actually update our provider that exists in the cluster.
+01:12:17 [W] So let's look at our provider so we have it here and we're using that 0 dot 0 dot one image.
+01:12:26 [W] So let's go ahead and edit that.
+01:12:29 [W] And we'll bump it too.
+01:12:32 [W] 0.8 0.2.
+01:12:41 [W] All right, and we should see if we get that provider package again.
+01:12:44 [W] It's healthy and true and we should actually see that the controller has been switched out here.
+01:12:50 [W] So you'll see the old one is terminating you'll see this new digest actually present. So that matches our image digest and we should see that our new controller is running we should see that we have all the same cri-o s+ our
+01:13:05 [W] just actually present so that matches our image digest and we should see that our new controller is running we should see that we have all the same cri-o s+ our membership one, so there will
+01:13:21 [W] So there will see our membership ci/cd and we should also still see that our team exists and that's true.
+01:13:27 [W] So our team exists. It's still synced.
+01:13:29 [W] We didn't delete that or clean it up and we've automatically upgraded our provider here to pick up our new versions.
+01:13:38 [W] Okay. So the last thing we want to look at today is how we can compose these manage resources that we've created for this provider.
+01:13:45 [W] We're going to show a pretty simple example, but we have a another type of package and crossplane other than provider and that would be the configuration package type.
+01:13:54 [W] You can see here you can declare dependencies on providers and what a configuration package does.
+01:13:59 [W] is it combines different infrastructure Primitives, in this case, we're going to use our team and our membership into a higher level object. This is kind of a trivial.
+01:14:08 [W] Sample, but you can imagine that if you were using gcp or AWS or Azure, and you wanted to define a VPC and then put an RDS instance and that and also an e KS cluster and have those all wired up and present that to
+01:14:23 [W] Within your organization as a simple abstraction.
+01:14:26 [W] This could be really useful the other nice thing about this is the ability to declare dependencies on providers. So you can imagine if you are creating a network database and cluster abstraction that you could declare dependencies on three different providers. Have them all installed
+01:14:41 [W] Wait what we call a composite resource definition which declares the schema.
+01:14:33 [W] This looks a lot like a CRT.
+01:14:34 [W] In fact actually renders out of cri-o.
+01:14:58 [W] Compositions that satisfy a composite resource definition or xrd as we call it for short and these basically tell how a abstraction is satisfied.
+01:15:11 [W] So in this case, we're going to satisfy it with a GitHub team and a GitHub membership, you know in the in the more complex case you could have different Cloud providers backing a single abstraction or you could have different configurations
+01:15:26 [W] Here I'm praying and in cluster all these sorts of variations that can satisfy definition really allowing you to Define your own platform and your own console for consuming resources, so we can package these up just like we did a provider
+01:15:38 [W] So we can package these up just like we did a provider and push them to a registry and also be able to install them and when they're installed there are going to automatically do things like check the crossplane version make sure all dependencies are there install dependencies if they're missing Etc.
+01:15:44 [W] So let's go ahead and do that.
+01:15:45 [W] So I'll go into the configuration directory and you'll see this is a lot like how we package the provider. So we'll do K crossplane build configuration.
+01:15:59 [W] And that'll build our configuration.
+01:16:02 [W] Once again, we see RX X package here.
+01:16:04 [W] I called this our source control platform as a service.
+01:16:07 [W] So let's go ahead and also push that so we'll say k crossplane push configuration.
+01:16:15 [W] And we'll call it Source control pass.
+01:16:21 [W] Troll has the 0 dot 0 dot one.
+01:16:26 [W] once again, this is going to put you to the registry.
+01:16:30 [W] And once that completes remember that we do have provider GitHub already present here.
+01:16:36 [W] So it's going to see that that provider has already been installed and won't have to do any extra installation.
+01:16:42 [W] It'll just bring these composite types that we were talking about so we can go ahead and K cross plane.
+01:16:49 [W] install configuration
+01:16:53 [W] and I'm just going to copy paste this in.
+01:16:59 [W] And now we can do things like look at our configuration.
+01:17:02 [W] Extra installation.
+01:17:04 [W] It'll just bring these composite types that we were talking about so we can go ahead and K cos plane.
+01:17:11 [W] Install configuration and I'm just going to copy paste this in.
+01:17:20 [W] And now we can do things like look at our configuration.
+01:17:23 [W] So you have versions using it's already installed and healthy and what we should see is the xrd and composition. We installed are now present in the cluster the xrd actually creates other crd s for us to be able to actually create instances of this
+01:17:47 [W] actually create instances of this abstract type so we should see that there is a
+01:17:56 [W] User teams crd here and I can now create instances of it.
+01:18:00 [W] So let's look at what an instance of that might look like if we go down. I've created an example here.
+01:18:05 [W] So here we're going to create a user team.
+01:18:07 [W] We want it to be called user team and we're saying we want to in this Cube Khan in a or and we're going to say we want users Stephen D Borelli in it.
+01:18:15 [W] So this is actually going to create a user team team as well as ADD Stephen to that team and behind the scenes. It's going to render out a
+01:18:26 [W] And tinea once again kind of a trivial example, but it does show the power of this model here.
+01:18:34 [W] All right, so examples I need to get out of this directory.
+01:18:37 [W] Okay, apply - F examples org user team.
+01:18:46 [W] All right, and if we actually look at the rendered out resources, this should take a minute for it to become ready, but we can look at the user team itself, which is what the the user is interacting with.
+01:18:57 [W] So a developer who just wants a team with the user so they'd only care about the status of this but being infrastructure aware.
+01:19:05 [W] We are going to look at the actual rendered out resources.
+01:19:08 [W] It looks like our team has now become ready and let's see if our membership has as well.
+01:19:13 [W] I'm ready and if we go over and look at our Cube Khan in a org.
+01:19:19 [W] We should see that our user team is present here and you'll see that both Stephen and I are in it and we have the description that we defined and that's a good thing to point out. There is in the composition you can have arbitrary mappings from the
+01:19:34 [W] Base resources you can also have the resources reference each other.
+01:19:27 [W] So here we're saying please use the same team that's composed with me. So you can kind of resolve those references automatically. You can also set defaults.
+01:19:36 [W] So for instance, we're not exposing the description and we're just saying, please always set it to a composed team and you could decide if you wanted to expose more or less in the abstraction and also make parts of that optional or not.
+01:19:51 [W] For joining us today as definitely a blast to go through actually implementing a kubernative controller for crossplane.
+01:19:53 [W] Please feel free to join us in the crossplane slack. You can use this link here slack that crossplane dot IO set up an account and we'd love to chat with you and will also be in the chat here for the presentation.
+01:20:05 [W] So if you have any questions or thoughts or want to talk to us afterwards, please feel free to let us know and we'll stick around for any questions you may have. Thanks for joining us for today.
+01:20:16 [W] Yes, thank you for joining us.

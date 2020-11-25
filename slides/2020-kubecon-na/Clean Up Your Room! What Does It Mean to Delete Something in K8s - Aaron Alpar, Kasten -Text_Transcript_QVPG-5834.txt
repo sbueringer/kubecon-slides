@@ -1,0 +1,259 @@
+﻿Clean Up Your Room! What Does It Mean to Delete Something in K8s: QVPG-5834 - events@cncf.io - Tuesday, November 17, 2020 1:52 PM - 37 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, welcome to clean up your room.
+00:00:02 [W] What does it mean to delete something in cakes today?
+00:00:06 [W] I'm going to talk about everything.
+00:00:07 [W] delete how to delete things and kubernative and why some things get deleted and others don't my name is Aaron alpar.
+00:00:17 [W] The cloud native data management company we deal with data management for Disaster Recovery as well as cluster migration.
+00:00:25 [W] My background is an engineer is mostly in custom database implementations domain specific database database implementations for order matching dating websites biological analysis and geodesics.
+00:00:41 [W] Domain-specific database database implementations for order matching dating websites biological analysis and geodesics.
+00:00:32 [W] So today I'm going to be talking about delete which can be difficult specifically.
+00:00:39 [W] I'm going to be talking about what properties on a resource can govern deletion the two things I'm going to focus on are finalized errs and own a references and I'll get into details on how these two things can affect.
+00:00:52 [W] Deletion of objects within kubernative.
+00:00:54 [W] He's going to demonstrate how its works and this is going to be a short presentation.
+00:00:59 [W] So I have 30 minutes plus QA.
+00:01:02 [W] So the goal here is to inform Inspire and make you dangerous.
+00:01:07 [W] I encourage you to take what you learn here and experiment with it on the test cluster.
+00:01:14 [W] So kubernative has a lot of commands course.
+00:01:19 [W] I'm going to be focusing on delete. I'm going to be using
+00:01:22 [W] In for kubeacademy commands throughout this presentation.
+00:01:26 [W] I'm going to be using Create get patch and delete to keep things simple.
+00:01:30 [W] All of my examples are going to use config maps and the entire presentation is basically going to be presented as a series of shell commands.
+00:01:38 [W] So the idea is to give you the commands show you how they work.
+00:01:46 [W] are worth are repercussions. Our results are and to give you some examples that you can take back and
+00:01:52 [W] try for yourself.
+00:01:53 [W] So here's the basic.
+00:01:56 [W] Following an onboard the unbolted letters here.
+00:02:01 [W] You can see I've got a could cuddle create config map my map.
+00:02:04 [W] This is going to create an empty config map.
+00:02:08 [W] I can then get that.
+00:02:10 [W] config Matt to prove that it actually exists.
+00:02:12 [W] I can then delete that config map and then I can attempt to get it again and I can see that I get a 404 back on that last Kudo command, which means that it's not found.
+00:02:25 [W] This is the basic.
+00:02:26 [W] Delete. It is very simple.
+00:02:27 [W] We start off with Kudo create which creates a live object.
+00:02:32 [W] I then perform a coup couple delete which deletes the object and basically the final State the state diagram.
+00:02:39 [W] This is a this is a state diagram.
+00:02:41 [W] I'm going to have one more of these within the presentation to basically explain to you how finalizes work so finalizer finalized others are
+00:02:54 [W] versus on our finalizes our keys on resources that control their garbage collection finalizes are keys that are designed to be used by controllers to tell
+00:03:09 [W] Cleanup operations have to be performed before the resources removal.
+00:03:11 [W] They are they are very simple. They do not necessarily they do not necessarily point or name code that needs to be executed.
+00:03:23 [W] They're just a list.
+00:03:25 [W] There are certain dead finalized errs, that can prevent deletion dead fi eliezer's are basically finalizer strings that the controller does not understand.
+00:03:36 [W] And does not know how to deal with I'll be talking about those knowledge if I eliezer's is particularly useful and when you start to get into specifics of deleting objects knowing which finalizer Keys
+00:03:52 [W] In what controller actions on deletion can be very helpful in debugging why some objects don't get deleted.
+00:03:49 [W] I'm going to start off this demo basically with a custom config map which has no properties but contains a finalizer finalized errs are on the metadata of the object.
+00:04:04 [W] App, which has no properties but contains a finalizer finalized others are on the metadata of the object.
+00:04:07 [W] They are a list of strings in this case.
+00:04:09 [W] I am adding a kubernative finalizer to this object kubernative finalizer is a dead finalizer for config. Matt config map resource controller doesn't understand what to do with this
+00:04:24 [W] Config map resource controller doesn't understand what to do with this is the least as far as I know kubernative finalizer is actually used on namespaces.
+00:04:34 [W] So this is going to produce some interesting results.
+00:04:37 [W] So here I'm going to create this config map.
+00:04:42 [W] With the finalizer here, you can see that the finalizer has been created.
+00:04:48 [W] I'm done going to attempt to delete that and here let me show you this in code what actually happens.
+00:04:56 [W] if I show up
+00:05:09 [W] here I can create that.
+00:05:13 [W] And here I'll get the config map.
+00:05:21 [W] Show you that it actually exists and we can take a look at the content here.
+00:05:26 [W] I'm using kubernative 1 8 so I get manage Fields.
+00:05:31 [W] I've taken these out of my demonstrate My Demo slides to keep the slide short as you can see here toward the top of the object.
+00:05:39 [W] I've got my finalizer and if I go ahead and attempt to delete that
+00:05:51 [W] Kubernative is going to tell me that the object has been deleted.
+00:05:54 [W] It hasn't been deleted in a traditional sense.
+00:05:58 [W] Here, I'll go ahead and I'll background that task.
+00:06:02 [W] And I'll go ahead and get that object again, and we'll see that it has been modified specifically. The deletion time stamp has been added to the object.
+00:06:15 [W] So here I've created a config map with a finalizer on it.
+00:06:18 [W] I've attempted to delete it and what's happened in actuality is the objects been updated with the deletion timestamp. The deletion timestamp kubernative is added that because it seemed that the object has
+00:06:32 [W] eliezer's and it's put it into a read-only state the deletion timestamp signals at this object can only be read with the exception of removing finalizer Keys updates to the final Wiser's so
+00:06:48 [W] Kubernative is added that because it seemed that the object has finalized errs, and it's put it into a read-only state the deletion timestamp signals at this object can only be read with the exception of removing finalizer Keys updates to the
+00:07:03 [W] The delete will basically hang in the background until I actually go ahead and edit that object.
+00:07:11 [W] Go ahead at this.
+00:07:19 [W] And I'm going to remove the finalizer and go ahead and write that and we'll see what happens.
+00:07:29 [W] It can fit tells me the config Maps been edited. I remove the finalizer key and notice the leat has continued when I go back and try to get that config map. Once again, it's not found so
+00:07:53 [W] So just as I showed you I created the I created the config map with a finalizer the deletion timestamp.
+00:08:01 [W] I tried to delete that in actuality. It got updated the deletion timestamp got added to it and here's a demonstration of using the coop cuttle patch command if I want to delete that
+00:08:16 [W] Is basically patch it on the command line to remove the fine eliezer's in which case the deletion that I had before running in the background will complete and the object will be deleted when I attempt to get
+00:08:31 [W] Up, it will be gone.
+00:08:19 [W] Here's a state diagram for finalization.
+00:08:23 [W] So if an object has a finalizer on it and you tempted to lead it, it will remain in finalization until the controller's remove the finalizer keys or the finalizes are removed by KU cuddle.
+00:08:37 [W] Once that finalizer finalizer list is empty.
+00:08:41 [W] The object can actually be reclaimed by kubernative. He's once it's empty. It will be put in a queue to
+00:08:47 [W] really be deleted from the registry.
+00:08:54 [W] Here's basically a slide that says what I just said keep in mind finalizes or just keys.
+00:09:00 [W] They should be managed by the controller's but they're not always managed by the controller's especially in the case of dead finalizes. The I just showed you here are some common finalizes that you probably seen at least the ones I certainly come across the most often
+00:09:16 [W] We see protection finalized errs.
+00:09:16 [W] there. They are there to govern the deletion of the resources that are in the back of kubernative is the actual discs themselves the actual reservations on a distance cells.
+00:09:29 [W] There's kubenetes finalizes, which is used in namespaces, and there's a foreground deletion, which I will allude to a little bit but I won't get to do an in-depth.
+00:09:40 [W] So that's it for finalized errs, finalizer basically control how a single object is deleted by the controller. So owner references tell how groups of objects are deleted
+00:09:56 [W] Says our properties on resources that specify the relationship to one another. So entire trees of resources can be deleted finalizer is rules are processed when their owner references,
+00:10:01 [W] Finalize rules are processed when their owner references. So these are not there's somewhat orthogonal and how they work and you've probably already seen these on pods pods
+00:10:10 [W] Is on pods pods typically have owner references to the replica sets.
+00:10:16 [W] So when the deployments stateful sets or replica sets themselves or deleted that the pods are taking care of the process.
+00:10:25 [W] I'm going to show you a quick example of owner references and how they work.
+00:10:31 [W] I'm going to start off with a really simple example, and then I'll work into progressively more complex examples here. I'm going to create my petabyte-scale.
+00:10:40 [W] Parent object first since the references are from Child the parent have to create a parent first and then I can go ahead and create the child here. I have to do some shelf.
+00:10:52 [W] Ooh to get the uid out of the parent and included in the shot a child and you can see that once again.
+00:10:58 [W] We have a very simple config map that contains an owner reference to its parent an odor reference consists of a name and a uid owner references.
+00:11:10 [W] Ask to be within the name same name space so you'll never see a namespace on an over a reference but there does have to be a there does have to be the object name.
+00:11:20 [W] It also needs a uid for that reference to work here is another example here we can see after I created these objects. We can see them both. You can delete the child
+00:11:36 [W] when an over references involved the deletion of a child typically doesn't really do anything or rather the the child will be deleted but nothing will do will be done with a parent things get interesting with
+00:11:52 [W] The parent owner references really change how trees of objects are deleted from their parents.
+00:11:46 [W] So here we create the parent-child references in the config Maps here. I go ahead to delete the config map the parent config map and because of there's an odor reference from the child to the parent
+00:12:01 [W] Delete the config map the parent config map and because of there's an odor reference from the child to the parent when I go to get those when I go to get the config method the config Maps.
+00:12:11 [W] I'll see that none are in the namespace.
+00:12:16 [W] And here I'll do a quick demonstration of this.
+00:12:23 [W] my shell here I have a
+00:12:31 [W] I have a quick script to make this easy on myself here. We create the parent and then we create the we create the child with the parent reference in it.
+00:12:44 [W] Go ahead and create these.
+00:12:50 [W] I can get the config maps and here we can see that we have the parent-child relationship. We have a parent and a parent and a child and that child the relationship is represented in the child.
+00:13:12 [W] And down here near the bottom. We have the owner reference here.
+00:13:19 [W] If I go ahead and do the delete.
+00:13:29 [W] Create the we create the child with the parent reference in it.
+00:13:35 [W] Go ahead and create these.
+00:13:41 [W] I can get the config maps and here we can see that we have the parent-child relationship.
+00:13:46 [W] We have a parent and a parent and a child and that child the relationship is represented in the child
+00:15:56 [W] The the my map parent has been deleted but in actuality the parent and child have been deleted.
+00:16:10 [W] Telling me if I go ahead and try to get the config Maps within the namespace the default namespace it no, no, our resources are found because they both been deleted.
+00:16:21 [W] So getting back to the presentation.
+00:16:31 [W] We can see that there's sort of a cascading operation by default when there's an over are owner reference from a child to a parent when you delete the parent the children are automatically deleted
+00:16:46 [W] Cascade the default for Cascade is true.
+00:16:50 [W] Cascade option can be specified and delete and basically specifies whether or not it should orphan children.
+00:17:05 [W] Now this cascading property can can change it can be the the cast there's the Cascade option under the leak can be specified the basically allow you to Orphan children.
+00:17:18 [W] So you can delete a parent without actually deleting the children. If you delete the parent with delete command using Cascade equals false.
+00:17:28 [W] what it will do is it will take the owner references off of the children, but leave the
+00:17:33 [W] An intact there's something that's also called propagation policy which the Cascade option links to which controls the order in which the order in which the nodes in the order in which
+00:17:49 [W] are deleted
+00:17:37 [W] for this I'm going to start up a proxy in the background and here let me go ahead and demonstrate the demonstrate that Cascade equals false and in the process.
+00:17:54 [W] I will start a proxy.
+00:18:11 [W] So I've just made my tree again.
+00:18:14 [W] I started my proxy.
+00:18:14 [W] I'll use the proxy in the next example, but for this example.
+00:18:30 [W] I'll show you how the Cascade Works in this example.
+00:18:32 [W] I have a parent child and a parent.
+00:18:45 [W] in this case, I'll go ahead and get the child is yeah mlops and near the bottom here that we still have we have owner references to the parent and if I delete
+00:19:00 [W] I with Cascade equals false.
+00:18:57 [W] My parents you remember earlier this deleted when I ran this without a Cascade option it deleted the entire tree here.
+00:19:05 [W] I'll go ahead and delete the parent with Cascade equals false.
+00:19:08 [W] It's come back with exactly the same responses. I got before config that my map parent has been deleted, but as we'll see.
+00:19:20 [W] my map child still exists and in fact when I get that
+00:19:40 [W] You'll notice that the owner reference on the child config map has been removed. So
+00:19:52 [W] This is done by setting the the what happens in the back end is the propagation policy when you when you specify Cascade false is it sets the propagation policy for the API call?
+00:20:05 [W] line with kubelet
+00:20:24 [W] Command for the deletion and in here I can specify all sorts of options one of which is a deletion option and the propagation policy for background deletion.
+00:20:36 [W] So here's an example of that.
+00:20:39 [W] I will show you this I will show you this running on the examples that I have and just a moment.
+00:20:47 [W] This is a background population policy.
+00:20:50 [W] This sets the order to delete I believe delete from parent to child.
+00:20:56 [W] So there's three there's three different options for the propagation policy.
+00:21:02 [W] foreground relation, which is the postorder deletion.
+00:21:06 [W] or you can specify a background deletion, which is a pre-order deletion foreground is children are deleted before the parents are deleted background is parents or deleted first parentage deleted before their children
+00:21:22 [W] Also specify or owner, which is just like specifying Cascade equals false, which means that the owner references will be ignored and the parent will leave the children intact. The owner references on the chodron
+00:21:37 [W] And let me go over and demonstrate this really quick.
+00:21:43 [W] Let me clean up.
+00:22:02 [W] There we go.
+00:22:07 [W] There my config maps and let me get the command.
+00:22:23 [W] Here's the curl command to perform the delete through R.I.P.
+00:22:27 [W] call here. I'm doing this because I want to specify a custom propagation policy.
+00:22:35 [W] My config maps and let me get the command.
+00:22:52 [W] Here's the curl command to perform the delete through R.I.P.
+00:22:56 [W] I call here. I'm doing this because I want to specify a custom propagation policy.
+00:23:16 [W] And there I got a response back that says that the lesion was successful I go here.
+00:23:25 [W] I should see that I have no config Maps left in my name space because they've been deleted.
+00:23:29 [W] keep in mind that when you when you delete an object and owner references have been specified that finalized errs will be honored in the process. So
+00:23:44 [W] Switch back to the presentation.
+00:23:50 [W] That finalizer is will be finalized as will be honored. So this can lead to situations where basically you have trees of objects are the trees of objects that have not been deleted is
+00:24:05 [W] I find that when you when you delete an object and own a references have been specified that finalized errs will be honored in the process.
+00:24:15 [W] So switch back to the presentation.
+00:24:23 [W] That finalizer is will be finalized as will be honored. So this can lead to situations where basically you have trees of objects are that trees of objects that have not been deleted is
+00:24:39 [W] Chance it's then you've got at that point.
+00:24:42 [W] You have to dig in you have to look at the existing roner references on your object with some knowledge. If the owner references have been deleted what they were before as well as the fine eliezer's to understand what's happening there the old once again, the goal here is give you
+00:24:57 [W] That out.
+00:24:58 [W] So there's an exercise that you'll have to go through to do a little bit of research.
+00:25:03 [W] There's one situation that you might run into where you need to force finalization for namespace.
+00:25:11 [W] This is a basically if you've deleted a namespace you cleaned out all of the objects under it but yet the namespace still exists.
+00:25:23 [W] Here's the command of force the finalization. This is one of the
+00:25:27 [W] reasons why I showed you the ride Pi calls before this.
+00:25:31 [W] There's a there's an API call off of off of the namespace called finalized it informs the in forms of namespace controller that it needs to remove the finalizer from the namespace and perform in a cleanup is basically
+00:25:46 [W] Telling the main space to remove the finalizer on.
+00:25:49 [W] so
+00:25:51 [W] so this concludes the presentation so you take away takeaways from this are finalized others can get in the get in the way of the deletion of resources, especially when there's two trees involved.
+00:26:06 [W] Owner references generally. There's a reason for a fine eliezer's presence.
+00:25:57 [W] You should investigate first before manually deleting. It owner references a lot of trees of resources to be removed specified in removed and once again finalizes are honored in that process so they can they can result in
+00:26:12 [W] in removed and once again finalizes are honored in that process so they can they can result in partial deletion of partial deletion of trees propagation policy can be specified in a custom API call
+00:26:24 [W] You can be specified in a custom API call the change the order in which resources are deliberately deleted.
+00:26:31 [W] So if you're in a situation where you do have a partial tree, you can control how those objects are deleted by specifying the propagation policy on the API call.
+00:26:40 [W] So here are some additional references these specifying a lot more detail about how the garbage collection process occurs.
+00:26:50 [W] Please take a look and thank you. That is it.
+00:27:02 [W] Hi, okay now for QA, I've got a few questions here on the chat. So I'll go through them.
+00:27:13 [W] I got a question.
+00:27:13 [W] Hopefully if well first off, hopefully you liked the presentation. I want to get through a few of these because they're important points.
+00:27:22 [W] I've got a question. Can I delete finalize our objects with
+00:27:27 [W] or grace period grace period 0 so there's an option on delete - - Force it's typically used in conjunction with the option - - grace period equal 0
+00:27:44 [W] you you can if there's an object that has a finalizer on it.
+00:27:48 [W] Helps this is essentially removes the object from Etsy D. It does not necessarily remove the resources that are associated with the object very important.
+00:28:00 [W] This will happen with namespaces. If you force delete the namespace as in my exam last example for the with the finalizer on the namespace the the objects that were once in that namespace still do exist or
+00:28:15 [W] In the case of namespaces namespaces are identified by names.
+00:28:16 [W] So if you do Force deleting things if you do Force delete a namespace and remove the namespace and let's say there was a secret that was not the lie that was associated with service count.
+00:28:27 [W] that will not be deleted. And if you create the namespace with the same name again, it's the the secret will be resurrected. So
+00:28:39 [W] You can use this the so this has pros and cons you can use this technique if you've accidentally quote unquote you think you've accidentally deleted something and the object has not been finalized. You can recreate it with the same name particular
+00:28:55 [W] And see the objects that were once again in it in some cases in other cases with forced deleting namespaces.
+00:29:00 [W] You may actually see objects that are identified and being associated with a deleted namespace, but you won't be able to get access to them because the API calls that access that name State won't succeed.
+00:29:12 [W] You can create the namespace crazy old man in space again.
+00:29:16 [W] delete conduct the proper deletion on the other objects and then delete the original.
+00:29:22 [W] Blank space so so that is to say yes, you can force delete do it very carefully as with almost everything in this presentation and understand what the ramifications are forcing grace period
+00:29:37 [W] These together. So I've got a question from Gavin.
+00:29:37 [W] Can I create a custom finalizer?
+00:29:40 [W] Yes, you can create a custom finalizer. If you're creating controllers. You can certainly create custom finalized errs finalizer is do get validated.
+00:29:49 [W] there has to be controllers, you know associated with finalizer key that you put on there. I've in this case the examples. I've given you I've used a couple finalized errs that are used for other objects.
+00:30:02 [W] Kubernative eyes, which is most notably used for namespaces, you know, just just to give some coherent examples.
+00:30:15 [W] Siddharth has a question when object is in a read only state instead of removing the file areas. You can edit them something that is not a dead not as that is not a dead finalizer
+00:30:31 [W] Do you know just just to give some coherent examples?
+00:30:34 [W] Siddharth has a question when object is in a read only state instead of removing. The file items you can edit them something that is not a dead not as that is not a dead finalizer
+00:31:08 [W] First deleted in that case read only objects can take naps and secrets and not exactly I guess almost anything could eventually be a read-only object.
+00:31:21 [W] But at any rate, those are the cases secrets are kind of a special case, so you should be really careful about that.
+00:31:27 [W] There are some hoops Secrets go through to make them more secure. Typically if you can't delete a secret it's already
+00:31:38 [W] Associated with service count so make sure to check that first. You can you can use Force to try to delete that
+00:31:54 [W] A secret.
+00:31:55 [W] It's already associated with service count.
+00:31:57 [W] So make sure to check that first. You can can use Force to try to delete that which would be the
+00:32:26 [W] A preferable route to actually try and edit the file sizes of course can't work won't work.
+00:32:32 [W] So at any rate be careful with that.
+00:32:36 [W] Let's see Zack.
+00:32:39 [W] So there is a previous question about deleting cri-o is the CRT is a little bit of a special object to because they represent custom resource definitions.
+00:32:51 [W] You can certainly delete CRTs from from
+00:32:55 [W] my own experiences Watchers Watchers may still be installed for those cri-o is you can recreate the CRT in which case it'll be fine.
+00:33:10 [W] Had mixed success with delete truly deleting crd s because the Watchers aren't always uninstalled and honestly, I'm not super clear on all the background on that. But so that's to reiterate that
+00:33:24 [W] These can be deleted but just be aware that there might be some side effects.
+00:33:23 [W] Let's see any other questions.
+00:33:33 [W] Andrew why doesn't kubeacademy tall label selector delete all normal k8s resources and to all cri-o is all cri-o.
+00:33:47 [W] These are a little bit of a special case.
+00:33:48 [W] Honestly. I haven't tried to delete all on cri-o you so I am not sure what that case is. I can certainly speak to config maps and secrets because those objects in particular can be read only
+00:34:03 [W] Read only objects and mutable objects and they can also be they can has you see they can have owner references and they can be associated with other they can be Associated internally with other artifacts such as
+00:34:18 [W] big maps and secrets because those objects in particular can be read only read only objects and beautiful objects and they can also be they can has see they can have our own owner references
+00:34:50 [W] So they're they're good reasons.
+00:34:52 [W] Why they when you conduct a delete why the they may be marked for deletion.
+00:35:00 [W] They may not be able to be deleted from the system because a dependent resources so important to look on that.
+00:35:13 [W] Dinesh Dinesh
+00:35:22 [W] Dinesh has a question what values are supported in finalized errs?
+00:35:32 [W] Any anything that's a valid kubernative Z ID is valid for finalized errs. So basically any almost any string this is this if you're writing writing a controller.
+00:35:48 [W] Otherwise using kubevirt you're restricted to values for finalizes. The were already been defined for the respective controllers find finalization.
+00:36:03 [W] from sit too
+00:36:07 [W] fine eliezer's are like soft.
+00:36:09 [W] Delete.
+00:36:12 [W] Not exactly that you can hard.
+00:36:16 [W] delete an object that has finalized errs finalizes indicate actions and I've answered this one in the chat finalizer is indicate actions of controllers must take in order to gracefully delete the object.
+00:36:31 [W] I guess either like soft Elite in the sense that the controller the controller.
+00:36:36 [W] They indicate how the controller should go about gracefully deleting the object if the the objects is successfully gracefully deleted then all of the finalizes will be automatically removed.
+00:36:56 [W] I think
+00:37:08 [W] I kneel can we revert the deletion when finalizes are used?
+00:37:13 [W] No, you can't you can you can start a deletion which may be running in the background?
+00:37:23 [W] But but and then deletion may be prevented from the inclusion of fine.
+00:37:31 [W] Wiser's but you cannot stop that deletion that can deletion will proceed proceed as usual so important to know.
+00:37:45 [W] So that is it.
+00:37:47 [W] You should have gotten the message to join on slack.
+00:37:52 [W] I will be there as well.
+00:37:53 [W] So hopefully I will see you there and I'll be able to answer more questions.

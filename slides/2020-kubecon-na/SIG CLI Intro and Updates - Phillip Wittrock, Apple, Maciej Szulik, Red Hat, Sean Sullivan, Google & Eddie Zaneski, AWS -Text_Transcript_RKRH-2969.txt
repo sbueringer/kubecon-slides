@@ -1,0 +1,261 @@
+﻿SIG CLI Intro and Updates: RKRH-2969 - events@cncf.io - Thursday, November 19, 2020 4:52 PM - 31 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, and thank you for joining us for these Sig CLI intro session.
+00:00:04 [W] My name is Ed. He's an Esky and I'm joined by Phil wit rock Sean Sullivan and Macho Schulich six.
+00:00:11 [W] But we provide libraries and Frameworks that they build out of today. We have a couple quick short updates for you and we'll have plenty of time at the end for your questions.
+00:00:21 [W] Obviously though the most burning question you have is how do you pronounce this tool?
+00:00:25 [W] There is no official pronunciation.
+00:00:28 [W] There is a logo in a mascot.
+00:00:30 [W] So I will let you make your own decision there. I personally say Cube CTL.
+00:00:35 [W] We have a bunch of amazing contributors to chairs that oversee governance of the Sig 2 tech leads that oversee steering.
+00:00:46 [W] We're made up of a handful of different sub projects Cube control is the command line tool that you use to talk to a kubernative cluster customized lets you modify and manipulate.
+00:00:56 [W] Yeah manifest that come down without making changes to the original crew and the crew index is the package manager for Kube CTL plugins.
+00:01:06 [W] I think we're up to a hundred and twenty plugins right now.
+00:01:08 [W] She should definitely go check some of those out Chui is a awesome project that provides an Interactive.
+00:01:15 [W] Graphical tool that you can use to work with Cube control and its output and then as I mentioned we have a bunch of other libraries that are used for building command line tools.
+00:01:27 [W] You can find us on slack in the Sig CLI Channel.
+00:01:30 [W] We have a mailing list under Google Groups.
+00:01:35 [W] We have a biweekly meeting Wednesdays at 9:00 a.m.
+00:01:39 [W] Scrub where we go over and triage open issues. This is great for people who want to get involved in the Sig.
+00:01:35 [W] Sig CLI and Cube CTL has grown interest over the time. If you join the mailing list, you'll receive calendar invites to the meetings. I mentioned we are always welcoming new contributors any feedback you have and hopefully we have some cool things cooked up for you in the roadmap
+00:01:50 [W] Pieces so thanks for joining us and I hope you enjoy the the sessions hi. My name is Phil what rock I'm here talking at this ecl. I deep dive session.
+00:01:49 [W] I'm going to talk about something.
+00:01:50 [W] We're calling resource functions and say CLI.
+00:01:53 [W] These are really about how do we model controllers on the client side?
+00:01:57 [W] side? And how do we take the level triggered holistic reconciliation of the system and take those Concepts on the client. So for context the way controllers were is if you
+00:02:09 [W] Have a deployment controller here.
+00:02:11 [W] It's job is when a user specifies a deployment to manage replica sense, right?
+00:02:19 [W] So for instance go create the replica set for this deployment, but
+00:02:26 [W] What makes this different than sort of the client-side patterns we see today around like templating for instance.
+00:02:32 [W] is that this controller also reads the replica sets before deciding what to write, right? So also writes back the deployment the status now, this is the one that I think is important.
+00:02:47 [W] It looks at the whole state of the system and it says okay.
+00:02:50 [W] Do I need to delete a replica set create a replica set scale one up or down and this makes sense in like a dynamic changing system to do sort of the level trigger self-healing approach.
+00:03:03 [W] And while back this project called meta controller came along.
+00:03:06 [W] He said instead of setting up all this Logic for watching resources and figuring out how to list them and read them and then write them back out.
+00:03:15 [W] What if we just wrote this decoupled.
+00:03:19 [W] How do I want the existing state of the system change right from how do I read the existence of the system? And how do I trigger this thing?
+00:03:27 [W] And how do I write back up and what I like about this model is while the meta controller model.
+00:03:33 [W] And rice from the API server on the framework provides the resources that in our case, we can take the same approach and say Hey, what if it read from a file right in rope back to a file or row to a different file
+00:03:49 [W] Yeah, right.
+00:03:40 [W] And so now we can take this approach of looking at a holistic state of the system and the finding some business logic that knows how to take a set of inputs change to self outputs and apply it to how we manage our configuration
+00:03:55 [W] issues
+00:03:52 [W] and the notion of saying hey, I want to write a system where I taken a set of resources and then apply some transformations to them before they get to their final destination is not new, right?
+00:04:05 [W] So this is how customized is architected where you have customizations that it has an important set of resources and then modify them apply patches apply invitations applied prefixes and suffixes
+00:04:21 [W] are you have customizations that it is an important set of resources and then modify them apply patches apply any tations applied prefixes and suffixes and then emitter then pass them on to the next one right
+00:04:39 [W] Then pass them on to the next one. Right and you can kind of think of these similar to know that meta controller function that we demonstrated in these look kind of like controllers for just really finally scope to a static set of Transformations like patches
+00:04:54 [W] That's relations.
+00:04:54 [W] The second one is kind of the helm Helm flag for post rendering right in so you can have some executable modify the output of Helm before it's sent to the API server writing again.
+00:05:09 [W] This looks kind of similar to the medical troller model.
+00:05:11 [W] where you provide some executable Helm is going to send some red a set of resources to you. And then you're going to admit them and then these go back.
+00:05:23 [W] after that a pi server
+00:05:26 [W] Right. So this model of writing logic which reads resources transforms them right from back out is taking root in a couple different places.
+00:05:39 [W] We just focus in on like the core principle of what it's trying to do.
+00:05:42 [W] How controllers do this.
+00:05:44 [W] We can actually start to do some new and interesting things.
+00:05:46 [W] So one thing we can do is with customized.
+00:05:51 [W] Sorry with helm.
+00:05:54 [W] Helm customized Perry this is a common thing folks do when they have a Helm chart. They want to change the output in some way.
+00:06:02 [W] They don't want to change the underlying chart.
+00:06:04 [W] So they use customizes a post rendering step for the helm resources.
+00:06:11 [W] To apply a patch right?
+00:06:15 [W] Transformation doesn't have any context of the helm chart, right?
+00:06:19 [W] So if you're doing a spring food application, you're applying patches to blindly at a resource level not at the spring boot level, right?
+00:06:27 [W] And so if you have a comes out and then you patch a and then tomorrow becomes out we have to write a different patch, right? You have to change this patch to patch be right because this doesn't really have
+00:06:42 [W] What this stuff is?
+00:06:40 [W] So there's two kinds of cool things we can do here one is your place like static patches and stuff. And if you have something like a common cross-cutting piece like a log-log injector, right?
+00:06:53 [W] You want to make sure blog Rotator is installed as a sidecar container. You can actually do it as a function right and in the function can maybe look at an amputation for logger.
+00:07:04 [W] I'm resources and then find everything that's annotated with that and then figure out how to put the logger in right and it can not just do something a patch can do which is like match to these in patch them, but it can for instance.
+00:07:19 [W] Look at what type of auger to install based on what type of whether it's a stable set or deployment or other things about other aspects right?
+00:07:28 [W] You can dynamically reconfigure itself based on what it's the same point. The second kind of cool pattern is that instead of patching a resource on the way out, right? So in this case we are modifying
+00:07:43 [W] Logger on the way out.
+00:07:40 [W] We can actually provide the patches input to the function, right?
+00:07:44 [W] if you replace maybe your template with a function that is going to act more like a deployment controller.
+00:07:51 [W] Then you can have you know, your typical values as input that you can also specify maybe the deployment that this thing would normally generate right so you can take this with your spring Boot and this is the spring root function and rather than just spitting out a deployment that
+00:08:06 [W] you know by rendering these values it can actually find this deployment that
+00:08:07 [W] that was specified in giving you the function. It can say magically going to decorate this point given to me now.
+00:08:13 [W] There's no patching.
+00:08:14 [W] There's no post step where we figure out how to take the output and change it because as part of the input you're specifying actually what you want and this function has the context to look at this thing and say, hey you're specifying some environment variable here.
+00:08:29 [W] we figure out how to take the output and change it because as part of the input you're specifying actually what you want and this function has the context to look at this thing and say hey you're specifying some environment variable here, but
+00:08:48 [W] You know what you specified in the values file here doesn't make sense right through this combination and only something like this function would have that context to a controller one.
+00:09:00 [W] So those are kind of some of the interesting ways we're looking at functions and basically using them to augment existing Solutions and using them as post renders or as parts of customized extensions or other places and other tools and
+00:09:15 [W] How can we bring the sort of holistic approach of looking at not just like here's some input produce some output, but here's some herb not just here's some like abstraction sort of template inputs.
+00:09:31 [W] But also looking at here's some extraction, you know template inputs and here's a set here's some additional State like the the observe state if you will the equivalent of those replicas sets for the deployment controller and say instead of just going off and doing
+00:09:45 [W] It's a new thing like take this and modify it in place to make it look the way I wanted to.
+00:09:51 [W] Anyway, thanks and have a great coupon.
+00:09:53 [W] Hello.
+00:09:54 [W] I'm Sean Sullivan and I am a co-chair of the six C line and what I'd like to talk to you today about is how to reuse Coop control code.
+00:10:04 [W] So as we all know that could control is the standard command line client for communicating and controlling a kubernative cluster and because of that there is already a significant
+00:10:19 [W] Well used well-tested battle-hardened code for implementing functionality to communicate with our clusters.
+00:10:26 [W] So wouldn't it be cool if we could reuse this code? And the good news is we can
+00:10:34 [W] So over many quarters the six CLI has been working to refactor The Coop control code to move it into a location called staging now in this staging location The Coop control code is now significantly.
+00:10:50 [W] Your to import and reuse and I've included a URL here to show you where the control code now lives and because it lives in staging and this new location.
+00:10:56 [W] We can easily import could control code with a simple straightforward import k8s dot IO control statement.
+00:11:08 [W] So during this brief overview, I'm going to use the coop control take command in order to show how we can reuse to control code.
+00:11:18 [W] But what is could control tanks or what is it ain't so a taint is basically extra metadata that we're going to put on nodes that allows more advanced scheduling opportunities and an example of this command
+00:11:33 [W] Code but what is could control tanks or what is a tank? So a taint is basically extra metadata that we're going to put on nodes that allows more advanced scheduling opportunities and an example
+00:11:47 [W] Could control tank nodes Foo-Foo be in the name of the node and then a label and an effect.
+00:11:55 [W] So it turns out that almost all Coop control commands follow a particular pattern and the pattern is there is a struct created that contains all of the fields necessary to run a particular command.
+00:12:11 [W] And then there are three functions which worked on that option struct in order to implement the command and these three commands are a complete Command that complete Command will fill in
+00:12:26 [W] And these three commands are a complete Command the complete Command will fill in the values of the struct.
+00:12:30 [W] The validate command will unsurprisingly ensure that all the fields are valid for the struct. And then the execution of the command is is an options dot run function and for our example take
+00:12:45 [W] Take command.
+00:12:46 [W] There is the taint options.
+00:12:48 [W] There is a taint options to complete a taint options to validate and then at ain't options to run tape, which actually executes the tank functionality.
+00:13:03 [W] So here is actually code in in staging implementing taint the tank command and here is what the taint options structure looks like.
+00:13:15 [W] So it's going to have particular fields that are necessary and used for the implementation of the taint command and then further down. We actually see how this struct
+00:13:30 [W] Some structure is used. So here's the command here is where we created the taint options.
+00:13:39 [W] And then here are the 3 and the 3 invocations of the functions necessary to implement the tank command the three that I mentioned before complete validate and
+00:13:54 [W] It's necessary to implement the tank command the three that I mentioned before complete validate and run taint the execution.
+00:14:00 [W] So what if I wanted to use Tate this tank functionality and one of my applications.
+00:14:08 [W] Well, I would simply import this tank code base.
+00:14:11 [W] And this is this case study I oq control package command taint is the location that I would import. I would create a taint option structure.
+00:14:24 [W] And then massive hand waving here.
+00:14:27 [W] I would fill in and validate the fields for that option structure and I would call run taint on that options.
+00:14:37 [W] So because we have such a small amount of time.
+00:14:42 [W] I'm not going to be able to dig into the actual the actual filling in or validating those fields. But all I want to to convey is the
+00:14:54 [W] Overview of how we would reuse could control code.
+00:14:58 [W] So in summary, if you don't remember anything else from this short discussion, it's you can reuse could control code in your own applications.
+00:15:09 [W] Thank you very much.
+00:15:10 [W] I'm going to show you a few helpful tricks.
+00:15:13 [W] You might not have heard before when using Cube control.
+00:15:16 [W] Let's get going.
+00:15:17 [W] I'm going to create a center spot and I'm going to copy Cube cuddle binary into it and I'll explain a little bit.
+00:15:24 [W] Carol has several places that it will search for configuration.
+00:15:27 [W] You are probably familiar with home slash dot kublr rectory, which is the default directory where Cube cattle storageos configuration and cache files.
+00:15:37 [W] You've also heard about - - Cube config flak or cube conflict environment variable which allows passing configuration file location, but that many users know that there's also one another location that Cube cotta will look for when loading files the so-called in cluster configuration.
+00:15:52 [W] Since I picture is worth a thousand words.
+00:15:44 [W] It's best to show you how this works with an example.
+00:15:47 [W] So inside of my pot I can invoke keep cattle get pot for operation.
+00:15:52 [W] Unfortunately, this operation will end with an error which says that my user does not have the necessary permissions to perform that operation. If you look closely though, you'll notice that the user name is actually
+00:16:07 [W] This account assigned to my part.
+00:16:05 [W] This is in cluster configuration kicking in with checks presence of three elements a file a service count token located and slash four slash run slash secret / kubernative that IO / service account / token and to
+00:16:21 [W] Quality Service host and kubernative Service Port when it finds all three of these it knows it's actually running inside of a cabinet is faster and it should read injected data to talk to the cluster in my class are I have a set of pre-existing
+00:16:32 [W] one of which with its view
+00:16:35 [W] let's create a cluster roll buying the ink that will active you roll to my service account and let's again try to repeat the get pots operation and now this time it's succeeded.
+00:16:53 [W] Perfect LEDs on move. Let's move on to the next example.
+00:16:56 [W] I'm going to change my user.
+00:17:01 [W] UPA non system admin and now I'm going to try to get parts.
+00:17:09 [W] How my previous example?
+00:17:15 [W] It's forbidden.
+00:17:16 [W] So gravity says a Unix to the light capabilities.
+00:17:20 [W] It is called user impersonation you use it. You need to pass - - as flag and a username that you want to impersonate.
+00:17:29 [W] So let's try to impersonate system.
+00:17:31 [W] Admin.
+00:17:32 [W] Unfortunately that operation will fail because we don't have the necessary permissions similarly to how you do it in Unix systems.
+00:17:42 [W] Namely we need to have a impersonate verb permission in my class are again.
+00:17:48 [W] I have a pre-existing cluster of role of coal to Door.
+00:17:57 [W] And let's again try to impersonate the system. Admin this time this operation Works to prove that the impersonation is working as expected.
+00:18:06 [W] Let's try again invoking the same command, but without impersonation and as expected this operation will fail
+00:18:16 [W] There's also - - ass - group flag which allows to impersonate a group, but I'll leave this as an exercise to the viewers the final two examples that I would like to present is
+00:18:31 [W] It command by default will use VI editor on Linux and notepad and their own windows. But if you want to change the cube cattle Editor to your own favorite
+00:18:34 [W] Favorite, all you need to do is use Cube at error environment variable in my case.
+00:18:35 [W] I'm going to use vs code and I'm going to edit that same pot that we've been working with. Let's try to change the sentence image.
+00:18:45 [W] Save that one.
+00:18:46 [W] Okay, and let's try to verify the image of the modified pot and as expected it is sent us 8
+00:18:57 [W] as a final example, there is a command new Alpha command that we are hoping to
+00:19:07 [W] to promote to Beta in 120 Cube cuddle debug debug allows the back in your application and best to learn all its possibilities and capabilities is by
+00:19:22 [W] Learn all its possibilities and capabilities is by giving it a try.
+00:19:27 [W] So happy tobogganing.
+00:19:29 [W] Thank you very much for your time.
+00:19:30 [W] And I'll we're going to answer some of your questions.
+00:19:47 [W] Hello.
+00:19:50 [W] Hi there.
+00:19:52 [W] Hello folks.
+00:19:55 [W] How's it going?
+00:19:57 [W] So I guess we're going to answer some questions now is from questions in the Stream.
+00:20:00 [W] Stream. I'll go ahead and publish them as I answer them.
+00:20:05 [W] The first one is how closely related our resource functions to Mission controllers.
+00:20:08 [W] They seem like they're doing similar things at different times.
+00:20:11 [W] Yeah, that's true.
+00:20:13 [W] The resource functions can model different parts of the kubernative control plane, which includes both admission controllers and like the typical resource controllers.
+00:20:23 [W] like it such as deployments or hpa's or these sorts of things.
+00:20:27 [W] It's prom because in both cases, you're just reading resources and then either transforming them or throwing an error or something like that differences between functions and the admission.
+00:20:43 [W] The timing are that the functions have disabilities are have visibility into more than just a single resource being applied.
+00:20:54 [W] So for instance, if you wanted to do validation that your deployments are paired up with Services.
+00:21:01 [W] There's something like that right? And so or you wanted to annotate a deployment.
+00:21:07 [W] And make sure that there was a corresponding service associated with it or you're Ingress select services or these sorts of things.
+00:21:14 [W] that would be really challenging to do with the mission controllers because the mission controller code would just be seeing the one resource either redeployment or the service either the Ingress or the service. So by doing it in a
+00:21:30 [W] I do you do have visibility into a collection of resources.
+00:21:21 [W] And it also yeah, you can do it in get before as part of your push pipeline for instance.
+00:21:27 [W] it doesn't quite make it to production before you review it.
+00:21:37 [W] Sorry, and I say the question the question was how our mission controllers different functions you did.
+00:21:50 [W] Second second question here customize and capital abused and apply variation in CLI.
+00:21:58 [W] You tilt switch itself includes a kpi example app.
+00:22:00 [W] How can we how should we call the single flap?
+00:22:03 [W] What's this timeline for stability?
+00:22:05 [W] What else? Would you like this know about it Shawn. Would you like to answer the phone?
+00:22:10 [W] Sure drill.
+00:22:13 [W] Thanks. Thanks for asking me about this Judson. So the the
+00:22:19 [W] Own in the CLI you tools which deals with the apply is a it's basically an experiment and you're right. There is a driver binary payout ply which is used for testing,
+00:22:34 [W] To be we're not going to actually publish this. We just need something to be able to drive these libraries and so the extra functionality that we've been experimenting with apply in the CLIA tools is
+00:22:43 [W] Some sorting of the resources before we apply them.
+00:22:36 [W] We have a brand-new prune which is which uses a particular resource to store references instead of the typical prune and could control which is based on labels to
+00:22:51 [W] Set of resources and there's also some experiments with returning status for how resources reconcile in the cluster.
+00:23:03 [W] Not just the status of what happens for the config that sent to the API server.
+00:23:08 [W] So this this is these are just experiments.
+00:23:10 [W] We actually don't have a timeline for one way. You can tend to have a real API for this.
+00:23:19 [W] This is these are there's a basically just like I said experiments.
+00:23:26 [W] We're just playing around with new functionality that that people have been asking about.
+00:23:34 [W] that that force does that mean kept applying uses the CLI utils right as its primary apply mechanism is that we need experiment experience mean that like keptn still like it not as
+00:23:49 [W] COI, and therefore doesn't have some of the you know, compatibility or stability or entities or two different contact. Yes, and the the API to this these experiments is
+00:24:04 [W] Immature and not documented etcetera.
+00:23:58 [W] It's it's because we have people working on both that were able to even use them or integrate them and So
+00:24:14 [W] once we've come to a consensus on what what we think that's extra functionality should look like in its final form then we would we would provide an API or
+00:24:28 [W] Lead more stable API and well-documented any PI and right now it's I think that we're just in the here we're experimenting and playing around with it face.
+00:24:35 [W] Did that make sense?
+00:24:39 [W] I think they can't audience can't talk.
+00:24:42 [W] I'll take that as a yes if that makes it say nothing.
+00:24:53 [W] Probably one of the things that we can call out is it's been a very long move trying to separate Cube controls code outside of from inside of kubernative main repo to its own Standalone repo and Ma chaîne some other folks have been
+00:25:08 [W] a very long time and I think we finally just pulled the trigger very recently Where We Are
+00:25:25 [W] mate
+00:25:43 [W] I hear you.
+00:25:48 [W] Nope, I did hear you.
+00:25:54 [W] Recently, the only one big element left with the cube.
+00:26:00 [W] Carol move is figuring out how to release and how to test that with the rest of the communities and that's probably is going to take us a couple more months
+00:26:15 [W] I meant within the community, but that's basically all.
+00:26:16 [W] We just got the ending there.
+00:26:21 [W] It sounds like we're having some audio trouble and yes, we will be having that soon where you can build Q control Standalone. Hopefully very soon.
+00:26:30 [W] soon. Great job to everyone who's been working on that what other things we call out? We still have a few minutes for questions if anyone wants to squeeze any other end.
+00:26:40 [W] Say thanks Eli meets bi-weekly.
+00:26:43 [W] It's a great place to get involved plug for that. If you're looking to get involved with the project, I'd encourage you to show up to 60 life first and just let us know and then you can kind of learn about what issues might make sense
+00:26:59 [W] To help guide people through that and and even if you're just showing up to the meeting and you know kind of given your experience and stuff that's valuable to we have folks that routinely come to the CC line meeting and don't
+00:26:53 [W] A lot through PR contributions, but contribute a lot through the discussion that happens there.
+00:26:53 [W] Yeah, absolutely.
+00:26:54 [W] I see we have Bailey in the audience and Bailey's been great.
+00:26:59 [W] She provides great feedback for her team at SAS or they're working on using customized and stuff.
+00:27:04 [W] So yeah, please everyone come hang out with us for sure.
+00:27:14 [W] Would anyone else like to comment on the particular sub projects you're interested in obviously who controls a very well-known tool but there's other sub projects in the six Eli.
+00:27:28 [W] Eli. Is there anyone out there who would like to know more about the different sub projects?
+00:27:40 [W] What skills should one have to start contributing in this sig?
+00:27:44 [W] That's a great question.
+00:27:46 [W] Where'd that come from? By the way?
+00:27:52 [W] We're five in the questions.
+00:27:54 [W] I'm at these folks a year ago at the last Cube Khan and you know, I still feel pretty shaky with go I pretty much hung around until there was something I could work on and yeah everyone soup.
+00:28:08 [W] sub-projects
+00:28:15 [W] what skills should one have to start contributing in this sig?
+00:28:19 [W] That's a great question.
+00:28:21 [W] Where'd that come from? By the way?
+00:28:27 [W] Four five in the questions.
+00:28:30 [W] I met these folks a year ago at the last Cube Khan and you know, I still feel pretty shaky with go I pretty much hung around until there was something I could work on and yeah everyone soup.
+00:28:46 [W] To get involved as opposed to having a certain set of skills because there's some great mentorship and there's plenty of opportunity to get people to start contributing as you know, if you want to drive and keep showing up.
+00:29:01 [W] The code itself in Cube Caudill is pretty contain per each command.
+00:29:07 [W] So it's pretty easy to pick up only a small bit.
+00:29:11 [W] Learn the basics and then bit and afterwards you will be able to pick up each and every single command and work with that one.
+00:29:20 [W] So like Phil and Eddie and Sean mentioned. It's definitely worth to show up for 60 Li and we will be having another instance of that in-toto.
+00:29:32 [W] Less than two weeks on Wednesday and we have a bunch of open topics where we are inviting people to help us with fixing some old stuff that that are
+00:29:47 [W] I think another incest of that in less than two weeks on Wednesday, and we have a bunch of open topics where we are inviting people to help us with fixing some.
+00:30:01 [W] Where it's very easy for newcomers to start with those.
+00:30:06 [W] It's a the probably the most important skills are tenacity and patience.
+00:30:12 [W] Definitely if you show up you'll see that a lot of the a lot of energy is spent trying to figure out is this changed going to be something that is going to break
+00:30:27 [W] Going to be one that we have a difficulty maintaining going forward or creates a precedence for you know, twenty other similar flags that you know are similar category, but you know that we would Implement and so we have just a scatter
+00:30:42 [W] in this is where a lot of energy is spent in so I can be if you just want to show up and be like I want to contribute something right at there's this long discussion about should we contribute that it's maybe surprising so just
+00:30:53 [W] It's you know, be patient with the process would be a good skill.
+00:31:00 [W] I think we have to wrap up.
+00:31:02 [W] Yep, please Monster. Go ahead as Eddie was saying we have to wrap up if you have any further questions, where on slack hit us up there.
+00:31:12 [W] Thanks very much.
+00:31:16 [W] Thanks.
+00:31:17 [W] Thanks.

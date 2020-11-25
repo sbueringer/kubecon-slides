@@ -1,0 +1,241 @@
+﻿Cluster API Deep Dive: OSEF-2231 - events@cncf.io - Wednesday, August 19, 2020 10:55 AM - 1181 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, welcome to the cluster API deep dive.
+00:00:06 [W] I'm sisal, Robert Mitchum.
+00:00:10 [W] I'm a software engineer at Microsoft and I am a cluster API as your maintainer.
+00:00:18 [W] I've been working on the cluster API project for about a year now.
+00:00:18 [W] And I'm nydia T remember of technical staff at VMware.
+00:00:26 [W] I'm the maintainer of the class API provide AWS on which I've been working for about 2 years now.
+00:00:30 [W] so
+00:00:37 [W] It's a project of C cluster life cycle.
+00:00:45 [W] It was initially released in V1. Also one in April 20 19, and it's now in the V1 also for API version and cluster API is a kubernative project to bring Declaration of kubernetes tiles
+00:00:56 [W] API to Cluster creation configuration and management what this means is that it really simplifies the lifecycle management of kubernative clusters using extending the kubernative apis, and if
+00:01:10 [W] All familiar with our logo.
+00:01:14 [W] a reference to Turtles all the way down because it's really using kubernative to build kubernative.
+00:01:19 [W] Okay, so when talking about cluster API, it's important to understand that it is a building blog.
+00:01:35 [W] So there's this project called qvm or you know Cuban or Kudo M Adam depending on where your kubernative presentation game is, but it is another sub-project of C cluster life cycle.
+00:01:42 [W] And what Cuban young does is it takes a computer a server machine and it turns that into a kubernative nodes. So it really simplified and streamlined.
+00:01:51 [W] Way that we build kubernative clusters in kubernative.
+00:01:59 [W] What we did with culture API is we went one step further.
+00:02:00 [W] We took you baby.
+00:02:03 [W] I'm and we built on top of it using it for bootstrapping of nodes and we decided we wanted to also manage the cluster infrastructure itself using kubenetes apis.
+00:02:15 [W] So that's what cluster API is and it is modular which means that you can replace the build your own provider for bootstrapping for
+00:02:21 [W] Example or use another existing provider besides the reference Cube 80mm provider such as the tell us which are provider and you can also plug it in with any infrastructure provider.
+00:02:36 [W] It's compatible with any cloud or any on-prem environments in cluster. API itself below cycle management part is really environment agnostic.
+00:02:45 [W] This is a bit of a over view of the landscape of the infrastructure providers and bootstrap providers that exists in cluster API today.
+00:03:03 [W] This is just an overview as you can see there's support for some of the major clouds as well as some bare metal providers.
+00:03:05 [W] It is a growing list.
+00:03:07 [W] So I recommend you check out the full list at the cluster API book in the provider section, and if you can't find what you're looking for, you can also decide to build your own provider.
+00:03:18 [W] We have some instructions on like a provider contract on what is needed in order for your provider to be conformed with cluster API.
+00:03:24 [W] Okay.
+00:03:28 [W] So how does it work?
+00:03:30 [W] So when thinking about cluster API there are usually two ways that users go about using the tooling.
+00:03:41 [W] The first one is having one management cluster and many Target clusters what that means is that the management of your target clusters is centralized and is all on one cluster called the management culture
+00:03:51 [W] The management cluster can be any kubernative cluster as long as it's kubernative conformance.
+00:03:59 [W] So you can use kind or you can use a managed Granny's service such as a guess or gifts and or you can use another cluster API built cluster and then your target clusters are what runs your grenades
+00:04:11 [W] Close what's really interesting about? This is that you can actually have different environments being managed from the same management cluster. So in this example, we have as your clusters and openstack clusters and AWS clusters
+00:04:26 [W] Vsphere clusters all being managed from a management cluster.
+00:04:30 [W] So let's dig in a little bit more into the management cluster. So there are three providers in cluster API.
+00:04:47 [W] There's the core providers the British Raj providers and the infrastructure providers and then we also have control plane which is a new addition.
+00:04:54 [W] So how it works is cluster API uses yardies to extend the kubernative apis to manage clusters themselves and their machines.
+00:05:01 [W] And it uses controllers to reconcile those grpc and make sure that the actual state of the world matches the desired state if you're not familiar with controllers and ciardi these I recommend checking out the
+00:05:17 [W] You build your book.
+00:05:20 [W] think it's a really good introduction to the basics of house. You're using controllers work.
+00:05:24 [W] Okay, so I mentioned that there are two ways of managing cluster API clusters.
+00:05:38 [W] The first one is having one management cluster and menu Target clusters, but what if you just want that one kubernative calstrs, sometimes you might not want to have an extra cluster sitting there to manage your glow cluster and you might want to
+00:05:49 [W] And be able to manage your workloads from the same place that you manage your cluster infrastructure and that's where the self-managed cluster concept comes in.
+00:06:01 [W] So how that works is as a user you'll start by bootstrapping cluster called the bootstrap cluster and that's again any kubernetes cluster as long as it's conformant and that cluster
+00:06:13 [W] Will you will install all the cluster Epi scared even controllers on it and it will start to reconcile your target cluster?
+00:06:25 [W] And as soon as the target cluster control plane is up. Then you do something that we call pivot, which is you move all your cluster API crd and controllers to your new Target cluster and you delete your bootstrap
+00:06:36 [W] That means from that point on you're going to be able to manage all your cluster infrastructure from the same place of from the cluster itself.
+00:06:48 [W] So you really have one place where your cluster workloads and your cluster infrastructure is managed from
+00:06:54 [W] so I'm going to give you a bit of an overview of you know, the CRTs in their specs.
+00:07:09 [W] I'm not going to show you all of them because I would take a long time. But just to give you an overview of the important ones.
+00:07:15 [W] This is so this is the cluster.
+00:07:20 [W] So the concept of Koster is so this is in custody API.
+00:07:21 [W] cluster wide configuration and it is everything that is really generic and not infrastructure spiffe.
+00:07:29 [W] Affect things like poddisruptionbudgets and then we also have the associated infra cluster and the infer cluster is / infrastructure provider.
+00:07:44 [W] So usually will be named like something like name of the infrastructure and cluster. So for example AWS cluster as your cluster, and that's really the provider specific cluster configuration.
+00:07:54 [W] So for example, your AWS region or your Azure location or your v-net name or
+00:07:58 [W] things like that
+00:08:07 [W] Then we have Cube 80mm control plane. So I mentioned control plane provider briefly earlier kubenetes m control plane is new and V103 and it is a way to simplify the control plane lifecycle management.
+00:08:17 [W] using Cube ATM so it has the replica count, which is the desired number of control plane machines and then it has two references the infrastructure template which is what the template of the infrastructure machines and what each machine
+00:08:33 [W] Look like the reference that templates and then the cube a game config and the cube adium config is really what helps you configure the bootstrapping and the cluster configuration.
+00:08:47 [W] So you have the in it configuration the cluster configuration and the joint configuration and that's where you would set things like if you want for example extra argh in your controller manager.
+00:08:56 [W] And then we have the machine deployment the machine deployments are if you're familiar with pods and deployments machine deployments are kind of the same thing for a cluster APA with machines and machines Employments.
+00:09:14 [W] And so with a machines employment. You can define a set of machines that would have a similar configuration and you will set a replica count similar to the control planes and then you'll also have the machine spec. Which
+00:09:26 [W] Finds what each machine in that set should look like so that we'll have the cube root version and the reference the infrastructure template as well as the bootstrap templates.
+00:09:38 [W] Okay, and then we have machine so machine is an individual object in a machine deployment or you can also decide to create individual machine Standalone machines just like in kubernative. You can create Standalone
+00:09:56 [W] Odds that are not part of a deployment and so this is really the configuration for that specific machine and the spec looks very similar to The Machine deployments expect. We also have the
+00:10:11 [W] Cupid version and the infrastructure of reference as well as the bootstrap config reference.
+00:10:17 [W] And then just like you had the info cluster with cluster we have information with machine and sew information again is going to be something like AWS machine or Azure machine or vsphere Machinery Etc and in that
+00:10:34 [W] Information you really have all the infrastructure provider specific configurations.
+00:10:42 [W] So those are more like environment specific capabilities.
+00:10:48 [W] So for example, if your provider enables spots of virtual machines, that's where you would configure that you'll be able to set your instance type or your VM size depending on what card languages speak and different things like that that are really provider.
+00:10:58 [W] infrastructure specific
+00:11:00 [W] Okay.
+00:11:07 [W] So now I'm going to hand it off to Dear who's going to give you the show you the exciting parts and demo.
+00:11:09 [W] All right. So well one for you is how to get started with cluster API essentially. So what we're going to do is is first going to use kind to
+00:11:25 [W] Just have a bootstrap cluster that I can work with and then we use a tool called cluster cuddle, which can get from the link below in this cluster cattle in it installs the components that are required to run cluster API for each provider to actually going to
+00:11:39 [W] Set up three different clusters at the same time using as your AWS and vsphere. So this really shows the power of using plus the API. So to create a cluster we use a command will cluster cattle config and this just
+00:11:54 [W] Weights kubenetes manifests templates that been released by the infrastructure providers that help you get started, but there's nothing to stop you using your own manifest using the specs that Cecile show you the few moments ago.
+00:12:10 [W] So this is just an example each of the Azure vsphere knative yes templates and they all have common components and then each custom bits for each each individual infrastructure provider.
+00:12:23 [W] And then what we're going to do is we're going to apply this to a bootstrap cluster which in this case is the kind one.
+00:12:36 [W] We just created just showing the logs from each of the sort of controllers that for each infrastructure provider so you can see what's going on and the first thing that
+00:12:38 [W] Happens is that you create the sort of underlying Network infrastructure that's going to be needed for the cluster.
+00:12:45 [W] It's usually load balancers. If it's public Cloud then anything to do around creating private networks.
+00:12:56 [W] It's real Nets in as usual and BBC's and they AWS and we can also just use normal Coop cattle give control to inspect the objects that are created by each of the class that API can components. So in this
+00:13:07 [W] It's we're doing kubevirt will get K CP which is the cube ATM control plane management and the various vsphere machines.
+00:13:21 [W] Next thing you do is you the cluster come conflict administratively login is stored as a secret so you can just get that out and use that to recoup Castle to access that newly
+00:13:30 [W] Plus the first thing we need to do is apply like you cni. So plus the API in itself is not opinionated in terms of which cni you so we just using class and Calico nice experience.
+00:13:44 [W] And now we've had a problem is that one of these as your machines didn't come up and that's because I don't have enough quote in my As you move down because I started it several hours prior to making this demo.
+00:13:57 [W] So what I'm just going to do is just edit the machine deployment.
+00:14:04 [W] So I'm just going to make it two rather than three.
+00:14:06 [W] So then I have enough room for my high availability control plane. And then you can see just delete that faulty control plane machine and plus the API goes ahead and replaces that for me.
+00:14:19 [W] me. The other thing that I want to do is my AWS cluster is a bit out of date competitors 1.17 versus 1.8.
+00:14:29 [W] Aim, so I'm going to basically upgrade my AWS cluster so I can do that by editing first the control plane and just changing that version field. So in just change it from
+00:14:42 [W] 1:17 five to be one 18.2 and once I've saved and exited you can see that what's happening is one of my control plane replicants become unavailable because it's about to
+00:14:57 [W] Deleted and I've got four vectors rather than three.
+00:15:04 [W] So it's grated 1 1 new 118 control plane instance.
+00:15:09 [W] It's checking at CDs working making sure that the ATD cluster is okay.
+00:15:18 [W] And then it's just going to roll through each of those control plane instances replacing them one by one and the other thing we can do here.
+00:15:23 [W] It's like I can do this independently so I can also upgrade a worker nodes. So I'm just going to edit. So the
+00:15:29 [W] Workloads controlled by the machine deployment.
+00:15:32 [W] So I'm also just going to change that to 118 to and exit where him and you can see that nodes are going to not ready scheduling disabled to we're doing they're draining that
+00:15:45 [W] It makes sure the workloads moving off then terminating that instance and replacing it with a new one and you can control using this standard sort of but Max bursts or settings that you're familiar with in.
+00:16:00 [W] And pot base deployments you can apply days there to control how many machines get replaced at once.
+00:16:06 [W] Finally.
+00:16:08 [W] We're just going to show this pivot method. So we might want to do is you've created a cluster we class API you want that to be the management cluster for all of the other clusters.
+00:16:21 [W] So what class the cattle move does is it pauses all of the resources on this initial kit kubenetes cluster and after we've been stored 1
+00:16:29 [W] for cutter win it on the AWS cluster, which is where I'm going to move everything to you can now then 1 plus cos move and it basic deletes the objects from the old cluster puts him into the new
+00:16:44 [W] In this paused State and then unpause it so then those then you can continue with ongoing management.
+00:16:53 [W] Finally.
+00:16:58 [W] Just want to show you how you might want to do development class API, so we're big fans of using tilt and development.
+00:17:06 [W] So tilt allows us to essentially do hot work hot reloading as you as you write code using class API.
+00:17:10 [W] So there's a Json file you can see in this vs code that you will need to set up. All the instructions are on the cluster.
+00:17:16 [W] API web site and then what just do is just change a line of code you had you can view the logs in a browser as well. So you can just click on each of the controllers that you're working on.
+00:17:28 [W] And in this case. I'm just going to change one log line and you can see that the controller got rebuilt and as started again, so this is where most of the sort of plus API developers using this
+00:17:42 [W] Till it's great tool for all kinds of development and we use extensive linked list API.
+00:17:53 [W] So with that let's talk about what we've been working on. So we've just done some new releases of plus API.
+00:18:02 [W] So in this 0.3 series, we've done quite a lot of work when things we just introduced was the control plane management, which are just demoed a moment ago. So this is really about making sure that we can do
+00:18:12 [W] A to operations of clusters managed by plus API in terms of being able to do upgrades remediate control planes being able to scale them up.
+00:18:27 [W] So maybe started off with a demo one node cluster 1 node control plane cluster, but it's actually running production workloads make it high variability.
+00:18:38 [W] That's what the control plane Petrelli can do and the Machine pools
+00:18:42 [W] see our D is a new thing that was added in 0.2 0.3 is implemented for as you're right now with AWS is coming soon. And that's where you have Cloud providers that provide their own constructs four sets of
+00:18:56 [W] Chains and have provide more enhanced functionality three days such as in the case of as your VM skill sets or AWS also scanning briefs.
+00:19:07 [W] They can be used as a knative construct within cluster API machine help Chet's allow you to give say pluggable model for remediating machine see using you can use any tool
+00:19:20 [W] Using such as Prometheus or node problem detector to Mark nodes as unhealthy and then that can act as a signal for cluster API to do some sort of remediation.
+00:19:35 [W] We've done a lot of work on testings.
+00:19:36 [W] We've built a if you're writing your own provider or you're working on other bits of kubenetes such as CSI or cloud provider Integrations elsewhere. Then the cluster API test framework is
+00:19:50 [W] is provide some really nice helpers and abstractions for you to just start a kubenetes cluster run some tests on that cluster. You created tear it down again and just run things like conformance checks Etc
+00:20:05 [W] Failure domain. So this is introducing the concept particularly for the cube ATM control playing around what are the different failure domains within a given infrastructure provider?
+00:20:20 [W] It's a way to give that information to the call controllers such as kubernative Tron plane and machine set to be able to distribute instances across those various family domains plus the
+00:20:31 [W] Castle + Ctrl + T Ctrl that got a complete rewrite in 3.3 it kind of disappeared for a while with some point to come back again as this and that's really that utility.
+00:20:45 [W] I was showing you earlier so the ability to install infrastructure providers the latest releases without having to deal with lots of Wars of llamo.
+00:20:57 [W] That's what class of ctls.
+00:20:58 [W] what about conditions apply our
+00:21:02 [W] If you've worked with nodes or pods and you've seen conditions on those objects, we've now introduced them into the cluster API resources as well.
+00:21:10 [W] This should really help people who want to work with those resources more programmatically.
+00:21:20 [W] gives a much cleaner interface in terms of introspecting what is really happening inside a given cluster and finally we've got given initial cluster autoscaler support So this work is ongoing within the class. That was just
+00:21:32 [W] Project right now, so it will be able to control machine set seem cluster API generically, so it doesn't need to have any infrastructure specific in information and you'll run this as
+00:21:45 [W] one part plus that what is getting your management plus and one point workloads us there and daughters go will be able to control the site will be able to scale up and down a clusters managed by class that API so given that
+00:22:00 [W] Like this what's next so we would we're hoping to reach beta status that and by the beginning of next year.
+00:22:13 [W] So we're going to be working on stabilizing class debut and make sure it meets the needs of everyone who wants the use plus API ongoing your ex Improvement. So we did a big rewrite of
+00:22:24 [W] A cluster is CTL.
+00:22:29 [W] We want to improve that not everyone wants to use cluster CTL.
+00:22:35 [W] So how can we improve that experience overall better management plus the add-ons so things like cni-genie.
+00:22:54 [W] To as soon as you create cluster apply a set of manifest to two clusters based on some labels that you've found them detection some machine failures prior to Cluster joints. So one of the problems we have now is
+00:23:09 [W] We only really know the status of machine once it's join a cluster. But what happened?
+00:23:15 [W] How do you know what's happening when when it hasn't joined that cluster yet.
+00:23:21 [W] Can we find out where that thing went? Well, so we're going to be doing some experiments some research into finding out how we can do that through the various infrastructure apis that are given to us low bounce provider. So this is
+00:23:34 [W] Definitely nothing to do with Community Services or service type load balancer talking purely in terms of load balancers the communities API server. So before you've even got a cluster up you want a low bounce in today's various control plane instances.
+00:23:50 [W] So we were looking at a pluggable model to be able to do that. And that's really important for the on-premise environment where you don't have don't typically have those cloud provider can construct like the elastic load balancer etcetera
+00:24:06 [W] Meeting machine pull out of experimental so complete the implementation for AWS primarily and make sure that that abstraction Works across the various different types of public clouds support for Windows
+00:24:21 [W] it's it is that's going to start off with one of our sister projects could image Builder which provides is price mechanisms to build images for the various Linux distributions adding support for Windows that and making
+00:24:36 [W] That we have a window specific bootstrap provider that can bootstrap Windows notes essentially and then finally for particularly for aw statue or we're interested in how do you deal with multi-tenancy?
+00:24:51 [W] So with AWS and as you're in any large organization organization, you're not just dealing with one AWS or as your account is going to be lots of different accounts and subscriptions and you want to provide a sing Single place where
+00:25:06 [W] Are people where teams can manage their clusters?
+00:25:18 [W] So we need to provide knative ways to be able to choose which accounts and subscriptions with with the right levels of security around them.
+00:25:20 [W] So that's what we'll be working on next.
+00:25:29 [W] So if you'd like to get involved, then you can join us in our weekly meeting which happens every Wednesday at 10 a.m.
+00:25:31 [W] Pacific time.
+00:25:32 [W] That's five fit 1700 UTC.
+00:25:36 [W] And not only this is just for the main cluster API meeting and what you'll find. If you go to that link, you'll find that each provider has their own meeting specific to those concerns.
+00:25:52 [W] So AWS as your vsphere openstack Etc.
+00:25:59 [W] So go and take a look and see what takes your fancy. Please join us with that.
+00:26:04 [W] I think we're done.
+00:26:05 [W] Ike's
+00:26:09 [W] Alright, that was a lot of information.
+00:26:23 [W] I'm sure a lot of people have questions.
+00:26:27 [W] So maybe errs here on the phone as well.
+00:26:31 [W] And we're going to try to go through as many questions as we can but there are a lot so if we can't get through all of them, we're happy to continue the conversation in slack and you can find us on there's a thread already I think in the cube
+00:26:42 [W] Like since you have Sly Candor maintainers the maintainer strike.
+00:26:48 [W] Okay, so I can take the first one can cluster API detect and reaping sellout no tissues such as dead machines.
+00:27:03 [W] Yes, so that's where you use a machine health check so you can define a machine.
+00:27:07 [W] help check on your in your template and that will have conditions under which the note is considered unhealthy and when those conditions are met cluster API will go ahead and get rid of that machine and replace it with a brand new one.
+00:27:21 [W] I need you. Would you like to take the next one?
+00:27:25 [W] Suicide a question is happening across the API team a script is running in private networks and the weekly basis about using graph API.
+00:27:39 [W] So in that moment you're going because cluster API is doing the Lochte interrogate the status of clusters. We do need to be able to connect to the control plane and point
+00:27:52 [W] So if you money privately PC if you are going to have to provide some sort of connectivity between them. So whether that's using we be preparing Direct Connect vpns Etc, one of the things that were looking at
+00:28:09 [W] In the future is the upcoming project cool that either graphically could try this activities, which you can be managed by AWS which will allow us to consume arbitrary AWS resources
+00:28:24 [W] Directly into given that he's way that might provide a mechanism to be able to automate some of that BPA.
+00:28:37 [W] It's a bit hard to put all the different permutations and networking directly into because they grow quite aw.
+00:28:41 [W] So today you can build different clusters. You will need to do you some other automation to sort out the networking between private networks.
+00:28:52 [W] Thanks.
+00:28:53 [W] Okay, I can take one is there tooling for the bootstrap process of self manage cluster?
+00:29:06 [W] Yes, and no, so there is some there are some commands in cluster cuddle cluster cuddle is the tool that Nedra was using in the demo, which is the CLI tool that was built to facilitate the management of
+00:29:19 [W] The cluster API management cluster and that does have an ability to move all your resources to make and essentially any cluster self-managed.
+00:29:33 [W] So if you built a bootstrap cluster and then you build a Target cluster like a cluster API built cluster with that Target cluster, then you can then use closer cuddle move to move all the cluster API resources from that original bootstrap
+00:29:44 [W] Through to the Target clusters, then that Target cluster becomes self managed.
+00:29:52 [W] I know there's also talks there's an open issue.
+00:30:05 [W] I don't remember the number of the top of my head, but about having some declarative management of the cluster itself, so you can have a self-managed cluster from zero to self-manage Cluster.
+00:30:09 [W] that's filling the talks and I would expect also any platform that builds on top of cluster API to be able to elotl.
+00:30:14 [W] Mate that cos 3 Pi. It's really a building block so you can do a lot around it.
+00:30:19 [W] Another question here.
+00:30:30 [W] What would be the benefit of trust API?
+00:30:51 [W] Company to manage clusters right now.
+00:30:55 [W] you work to do that be Clarity for using cluster API, hopefully by the end of the day and the month and related to that if you're to be able to see that bootstrap cluster that you're creating using
+00:31:09 [W] Plastic on the bottom line that's really about using that classic rock moved to make that and more permanent self management management cluster, then from there. You can drive all United gitops for all the other crackers that in one minute.
+00:31:25 [W] Yeah, that's a great point.
+00:31:30 [W] So how can you get involved in the development of cluster API?
+00:31:34 [W] I love this question.
+00:31:36 [W] So we'd love for you to get involved and I think the best way to start is to join the different communication channels.
+00:31:50 [W] So you'll want to join the kubernative slack if you're not already in it, and there is a dedicated cluster API Channel and there are also channels for each provider. So if you're interested in a specific area, let's say as your you might want to join.
+00:31:56 [W] closer API - as your channel, and there's one for every provider and then you should also join the cluster lifecycle mailing list, which will give you access to all the documents
+00:32:11 [W] Putting the meeting notes and everything.
+00:32:14 [W] There are links for that on the kubevirt. Sorry Koreans Community repo if you go under single cluster life cycle and also as knative or mentioned earlier, we have a meeting every week.
+00:32:27 [W] So that's a really good way to like start getting to get to know the community and you know, you can just join them.
+00:32:38 [W] Listen, if you're just want to learn more or like you can come and ask any questions you have and that happens every Wednesday.
+00:32:41 [W] At 10 a.m. Pacific time.
+00:32:44 [W] We're actually not going to do it today.
+00:32:52 [W] I think because of cube con, but the next one would be next week a week from now on Wednesday. So look forward to seeing you there.
+00:32:57 [W] And then we also have good first issues on the repo.
+00:33:04 [W] So that's also a good way on any cluster API people whether it's a provider repo or the main cluster API repo.
+00:33:09 [W] So if you filter GitHub issues with labels, you can look at the good first issue labels and
+00:33:13 [W] Are usually well scoped small issues that are good to get started with.
+00:33:15 [W] I don't have any. Do you have anything to add to that?
+00:33:19 [W] I think
+00:33:40 [W] On the relate to other projects such as metre cube or ironic or Talent into these people plus a guy so much building block and we fully expect people to
+00:33:43 [W] Medicube is example using props API to provision kubectl can do is involved in positioning using prepaid guide provision to reach there.
+00:33:54 [W] So it's very much a fundamental building block.
+00:34:00 [W] We get want to solve the problem about deploying kubernative once and for all we've been doing it for four years.
+00:34:03 [W] Let's let's just join together do it. Well together and everyone can reap the benefit.
+00:34:10 [W] Yeah, I'll throw squeeze in one more answer.
+00:34:15 [W] Does it support eks in AWS?
+00:34:21 [W] So there is an in-progress PR actually to add support for building a PS clusters and that's something that's come up a lot recently you like.
+00:34:30 [W] how do I build manage clusters with cluster API?
+00:34:34 [W] It is still like very experimental and very much in the development process.
+00:34:37 [W] So if you'd like to help shape it this is a great time. You can find that PR. I'm in the cab. I
+00:34:40 [W] Which is cos 3 Phi AWS, and then we also have done something on the outer side.
+00:34:47 [W] There's an experimental feature available for Developers for deploying sorry AKs clusters.
+00:34:55 [W] So that's already available in the latest release under the experimental folder.
+00:34:56 [W] check that out.
+00:34:58 [W] All right. I think that's our tiny deer.
+00:35:02 [W] Yeah, thank you for joining.
+00:35:14 [W] We're happy to continue the conversation.
+00:35:19 [W] It's like sorry we didn't get to get to get to all the questions, but I'll see you all in Psych.
+00:35:19 [W] Thanks.

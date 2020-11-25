@@ -1,0 +1,258 @@
+﻿Contain Your Enthusiasm for Go Dev: Fast, Simple Go+Docker Development: RDGM-8878 - events@cncf.io - Wednesday, November 18, 2020 3:52 PM - 36 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Welcome to contain your enthusiasm for go fast and simple go play soccer development.
+00:00:06 [W] As a matter of housekeeping you'll find that this QR code will take you to the slides. So if you'd like to actually go find the original version of these lines, please follow this QR code.
+00:00:26 [W] Welcome to contain your enthusiasm for go fast and simple go plus Docker development.
+00:00:33 [W] As a matter of housekeeping you'll find that this QR code will take you to the slides.
+00:00:38 [W] So if you'd like to actually go find the original version of these lines, please follow this QR code.
+00:00:45 [W] So go is an extremely Pleasant language.
+00:00:49 [W] It's builds are fast.
+00:00:53 [W] It makes testing very easy and also fast.
+00:00:58 [W] And it makes debugging very easy and there's a whole ecosystem of tools to plug into the bugging of go.
+00:01:06 [W] And then there's Docker and Doctor also makes development easy.
+00:01:10 [W] It makes cross OS work using I can literally start on my Mac laptop and use Docker to gain access to and Arun to 2004 development environment trivially in a single command line.
+00:01:25 [W] And I perlier caching makes builds fast.
+00:01:28 [W] So without doc earlier caching.
+00:01:30 [W] I have a project I work on from time to time that it takes 54 seconds to build and with back earlier cashing that comes down 2.5 seconds. So very nearly a hundred X speed up.
+00:01:47 [W] And so when we go to look at bringing go and Docker together, there's some goals we want to achieve.
+00:01:51 [W] So first we want to take go code and turn it into a go executable in a Docker container.
+00:01:56 [W] This is actually not that hard but we'd like to get fast rebuilds. And for reasons that we'll go over here shortly. That is kind of hard when you Ringo and Docker together.
+00:02:08 [W] We'd like to be able to Docker run tests.
+00:02:10 [W] You're caching.
+00:02:12 [W] I have a project I work on from time to time that it takes 54 seconds to build.
+00:02:18 [W] And with Doc earlier caching that comes down 2.5 seconds.
+00:02:22 [W] So very nearly a hundred X speed up.
+00:02:28 [W] And so when we go to look at bringing go and Docker together, there's some goals we want to achieve.
+00:02:32 [W] So first we want to take go code and turn it into a go executable in a Docker container.
+00:02:37 [W] This is actually not that hard but we'd like to get fast rebuilds. And for reasons that we'll go over here shortly. That is kind of hard when you bring go and Docker together.
+00:02:50 [W] We'd like to be able to Docker run tests.
+00:02:52 [W] Say for example, and this is an example from my own development life.
+00:02:55 [W] You're working on a map out of executable that is really intended to run analytics environment.
+00:03:01 [W] You obviously need to be able to test that executable, but you're not going to test that executable for a Linux OS on your Mac directly. You need to be able to test it in a linux-based Docker container.
+00:03:16 [W] You want to be able to debug all the things as they are running in your Docker container?
+00:03:23 [W] Are you like to be able to hack on the dependencies for the particular executable you're working on so one of the things about go is it's a beautifully modular language and as you use it more and more you discover that certain things are true.
+00:03:35 [W] So one of the things you discover is it really really wants you to have one module per repo and then the next thing we discover is that it really kind of wants you to have one executable / repo and obviously when it's you who to vote for Docker container
+00:03:50 [W] You hack-a-thon the dependencies for the particular executable you're working on.
+00:03:53 [W] So one of the things about go is it's beautifully modular language. And as you use it more and more you discover that certain things are true.
+00:04:00 [W] So one of the things you discover is it really really wants you to have one module per repo and then the next thing you discover is that it really kind of wants you to have one executable Perico and obviously when it's you who to vote for Docker container now you
+00:04:15 [W] Natural way to work with go and as you dig into that you quickly discover that you find occasions where there is some dependency or working on say you have an SDK and you're working on an executable.
+00:04:26 [W] We'd like to hack on the SDK and the executable at the same time.
+00:04:31 [W] And so doing that in a world where everything is running in your Docker container to get you the cross OS support that you're looking for. That's an interesting trick.
+00:04:40 [W] And then the last thing is we'd like to keep these things idiomatic both doctor and go have very powerful idioms for how you work.
+00:04:47 [W] They make it end up being a big part of what makes them sort of very natural and pleasant environment stork in so whatever it is that we do we'd like to try to keep everything as simple as possible and trying to see as close as possible to the standard of the hips so we don't get
+00:05:02 [W] sense
+00:05:04 [W] But as you bring going doctor together, there are some rough spots.
+00:05:09 [W] So the first one we'll talk about is what I sort of refer to as cash Collision.
+00:05:13 [W] So in go you have a couple of things that go does to make your builds fast that have to do with caching.
+00:05:20 [W] So the first one is if I have some go mod file where I've listed out the modules that I depend on as in this example, when I go to do a build go we'll go ahead and download the source code for all of those modules and it will put them in its module Source cash,
+00:05:35 [W] File where I've listed out the modules that I depend on as in this example, when I go to do a build go we'll go ahead and download the source code for all of those modules and it will put them in its module Source cash, which is in wherever your go path
+00:05:50 [W] Wherever your go path is / package / mod, and it will populate this Source cash. So it doesn't have to redownload those modules every time you do a rebuild. It only has to download them on an occasion in which you change versions.
+00:06:03 [W] This is not having to download every time radically speeds things up.
+00:06:10 [W] And then you've got the binary cash.
+00:06:12 [W] So this is an exercise.
+00:06:13 [W] I highly recommend it's hugely instructive.
+00:06:15 [W] We're only going to show you a little bit of it here.
+00:06:17 [W] But if you type go build - x that will actually show you all the things that are going on behind the scenes with go build.
+00:06:25 [W] It's fascinating we're going to focus on one particular thing that goes on behind the scenes, which is you end up seeing commands that look like this. They are compiled Comics you'll see this compile command is for Linux amd64.
+00:06:40 [W] And then there's a whole bunch of other flags to go with it and it's compiling client set dot go now one of the things that go does with this is it builds a binary artifact cash.
+00:06:53 [W] So it takes a hash of the command line and the file contents in client said dot go and those together produce a hash file name and that hash file name is the resulting binary artifact and what this means is
+00:07:08 [W] next time we go to a rebuild if this source file has been built before with the same arguments meaning we're still building it for Linux and we haven't moved anything around terribly launch, then it doesn't have to rebuild the binary file
+00:07:23 [W] From a cash and so this can take something where you might have thousands of different things in dependencies to build to a situation where you just have a linking problem.
+00:07:21 [W] Now then you go. Look at Dockery doctor also does caching caching is awesome.
+00:07:25 [W] So if you take sort of just a very standard Docker file here, you know from go lying.
+00:07:31 [W] Yo, what up? 15.3 Alpine 3.12.
+00:07:33 [W] So you've got a container.
+00:07:35 [W] you said work directory you copy your source code in dot-to-dot you do a go build right super straightforward. So, dr. We'll go through this in steps building layers as it goes.
+00:07:47 [W] So the first step it just goes and gets you the original container your based on.
+00:07:50 [W] Second stop it will change the bill directs her energy to the Work Director to build third step it copies your source code in as an additional layer and then the fourth step it actually runs the build and the point of this is that each layer.
+00:08:03 [W] It's updating the contents and overlaying the contents of what came before.
+00:08:08 [W] So if I do a darker rebuild some magical things happen. So the first thing is obviously it's the same containerless before so no real work to do there for Step 1 for step two. It can actually use the cash.
+00:08:19 [W] So resetting the build directory not a big deal for step 3, if the source code that I'm copying in is the same source code that I was copying in before then it can literally cash this layer.
+00:08:32 [W] came before
+00:08:32 [W] so if I do a darker rebuild some magical things happen. So the first thing is obviously it's the same containerless before so no real work to do there for Step 1 for step two. It can actually use the cash.
+00:08:43 [W] So resetting the build rectory not a big deal for step 3, if the source code that I'm copying in is the same source code that I was copying in before then it can literally cash this layer.
+00:08:55 [W] So it doesn't have to reproduce a new layer you can use the what it's got and because it is
+00:09:01 [W] Out layer when it goes to run go build it can use the cached results of that last go build because the source code hasn't changed.
+00:09:10 [W] And the result of this is that you get a very very fast rebuild that sort of point five versus 54 second case that I showed you so pure rebuilds are very fast. But what happens if you do a Docker rebuild with a source file change
+00:09:26 [W] So again, we start with exactly the same dockerfile, but we changed one source file from last time.
+00:09:31 [W] So we still use exactly the same step one image again.
+00:09:35 [W] We can still build pulled from the cache the work directory being set but when we go to copy in the source code, what we discover is what we had last time the six 3D layer, that's no longer valid because the source code is different.
+00:09:49 [W] So we've had a cache invalidation on this layer and because that that cache invalidation we go
+00:09:55 [W] You step 4 which is running go build. We can't reuse the cached entry from the lineart layer last time that's also invalidated. Once the layers been invalidated everything that follows. It is invalid in the cache. And so we have to go and redo this work.
+00:10:12 [W] Now let me sort of look at what consequences this has for a go build, right?
+00:10:17 [W] So I'm going to skip over step one and two because they're frankly extremely boring and go straight to the copying the source, right? So you copy the source in and of course that will update the go Source in that layer.
+00:10:29 [W] That's no longer valid because the source code is different.
+00:10:32 [W] So we've had a cache invalidation on this layer and because that that cache invalidation we go to do step 4, which is running go build.
+00:10:41 [W] We can't reuse the cached entry from the lineart layer last time.
+00:10:44 [W] That's also invalidated. Once the layers been invalidated everything that follows. It is invalidated in the cache. And so we have to go and redo this work.
+00:10:54 [W] Now let me sort of look at what consequences this has for a go build, right?
+00:10:59 [W] So I'm going to skip over step one and two because they're frankly extremely boring and go straight to the copying the source, right? So you copy the source in and of course that will update the go Source in that layer.
+00:11:11 [W] Now when you go to Rome to go build things happen here. So first is it goes into us the download to construct your Source cash?
+00:11:19 [W] And so it'll download all the modules at the step every time that you have a source code change and then it also ends up as part of building building the binary cash.
+00:11:30 [W] So again for a one line Source change, what does this really mean for us?
+00:11:34 [W] What it means is that your go Source comes in it invalidates the cash because different source code and that means that it invalidates the docker cash for the build build line, which means you can't use
+00:11:50 [W] And so it'll download all the modules at the step every time that you have a source code change and then it also ends up as part of building building the binary cash.
+00:12:01 [W] So again for a one line Source change, what does this really mean for us?
+00:12:05 [W] What it means is that your go Source comes in it invalidates the cash because different source code and that means that it invalidates the docker cash for the build the build line, which means you can't use
+00:12:42 [W] You've got to redownload everything even though that may not have changed at all and your go binary cash also has to be completely rebuilt even though that hasn't changed at all.
+00:12:53 [W] all. And so we have this mismatch between how go Tasha's to go fast and how Docker Cassius to go fast and that mismatch causes all kinds of headaches in particular in this is sort of an example from a medium large command project that I'm working on.
+00:13:08 [W] Or my one line change tying stalker build was 27 seconds. If I used a file go file. Sorry, dr.
+00:13:18 [W] File that was like this, you know Sad Panda 27 seconds like it's amazing how quickly that starts to wear on your soul.
+00:13:24 [W] Every time you have to do a rebuild because you need to build analytics and running Linux, but you're running on a Mac.
+00:13:30 [W] It's just awful.
+00:13:31 [W] So question is what can we do to make this better now, there's partial Solution. That's extremely popular and I'm certain that.
+00:13:38 [W] You've seen it before because it's used everywhere. And if you haven't been using it, you're really should be using it and I say look dependent the download of the the dependency sources is a long time.
+00:13:48 [W] So what if between the build step and the copy The Source could step in we just copy the go mod and the go some files into our Docker container built, right?
+00:13:58 [W] Just those two just the things that tell us what are our dependencies and then we run this handy command go Mod download which will go and download those dependencies.
+00:14:07 [W] Panda 27 seconds, like it's amazing how quickly about starts to wear on your soul. Every time you have been will rebuild because you need to build analytics and running Linux, but you're running on a Mac.
+00:14:18 [W] It's just awful.
+00:14:18 [W] So question is what can we do to make this better now, there's partial Solution.
+00:14:24 [W] that's extremely popular and I'm certain that you've seen it before because it's used everywhere and if you haven't been using it you really should be using it and I say look dependent the download of the the dependency sources is a long time. So what if between
+00:14:37 [W] in the build step and the copy the source code stuff in we just copied the go mod and the go some files into our Docker container built, right?
+00:14:46 [W] Just those two just the things that tell us what are our dependencies and then we run this handy command go Mod download which will go and download those dependencies.
+00:14:56 [W] So what does this look like in terms of our caching Behavior, right?
+00:15:00 [W] So it means that again we still have the copy of the go mod and the go some happening just like we did before now these haven't changed though because we haven't changed our dependencies and we still have the Run go Mod download stuff.
+00:15:14 [W] But again, this also hasn't changed because our dependencies haven't changed.
+00:15:17 [W] So the source cash gets reused from the step for layer.
+00:15:23 [W] And then we copy our source code in and through our binary build our source code getting copied in it's different so that invalidates our previous step layer for the source code for step 5, and that means we have to
+00:16:15 [W] Still have the copy of the go mod and the go some happening just like we did before now these haven't changed though because we haven't changed our dependencies and we still have the Run go Mod download stuff.
+00:16:27 [W] But again, this also hasn't changed because our dependencies haven't changed.
+00:16:31 [W] So the source cash gets reused from the step 4 layer.
+00:16:36 [W] And then we copy our source code in and through our binary bill and I'll our source code getting copied in it's different so that invalidates our previous step layer for the source code for step 5, and that means we have to
+00:16:52 [W] Even though we may have only changed a single file, right?
+00:16:55 [W] We may have just changed may not go but we've got a real rebuild all of our dependencies and everything in our project.
+00:17:00 [W] This is kind of a drag.
+00:17:06 [W] So in the medium large command project on talking I've been been playing with this one line change now has a real-time 11 25 seconds.
+00:17:15 [W] So way better than the 27 seconds we were seeing before but this is sort of an emotionless Panda because it still starts wearing on your soul.
+00:17:26 [W] So here's some more complete solution.
+00:17:28 [W] So there's a little handy tool that I've actually put together called Imports Jen Imports - Jen and it's ago generator.
+00:17:37 [W] It's very straightforward.
+00:17:39 [W] So the first line here is just a very handy bash line that goes and goes to a temporary directory and does the go get install for imports Jen. This is a super handy way to install things and make sure that you always have the go Imports done that you want.
+00:17:53 [W] Here and then it just runs go in ports Jen and you may wonder why this is a bachelor of the reason is because of the goose setting Goose equals Linux because as it turns out for my particular case, I'm building Linux containers.
+00:18:05 [W] And so I want to import Jen running for Linux, even though I'm running it on my Mac at this point now when I go and type go generate it goes through and it generates a source code file and it sticks it an internal Imports Imports underscore Linux
+00:18:21 [W] Because that's where my gen file was and the import file literally just takes every package every single package in my dependency tree and for my module my entire module this includes everything I depend on includes everything.
+00:18:36 [W] every single package in my dependency tree and for my module my entire module this includes everything I depend on includes everything that anybody that I depend on depends on and it is symbols and imports file and with this little underscore
+00:18:40 [W] That I depend on depends on it is symbols and imports file and with this little underscore with underscore basically says is hey, I'd like you to import this which from the point of view of the binary cash means you need to build it, but I don't really get
+00:18:55 [W] File there lots of candy reasons you do this often involving manipulating the init function, but for us what we're really doing here is ensuring that stuff is getting built even though we're not actually using any of it in this particular file.
+00:19:11 [W] So what does this end up doing?
+00:19:13 [W] Right so you got to want to make a very small change to your Docker file for the full solution, which is you still want to copy in the go mod and the go subtle in step 3, but then for step four rather than doing go Mod download you want to copy in your internal
+00:19:28 [W] which is you still want to copy in the go mod and the go soul in step 3, but then for step four rather than doing go Mod download you want to copy in your internal import strike during which will copy in that Linux underscore Imports Telco file
+00:19:40 [W] That Linux underscore compartes Telco file and then you just run and go build internal importance and that will go ahead and build just that one directory.
+00:19:51 [W] So what does this actually look like in terms of what happens to earlier caching?
+00:19:55 [W] Right? So we've copied in the go mod still we got down to that step.
+00:19:59 [W] Everything is still in the same place.
+00:20:00 [W] Now when we copy the internal Imports in it just copies in the internal Imports directory. Now this only changes when you rerun your go Jenn generate and again, even if you were in go generate every time it only actually changes when the
+00:20:15 [W] Change and you can choose when to run that yourself.
+00:20:21 [W] So that can be used from coming pardon from cash. Now, then the next thing you do is you run go build internal Imports. Now the interesting thing about this is number one go build internal Imports because
+00:20:36 [W] I could you use has its module downloaded your module Source cash is going to get updated.
+00:20:36 [W] So it'll go through and update your module Source cash.
+00:20:40 [W] Now.
+00:20:41 [W] I have the sneaking suspicion based upon the behavior that I've seen that it's actually incredibly smart about this meaning that it can tell a little bit not of the level of just module dependency, but the level of package dependency because the number of
+00:20:56 [W] So we'll go through and update your module Source cash.
+00:20:55 [W] Now. I have the sneaking suspicion based upon the behavior that I've seen that it's actually incredibly smart about this meaning that it can tell a little bit not of the level of just module dependency, but the level of package dependency because the
+00:21:56 [W] Modules that I get downloaded through this pattern is substantially less and substantially faster than what I get with go Mod download.
+00:22:04 [W] So not only do you get your module Source cash, but it's actually more efficiently constructive than with the partial solution.
+00:22:09 [W] And then because we're running go build internal Imports.
+00:22:12 [W] It will go through and construct the binary Cash for every package that is in your dependency tree.
+00:22:18 [W] So every package that is not immediately part of your own source code already has a binary artifact in the cash in your container.
+00:22:27 [W] And what that means is when you get down to your one line change in your copy file your one line change to your source code that one line change to your source code is the only thing that invalidates the cash.
+00:22:40 [W] So even if you make a one-line change, you don't have to download your dependencies anymore.
+00:22:46 [W] You don't have to go and build alt rebuild all your dependencies again.
+00:22:50 [W] You just have to rebuild your immediate artifacts and then do your linking step and so your go run run.
+00:22:57 [W] Go build is a much much faster step as a result to give you some idea of how much faster and again. This is the same medium sized project one line change, you'll basically with the source and been cash being preserved by the
+00:23:12 [W] Don't have to go and build or rebuild all your dependencies again.
+00:23:15 [W] You just have to rebuild your immediate artifacts and then do your linking step and so your go run run go build is a much much faster step as a result to give you some idea of how much faster and again, this is the same
+00:23:52 [W] It's down to a real-time of 3.2 2 seconds, which is our happy panda over here.
+00:24:01 [W] So if you look at this we go from a Sad Panda at 27 seconds.
+00:24:05 [W] Then we get about a three-fold speed up going down to a medium scale Panda at eleven point eight five seconds.
+00:24:11 [W] And finally you get to a happy panda with another threefold speed up to three point two two seconds.
+00:24:16 [W] So there's a real difference here in actually fully solving the impedance mismatch between dr. Caching and go cash.
+00:24:28 [W] So just to review it's very simple.
+00:24:30 [W] You just had an internal Imports Jen dot go file looking roughly like this. You do go generate and then you add these two lines to your Docker file after the point where you would add your
+00:24:45 [W] So there's a real difference here in actually fully solving the impedance mismatch between Docker caching and go cash.
+00:24:57 [W] So just to review it's very simple.
+00:24:59 [W] You just had an internal Imports Jen dot go file looking roughly like this. You do go generate and then you add these two lines to your Docker file after the point where you would add your
+00:25:49 [W] To go some and you don't have to do your goemon download anymore because the go build internal Imports takes care of that for you.
+00:25:58 [W] So this is how we achieve cash harmonization.
+00:26:04 [W] So next up you recall we were talking about being able to test so I don't know how everybody else works.
+00:26:10 [W] I've never been a huge proponent of the sort of the classic test driven development model, but what I can tell you happens continuously in my life is I write code I test code I write code I test code I write code I test code it's a constant back and forth in an infinite Loop for me.
+00:26:23 [W] And so you want to be able to do this and do this quickly.
+00:26:27 [W] And so again a very small change to your dockerfile. So first we switch to using multi stage builds and doctor and to do that we lay we named our first stage as build and then below.
+00:26:43 [W] We say from build as test.
+00:26:46 [W] Then we add a command to run our tests.
+00:26:48 [W] So whatever it is that we're building whatever command that we're building we built here and then we go through and we run our tests here.
+00:26:58 [W] And our tests here will run not as part of the build.
+00:27:02 [W] But literally when we go and run this Target in our particular Docker container and so you can literally just say Docker run. I highly recommend the - - RM because it means that you don't accumulate lots and lots of containers that you don't really care about
+00:27:17 [W] Fun little line. It basically says look, the the idea of the container to run is whatever the output. It is of Docker built - Q which again the dash Q option just instead of showing you all the layers with Docker. It just outputs the final containerd image ID.
+00:27:24 [W] In the - - Target test here. It says rather than going and getting to the act now. This happens to be a right now.
+00:27:26 [W] get back to the know II only build your buildings your final piece to test Target, which is this target right here.
+00:27:32 [W] here. Now. The reason the targets going to be important is obviously you don't want the final output of your container build to be a thing that runs your tests. And so you're going
+00:27:48 [W] to anything and then I'll construct the final stage where I just copy whatever my resulting binary is from my build a giant to a
+00:28:03 [W] Age and give my entry point.
+00:28:03 [W] So then with this Docker file, you can say Docker run RM, dr.
+00:28:08 [W] build Q Target test and that'll bring your testing or you can just omit the target test and it will go ahead and build and run your actual application this example a hello world application.
+00:28:22 [W] So that limits testing super super easy.
+00:28:25 [W] Now the next thing that usually I run into is debugging I am I will confess I am a debating addict I use the debugger probably a bit too much but it just makes it super easy to tell what's going on in your code and sort out and figure out a
+00:28:40 [W] It eliminates the general tendency to over log your brains out, which is going to screw your life up in production.
+00:28:42 [W] So bringing go in a Docker container together with the bugging, you know, this is something lots of people have written about but nobody's actually talked about how to make it super easy.
+00:28:52 [W] It always ends up being this bizarrely contrived thing that typically involves radically violating go idioms and it just feels uncomfortable.
+00:28:59 [W] so this is a really simple way to do it. Right? So the first is you add to your build staging or dockerfile just a real simple installation for dull now we have this layer early because this way you will
+00:29:12 [W] Always win the game of layer caching.
+00:29:14 [W] So once you've built this one's you never have to go and get and build delve again. Now for those who don't know delve is the go-to bugger.
+00:29:23 [W] So very simple thing to add there and then the second little trick is in whatever your executables may not go is you can use this little package debug and this is the world's simplest to literally when you call
+00:29:38 [W] It looks for an environment variable.
+00:29:32 [W] that is very very bespoke to this particular executable. Right? So if you have many executables running you can use different environment variables and that environment variable if it is found then debug
+00:29:47 [W] Exact delve with the appropriate arguments to rerun exactly this binary again.
+00:29:40 [W] And so you fall into a debugging mode listening on whatever Port you specified and if it doesn't think you hit something that outputs the error now the error generally speaking you don't want to stop over because the error among other things will when you
+00:29:55 [W] Run tests, it will go through and say setting Envy variable delve.
+00:29:58 [W] Listen, hello world to a valid Dell listen value will cause the dog debugger to execute this binary and listen as directed.
+00:30:04 [W] So he tells you exactly which environment variable because this is presuming a command named hello world. If you are Commander staying for dinner would be Del vallès and forwarder.
+00:30:16 [W] are some things you can tweak to have even more control over this if you'd like, but the out of the box is pretty simple. And so if you come back,
+00:30:22 [W] Can you run Docker run with the environment variable Dell of listen? Hello world 50,000. Make sure you pass the ports through then the result is that you will get running in your container your command executable
+00:30:37 [W] Port 50,000 which will be accessible from your host my Mac laptop in my case and you can just connect your debugger and go so it makes it super super easy to go through and debug these things without having to do a very complicated setup
+00:30:51 [W] You need is already there and the bug self is utterly harmless if you don't actually want the building to be taking place.
+00:30:53 [W] So the last thing is adding test evolving and protest the bugging. This is like you've got your go test files.
+00:30:59 [W] Sometimes you want to attach your nugget test files the thing we just showed you is how to test it.
+00:31:04 [W] attach it to bugger to you're running executable.
+00:31:06 [W] So in this case, you can just say look We'll add 1 more stage called debug will derive it from test.
+00:31:14 [W] So it's still, you know, got all the things to test toss the case we had more things and we'll just have it run the command Dell test.
+00:31:22 [W] Um instead of running the command go test and it will fire up listening on Port 40,000 in this example.
+00:31:28 [W] And so this way if we run, you know debug to the bug the test we can run Docker run us through Port 40,000 using a targeted debug my actual test code.
+00:31:40 [W] code. We'll listen on Port 40,000 and if we really want to go crazy and debug both the tests and the executable we can pass the environment variable for the executable and forward it supports and as well.
+00:31:52 [W] As the forwarding the ports for the test code and use Target debug.
+00:31:56 [W] And so we sort of slowly build up to the point where we could about absolutely everything in a very natural way and if you go back and look at the dockerfile at the end of it all we still come back to building a really lean runtime stage, which just
+00:32:11 [W] And if we really want to go crazy and debug both the tests and the executable we can pass the environment variable for the executable and forward it supports and as well as the forwarding the ports for the test code and use Target
+00:32:54 [W] So none of this additional Machinery screws up in any way the actual executable you end up building at the end of time.
+00:33:05 [W] Which brings us to the last of the things that you're going to end up wanting to do at some point when you try and bring go and Docker together, which is go is really good with dependencies.
+00:33:14 [W] Go modules are super nice. You can specify what modules you depend on and but inevitably when you do this, you find yourself in some sort of a weird situation where you want to go hack-a-thon one of them, right?
+00:33:27 [W] So in my example, I've got a bunch of commands that use a common SDK so I often want to go and hack on the SDK.
+00:33:34 [W] In this example, you know, we don't have any dependencies because they don't want to be too confusing but you can easily see where this would be a thing you'd want to do.
+00:33:42 [W] Now let's talk first about what doesn't work, right?
+00:33:45 [W] Obviously the thing that you know often I end up doing when I'm not working with Docker which is saying, okay keep all my git repo some directory. So I'll use the replace directive to point one of my dependencies at dot dot a directory that contains
+00:34:00 [W] For that particular dependency. Now this obviously doesn't work and you'll see why when you get to Docker because saying copy dot dot log risk is not going to work because Docker literally will not let you break out
+00:34:15 [W] work because Docker literally will not let you break out of the confines of the directory in which its run now, you can go play all kinds of crazy games with moving your doctor files to different places and so forth, but this is really not
+00:34:18 [W] This is really not going to be a solution for your problem.
+00:34:22 [W] But what does work and actually works really nicely because it doesn't ever involve having to edit your your doctor files after you start adopting it is let's say that we keep a directory called local and literally just drop a get ignoring your local directory that says look nothing except a
+00:34:37 [W] Checked into my DOT local directory here through the wonders of being able to stick get ignores and subdirectories that works nicely.
+00:34:42 [W] And then anytime I have a dependency.
+00:34:45 [W] I want to hack on. I just check its rip out into the doc mobile directory.
+00:34:49 [W] Now I can keep in my dockerfile a directive to copy dot local to that local inside my working directory and this is something you're going to want to do after your go modding
+00:35:04 [W] but before anything that actually builds anything because if my go modern go some have a replace directly when I get down to my goal build and turtle and ports if the local directory is not present then my go build internal Imports is going to fail or if Italy
+00:35:17 [W] one line change is completely harmless in the event that I don't actually have any dependencies and Dot local because again who cares but if I do work on dependencies, then it means without having to change the dockerfile and oh Gina to remember to change it back and all the other things
+00:35:26 [W] My CI to protect me against somebody who changed the dockerfile so they can do this.
+00:35:26 [W] Now. You have one standard place you put in one standard way you deal with it and you're done right anything that you're doing locally is purely local.
+00:35:35 [W] So we've actually gone through now and that our goals, right?
+00:35:41 [W] So we've got the go code to a go execute of lot of Docker container.
+00:35:45 [W] We got fast rebuilds Docker run test is very easy and straightforward debugging both the
+00:35:52 [W] The tests themselves and the executable is very easy and straightforward.
+00:35:57 [W] We've got a clear way to hack dependencies that sort of this vaguely Go Yeti Ematic doctor idiomatic.
+00:36:04 [W] And again, the ATMs are pretty much preserved across the two different environments.
+00:36:09 [W] We aren't doing anything super bizarre.
+00:36:11 [W] We'd have to go and edit things unnaturally at weird times.
+00:36:17 [W] So thank you very much for attending the talk. Again, you will find that this is the QR code for these lines. Please feel free to go and look at them.
+00:36:25 [W] They're in Google Slides.
+00:36:26 [W] Feel free to borrow from them. And thank you so much for attending.

@@ -1,0 +1,267 @@
+﻿Uniform Workload Identity Everywhere: SPIRE Integrations and Extensibility: VNWY-7997 - events@cncf.io - Friday, November 20, 2020 5:57 PM - 35 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello everyone.
+00:00:01 [W] Identity and a uniform way across your environments.
+00:00:07 [W] So first, I kind of want to just touch on some common integration challenges that I think many of you probably relate to so you may be using multiple environments and those may be private or public clouds.
+00:00:18 [W] They may be on-prem infrastructure.
+00:00:21 [W] You could be running in a variety of environments. You may have your own in-house tooling that is proprietary and not open source. You may have some open source tooling and maybe using Cloud native tooling.
+00:00:33 [W] So all these different systems are in play.
+00:00:37 [W] May have a mix of legacy and Cloud native applications.
+00:00:41 [W] So things that are designed to run natively in one public cloud or potentially that run kubernative cluster or you may have Legacy workloads, which don't use these newer Technologies yet.
+00:00:54 [W] And so how do you actually provide identity to all of these kinds of environments and applications?
+00:01:02 [W] And how do you enforce uniform authentication across all your art room? Okay.
+00:01:07 [W] Procedure calls which would be happening in your micro service ecosystem.
+00:01:12 [W] So I am excited to tell you that spiffe e and Spire can provide consistent strong identity and help you solve your identity needs in all of these use cases.
+00:01:27 [W] So what are we going to talk about today?
+00:01:29 [W] Overview of what spiffe Ian Spire are for those who are not too familiar and just kind of talk about some of the terminology that we'll be using throughout the talk.
+00:01:32 [W] Then I'm going to go into some of the Integrations that Spire provides and some of the external systems that Spire can integrate with
+00:01:41 [W] then I'm going to talk about different ways that Spire can be extended and the kind of functionality that you can customize in your deployment of spire.
+00:01:52 [W] Then I'm going to talk about Downstream Integrations.
+00:01:54 [W] So how Spire can be used once it's up and running in your environment how you can actually enforce authentication across your ecosystem with Spire issued identities.
+00:02:05 [W] And then I'm going to open up to Q&A at the end.
+00:02:09 [W] So let's go ahead and get started.
+00:02:11 [W] So first of all, what is spiffe e spiffe e is the secure production identity framework for everyone.
+00:02:18 [W] So it's a cool acronym what it really is though.
+00:02:21 [W] It is that it defines three key things one is an identifier format, which is called a spiffe Eid and this is a URI based format which has a scheme component. That just says called spiffe e and then you have
+00:02:36 [W] Concept which is a logical way to organize identities and organization and then some path which has no semantic value but something that you can Define for your own use cases to distinguish different
+00:02:36 [W] from other workloads in your system
+00:02:27 [W] Then the second part of the specification defines an identity document standard.
+00:02:32 [W] So how does this identity get represented? And this is what we refer to as a nested.
+00:02:39 [W] So that stands for spiffe E verifiable identity document and that comes in two different forms.
+00:02:44 [W] forms. One is an x.509 certificate and another is a Json web token.
+00:02:50 [W] And then the third part of the spiffe E specification is this workloads API which talks about how to retrieve and issue s visits throughout an environment.
+00:03:04 [W] So next what is Spire? So Spire is the spiffe E runtime environment and it's an open source implementation of the spiffe E specification.
+00:03:14 [W] So it implements those identity permit has that are defined in the spec.
+00:03:21 [W] It is essentially a control plane. What we'd like to call an identity plane for managing distribution and rotation of identities throughout an environment and it's designed as a scalable distributed system.
+00:03:34 [W] Which is intended to meet the needs of large environments and with many applications and microservices running concurrently.
+00:03:45 [W] So just quickly want to talk about what is the architecture of spire at a high level?
+00:03:50 [W] Identity Primitives that are defined in the spec. It is essentially a control plane. What we'd like to call an identity plane for managing distribution and rotation of identities throughout an environment and
+00:04:47 [W] Jen's the server is responsible for managing identity registrations and issuing identities through the form of an S fit and x509 or GWT.
+00:04:59 [W] So it's essentially a certificate Authority which Provisions these identities and two different agents that run throughout an environment.
+00:05:09 [W] So this agent component is the second component of spire which talks to the server and requests different.
+00:05:17 [W] Entities that it can manage on the host.
+00:05:20 [W] And so how does the user workloads come into the picture here.
+00:05:25 [W] So the workloads will connect to the workloads API which was defined in the Smithy specification and Inspire. It's exposed as a Unix domain sockets today on the host.
+00:05:36 [W] And so that the Unix domain socket is publicly available to anything on the host and the workload connects to it.
+00:05:45 [W] And the agent tries to identify what that workloads is and match it against a set of registrations that is authorized to issue identities for if any of those identities match the workload that is trying to
+00:06:00 [W] And those identities are distributed to the workload over the workloads API.
+00:06:08 [W] So I just want to show like a big picture here.
+00:06:10 [W] There's a lot going on.
+00:06:11 [W] It's the details are not super important here, but I just want to kind of hammer home that Spire can really be versatile and work in a variety of environments here.
+00:06:21 [W] So I'm just showing like one example, maybe you have deployments in different private and public clouds.
+00:06:28 [W] So here I have pictured in AWS deployment where you have kubernative cluster with some nodes running different workloads. And those workloads are Docker based workloads.
+00:06:38 [W] And so in that environment Spire can function it has Spire server deployment in the kubernative cluster and then their agents which are deployed in all the nodes in that cluster and the workloads connect to those agents on those nodes
+00:06:54 [W] Also have a deployment and Microsoft Azure, for example, and in Azure, you're just using it as more of an infrastructure as a service platform.
+00:06:51 [W] So you're not really doing things in a society a cloud native way, but you have workloads running there in Virtual machines.
+00:06:58 [W] So Spire also supports this kind of use case.
+00:07:01 [W] And so if you're imagine you have some virtual machine running Spire server, which is, you know, addressable and writable from other virtual machines.
+00:07:13 [W] In that environment and then the agents on different virtual machines can connect to the server and receive the identities for the workloads that run and the zms and they could be a variety of different kinds of workloads and Docker maybe or maybe they're just knative
+00:07:28 [W] Is and then similar story here for on Prem?
+00:07:24 [W] You may just have bare metal host running in the data center. And so how do you manage Spire their? Well Spire can also work there. You can have different hosts running Spire server, and then you can have
+00:07:39 [W] Hosts in your infrastructure, and again, you can support a variety of these workloads.
+00:07:28 [W] very adaptable.
+00:07:33 [W] So I want to talk about what are the different types of Integrations available with Spire.
+00:07:39 [W] So really we can categorize these into two different buckets one is Integrations that enable the operations of spire.
+00:07:46 [W] So this is controlling some of the key functionality and behavior of spire and some of the security properties as well to meet the compliance requirements that you may have or your own internal requirements.
+00:08:01 [W] And then so really that's all about getting Spire up and running.
+00:08:04 [W] That's just how do I manage spire and make it work in my infrastructure in a secure way that you know, I'm comfortable with the second part here is how do you actually consume Spire issued identities in a way that seamless
+00:08:19 [W] Charity properties as well to meet the compliance requirements that you may have or your own internal requirements.
+00:08:24 [W] And then so really that's all about getting Spire up and running.
+00:08:27 [W] That's just how do I manage spire and make it work in my infrastructure in the secure way that you know, I'm comfortable with the second part here is how do you actually consume Spire issued identities in a way that seamless so
+00:09:08 [W] Ideally, not every workloads needs to implement their own integration with Spire just to get their identity and get bootstrapped.
+00:09:15 [W] Maybe that works in a small environment where you just have, you know, very few number of services or applications and you can make those code changes and all the services to get identity.
+00:09:25 [W] But as you scale further up and they have more and more services in your environment that becomes very difficult to manage. And so how do we actually propagate these s vids across remote procedure?
+00:09:37 [W] Call boundaries and provide secure authentication across our service requests.
+00:09:43 [W] And then how do you use S vids outside of your own ecosystem for requests to external services? So I'm going to talk a little bit about how you might be able to do that as well.
+00:09:57 [W] So first operations Integrations, what are some things that we might want to control with respect to house fire functions?
+00:10:07 [W] so one is that you may have in your organization already some public key infrastructure likely you do and that might be a public web pki chain to some well-known trusted see a on the Internet or
+00:10:22 [W] Ki so you may have your own root CA and your infrastructure organization and you have processes around how its Managed IT.
+00:10:31 [W] maybe you want to manage all of your workload identities in your environment such that they're all chained to this pki. So this is a very common integration point with spire.
+00:10:45 [W] Another integration point we have to consider here is we have this distributed system architecture where there are agents running across different hosts VMS virtual nodes throughout an infrastructure.
+00:10:58 [W] So how do we securely identify those agents in the nodes that they're running on so that we can trust those agents with the identities that Spire server will distribute.
+00:11:08 [W] So this is all about kind of linking your host identity system to spire and
+00:11:15 [W] publishing that bridge of trust
+00:11:18 [W] next another key integration here is how you manage your identity registrations.
+00:11:26 [W] So this is something that we call host categorization.
+00:11:30 [W] So this enables creating identity registrations that we called node Alias registrations, and essentially what these node Alias registrations are for or to give you logical groupings of registrations per host
+00:11:45 [W] A group of hosts. So that identities are not globally available throughout your entire infrastructure.
+00:11:44 [W] You may scope those identities to certain nodes running in your environment.
+00:11:50 [W] So this is about providing the host of some additional metadata to be able to create these kind of no daily service stations for grouping registrations.
+00:12:00 [W] Another key functionality we might want to control is Key Management.
+00:12:03 [W] So how Spire mannan ATMs its own private Keys.
+00:12:07 [W] It's see a private key how it does signing operations and those kinds of things.
+00:12:16 [W] Another important integration Point here is how workloads are securely identified in this system.
+00:12:24 [W] So how does the agent actually determine that a given workloads is something that is trusted and has a registered identity in the platform.
+00:12:34 [W] So we call this workloads at a station and spire.
+00:12:39 [W] And this so this is all about wearing runtime attributes of a workload to identify it against a set of registrations already in spire.
+00:12:50 [W] And then lastly there are some event hooks so you may have some Downstream processes or Downstream storage that you may want to link different key events and Spire to some workflows or you know
+00:13:05 [W] Registered identity in the platform.
+00:12:53 [W] So we call this workloads out of station and spire.
+00:12:58 [W] And this so this is all about wearing runtime attributes of a workload to identify it against a set of registrations already in spire.
+00:13:09 [W] And then lastly there are some event hooks so you may have some Downstream processes or Downstream storage that you may want to link different key events and Spire to some workflows or you know
+00:13:45 [W] And so this is kind of providing using these hooks so that you can plug into that life cycle of different things that happen in spire.
+00:13:55 [W] So how does this all work? So Spire has this plug-in framework which it uses throughout all these different operations and these plugins are defined with interfaces in protocol
+00:14:10 [W] Out all these different operations and these plugins are defined with interfaces in protocol buffer language and these plugins kind of are grouped into two different categories.
+00:14:24 [W] There's like built-in plugins, and those are plugins that are natively available inspired.
+00:14:30 [W] So if you go to play Spire with you know today from latest release, you'll get a set of different plugins that you can configure and so you just need to specify in-toto.
+00:14:40 [W] Your configuration file for the server in the agent.
+00:14:43 [W] what plugins you want to use in your environment?
+00:14:47 [W] And then there is these external plugins which are things that you can develop or things that you can Source from the open source Community if other people have already developed a plug-in for specific operation that you are interested in you can leverage that
+00:15:02 [W] External plugins and loading mechanism and the way that this plug-in framework works is it links like The Core Business logic of spire to these plugins over a grpc interface.
+00:15:13 [W] So that's what enables both in memory and external plugins.
+00:15:19 [W] And these plugins are all designed on top of this framework called hashicorp.
+00:15:25 [W] Go book plug-in, and that's a pretty commonly used plug-in system available in go and is used widely and hashicorp and by other projects in the open source community.
+00:15:38 [W] So I have a link to the reference for that project later on in the slides if you're interested in looking into that work.
+00:15:47 [W] So I want to kind of just touch on what are the different plug-in types for each of these components.
+00:15:52 [W] We talked about in Spire the server and the agent.
+00:15:54 [W] So this is just kind of intended to be an illustration.
+00:15:58 [W] I'm going to dive into all of these different plug-in types more detail here coming up.
+00:16:01 [W] This diagram is slightly outdated in that the plug-in to the left there the day of struggle doesn't exist anymore. So you can kind of ignore that part and there should also be a Notifier plug-in in here as well. But
+00:16:15 [W] Overall, these are the plugins that are available today in the server.
+00:16:19 [W] There's the key manager and Upstream Authority which is kind of how you link to your pki and I'll talk about that later.
+00:16:25 [W] Intended to be an illustration.
+00:16:26 [W] I'm going to dive into all of these different plug-in types more detail here coming up.
+00:16:30 [W] This diagram is slightly outdated in that the plugin to the left there the day of struggle doesn't exist anymore. So you can kind of ignore that part and there should also be a Notifier plug-in in here as well.
+00:16:42 [W] But overall, these are the plugins that are available today in the server.
+00:16:47 [W] There's the key manager and Upstream Authority which is kind of how you link to your pki and I'll talk about that later.
+00:16:54 [W] Then these node plugins called noted tester node resolver, which are used to authenticate notes in your environment and also label them with different key metadata.
+00:17:07 [W] And then the agent has its own set of plugins available as well. And the sort of the three that are supported say the note a tester which pairs with server node tester plug in the workloads tester plug-in which identifies workloads that
+00:17:25 [W] Or environments and also label them with different key metadata.
+00:17:32 [W] And then the agent has its own set of plugins available as well.
+00:17:36 [W] And these are the three that are supported say the note a tester which pairs with server node tester plug in the workloads tester plug-in, which identifies workloads that connect to the workloads API in the host and then the key manager, which also
+00:17:51 [W] Vicki's in signing operations agent
+00:17:57 [W] so Upstream Authority is the first plug-in. I'll talk about here this applies to Spire server.
+00:18:04 [W] So this is how you control the integration with Spire, 'z certificate authority to the chain of trust that you may already have in your organization.
+00:18:12 [W] And so this Authority establishes an interface this plug-in establishes an interface that allows Spire to chain two Upstream certificate authorities.
+00:18:25 [W] It also allows Spire to publish GWT signing keys that it has generated or
+00:18:33 [W] And you know and publish those to some third party store.
+00:18:38 [W] It also can handle the stiff Achatz any requests for the Spire CA. So if you want to avoid or off avoid that signing operation happening in the Spire server process itself, or you want to offload that similar system
+00:18:53 [W] These developer built in plugins today.
+00:18:52 [W] There is a way to provide an upstream trust bundle and private key on disk.
+00:18:57 [W] That's kind of like the simplest way to get going.
+00:18:59 [W] You can also use some third-party secret storage for this as well and the services that we support natively today or AWS PCA and AWS secret manager.
+00:19:11 [W] We also support hashicorp Vault natively and Spire is also an additional plug-in that supported so you can have this nested Spire deployment where you have kind of a central Spire that manages children spire
+00:19:27 [W] All those children Spire deployments chain up to some root Spire deployment.
+00:19:19 [W] So if you want to handle everything within Spire, you can do that as well.
+00:19:28 [W] The next type of plug-in here is the note of tester and this applies to the server and the agent and the this is something that implements kind of a challenge response protocol.
+00:19:39 [W] So you can Define how the agent provides a map station material to the server to prove that it's a trusted node in the system.
+00:19:48 [W] and that could be a physical node, like actual bare metal host where could be a virtual node like a kubernative node or a virtual machine running in your on-prem or public Cloud wherever
+00:20:02 [W] so this defines the bridge of trust between your host identity system and Spire. So this is how you authenticate nodes and your system.
+00:20:11 [W] And so that these are the different plugins which are supported right now.
+00:20:14 [W] We have knative plug-ins for AWS Azure and gcp virtual machines and these generally all work by querying a local metadata and point in the virtual machine and using a trust fund first use security model
+00:20:29 [W] It that identity metadata to Spire server and Spire server can authenticate that and I'll show you an example flow of that after this slide.
+00:20:34 [W] Some of the other plugins that are supported today are join token. This is essentially a one-time pre-shared key that you can generate and you provide that he to the agent and then the server knows about it because
+00:20:49 [W] Generated the key.
+00:20:36 [W] And so that's just a simple way to authenticate a node.
+00:20:40 [W] There's also knative integration of kubermatic.
+00:20:42 [W] He's there's a couple different ways has this can work one is through projected service account token, which is kind of the recommended way.
+00:20:48 [W] There's also kind of a more Legacy plug in for service account tokens such as the older way of providing a node identity in kubenetes, and then we also have S sh and x509 proof
+00:21:04 [W] Russian plugins as well.
+00:21:01 [W] So if you are running on bare metal and you have some other host identity system like an SSH certificate Authority in for maybe some out-of-band x509 host identity
+00:21:16 [W] As a stationary chair as well.
+00:21:15 [W] So it's just an example of how the NoDa tester works for AWS.
+00:21:19 [W] So when the agent comes online, it's no to test. Your plug-in is configured here to be AWS and that AWS plug-in reaches out to the AWS instance identity service on the host and that
+00:21:34 [W] I don't eat to the engines which is signed by a ability.
+00:21:35 [W] Yes using its its private keys. And so server can will receive that entity from Agents and it'll validate that it was a valid identity provided by AWS and if it's able to validate
+00:21:50 [W] Will return an x.509 S bid to the agent which represents the identity of the agent and the agent is an authorized to manage identities and distribute identities to other workloads on that host.
+00:21:58 [W] So node resolver is the next plug-in here and this kind of comes from the attestation flowmill.
+00:22:07 [W] I just showed you. So once that attestation completes in the server, you can configure these node resolver plugins which append additional metadata about
+00:22:16 [W] about those nodes in spire.
+00:22:20 [W] And so why would you want to do this?
+00:22:21 [W] So the reason why this becomes useful is because it allows you to Define registrations in Spire that act as node aliases which serve as kind of a parent of different workloads that
+00:22:36 [W] Our on specific subset of hosts. So you can control these aliases kind of at the node level and say like post a is able to serve identity is for workloads 1 2 and 3 and host B is able to serve identities for for
+00:22:46 [W] For of and 6 etcetera.
+00:22:38 [W] So just gives you some controls to actually manage where identities are distributed throughout the system.
+00:22:48 [W] So here is kind of like an example of how you might do that.
+00:22:50 [W] So let if you look at the top registration here, this is a node Alias registration and you see it spiffe Eid is for my domain /host /a so, this is we're calling this host a and her infrastructure
+00:23:06 [W] The selectors here are upended by the notary solver, which I've let's say I've created some node resolver in this example.
+00:23:12 [W] It's called my fancy node resolver.
+00:23:14 [W] And so it depends this selector, which says hey, I know something about this host.
+00:23:19 [W] It's called hosts a so I'm going to give it this selector.
+00:23:22 [W] So what this means is when in agent comes to retrieve its identity registrations from Spire server, its first going to be matched against this node Alias registration.
+00:23:34 [W] And then any registrations which are specifying this register, this no deal is registration as its parent will also be sent back to that agent.
+00:23:43 [W] And so we can Define these workloads with parent IDs of spiffe e my domain host a for workloads and be and then that allows us to scope only the and be workloads at entities to this Jose.
+00:24:01 [W] So next is a workloads tester and this is an agent side plug-in and so it's responsibility is to reach out to some trusted Authority and interrogate it for some process selector metadata that we can use to
+00:24:17 [W] Of spiffe e my domain host a for workloads and be and then that allows us to scope only the and be workloads identities to this host pay.
+00:24:25 [W] So next is a workloads tester and this is an agent side plug-in and so it's responsibility is to reach out to some trusted Authority and interrogate it for some process selector metadata that we can use to
+00:25:01 [W] Asians in Spire server
+00:25:04 [W] so some what are some example authorities that we trust in Spire might be an operating system kernel like the Linux kernel it might be some sort of orchestration platform and so here are the examples of the plugins that we support today
+00:25:19 [W] Are the examples of the plugins that we support today?
+00:25:22 [W] We support Docker and kubernative zand unix-based workloads. So workloads that are just knative processes on a host.
+00:25:33 [W] And so this is how the workloads tester flow works at a high level just to give you an idea.
+00:25:37 [W] So at the top here this green boxes your workload and it connects to the workloads atapi running on the X domain sockets by the Spire agent on that host that work. Will API basically has one
+00:25:53 [W] Give me an identity.
+00:25:53 [W] And so that's what the workload calls and it says I'd like an S vid to identify myself to other actors within that system Spire agent then uses this workloads tester system and
+00:26:08 [W] It workloads s your plugins that it has and it interrogates each of those external systems to try to discover attributes about this process that's running that's involved.
+00:26:18 [W] kubernative
+00:26:48 [W] Oceans in Spire which match the set of selectors returned from these third-party systems, then we can issue an identity for this workloads.
+00:27:04 [W] Next is a key manager plug-in here and this applies to the server and the agent components.
+00:27:09 [W] So this is responsible for managing the private key operations and storage of private Keys throughout spire.
+00:27:16 [W] And so some of the key things that we want to manage here are the private key generation.
+00:27:23 [W] So how it gets generated.
+00:27:25 [W] what kind of icky it is and then also doing things like Computing digital signatures on
+00:27:31 [W] Any documents that we make this something we may want to offload to a third party system.
+00:27:36 [W] And so the built-in plugins today for the key manager or the disk and memory plugins so you can store the keys on disk which allows you to retrieve them on the host after the server or the agent,
+00:27:51 [W] Is down and it comes back up. It can retrieve its identity back from disk memories and other options if you want to just keep the keys in memory.
+00:27:45 [W] That's also possible.
+00:27:50 [W] And then the last plug in here we'll talk about is the Notifier plug-in and this is a server-side plugin today.
+00:27:56 [W] What this does is it publishes notifications of different key operations in spire and it currently is only used to publish trust bundle events.
+00:28:07 [W] So when a bundle is changed you can publish that new bundle out to some third party storage.
+00:28:14 [W] So the plugins which are supported here today are Google Cloud Storage or in kubermatic.
+00:28:19 [W] Fundal where you can write out this bundle some back to some external storage.
+00:28:28 [W] So how would you actually Implement a Spire plugin?
+00:28:30 [W] So say maybe like you have some use case that is not solved by these built-in plugins and you need to extend Spire for that case.
+00:28:39 [W] So what you would need to do is in the GitHub repository for spire.
+00:28:44 [W] There are these plug in their faces to find and this Proto Spire location. And then under that there's an agent in the server directory and then different plug-in types underneath that and then so
+00:28:57 [W] So how would you actually Implement a Spire plugin?
+00:28:56 [W] So say maybe like you have some use case that is not solved by these built-in plugins and you need to extend Spire for that case.
+00:29:04 [W] So what you would need to do is in the GitHub repository for spire.
+00:29:09 [W] There are these plug in their faces to find and this Proto Spire location and then you know that there's an agent in the server directory and then different plug-in types underneath that.
+00:29:22 [W] So for whatever plug-in that you need to implement, you would find that interface for the component that you're trying to extend and you would Implement that interface and then you would add config stanza
+00:29:57 [W] that interface
+00:29:59 [W] and then you would add config stanza in whatever component.
+00:30:05 [W] they are implementing the plug-in for and so this is kind of an example. Like let's say you have a custom know to test your plug-in and you have called this my no to tester.
+00:30:15 [W] This is kind of how the config might look in whatever in but I guess in this case note history applies to both server and agent. So here the noted tester is specified by its name, which is called No tester.
+00:30:29 [W] my name is Esther and then there are three key things to point out here one is you have a plug-in command which is a path to the binary on the host that the Spire server and Spire agent processes can launch
+00:30:44 [W] Provide a sha-256 checks from of that binary so that you can know that that binary is something that you expected and not something that's been modified on the host and then whatever data is required
+00:30:59 [W] You can provide in this plug-in data section, which is customizable for whatever plug-in that you are implementing.
+00:31:01 [W] Okay, so I want to quickly touch on also some Downstream Integrations.
+00:31:05 [W] So this is kind of second category of Integrations that we're talking about here.
+00:31:09 [W] So once you have Spire up and running, how do you actually use these identities effectively so very common Paradigm now is this idea of the servicemeshcon?
+00:31:30 [W] There's the logging and you know centralized operations as authentication things like that.
+00:31:35 [W] So Spire actually has a native integration with Envoy.
+00:31:38 [W] It burns the envoy secret Discovery service.
+00:31:42 [W] It's called SDS.
+00:31:43 [W] And so that's implemented by the Spire workloads API today.
+00:31:47 [W] And so what this means is you can transparently enable Mutual TLS using Envoy through Envoy configuration. So when you have a Spire deployment up and running, all you have to do is add this additional configuration.
+00:32:00 [W] In which is documented and spot Spire documentation and you can get Mutual TLS up in your environment.
+00:32:09 [W] Another example here is how do you use an S-Video outside of your own infrastructure?
+00:32:15 [W] At Sports open ID connect Federation. You can set up Federation within Spire it supports Federation.
+00:32:20 [W] And so there's an example that has been put together.
+00:32:23 [W] It's pretty cool that actually shows how you can authenticate to AWS management apis using estimates. So in this case, it's using a GWT acid.
+00:32:36 [W] And there's more links later on for all this.
+00:32:41 [W] So what are some future extensions were considering there's a proposal going out currently called an agentless mode where you're able to request Spire show identity directly from the server as opposed to
+00:32:57 [W] So what are some future extensions were considering there's a proposal going out currently called an agentless mode where you're able to requests Spire show identity directly from the server as opposed to
+00:33:16 [W] So this kind of enables things like the serverless use case where you don't have like a dedicated node where the process is running.
+00:33:23 [W] It's something that you know comes up and it's transparent to you you have control of that node entirely and then we also have started exploring some Integrations with Apache data project. So in that Hadoop kind of ecosystem
+00:33:38 [W] Kerberos paste identity. So how do we translate the Kerberos faced identity into 50 identities and make that coexist in this environment with spire.
+00:33:50 [W] So to conclude here.
+00:33:52 [W] We showed how Spire can be extended for different use cases and bring identity to complex environments that may have a variety of proprietary or open source or Cloud native tooling and we showed how this plug-in model and Spire enables you to
+00:34:08 [W] Internal proprietary extensions or open source extensions that other people can consume as well.
+00:34:14 [W] And so here are the links to reach out to the community.
+00:34:17 [W] We'd love to hear from you. If you have input on any potential future plugins, or if you have questions about some of the existing plugins or what's available.
+00:34:27 [W] We are very happy to engage with you further.
+00:34:28 [W] We have a website here and he's our GitHub links.
+00:34:32 [W] We also have a slack and a Twitter if you're interested in subscribing to some of the news around the specific and Spire projects.
+00:34:41 [W] So thank you very much for attending this talk and we'll turn it over now to QA.
+00:34:55 [W] Hi everyone Thanks for attending.
+00:34:57 [W] I know this is the last slide of the conference and I'm probably the last thing between you and your weekend, so I appreciate your time and for joining the talk.
+00:35:05 [W] We got a few questions here in the Q&A chat.
+00:35:08 [W] I've tried to answer them.
+00:35:11 [W] So if hopefully those answers were useful. If you have more questions, feel free to follow up with me offline.
+00:35:18 [W] I'm being told that we are out of time for the talk, but I am generally available in the spiffe E slack.
+00:35:25 [W] Again, thanks very much and take care everyone.

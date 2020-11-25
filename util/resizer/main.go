@@ -24,7 +24,7 @@ func main() {
 
 	var sourceFolders []string
 	for _, f := range sourceFileInfos {
-		if f.IsDir() && f.Name() ==  "2019-kubecon-na" {
+		if f.IsDir() && f.Name() ==  "2020-kubecon-eu" {
 			sourceFolders = append(sourceFolders, path.Join(sourceRootFolder, f.Name()))
 		}
 	}

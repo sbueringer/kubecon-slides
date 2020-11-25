@@ -1,0 +1,282 @@
+﻿A Hard Multi-tenancy Solution: Use Case, Challenges and Work: AFSQ-0086 - events@cncf.io - Tuesday, August 18, 2020 11:42 AM - 52 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:02:25 [W] Hi everyone, and thank you and welcome to talk.
+00:02:33 [W] My name is Johnny in this talk.
+00:02:40 [W] My colleague will chair and I talked about the multi-tenancy work. We did in kubernative chant. We want to quickly introduce yourself.
+00:02:44 [W] And I'm not cloudevents near in futurewei and my focus now is in multi-tenancy work in kubermatic.
+00:02:55 [W] Thank you.
+00:02:56 [W] Okay, this is the agenda of the talk first.
+00:03:05 [W] I will give a brief overview of the project including some unnecessary background information. And then for the most of the part we will walk through our multi-tenancy design and features after that.
+00:03:17 [W] I will also give a summary about the current project status the next step and the challenges.
+00:03:23 [W] And we will conclude the talk with a demo.
+00:03:26 [W] Okay, let's get this started the video overview. First. I want to say multi-tenancy is actually a very broad Topic in kubernative.
+00:03:43 [W] There are different multi-tenancy models for different scenarios. And we usually categorize this different models by their isolation level.
+00:03:49 [W] This is the agenda of the talk first.
+00:03:54 [W] I will give a brief overview of the project including some unnecessary background information. And then for the most of the part we will walk through our multi-tenancy design and features after that.
+00:03:56 [W] I will also give a summary about the current project status the next step and the challenges.
+00:03:57 [W] And we will conclude the talk with our demo.
+00:03:58 [W] Okay, let's get started with the overview. First. I want to say multi-tenancy is actually a very broad Topic in communities.
+00:04:00 [W] There are different multi-tenancy models for different scenarios, and we usually categorize this different models by their isolation level.
+00:04:03 [W] If I mother tenancy model provides a strong isolation, what's that? It's a harder model if the model provides a week isolation. We say it's a soft mode you can for some use cases
+00:04:09 [W] That is how the model if the model provides a week isolation with say it's a soft mode.
+00:04:10 [W] You can for some use cases week isolating probably the enough for example, if you are working with multiple teams inside our company because this teams are all belong to the same
+00:04:18 [W] Zettaset --and level of trust among these teams. So you don't need a very strict isolation. It's probably okay for them to see some resources from each other and they're probably can't even call you later on some resource allocations
+00:04:34 [W] change
+00:04:35 [W] but if we are working with multiple, you can external organizations.
+00:04:40 [W] Then no trust among them and we need a harder isolation.
+00:04:46 [W] That's how I use the case.
+00:04:49 [W] in our use case, we want to enable multiple external organizations to share a same physical crust and we don't assume any trust relationship among these talents a
+00:05:05 [W] A cloud provider offers a communities across to as a service to public Cloud users and obviously there's no trust among these public Cloud users.
+00:05:18 [W] So we are trying to address a hard multi-tenancy model with strong isolation.
+00:05:25 [W] Why are we all talk about the detail that's like detailed design and features in the next slides here.
+00:05:32 [W] I want to quickly describe our solution from the following three aspects.
+00:05:38 [W] First our solution is built around the idea of what your cast.
+00:05:44 [W] So there is only one physical class and the one control plane but each Talent feels like they are using the cluster in in exclusive way. They are not impacted by other talents and then yeah, they even do not
+00:06:00 [W] First our solution is built around the idea of what your cast.
+00:06:01 [W] So there is only one physical class and a one control plane.
+00:06:02 [W] But each Talent feels like they are using the cluster in in exclusive way.
+00:06:02 [W] They are not impacted by other talents and yet they even do not realize the existence of other tenants.
+00:06:04 [W] We also provide an API backward compatibility.
+00:06:09 [W] So all the tenants can still use their old kubernative tools under under clients.
+00:06:17 [W] All the apis are same. They don't need to change any code or Yama fires.
+00:06:20 [W] Everything is transparent apis are same and we also provide some self-management tenant admins can manage their own Talent without getting help from class telepresence.
+00:06:33 [W] They can still use like the native communites objects like a rural setting lower bindings class the rule Courthouse security policies.
+00:06:46 [W] policies. They can still use all these familiar API objects and all these changes only applied to it's cut its own Talent. You don't want the impact are the talents.
+00:06:56 [W] All our work is implemented in our open source project called actors.
+00:07:04 [W] I put the red for you. I are here. Feel free to check out if you are interested in the project details.
+00:07:08 [W] After the oval let's walk through our design and features first. I want to start with a very fundamental concept called a space.
+00:07:21 [W] Space is a New Concept that of a introduced in a pi server.
+00:07:26 [W] of a introduced in a pi server
+00:07:30 [W] a space is a high level of isolation unit beyond the name space a space can contain any API object.
+00:07:41 [W] You can single you can sync our space is a subfolder.
+00:07:43 [W] When you create a sub folder you can have a you can have put anything in the root folder into the subfolder. So here I put example we have to we have two objects under the space called T1.
+00:07:59 [W] Keda left side.
+00:08:03 [W] I was a example.
+00:08:09 [W] So this T1 space has a pod results, which is a namespace scoped and it has a PV object, which is now namespace scoped.
+00:08:16 [W] In the UI of due to some historical reasons, we are still young talents, but I should be specific and on the right side you can see how these objects are facilitating at the CD.
+00:08:31 [W] We basically embedded the space name in The Audacity key.
+00:08:35 [W] So all these objects are stored separately.
+00:08:38 [W] You don't need to worry about naming conflicts after we introduces our space every API object in API, so
+00:08:48 [W] Belong to one space and only one space.
+00:08:50 [W] In order for us to quickly find out which space contains the this API object.
+00:09:01 [W] We introduced a new field in the object metadata section. So every time when you check this field, you can easily find out which space this object belong to
+00:09:09 [W] Okay, so we introduced the space and each Talent can have its own space and the in the space he can has he can have its own copy of the results higher Iraq, and he doesn't need to worry about the naming
+00:09:28 [W] As any other conflicts with other tenants, but how does space get the related to his talents and how the data get initialized?
+00:09:38 [W] Basically, there is a Wong's special space called the system space.
+00:09:45 [W] This space is created automatically during class the bootstrap.
+00:09:51 [W] So after a cluster is a Buddhist rapid.
+00:09:56 [W] There's only one space system space is there under this system space contains all the cluster level resources like class the settings and the nodes Etc because this resource
+00:10:10 [W] Not belong to any particular talents.
+00:10:14 [W] And the unit system space we introduced the new API object called the talent.
+00:10:20 [W] I put a sample.
+00:10:23 [W] Yeah, I'm over here on the right side. You can see the pretty simple object.
+00:10:26 [W] It also has a talent a controller.
+00:10:31 [W] Like any other controllers in the communities this talented controller, which is a lifecycle of this tendon objects.
+00:10:39 [W] When there are new Talent object is created this Talent controller working seen either will create our corresponding space with the same name of the talent.
+00:10:51 [W] And it will also initialize this space to create all the default objects like the default name spaces default the rules default DNS all this stuff.
+00:11:06 [W] So either way initializes space and make it look like exactly the same as the original the kubernative sekai so
+00:11:13 [W] And also if I'm telling the object is deleted this talented controller were kicking and the destroy the space and delete all the resources in space.
+00:11:24 [W] So this is a how Talent space gets created and it gets initialized.
+00:11:33 [W] And next I will hand over to Champ.
+00:11:40 [W] the fundamental concept of space
+00:11:43 [W] Hi thanks to Shannon. This is a chat.
+00:11:51 [W] So I will get more details about our work as mentioned by Johnny.
+00:11:57 [W] Just now one of the key goes in. Our design is backwards compatibility.
+00:11:59 [W] We would like the user.
+00:12:01 [W] Oh, sorry, I forgot to move the sides.
+00:12:04 [W] So here the start I'm talking to so we would like our customer continue to use current or like obesity. Oh and continue to use the resource GM of for iOS.
+00:12:15 [W] The cri-o Operators without any code change without coredns compiling or without putting major rebuilding how to do it the key chain the key design here is something with cost report the resolution
+00:12:30 [W] The existing apis were continued work in our system short path is something.
+00:12:40 [W] Same as the existing API, so it's contrast to something we call full part the full path.
+00:12:49 [W] Maybe you have seen just now in the previous slides.
+00:12:51 [W] It's such a s***.
+00:12:54 [W] It's such a URL with the tenants specify in a park. So with this path you can I dint you can uniquely identify a resource in the system and the short path is without this part part.
+00:13:06 [W] part. So it's the same existing apis, but how to translate short path to full power.
+00:13:12 [W] So we may have to customers to tenants send out too.
+00:13:16 [W] Apis with the same URLs, but we know they need to go to different space how to do it.
+00:13:23 [W] We added we add a component called short possible solution.
+00:13:32 [W] The short part resolution will infer the target space from the access credentials.
+00:13:37 [W] In this resource request or after the resolution.
+00:13:41 [W] This short path will be translated into full path and then you will go to the correct space.
+00:13:50 [W] We met some change in Authentication.
+00:14:08 [W] The main change here is we add a new field called tenant in there user identity in addition to current user and group Fields here.
+00:14:16 [W] I show some examples here.
+00:14:18 [W] So this one is the new way to generate a search and this is a new format for the it set for the token.
+00:14:27 [W] And this one is the new format for the password file. So basically we support all authentication strategies. That is workloads.
+00:14:31 [W] Working in competitors now and the next thing I would like to say it's about authorization in our system. It's pretty similar to what we have now.
+00:14:44 [W] Actually the main change is here.
+00:14:45 [W] We add something chat some check on the user tenant.
+00:14:52 [W] We make sure the tech user tenant have access to the resource to protect the space of the resource. So the rule here is that system tenant can access
+00:15:02 [W] Any space and but if it's a just a regular tenant, he can only visit his own space. We may have some cross tennis across space visit in the future. But now it's it's the rule that we
+00:15:16 [W] And you can see it's actually just add a few lines here. And then after that we make sure the user tenants is in the right space and then the access control inside a space is same as we have now
+00:15:32 [W] Cluster so that is access control and in the next slides. I want to convey our I talk about short path and access and control to get a full story on how a resource request is handled in our system.
+00:15:49 [W] Suppose there is a resource request arrives.
+00:15:59 [W] And then the API server will retrieve the tenant and user identity from the request first.
+00:16:07 [W] And then the next thing it will do is to check whether or not it's a short path by looking toward or not.
+00:16:09 [W] The space is defined in the URL. If it's not defined then it's something called short path. Okay, then we will set the resource space to tenant named there's
+00:16:19 [W] thing with earlier we mentioned it's just possible solution if it's a full path and we'll do some access control and we'll do some authorizing check to make sure whether or not the tenant is visiting
+00:16:34 [W] Space if it's not and we will check whether or not the cross tenant policy is allowed other across tenant policy allows this request. If yes, then we are here then it's
+00:16:50 [W] Well, they look across tenant policy allows this request.
+00:16:58 [W] If yes, then we are here then it's will access the resource with the full path is then the what is happening next is same as something we see in the kubelet.
+00:17:02 [W] that's access control and short path how they all fit together.
+00:17:03 [W] Just now I mentioned that backwards compatibility that we said every tenant can use the existing code existing tools with without any change because they are working in their own space, but there are some
+00:17:20 [W] There are some components that we realize there are some components. They need to work across the spaces let something like a schedule or like a couplet and like all the controllers in the kinetics.
+00:17:35 [W] They are now working with a pi server, which is suppose multi-tenancy and they have to make some code change. So we did it. What we did first is to make some code change client go so we add a set of
+00:17:48 [W] Tennessee cri-o D apis the difference is now in this apis.
+00:17:54 [W] There is a new parameter called tenant.
+00:18:00 [W] And also we make some cold chain to support across space least watch and after that we make some code change to this components use this using this client go new apis.
+00:18:09 [W] So here I gave some sample change here like will be like for this one. It's about visiting pause and for
+00:18:18 [W] given this name space and now we need to pass in another parameter which is tenant. And one thing I would like to mention here is that the code change here is quite straightforward.
+00:18:33 [W] It's with the client new client. Go apis. The change will happen to this scheduler kublr than controllers.
+00:18:39 [W] It's not big. We have finish it almost all of it and I schedule kublr is working our system now and I think they are 15 or something.
+00:18:49 [W] I think the number is pretty big but we did pretty quickly. So if you have an interested pick look at our code and can see that code changes quite quite easy that's client.
+00:19:00 [W] go and controller change and next thing it's here.
+00:19:07 [W] Stir just like a virtual cluster is dedicated to the tenant and the Tenant can manage its own cluster without turning to Cluster admins so he can work with almost all the existing apis like
+00:19:33 [W] Interests own cluster without turning to Cluster admins so he can work with almost all the existing apis, like roll roll bindings class overall cultural binding is resource code and things like this. And also here you can see we
+00:19:39 [W] Prosser all casserole bindings resource code and things like this and also here you can see we set crdi mean each tenant can have his own grpc.
+00:19:45 [W] And one thing here like there are some clusters scope Concepts like cluster rules which in existing code Nats. It's it's a cloud to scope objects now in our system.
+00:20:00 [W] It's just parently translated to our space level objects, like here, there's two pictures explain this difference like earlier like the classroom rules.
+00:20:12 [W] effective all the namespace in one.
+00:20:15 [W] But now it's working on a virtual cluster level.
+00:20:26 [W] So this cluster or defined by this tenant where work only in his own space and has no effects on other tents.
+00:20:32 [W] So it's something we called tenant autonomy.
+00:20:35 [W] So each tenants have his own virtual cluster.
+00:20:36 [W] Next and something like yeah, I briefly mentioned. It just now multi-tenancy crd so ci/cd. It's a very important feature for kubermatic sand. Now, we allow each tenant to Define his own crd
+00:20:52 [W] need to worry about any conflicts with other tenants and they can use their own cre just just like they own their their own clusters ads and there's
+00:21:08 [W] Isabel all useful to himself. I mean to his own space and the nice thing is because our backwards compatibility.
+00:21:21 [W] They don't need to change their ci/cd MO file.
+00:21:23 [W] They don't need to change this custom resource llamo file and they don't need to make any changes to their ci/cd operator.
+00:21:29 [W] They can just work and besides this. We also realize there are some requirements.
+00:21:36 [W] That's at some point cluster. Admin would like to enforce the ci/cd way.
+00:21:39 [W] Which is usable by all that regular tenants will also support this scenario.
+00:21:45 [W] We call something.
+00:21:47 [W] We called a system ci/cd, and it's such a cri-o that can only be installed by 1610 in the system space and we would like to Market and we want it to be marked with a special label without this
+00:22:00 [W] Seattle would be only available to their system space.
+00:22:07 [W] But once it's Mochrie special label, then all the tenants can use it just like his own custom at just like his own crd so here and my brief introduction next. I would like to hand it back to shouting and
+00:22:20 [W] Give more details.
+00:22:23 [W] Thank you.
+00:22:24 [W] Thank you chair in the previous slides Chan. I talk about the about all the design and the changes in the control plane in the master in the most part like the
+00:22:42 [W] Controllers here.
+00:22:49 [W] I want to talk about some changes in the in the in the data plane. In other words since happening on the workloads. The first part is about the wrong time runtime isolation.
+00:22:59 [W] as we all know regular containers like the docker containers, they are actually sharing the same host Colonel host OS kernel but when we are running in strong isolating the multi-tenancy
+00:23:15 [W] A single single welcome machine can run workloads from different talents and then there might be some malicious users are codes inside the workloads.
+00:23:32 [W] So it's not exact but to share the same copy our host the kernel to address this problem. We are currently using Kata to support the OS kernel isolation.
+00:23:39 [W] And we are also actively investigating lightweight virtualization approach to provide better performance while maintaining the isolation level.
+00:23:51 [W] The next part is a storage most of the modern storage providers.
+00:24:02 [W] They're already provide either account based or volume-based isolation. So there really isn't much isolate work to do here in terms of storage isolation.
+00:24:13 [W] We only added some Talent level storage quota to manage the storage called among different talents.
+00:24:22 [W] The most of the complicated part is actually about Network.
+00:24:27 [W] In the vanina kubernative the network model is a flat more flat model.
+00:24:38 [W] It assumes a every part is reachable from allowed apart.
+00:24:40 [W] I know they all share a single pot IP side the range and the service I put aside the range.
+00:24:45 [W] Welcome to do here in terms of storage isolation.
+00:24:46 [W] We only added a some Talent level storage quota to manage the storage called among different talents.
+00:24:46 [W] The most of the complicated part is actually about Network.
+00:24:47 [W] In the vanilla kubernative the network model is a flat more flat mode.
+00:24:48 [W] It assumes a every part is reachable from allows apart and they all share a single port IP side the range and the service IP side the range.
+00:24:49 [W] By the as you can imagine the list cannot work in harder multi-tenancy model because you notice how the multi-tenancy war model each. Talent is supposed to be strictly isolated from other
+00:25:00 [W] as you can imagine the list cannot work in our Harbor multi-tenancy model because you know how the multi-tenancy with our model it's a talent is supposed to be strictly isolated from other talents and that shouldn't
+00:25:03 [W] bof the existence of other talents
+00:25:06 [W] So then then the pot eyepiece I'd arranged need to be I need to be isolated and you should turn on the shooter should have the freedom to choose their own IP range without worrying about
+00:25:21 [W] It's under the service IP ranges same needs to be isolated. And also each tenant that should have their own thing is and all this stuff should be isolated.
+00:25:35 [W] In our solution, we choose the VPC Network to provide strict isolation.
+00:25:47 [W] But at the same time we also want to support the other excuse me, as a long with is another word for easy our adoption in order to make the design consistent and the support different network providers
+00:25:58 [W] Use our new network IP. I object the name of the network and the network object represents the isolated virtual Network. And each of us are each this network has its own pod IP range.
+00:26:14 [W] Dean has a cerveza policies.
+00:26:19 [W] Everything's Association is isolated with this network object.
+00:26:22 [W] And another one object that can be of any type either VPC baked along with respect and for each type there. There will be a network provider deployed in system space just like how CID and operator works.
+00:26:38 [W] All the parts their parts and service and other network related objects. There are annotated to attach to a specific Network.
+00:26:49 [W] If you look at the example here in the red space you can see there are three Network objects default net a net a net be so any product/service can be attached to any network if a product
+00:27:05 [W] Not headed by default. It will be attached to the default Network and this default Network object is a created by The Talented controller automatically during the space initialization.
+00:27:17 [W] Here, I want to give a brief summary of the current project status next and the challenges.
+00:27:28 [W] Currently young actress we already finished pretty much the mostly common use the functionalities like the talent the initialization tenant deletion and the commonly used the
+00:27:44 [W] Like parsec nem nem space is a replica says deployments job a static Force at all. This all this commonly used a fun learning objects and also commonly used management
+00:28:00 [W] Row binding cross the river casserole binding call results called Hawk etcetera.
+00:28:09 [W] Now we are working on the multi Network.
+00:28:13 [W] In terms of the next step. We are planning on two things first.
+00:28:23 [W] We want to support the 10 in the level of resource quartile rate a limit and the perfect isolation.
+00:28:26 [W] Since our Solutions based on Virtual classroom more classic Mode different tenants is share our same control plane.
+00:28:34 [W] this is to prevent a talent from abuse control plane and it won't cause any to make sure I don't want to cause any performance impact other talents.
+00:28:47 [W] And there's a second thing about the cross Talent access and fine granular access control for system Talent.
+00:28:54 [W] Because in the current model system can only use as a can access any other regular attendance is like a super user but the next step we are going to introduce fine granular access control so we can reduce the use of these super user.
+00:29:10 [W] Talking about challenges we can see there are two challenges first.
+00:29:22 [W] How we can optimize this and the reduce entry code changes?
+00:29:36 [W] And also the second one is about the client go and controller code changes.
+00:29:41 [W] We need to add a new parameter and call the talent for another hour ci/cd and the list of watching message, but unfortunately because the colon doesn't support the method overloading so we have to create a new function
+00:29:57 [W] This changes next the last thinking about how we can use some other methods approach like context-based or implicit context to reduce this kind of code changes.
+00:30:11 [W] That's pretty much Channel.
+00:30:18 [W] I want to talk about today and here is a list of links about our work as I mentioned earlier.
+00:30:28 [W] All our work is done in open source project called actors here is a link to the project repo design documents our roadmap and detailed design Doc's everything the public.
+00:30:39 [W] we are also welcome to join. Our was snyk Channel.
+00:30:41 [W] Next I will play are recorded a demo video made by chair.
+00:30:50 [W] And thank you very much.
+00:36:09 [W] Okay.
+00:36:25 [W] Hiya wrong.
+00:36:29 [W] This is happening Chan. I will take the consider ask the during that presentation. And the first I want to apologize.
+00:36:43 [W] Sorry due to some technical problems. I think the demo song that wasn't playing out so it isn't working very well.
+00:36:54 [W] I guess we have five minutes to answer all the questions.
+00:36:55 [W] I will address Shannon I will address these questions are based on the order either.
+00:37:01 [W] Without the platform. The first question is for Mike operator does a virtual cluster past the kublr conformance test.
+00:37:12 [W] Yes.
+00:37:13 [W] that's our Target and we haven't performed the conformance test yet because we are still working on some and the Martin Martin networking part.
+00:37:22 [W] See the question list.
+00:37:31 [W] Yes.
+00:37:32 [W] Okay, that guy can take next question.
+00:37:36 [W] That's question number three from Sook under Aquas I grow up.
+00:37:41 [W] So what's the difference the question is?
+00:37:45 [W] What's the difference between space and kubernative namespace fundamentally space is a higher level hierarchy Above namespace So under one name space you can have
+00:37:57 [W] Basis and it's possible that you can have to name space with the same name under under two different spaces.
+00:38:07 [W] So it's a higher level than namespace.
+00:38:12 [W] That's I think Johnny has slides on this but basically that's just it adds a higher level of hierarchy.
+00:38:17 [W] That's it.
+00:38:18 [W] Yeah.
+00:38:24 [W] as a space is actually a higher level of isolation unit that name space a space can also contain long namespaced objects.
+00:38:29 [W] Like cluster rules or P ways.
+00:38:32 [W] So it's more like a rotocast.
+00:38:34 [W] It's a large as a namespace.
+00:38:35 [W] The next question is from Marseille of bone Maltese.
+00:38:42 [W] What's a security model? Basically, what are the share the resources among tenants?
+00:38:47 [W] Actually, there are in our models are our first each space are strictly isolated. There is no shared resource among spacing.
+00:38:56 [W] Some physical some cluster resource like notes.
+00:39:08 [W] There are in system space and they can be used by each talents. But each tenant cannot access this system space directly there can only be used by the system controllers.
+00:39:16 [W] What mechanisms are actually doing isolation between talents
+00:39:22 [W] All the talent erase us saved on the different key prefix, so they are totally isolated.
+00:39:35 [W] And the second when when clients try to access this resource, you can actually serverless they are the authorized authorization and authentication mechanism.
+00:39:51 [W] We make sure our talented client can only access the resource object that helping authorized to him and the third in all the controllers like deployment controller or replica set controller.
+00:40:01 [W] A way of talents when they associate different objects, like associating a replica set to a pod. The only associate a result resources among inside the talent.
+00:40:16 [W] I think this to list three sides Builder the tenant isolation.
+00:40:22 [W] Okay.
+00:40:28 [W] So next one is the question number 6 from be shown.
+00:40:31 [W] Oh, I hope I pronounce this right name correctly.
+00:40:32 [W] The question is is this Behavior you are describing Earth custom cumulative distribution or extension. For example, the stock could Nats actually what we are
+00:40:46 [W] I hope I pronounce this run name correctly.
+00:40:47 [W] The question is is this Behavior you are describing Earth custom communities distribution or extension. For example, the stock could Nats actually what we are
+00:40:48 [W] Here today.
+00:41:00 [W] It's a the it's a is more like a customer called Nest distribution involves some ink she changed as we described just now like we have some chain to the API server and to the controller's skopets.
+00:41:03 [W] And also we had to add some new apis client go but one thing we would like to emphasize its we have some.
+00:41:08 [W] Designs for backwards compatibility so all the existing cre sore the existing demo files and all these tools are continue to work.
+00:41:19 [W] I hope that answers your question.
+00:41:23 [W] Yeah, and I probably can add the one cup of more sentence.
+00:41:25 [W] Basically.
+00:41:25 [W] We are describing.
+00:41:27 [W] I Stand Alone we stand around project open source project is called the actors actors is a base is derived from Community survey people could ways but it does stand along project and they say using for
+00:41:42 [W] Cloud infrastructure area, so it's it's not an add-on connected on. It's another also connected distribution.
+00:41:55 [W] It's a standalone project open source project.
+00:41:57 [W] So the next question is from Bram and Nats scale, but we can also walk away knowing when using ASL so it's a match.
+00:42:07 [W] Yes.
+00:42:11 [W] are working on another one solution. Once the network solution is down the servicemeshcon so work.
+00:42:13 [W] Okay, I guess we have only one minute remaining soap.
+00:42:22 [W] So probably we want to be able to take all the questions.
+00:42:24 [W] Let me see if there are any other important one.
+00:42:26 [W] I'm a little sorry for because of platform limited our time just the pop it out the warning window for the one minute limit.
+00:42:36 [W] Okay. Okay. I can live for question number 11 we yes.
+00:42:44 [W] It's open source project. I think that's a quick answer.
+00:42:46 [W] Yes.
+00:42:49 [W] It's a this everything the open public.
+00:42:50 [W] I put the link there and some somebody asks if we can share the slides and also because today the recorded the demo video didn't play where I will put the link to the slides and probably also the demo video on our
+00:43:04 [W] Up in the harbor have a river have a Wiki Pages home page so you can you can watch it there.
+00:43:12 [W] Okay, I guess we are. Yeah, we are out the time it out and I think we are cut out from the platform from the live.

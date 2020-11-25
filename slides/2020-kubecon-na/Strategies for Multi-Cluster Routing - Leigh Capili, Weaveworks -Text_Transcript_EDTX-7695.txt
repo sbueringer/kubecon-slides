@@ -1,0 +1,275 @@
+﻿Strategies for Multi-Cluster Routing: EDTX-7695 - events@cncf.io - Wednesday, November 18, 2020 3:51 PM - 40 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hey friends.
+00:00:01 [W] Thanks for joining me for my talk.
+00:00:03 [W] My name is leaked appealing.
+00:00:04 [W] I live in Colorado and joy parkour. My dog's name is Pepsi being done filipino-american?
+00:00:45 [W] Hey friends.
+00:00:46 [W] Thanks for joining me for my talk.
+00:00:49 [W] My name's Luke peeling.
+00:00:50 [W] I live in Colorado and joy parkour.
+00:00:53 [W] My dog's name is Pepsi England. I'm Filipino American.
+00:00:58 [W] I just ate a lot with sequester life cycle in the kubernative development groups if I know you from there. Thanks so much for coming in support of the talk and come in learn with me.
+00:01:09 [W] If I don't know you yet.
+00:01:11 [W] Please come and say hi.
+00:01:12 [W] My dams are open on Twitter or you can help on the community slack.
+00:01:16 [W] I work with developing your developer experience team with weaveworks very lucky to be friends when teammates with such wonderful people were the primary contributors to
+00:01:28 [W] Flux CD projekt but flexing the project does have a open governance model. So please come and build the best gitops tooling available with us. We are helping people to adopt flux to lately.
+00:01:43 [W] Any slack I work with developing your developer experience team with weaveworks very lucky to be friends when teammates with such wonderful people were the primary contributors to the flux CD project.
+00:02:08 [W] Apis and ci/cd driven controllers that do a modular split of fetching and sink and apply to the cluster.
+00:02:15 [W] If you want to learn more about implementing gitops from a cultural of this perspective with your teams. And with your organization come check out our gitops community website.
+00:02:26 [W] Today I am happy to be discussing some strategies for multi cluster routing and networking.
+00:02:32 [W] And before we just get into routing packets.
+00:02:35 [W] We want to talk a little bit about rational for multiple clusters.
+00:02:37 [W] One of them might be workloads proximity. Say you're a breakdancing apparel brand and you have huge user bases in Korea and France.
+00:02:46 [W] You might want to run some services for your web store in those regions to reduce latency and improve reliability. And also maybe there's specific services to Korea that aren't
+00:02:55 [W] Woman in France similarly, if you're in that in situation, you might want to separate your failure domain so that say your cluster is failing in France. You can still do a special services to your users and your your fans and stuff in Korea.
+00:03:10 [W] Another thing that we see often with kubernetes is like a desire to split up compute. So that application is segregated to the particular notes and you can do this with the kubernative died, but it's kind of complicated you have to use a combination of our
+00:03:26 [W] Mm spaces Network policy and the quad mode selector admission controller to decide that different namespaces can only schedule two subsets of label note selectors.
+00:03:31 [W] So if you've got certain nodes labeled low latency, that could be like say the entire cluster or half of it, but then a portion of that could be ephemeral and then others could have a note pool for persistent storage.
+00:03:43 [W] You could slice this up in any number of ways using multiple node name namespaces.
+00:03:47 [W] Has and the admission controller for it super cool very flexible.
+00:03:51 [W] It's more flexible than the alternative which is just to split up into two different control planes and separate clusters and give teams full access to that but one is easier than the other arguably so this is the common reason that people will split
+00:04:07 [W] Makes it really simple and often those control planes are free.
+00:04:07 [W] So one area where you start to hit some not just complexity but actual constraints of the kubernative DPI is with non namespace of objects.
+00:04:17 [W] When you modify the API server with a custom resource definition, then that's not something that can be easily be namespaced multiple.
+00:04:25 [W] People are going to be stepping on each other. If you allow them to write cri-o use potentially and in addition some, you know controller implementations might be using an API. That doesn't
+00:04:35 [W] Tenant eyes in a very secure way.
+00:04:37 [W] So you might be inspired to separate your cluster boundaries Beyond technical reasons.
+00:04:42 [W] Maybe you just have a social billing reporting reasons organizational reasons.
+00:04:46 [W] One team might have more resources than another and one teen might be incredibly disenfranchised because of the latest reorganization some other miscellaneous reasons that I could think of maybe you're trying to use some novel Services some novel
+00:05:02 [W] Salinas reasons that I could think of maybe you're trying to use some novel Services some novel features from a kubernative service provider say one cast provider does Edge really well and gives you secure enclaves.
+00:05:05 [W] There's also hybrid clouds environments or you might be doing a migration and a hybrid Cloud environment need multiple clusters for that.
+00:05:12 [W] I've been in that situation before business to business networking. Say your cluster you have this business relationship with another company that has a cluster with an object store in it.
+00:05:23 [W] There's some valuable stuff in there that you have contractual access to how do you open up the network path to access those objects that objects store over the network from your cluster and then there's mergers and Acquisitions which would naturally produce, you know the need for
+00:05:39 [W] In multiple distributed computers like kubermatic. So you end up in this world, you know, it is like lots of little and big clusters.
+00:05:43 [W] Some of them are shared by multiple people others are running the single application 1,000 times in a bunch of retail stores or on trains.
+00:05:50 [W] And so you inevitably need to be running some packets between some of these clusters.
+00:05:56 [W] and the problem is that the basic unit is compute inside of kubernative you get an individual IP address for each one of these pods and so we have this servicemeshcon.
+00:06:07 [W] Of subtraction that allows us to label select those pods and then keep an endpoint list up to date. Then other things can just watch the and point list, right? So things like nodes cloud provider load balancers anger as controllers. They can stay up to date with what the back ends are
+00:06:22 [W] Available they can move from the endpoint list and then you get a new pot with a brand new IP address and soon becomes ready and then it gets added and playing list, but the problem is that those things aren't the actual IP addresses in the cluster.
+00:06:32 [W] It's not just the pot i p addresses that matter Services have virtual IP s nodes you might have a couple hundred of those. They might have much of Nick's there might be multiple node pools with different configurations.
+00:06:44 [W] The cloud provider might be producing IP addresses for multiple load.
+00:06:48 [W] Others some of them being public on the internet and some of them being IP addresses in the VPC.
+00:06:53 [W] Your Ingress controller may be fronted by an IP forwarding rule or some server inside of your Cloud providers control plane, or you know, say you're using a bare-metal solution that provides an Ingress controller IP from a node Port power
+00:07:08 [W] On the internet and some of them being IP addresses in the VPC.
+00:07:04 [W] Your Ingress controller may be fronted by an IP forwarding rule or some server inside of your Cloud providers control plane, or you know, say you're using a bare-metal solution that provides an Ingress controller IP from a node Port power
+00:07:29 [W] then the IP addresses are completely different and it becomes, you know a little bit difficult to track all of this IP information, you know, you're still declaring it but it gets dynamically created by whatever the state of the environment is or however, it was provisioned and
+00:07:45 [W] As Network turn to track so it's cool that oh, sorry. I forgot about Port map sensor between each of the IP address past year.
+00:07:54 [W] There's also a potential for a bunch of Port mapping to occur.
+00:07:57 [W] So there's even more information you're going to have to deal with and so the kubernative API lets you kind of encapsulate all of this network draft, but then you have multiple clusters.
+00:08:06 [W] do you resolve the drift between two clusters say and your data center where you want your legacy apps to be able to access the
+00:08:14 [W] Services that you're now hosting, you know, you have this really modern fast service Discovery infrastructure inside of the cluster, but none of the rest of your holder infrastructure can keep up and even between multiple clusters. Now you have this problem. How do you get things to talk to each other?
+00:08:29 [W] One kind of beginning solution. The first thing that people will be introduced to is to use something like service type note port or service type load balancer.
+00:08:38 [W] This is a layer for abstraction that allows us to basically get a single IP address or IP port combo to map that Ford or proxy traffic to service virtual light piece on
+00:08:54 [W] Two routers the nodes inside of the kubernative cluster and so basically get a map of the service of it to either note IPS or something that's provision by your cloud provider or other tool set and then with that IP address if you're looking for a more declarative configuration,
+00:09:08 [W] Use controllers like external DNS or certain manager to then get stable naming and TLS identities to mount within the workloads for those bonds.
+00:09:11 [W] Here we can see. Okay. Well if we spin up a load balancer, that's the yellow thing inside.
+00:09:21 [W] Right of the bottom cluster and we're able to reach out to it from those green back and pots as well as from the Legacy workloads or whatever running inside of a data center or other infrastructure.
+00:09:33 [W] Now reaching Beyond just a single service because load balancers node ports.
+00:09:39 [W] They give us a single surface abstraction Ingress controllers allow us to potentially route too many services and it does this because it's a reverse proxy.
+00:09:49 [W] It's an API that describes how a reverse proxy should behave. So then you have these Ingress controllers implementing the Ingress API and we can Route One Network identity too many Service Pack ends based off of the content of the
+00:10:02 [W] That the client is speaking.
+00:10:04 [W] So this allows us to do one-to-one and one-to-many setups.
+00:10:08 [W] I mean that in terms of namespaces and Ingress objects.
+00:10:11 [W] Sometimes you can have a single Ingress Network identity hooked up to a single Ingress object in one namespace routing the multiple services and that namespace other times. You can collect multiple Ingress objects
+00:10:27 [W] Us all the name spaces in the cluster and have it linked up to the same Ingress controller this primarily layer 7 of traction, but something that's controllers let you do later for stuff at the same time and it's really important to note that these one too many
+00:10:41 [W] Was talking about allow you to really reduce the external network control Network.
+00:10:39 [W] churn that happens in terms of ips outside of your cluster.
+00:10:44 [W] So with cloud provider impresses, you usually get to expose like some kind of Internet facing or VPC accessible IP address and it's usually / Ingress so you can still route to multiple services within the same namespace, but this
+00:10:59 [W] Constraint of their implementation can't just like route to everything inside of your cluster pretty good design decision.
+00:11:03 [W] But also that's a serious constraint that might not fit you use case and these things are often very powerful because they're usually in some kind of horizontally scalable cloud provider infrastructure, but that can also make them
+00:11:18 [W] Which can make them a prohibitive solution if you're trying to just do low volume inter-cluster traffic or something like that.
+00:11:20 [W] So if you find that that's not a good solution for you.
+00:11:23 [W] You might look at me be hosting your own Ingress controller inside of your cluster there a lot of third-party solutions for this like Contour traffic Etc nginx Ingress is so popular and if you deploy these you often get a
+00:11:38 [W] so if you have a single Ingress controller, all of the Ingress objects could potentially set that English class and get aggregated to that single reverse proxy and this composes really well, you know behind
+00:11:50 [W] Load balancer solution or a note port and you can start messing in between these and grasses and do some pretty interesting Network topologies for declarative configuration.
+00:11:55 [W] We use the same external DNS insert manager to get stable DNS and serve manager actually gives us a bonus win here because the Ingress API supports TLS termination, which allows us to decouple TLS certificates from the
+00:12:10 [W] Words, you know have to restart your apps. If you say when I change your domain name or add 1 or something like that or even just rotate the surgery for automating the teal asserts. It can really help to use a wild-card DNS plus the TLs certificates.
+00:12:20 [W] This will lower your to play latency because then you don't have to constantly be requesting new TLS certificates and creating new DNS records.
+00:12:30 [W] If you have a DNS Zone, that's API enabled this is ideal because lets you create the DNS record and then also
+00:12:37 [W] so you can do something like acne view to with let's encrypt to refresh that wild card sir.
+00:12:46 [W] Here we can see an Ingress with an external externally accessible internet accessible IP.
+00:12:53 [W] That's just provided by the cloud provider. And so as a natural consequence of being on the internet suddenly anything with access to the internet can talk to it pods from inside of a cluster workloads inside of a data center. As long as they have some route to the public internet than
+00:13:08 [W] And get into the other cluster.
+00:13:09 [W] Here, we have a different problem. The Ingress controller in the lower cluster is a self-hosted one. So it doesn't have an external IP address. So we front it with a load balancer in yellow and the load balancer provides the network ID that
+00:13:24 [W] So we front it with a load balancer in yellow and the load balancer provides the network ID that then we can Route traffic to using the pods and workloads inside the data center.
+00:13:33 [W] You can see that if we start combining ingresses in one cluster and Ingress is another cluster, then you can get these one in one too many abstractions between many different topologies in your many different locations in your network topology.
+00:13:48 [W] You get this like kind of mesh havior starting to form where you have a lot of access to things that you've provision. So super cool now one constraint. I want you to notice here though is that there isn't any Ingress into the data center because
+00:14:02 [W] For that you would need to say openebs load balancer on your data center side.
+00:14:07 [W] That's more efficient operations.
+00:14:08 [W] This also is an area where you could start potentially thinking about a rap sharing solution with route sharing one of the primary goals here is to make the Pod IP addresses that are constantly changing normally inside of the
+00:14:23 [W] Natively routable not just on the nodes the routers of the cluster, but beyond the notes beyond the cluster perimeter when use case to think about here be like if you wanted to run an Ingress controller
+00:14:39 [W] if you wanted to run an Ingress controller outside the cluster, I actually run the Ingress controller infrastructure outside the cluster then dining risk controller infra we need to be able to route to the pot IP addresses that it reads from the API
+00:14:54 [W] And so like this is this is one use case another variation of this is if you were to say I want to run that Ingress controller inside a another cluster same thing, but just a little bit more cheeky and clever.
+00:15:09 [W] Now it's not just about politics. He's we also might potentially want to be able to Route something more useful like a service virtual IP.
+00:15:18 [W] This is kind of tricky because the virtual IP doesn't exist in any one place it exists in the entire cluster, but it's possible to use the endpoints API to determine which nodes a service
+00:15:33 [W] If you can figure out which nodes those pods are running on for that service, then you can take all the node IPS and advertise them as a vailable routes for service hips and you can even wait them and if you are putting equivalent routes
+00:15:49 [W] And it's important to know about this concept of ecmp ecmp equal cost multi path routing.
+00:15:46 [W] This is supported by the Linux.
+00:15:48 [W] kernel, it's supported by a lot of standard networking Hardware. If you have your own switches in your data center colocation, you might take a look at the manual and see what is the ecmp behavior of the routing tables of that switch or other networking equipment
+00:16:04 [W] For instance. I used to work with the switch in the side of a kubernative environment that you could advertise an arbitrary number of equivalent routes more or less that routing table could get super long but only eight of those equivalent notes would be hashed and used at any one time
+00:16:18 [W] That routing table could get super long but only eight of those equivalent notes would be hashed and used at any one time and the benefit of that is that say one of those routes actually became unavailable because we were rotating a note out of the infrastructure it very
+00:16:30 [W] Actually became unavailable because we were rotating anode out of the infrastructure it very quickly drop out of the routing table as a healthy path, and then there would be load balancing and failover to other nodes because of ecmp.
+00:16:44 [W] The protocols that are used to accomplish this kind of wrap sharing between things like routers are typically bgp analyst Kiev these kinds of protocols run the internet, but they're not that scary ospf is popular with in private networks because it is only for single
+00:16:59 [W] It works because it is only for single autonomous systems.
+00:17:03 [W] Whereas bgp is in inter autonomous system protocol.
+00:17:07 [W] So you can deal with multiple autonomous systems sharing routes.
+00:17:10 [W] You can mix these protocols. So that one part of your network uses ospf and the other part uses me GP and they routes will transfer properly so here in the rap sharing diagram. We need the routers of our kubernative cluster
+00:17:25 [W] Routers of our data center to talk in the kubernative Clusters just reiterating that the nodes are the routers of the kubernetes cluster.
+00:17:33 [W] The nodes are what allow you to be able to figure out where the virtual mix of pods are and they also are programmed by things like poop proxy or your cou proxy replacement program to have
+00:17:48 [W] It's rules that will do the service fifth load balancing.
+00:17:48 [W] So very cool.
+00:17:50 [W] Those notes can talk between each other and share routes for potted he addresses and service IPS and the notes that back them and they can also share that same information with your traditional running infrastructure inside of your data centers,
+00:18:05 [W] so share that same information with your traditional running infrastructure inside of your data centers or whatever nowhere Trapper key have
+00:18:12 [W] Now for Route sharing it's important to note that each cluster needs to have unique service subnets and podsnap Nats.
+00:18:20 [W] Basically, you can't have collisions because an IP address can't live in multiple places.
+00:18:24 [W] You want to have a unique route to be able to go there.
+00:18:27 [W] So each cluster has to have the separate subnets and that can be a tricky challenge sometimes especially if you're traditionally deploying kubernative with overlay networks. Sometimes people will take a shortcut of using a default subnet and just having it to be
+00:18:42 [W] A man everywhere.
+00:18:43 [W] So this is something that you might want to think about.
+00:18:46 [W] That's definitely a constraint or requirement of the solution for technologies that you might want to look at.
+00:18:53 [W] This is incredibly short non-exhaustive list.
+00:18:55 [W] Calico is super popular.
+00:18:57 [W] It's based off of an older project called bird.
+00:19:00 [W] The kublr outer is a very elegant single go program that does Network policy cni-genie.
+00:19:12 [W] I've deployed both of those things, but I haven't deployed Romana which is just another be cheap eBay seen on should go check that out for ospf go check out FR routing and the kubermatic project which was using
+00:19:28 [W] You just want to read the manual for your own wrapper to see what kind of protocols it supports go take a look and mess with this stuff really approachable.
+00:19:35 [W] It's not that scary as long as you're not internet scale and accidentally taking down knowing somebody's not work.
+00:19:43 [W] Routes are great.
+00:19:45 [W] You know when we're just working with IPS. But as people we want to configure things using DNS, right?
+00:19:50 [W] We want names for services and when we talk about service VIPs, like we don't think about the actual IP address of that thing.
+00:19:58 [W] Typically we think about resolving it using the service name in the namespace and then the service cluster local domain. This is only accessible typically within the inside of a kubernative cluster the service that allows me to do that is called core DNS.
+00:20:13 [W] And it's very extensible and configurable one thing to know about Cory Ness.
+00:20:17 [W] It's it's always the 10th IP address.
+00:20:20 [W] So it's not just some random IP inside of the cluster.
+00:20:23 [W] It's the tenth one and if you were service subnets are unique and you are sharing the routes for services across your clusters, then you should be able to talk to the DNS server of each cluster no matter where you are
+00:20:38 [W] infrastructure, so that would let you do something like DNS forwarding where say each cluster knows which zone it has and it's also known as what all of the zones of the other clusters DNS servers are so say, I'm in cluster 1 and I get a
+00:20:45 [W] Zero I can send that to Cluster zero and get the answer back in sort of this kind of DNS meshmark.
+00:21:05 [W] Laptop or from workloads inside of your data center.
+00:21:09 [W] This is a super and fun environment to be in I really miss being able to have access to this kind of infrastructure.
+00:21:16 [W] And so because I missed that I built a demo I would love for anybody to be able to play with this kind of infrastructure.
+00:21:27 [W] It's typically expensive and kind of an inch opportunity.
+00:21:30 [W] It's hard to get an environment where you can play with this kind of thing without having some sort of deadline.
+00:21:36 [W] Or cost Factor. So why don't we get into an environment that lets us play? Right? If you clone my repository.
+00:21:48 [W] It's at stealthy box / multi cluster - gitops. My name is are my GitHub handle stealthy box, then you can clone this repo and Fork it.
+00:22:00 [W] And then just run kind setup.
+00:22:02 [W] A few minutes depending on your computer and what you already have downloaded?
+00:22:04 [W] this will get you three kind clusters without any kind of cni-genie up at all and they will all have configuration for different subnets for goods and services.
+00:22:19 [W] You can see here. Seeing is the default cni-genie Sable because we're going to use Calico and then the load image script just preloads everything for you.
+00:22:20 [W] So once you have this infrastructure, go ahead and just follow the readme we will want to do a coop cuddle apply.
+00:22:34 [W] To the kind cluster 0 where we need to bootstrap cni-genie expand the customization directory for the coupe system namespace.
+00:22:45 [W] Just do that real quick.
+00:22:46 [W] This needs to bootstrap flux or this needs to bootstrap Telco so that we can actually do a flux bootstrap, which is the next thing that I'm going to suggest we do. So in order to do that. I have to export
+00:23:02 [W] Get out token.
+00:22:59 [W] This step is just slightly different for me because I'm using a hub token here, but you can just put your own in. Your My Hub token is modified to also have access to Repose in SSH Keys, which is to the permissions that you'll need.
+00:23:14 [W] There's an SSH Keys which is to the permissions that you'll need. It's mentioned in the readme.
+00:23:06 [W] So I'll do a flux bootstrap with my user stealthy box.
+00:23:09 [W] It's a personal repository called multi cluster gitops and I want to sync the path config cluster 0 and apply it to the cluster.
+00:23:18 [W] So if you look inside of config, I have a folder called cluster 0 with a bunch of namespaces with a bunch of configure them.
+00:23:24 [W] them. So we'll get flux bootstrapped ready to go and that off to the side here. We can start talking a little bit about what kind of configuration we're loading.
+00:23:36 [W] so inside of the coop system namespace
+00:23:43 [W] there is a customization that loads from libraries the Calico corniness and surf deployments Calico.
+00:23:53 [W] This is just set up to do the subnet advertisement stuff that's done with this patch right here.
+00:24:00 [W] So we advertise the cluster ideas for the specific subnet of cluster 0 and then cluster 1 and cluster to disabling this just because it could break setups depending on your computer.
+00:24:13 [W] Now the surf configuration I want all of the nodes in the cluster to join a surf cluster using multicast.
+00:24:21 [W] The problem of network drift of node IP addresses. So each surf node can then know its Network identity and advertise that to the rest of the surf cluster.
+00:24:31 [W] And then if you look inside of the library certain point there is according to the points that I wrote.
+00:24:40 [W] that is actually a pretty well functioning reconciler.
+00:24:45 [W] even has like Rachel exit and the function of this bash script is to convert the surf members into bgp peers.
+00:24:57 [W] And then also template the core files for the cluster to mesh the tween all of the other clusters so you can you can read this code.
+00:25:08 [W] It's item potent was pretty fun exercise.
+00:25:12 [W] Its just JQ bash.
+00:25:14 [W] Could CTL Calico CTL stuff was really fun to write this can also figure out how to do graceful exit and Bash.
+00:25:21 [W] This was a fun one to figure out with traps and jobs that are being waited on.
+00:25:27 [W] And grabbing like the job list.
+00:25:30 [W] Anyway, that's just fun Easter eggs.
+00:25:32 [W] I'm sorry.
+00:25:33 [W] I apologize in advance for losing that much Bash.
+00:25:36 [W] the function of this bash script is to convert the surf members into bgp peers and then also template the core files for the cluster to mesh the
+00:28:21 [W] Pod in food plant just so that ended debug deployment so we can mess with the network and in the flux system apply directory.
+00:28:30 [W] We have cluster 1 and cluster to apply which is using the new flux toolkit customization API remote access feature to basically apply from this management cluster all of the manifests in the git repository
+00:28:46 [W] One's so pretty cool stuff.
+00:28:48 [W] Go check that out with the single flux bootstrap done on our cluster.
+00:28:55 [W] We can start examining some resources and see if some of our networking it's working.
+00:29:00 [W] So I think the first thing I'll look at is just do we have our bgp peers.
+00:29:12 [W] So here we are in cluster 0 we have be two computers for closer one closer to because these are all peering properly. That means that the surf cluster is built.
+00:29:22 [W] And similarly I could change context to look at cluster 1 and you would see that it's peering with cluster 0 linked list or two.
+00:29:30 [W] So that's a really good sign.
+00:29:31 [W] The other thing that we would just check is I want to show you the core DMS deployment.
+00:29:37 [W] It's slightly extended.
+00:29:38 [W] extended. You can read the patches here.
+00:29:43 [W] But the cord Enos deployment.
+00:29:46 [W] Coupe system described
+00:29:51 [W] Config Maps prefixed with core.
+00:29:55 [W] So this almost looks like a normal core file except in addition to the cluster local domain for the kubernative services. We have extra kubeedge owns from the environment being templated in and then we also import any other
+00:30:10 [W] From Etsy Cordina study. We have separate config Maps. Then here's the core DNS configure that mounts to that location.
+00:30:16 [W] This is being created by a surf Corey controller.
+00:30:19 [W] It's the bash script that we just read we can see that we have an additional core DNS configuration extending on that limb from the separate config map.
+00:30:28 [W] that is taking cluster one not Lan forwarding it to this place specific 10th address in the 10101 servicemeshcon.
+00:30:36 [W] This subnet and the 10th address in the 10 102 service subnet for cluster 2 dot land.
+00:30:42 [W] Hopefully I won't have to restart Court DNS for this and having a few problems every now and then recording SE and V. We can see that extra kubeedge owns.
+00:30:50 [W] sets cluster zero event land. So this core DNS server knows that it's in cluster zero and will respond not only to Cluster that local but clusters are not man.
+00:31:01 [W] for any of the service request that we have
+00:31:04 [W] so if we get into our debug poddisruptionbudgets
+00:31:15 [W] according as this function so we can look that pot in fo we can get the potty info service.
+00:31:24 [W] That is from cluster dot local.
+00:31:27 [W] It's the same IP address being returned.
+00:31:22 [W] We should potentially be able to do plus your 0 dot land and we can also get a completely different address for a completely different service in a different cluster by changing to Cluster 1 dot
+00:31:38 [W] Last year by changing to Cluster 1.9.
+00:31:40 [W] And that also get lucky be able to resolve a service for cluster 2. Land.
+00:31:47 [W] and
+00:31:50 [W] if all of our route sharing is working because we already know that DNS boardings functioning. We should also be able to curl from kind cluster 0 poddisruptionbudgets fault namespace of
+00:32:05 [W] at Port 1990s
+00:32:09 [W] and there we have cross closer communication without the use of any node ports or ingresses or load balancers purely wrap sharing and DNS folding.
+00:32:22 [W] So pretty cool stuff if you want to take a look at more what's happening under the hood, I would highly I really like it. Actually if you were to check out the project on GitHub and Fork it
+00:32:37 [W] Actually, if you were to check out the project on GitHub and Fork it yourself and you can replicate these results in your own environment the best part about this is that it costs really nothing as long as your laptop
+00:32:47 [W] The best part about this is that it costs really nothing. As long as your laptop is strong enough to run a few kind of notes.
+00:32:53 [W] So super fun had ton of fun putting this down together and we'd love to hear your feedback for sure. So that's really cool to me. At least hope that you have some fun putting that together.
+00:33:08 [W] So just kind of recap in that example. We just had a third cluster we had no Upstream DNS server or additional infra except for
+00:33:17 [W] my laptop, which is not part of the routing meshmark.
+00:33:38 [W] Go check that out.
+00:33:39 [W] So for Route sharing and DNS forwarding we can extend the knative kubernative service Discovery and routing meshmark and the cluster, but you do incur a
+00:33:54 [W] In the service routing for doing it the service is this way as an alternative you could try to have service controllers programming each of the nodes across the cluster and doing route sharing in a little bit of a different way.
+00:34:08 [W] You could eliminate a hop it is possible to do that kind of thing.
+00:34:11 [W] This is a layer for abstraction.
+00:34:14 [W] So there's no like built-in encryption that's happening, you know as the packets transmitted like between the Clusters that's not really like
+00:34:23 [W] like a given if you you did see me disable the IP and IP encapsulation that is a feature of Calico if you have chemical on both ends, but yeah, like
+00:34:38 [W] You're going to have to look into your implementation to God. If you need to encrypt your packets save there are traveling across in untrusted network or the open internet this route sharing and like layer for adjacency
+00:34:48 [W] If pods is also typically a prerequisite for multi cluster servicemeshcon are interested in doing multi cluster.
+00:34:52 [W] Mesh.
+00:34:52 [W] you're going to have to know a little bit about route sharing in this kind of infrastructure setup some technologies. Again, we have a non-exhaustive list, but these are some things that I think are fun with weaveworks, which is one of the older cni-genie that's been around for quite a
+00:35:07 [W] We've met emulates a layer 2 network using Mac addresses.
+00:35:12 [W] It's pretty pretty mean we've met allows multicast. So you could do something like the surf cluster that I have deployed on top of the week net set of nodes and it's pretty easy.
+00:35:24 [W] We've done a previous talk before a Luke Marsden demonstrated. We've met being mashed cross multiple kubernative clusters for pods apartment routing for something a little bit more interesting you could
+00:35:36 [W] Could say create a wire guard Network psyllium allows you to use wire guard and they have some of the coolest edgiest non-standard multi cluster. Mesh technology out there right now.
+00:35:48 [W] Go ahead and check out psyllium.
+00:35:50 [W] They actually have a route sharing Network policy sharing implementation using a bunch of pets CBS instead of something like bgp, and then the other super cool category of network
+00:36:05 [W] Right now that you should look at all right this category of to a UDP hole punching Nats traversing private networks.
+00:36:11 [W] So there will be typically this kind of like public coordination or Lighthouse server to use the tail scale and nebulae terms that allow nodes inside of private networks behind Nat to find each other over
+00:36:26 [W] To use the tail scale and nebulae terms that allow nodes inside of private networks behind Nat to find each other over public networks, and you can look at tail scale which uses
+00:36:37 [W] And you can look at tail scale which uses wire guard under the hood slack uses nebula for their own kind of corporate, you know reasons or for their Workforce reasons and nebulae uses the noise protocol.
+00:36:52 [W] Crypt traffic and it's able to do this kind of double knot to Brazil without any kind of public machines actually routing traffic through them 0t R is another solution as well and their new version like nebula supports multi cast,
+00:37:07 [W] not support multi-class so as far as going further Beyond trying to defeat Nats
+00:37:35 [W] The clusters for something more a theoretical you could look at the well, I shouldn't say theoretical because there's an implementation now go to kubernative 6 M CS API. You can also read keptn Steen 45.
+00:37:49 [W] This is the multi cluster Services API that allows it just is a specification for which clusters can share about the endpoints lists of other clusters.
+00:37:59 [W] So that's one way to figure out how to get cou proxy to get rid of that extra Hawk.
+00:38:05 [W] Kou, proxy can now be MC sap eyewear for cross cluster servicemeshcon see might look at things like it's Toc linkerd e may be assembling your own kind of thing for the particular use case also take a look at console connect and
+00:38:20 [W] Orchestration as a final kind of tidbit of things to chew on you saw us.
+00:38:28 [W] With flux we were able to apply a single bootstrapped gitops directory structure to multiple clusters and we were using the customization tool kit API to
+00:38:43 [W] Troll these applies. You can actually create health checks and dependencies between individual customizations within a set of toolkit controllers, and if you were to deploy a flagger
+00:38:55 [W] In each of the Clusters using those customizations when we have the case status implementation of Flagger finished.
+00:39:05 [W] You could actually do a cross cluster not just across cluster Canary which is already possible and people are already doing that with sto multi cluster mesh in psyllium, but you could actually orchestrate the dependencies between those
+00:39:20 [W] Flagger canaries, so if you're interested in canaries and servicemeshcon is and traffic shifting and shaping Beyond just the normal facilities that you can do to accomplish zero downtime deployments and cross cluster traffic with
+00:39:36 [W] 90s around sharing and DNS forwarding check out Flagger and check out dependency management with customizations in flux for today's demo again.
+00:39:46 [W] You can go to the GitHub repository and Fork it and do it on your own play with it on your machine submit issues or ping me on Twitter if things are not working.
+00:39:55 [W] really want to hear if you're just learning something from this kind of environment because it took me a long time to be able to get into a place where I could learn these skills and I
+00:40:05 [W] I would really like for the next kind of generation of practitioners or people from different backgrounds.
+00:40:12 [W] Even if you're very senior to learn about bgp, and how to do rupturing in the context of kubernative sand Cloud native applications.
+00:40:20 [W] Hit me up. I am available DM's open on Twitter.
+00:40:25 [W] also my GitHub if you want to follow me there and again the kubernative slack as well. I'd really like to get to know you hear what you're doing with some of our technology.
+00:40:35 [W] You that we know that we've or if you have cool thing that you're doing is kubenetes also, say hi in sequester lifecycle, and thanks so much for coming to the talk. See you later.

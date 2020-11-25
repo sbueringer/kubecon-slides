@@ -1,0 +1,244 @@
+﻿Serverless for ML Inference on Kubernetes: Panacea or Folly?: TSRL-7730 - events@cncf.io - Thursday, November 19, 2020 5:42 PM - 40 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi folks. Good evening.
+00:00:01 [W] My name is Melissa vodka, and I'm the founder and CEO of Verda.
+00:00:05 [W] Topic that has come up time and time again with our clients and partners which is when you're serving and my models doesn't make sense to adopt a serverless infrastructure.
+00:00:17 [W] So with that let's get started a bit of background on myself as well as Berta.
+00:00:23 [W] So I found it virt are based on my PhD work at a mighty. This was on a open source Model Management and versioning system called Model D be just as get is
+00:00:35 [W] The de facto version control system for source code we found out that models didn't have an equivalent way to version on manage them.
+00:00:44 [W] So we both this open source system that is now maintained by verta and we have expanded that significantly to provide an end-to-end.
+00:00:54 [W] I'm a lapsed platform just like devops and the tooling around devops has enabled software teams to ship code more frequently and more reliably.
+00:01:05 [W] Verdi and mlops platform helps MLT Em's ship models more frequently and in a reliable fashion. So the reason this talk and the work that were presenting in this talk today
+00:01:20 [W] On a open source Model Management and versioning system called Model D be just as get is the de facto version control system for source code.
+00:01:23 [W] We found out that models didn't have an equivalent way to version on manage them.
+00:01:26 [W] So we both this open source system that is now maintained by Verda and we have expanded that significantly to provide an end-to-end. I'm a lapse platform just like devops and
+00:01:40 [W] and the tooling around devops has enabled software teams to ship code more frequently and more reliably the Verdi mlops platform helps em all teams ship models more frequently and
+00:04:01 [W] Was that we helped a lot of clients that I'm all teams deployed our models and serverless is a very appealing Paradigm in this case because it provides scaling ability. It also has a promise of reducing costs.
+00:04:17 [W] You don't use your own keep resources around that you don't need and so what we decided was that we would run a set of benchmarks comparing MLM France in the serverless setting compared
+00:04:32 [W] Gorilla setting and so provide the sort of best advice to our clients.
+00:04:34 [W] So today I'm excited to share some of that work with you all and without further Ado.
+00:04:41 [W] Let me get started.
+00:04:42 [W] What I'll be covering in the remainder of my talk is what a serverless.
+00:04:46 [W] why is it interesting unique considerations from all serving that come into play then we'll go to The Benchmark and results there and then all of wrap up with some key takeaways and
+00:04:59 [W] and how you can determine whether serverless is appropriate for you.
+00:05:05 [W] So serverless, what is it? And why is it interesting if you think about the different ways in which you can run software applications today?
+00:05:14 [W] you'll find that there is largely four categories one is you can start with a bare metal server manager the hardware and then run applications on top of it the next one up. The chain is virtual machines these
+00:05:29 [W] Were and you can have multiple guest machines running on your host machine further of the stack. We have containers that help us abstract away the operating system entirely and were left with only the application and it's dependencies.
+00:05:42 [W] At the very top we have serverless, where were only thinking about the function that we want to execute.
+00:05:40 [W] We're not really thinking about how to run it or how to scale it.
+00:05:44 [W] That's the value add that is brought in by a serverless platform as you might imagine as we go from bare metal serverless.
+00:05:53 [W] We're going up the abstraction chain, which means it's easier to use and yet it has less control and less flexibility.
+00:06:02 [W] a tea as a result
+00:06:05 [W] Today I'm going to be focusing on serverless and containers and comparing these two as we still run a mile workloads.
+00:06:14 [W] So serverless can be confusing term for many people. And so let me let me throw some definitions first. So this is an abstract one that I really liked by Martin Fowler.
+00:06:27 [W] It says serverless is at its most simple and Outsourcing solution.
+00:06:31 [W] So what that means is with serverless, you don't need a provision or manage the servers. Also. Your application doesn't have a long-running server component. So you don't have a loop that's sitting around waiting.
+00:06:44 [W] Paying for waiting for application to get requests instead.
+00:06:50 [W] Today I'm going to be focusing on serverless and containers and comparing these two as we still run a mile workloads.
+00:06:58 [W] So serverless can be confusing term for many people. And so let me let me throw some definitions first. So this is an abstract one that I really liked by Martin Fowler.
+00:07:11 [W] It says serverless is at its most simple and Outsourcing solution.
+00:07:15 [W] So what that means is with serverless, you don't need a provision or manage to servers. Also. Your application doesn't have a long-running server component. So you don't have a loop that's sitting around waiting.
+00:07:28 [W] Paying for a wedding for application to get requests instead.
+00:07:35 [W] It is much more an event-driven Paradigm where every time a serverless function is invoked.
+00:07:44 [W] The underlying platform is going to spin up one or multiple copies of the serverless function. And then that is going to be used to service requests as a developer. You're only writing the coder business logic.
+00:07:58 [W] Logic, you don't need to figure out how to run or deploy the platform's going to take care of that in addition. The platform is going to take care of scaling up and down and resources. If you have a certain burst because your app is very very popular
+00:09:12 [W] It's going to spin up one or multiple copies of the serverless function. And then that is going to be used to service requests as a developer.
+00:09:22 [W] You're only writing the code our business logic.
+00:09:25 [W] You don't need to figure out how to run or deploy the platform's going to take care of that in addition.
+00:09:31 [W] The platform is going to take care of scaling up and down and resources. If you have a certain burst because your app is very very popular. The serverless system is going to scale up to support that.
+00:09:43 [W] In contrast if it's if it's a holiday and no one's using the app that you've built for workplace productivity, then it's going to scale to zero until their requests.
+00:09:56 [W] And I'm finally serverless has many different flavors. What I'm talking about in this talk is function as a service.
+00:10:04 [W] and some of the popular serverless systems are lambdas chief CP Cloud run Cloud functions Etc.
+00:10:12 [W] So that's what serverless is.
+00:10:15 [W] Let's quickly look at why serverless is interesting. So some of the pros and cons when you are choosing to adopt a serverless setting
+00:10:25 [W] So first of all serverless is easy to use developers focus on business logic don't need to worry about how an application is going to run second.
+00:10:34 [W] It's a blue scale the more requests you get and as your workload varies more copies of the serverless function are created automatically similarly.
+00:10:44 [W] It's going to scale to 0 when your application is not receiving requests. So overall this means that the maintenance overhead of infrastructure
+00:10:55 [W] Ahead of infrastructure is very low.
+00:10:57 [W] You don't need to manage two nodes perform upgrades tune resource requirements and so on and as a result overall, whether we're talking about total cost of ownership or in certain cases, depending on the workload even the
+00:11:13 [W] When the infrastructure costs can be lower for a serverless system compared to a non serverless system.
+00:11:21 [W] So some popular applications that are good fits for serverless include a synchronous message processing iot workloads Turing processing and so on.
+00:11:30 [W] So those are cases where serverless has good fit but that doesn't mean the serverless is a good fit everywhere for instance serverless applications are stateless.
+00:11:41 [W] So if you have an application that does require state to be present in it, then serverless may not be a good fit here second. There are
+00:11:51 [W] The ventilation restrictions. So whether you talk about lambdas or Cloud run there are limits on how long a function can run the resources that can ask for concurrency and so on in addition you can choose our control
+00:12:06 [W] If you're looking for particular processor accelerator, the serverless platform might not support it. However, a kubernative space platform is likely to support them and then finally because the serverless applications
+00:12:21 [W] When they're not in use whatever the first request comes in and there are no instances running.
+00:12:11 [W] There can be a large latency which can result from cold start.
+00:12:16 [W] You're just spinning up the first instance of this particular function, you're downloading dependencies and that can take a while.
+00:12:25 [W] Okay, so given this background when does serverless make sense usually will make sounds when the application can be made stateless.
+00:12:33 [W] There's usually not a deal-breaker just store the state in a database and file store blobstore and so on the second one is that resource requirements are modest. So they fit into what the serverless platform expects as
+00:12:48 [W] The application can be made stateless.
+00:12:48 [W] There's usually not a deal-breaker just store the state in a database file store blobstore and so on the second one is that resource requirements are modest.
+00:12:58 [W] fit into what the serverless platform expects as typical resource requirements.
+00:13:06 [W] The third one is that performance requirements.
+00:13:10 [W] our slos are not super astringent because as mentioned earlier cold start is a real issue.
+00:13:15 [W] And so if there are type performance requirements here around latency in particular than serverless needs to be used with care and then finally serverless make sounds one query workloads are not steady
+00:13:31 [W] Particular than serverless needs to be used with care.
+00:13:36 [W] And then finally serverless makes sense one query workloads are not study. If you have a very steady workloads that uses your servers pretty effectively than serverless doesn't make as much sense because it's not going to save you
+00:13:51 [W] That's not receive you resources and therefore costs as well.
+00:13:57 [W] And then finally serverless really helps with reducing infrastructure burden.
+00:14:02 [W] And so if your team really has a lot of Burden around managing infrastructure serverless would make sense.
+00:14:10 [W] So with that we can look at what mlperf a entails and how serverless plays with that.
+00:14:20 [W] So unique considerations for I'm also serving first of all, I'm all serving means making predictions against a train model.
+00:14:26 [W] So there are different stages of the MLF cycle your first training your first cleaning the data, you're preparing the data, then you're training the model and then you making predictions against the train model.
+00:14:37 [W] So we're talking about that third piece off the MLF cycle.
+00:14:42 [W] The first consideration That's Unique for MLA is that models can be large and what we mean by that is a model can have millions of millions of parameters as a result. The serialized version of the model can be
+00:14:57 [W] So the still Bert one of the smaller NLP models is actually 256 and we if you compare that to your vanilla python function that you might run that's fairly large and we'll see how
+00:15:09 [W] That you might run that's fairly large and we'll see how we can run into problems when we're running a the stillbirth model and a serverless setting.
+00:15:12 [W] We run into similar challenges for mlibrary.
+00:15:16 [W] These Mo libraries can be varied.
+00:15:18 [W] They can also have a lot of dependencies and as a result loading up these libraries can hit some of the walls that are imposed by resource restrictions for serverless platforms.
+00:15:32 [W] then finally a momentous may need to be served via GPS or TB user more efficient that way and serverless systems currently don't enable that
+00:15:42 [W] so we now have a better sense of where serverless makes sense and how I'm all serving workloads might compare to that particular situation.
+00:15:54 [W] So next let's look at the Benchmark our goal with this Benchmark was to identify when it makes sense to you serverless for our most survey and we evaluated that question on a variety of systems today.
+00:16:07 [W] I'm going to be focusing on three systems. These are managed services and we pick these
+00:16:12 [W] As we found that these systems were most mature among the offerings out there.
+00:16:18 [W] So first one is Lambda 0 SM does this is the state-of-the-art in serverless.
+00:16:26 [W] Particular situation. So next let's look at the Benchmark our goal with this Benchmark was to identify what it makes sense to you serverless for our most survey and we evaluated that question on a variety of systems today.
+00:16:41 [W] I'm going to be focusing on three systems.
+00:16:43 [W] These are managed services and we pick these because we found that these systems were most mature among the offerings out there. So first one is Lambda 0 SM does this
+00:16:56 [W] This is the state of the art in serverless.
+00:17:00 [W] The next one is running serverless on kubenetes.
+00:17:05 [W] This is using the key knative project and we chose to use the Google Cloud run platform in order to perform the bench point.
+00:17:15 [W] Finally for a container based platform.
+00:17:17 [W] We use the virt 'system and what that entails is that verta packages and runs models as containers and does the scaling automatically similar to a serverless setting
+00:17:33 [W] Chose to use the Google Cloud run platform in order to perform the bench warrant.
+00:17:40 [W] Finally for a container based platform.
+00:17:43 [W] We use the virt 'system and what that entails is that verta packages and runs models as containers and does the scaling automatically similar to a serverless setting
+00:18:35 [W] We look at how each one of these systems works because that will help inform the analysis will perform shortly.
+00:18:42 [W] So for AWS Lambda of this is the manor serverless platform you write code for the Lambda function you upload the package code to S3.
+00:18:53 [W] Also upload any other dependencies and then every time that the Lambda is triggered via an event or an HTTP request.
+00:19:00 [W] The platform is going to spin up a Lambda instance. It's going to execute it. It's
+00:19:05 [W] to scale it up and down as required and when the request is done and there no other requests it will scale to 0 so that's generally how a Lambda works on AWS if we look at Google Cloud run.
+00:19:19 [W] run. It's pretty similar except now, we're talking about containers as opposed to just functions written in particular language. So in this case what the end user has to do is they upload a Docker container to The Container registry.
+00:19:36 [W] And the toll Google Cloud run about the container how it should be invoked.
+00:19:42 [W] And then every time that there is an event or HTTP requests.
+00:19:46 [W] It's going to trigger a cloud run execution. And as we for the platform manages all resources scaling and points.
+00:19:55 [W] Should I specify resource and Hardware requirements that you are looking to have met and then you deploy the model over Le notice that the step was missing in the serverless workflows and that's because what serverless
+00:20:10 [W] Serverless instances on the Fly.
+00:20:08 [W] However, in this case. We deploy at least one.
+00:20:12 [W] we will always have at least one replica running for the model.
+00:20:17 [W] And so that reduces our cold star costs.
+00:20:21 [W] However, does mean that if there are no requests we still have the model running at all times and then similar to serverless platforms Werdum managed just the endpoints and scaling of models.
+00:20:36 [W] All right, the last part of the benchmarks back is metrics.
+00:20:41 [W] We measure warm Stout latency culturally than see auto-scaling latency and also usability concerns. Like can you actually use serverless for This workloads Heart of barriers which make it impossible to use serverless,
+00:20:58 [W] Workloads, we tested these systems on a variety of models including mlperf Vision traditional about models today.
+00:21:06 [W] I'll be focusing on just a couple of NLP models because the trends are pretty similar across the board and we have different workloads that very QPS or queries per second.
+00:21:19 [W] Alright. So before I go to the results, I do want to point out a few caveats.
+00:21:24 [W] The first one is that serverless for kubernative is still evolving and so the numbers that I'm presenting here or based on the capabilities and software available today. If you re run the numbers in two months, they might be different
+00:21:39 [W] We have done is that this Benchmark is a living Benchmark and you can find the full set of results at that URL and also learn about how you can run the Benchmark yourself second one is we're using managed
+00:21:45 [W] Add that URL and also learn about how you can run the Benchmark yourself.
+00:21:43 [W] Second one is we're using managed services in this benchmark.
+00:21:47 [W] And as with all managed Services, there are knobs that cannot be seen or controlled by the end user and there are likely optimizations performed under the hood, which means that it's a bit challenging to perform a Apples to Apples comparison
+00:22:02 [W] With all manner of services. There are knobs that cannot be seen or controlled by the end user and there are likely optimizations performed under the hood, which means that it's a bit challenging to perform a Apples to Apples comparison the best that we can do
+00:22:17 [W] And the sponge Mark is to use best practices recommended by the cloud providers and to use off-the-shelf settings for the managed services.
+00:22:28 [W] All right.
+00:22:29 [W] So let's first get started with results around usability because if you're not able to even use the serverless platform for a particular model, then the quantitative numbers don't make sense.
+00:22:41 [W] So biggest hurdle that we found in using serverless 4 ml has to do with the restrictions that are put on resources.
+00:22:50 [W] So here I'm listing out the restrictions that are put on them band Cloud run with respect to memory disk and CPU.
+00:22:59 [W] And what this means is that if you require memory greater than 3 gigabytes then lambdas are not an option for you.
+00:23:09 [W] You cannot use the serverless platform similarly if you need more than four virtual CPUs.
+00:23:15 [W] It's a no-go on Google Cloud run. You're just not going to be able to do that.
+00:23:21 [W] Now with MLS we discussed before I'm all models and Emma libraries tend to be rather large. And so if it happens more often than not that your MLM model doesn't fit in the constraints imposed by the serverless platform.
+00:23:37 [W] Similarly, if you need more than four virtual CPUs, it's a no-go on Google Cloud run.
+00:23:41 [W] You're just not going to be able to do that.
+00:23:45 [W] Now with MLS as we discussed before I'm all models and mlibrary is tend to be rather large. And so if it happens more often than not that your MLM model doesn't fit in the constraints imposed by the serverless platform.
+00:24:13 [W] You two examples.
+00:24:14 [W] The first one has to do with this Dilbert and to run to still Bert. What you have to do is install torch and install the Transformer library from hugging face in this case. Both of them together are
+00:24:29 [W] Megabytes, and for a Lambda this Falls outside of the realm of what's doable.
+00:24:34 [W] And so what we had to do was to surgically remove pieces of library and code and get creative with model loading so that we could actually use to still Bert on a Lambda.
+00:24:46 [W] So if you if your model is larger than the expected resource constraint, you need to get very creative and significant wrangling is involved there.
+00:24:58 [W] The second one is another example that we have seen with multiple clients.
+00:25:03 [W] There is an embedding model for an entity and then there is a nearest neighbor a lookup model that's going to find and the days that are most similar and because this particular Model includes an index that can be pretty large the model ends up being
+00:25:19 [W] Greater than 20 Gigabytes.
+00:25:18 [W] That's way outside of the wrong of any other serverless platforms.
+00:25:22 [W] And so you cannot use a serverless platform in order to serve this particular model.
+00:25:28 [W] So last one I want to highlight here is configuration options about libraries and low-level lineage libraries have optimizations that can be tuned via environment variables.
+00:25:40 [W] However, in a serverless setting these environment variables or the hardware that determines these environment variables are not exposed to the user and so it's hard to set these environment variables correctly.
+00:25:56 [W] All right, so the set of results that we looked at so far have to do with usability.
+00:26:02 [W] Can you actually use serverless for this workloads?
+00:26:25 [W] A serverless application running and there's no need to download the model or a spin up a new instance from scratch.
+00:26:34 [W] P 5 and P 99 latency is interestingly. The verta platform is actually faster by 2 x this can be attributed to more control over the environment.
+00:26:38 [W] So this can be pasta sirs.
+00:26:42 [W] That we use or specific environment variable settings since Lambda and Clarin are closed Source.
+00:26:49 [W] It's hard to accurately identify.
+00:26:52 [W] What might be the reason why verta is running 2x faster, but it likely has to do with the environment that were running in and here I'm loading the configurations that we use for all three systems.
+00:27:04 [W] We have tried to keep all the configurations comparable so that we're doing a Apples to Apples comparison.
+00:27:14 [W] The next result has to do with cold start production latency.
+00:27:17 [W] So this is a case where no serverless functions are running already.
+00:27:23 [W] And so this is the time required to spin up a new instance of the serverless function and then service our request.
+00:27:31 [W] So in this case, we find that for virt out.
+00:27:34 [W] We always have at least one replica running and so it's extremely fast to make the first prediction.
+00:27:41 [W] On the other hand in the Lambda K SoundCloud run case. It takes several seconds in order to spin up the first instance of the serverless application.
+00:27:52 [W] And so we find that the latency is in the tens of seconds as opposed to less than a second for Verna.
+00:27:59 [W] So the previous results were around time to First production the next set of results are for scaling latency.
+00:28:09 [W] So one of the biggest advantages of serverless is its ability to Scale based on the workload and so here we're comparing the time required to reach steady state which means in this case.
+00:28:22 [W] We are testing with a hundred QBs one worker per query was saying that we know weaveworks.
+00:28:28 [W] Very steady state when we start receiving a hundred responses per second. And this is successful responses.
+00:28:39 [W] Here.
+00:28:40 [W] We see that Google Cloud run is quite fast 33 seconds lambdas are twice as slow verta is significantly slower and this is to be expected because we're now only
+00:28:55 [W] Is auto-scaling there are no optimizations being performed in order to always has a warm warm replicas ready to go and so on so the optimizations that you serverless
+00:28:53 [W] Implement in order to perform auto-scaling are not present in the container base killing based on vanilla kubernative.
+00:28:55 [W] Alright, the final result here is what happens when we vary the model size. So here we're comparing the silbert Again Sport bird is twice as large as the still Bert and we find that this
+00:29:10 [W] Pack the latency.
+00:29:10 [W] We see that the P95 is twice as much and the time to First request.
+00:29:17 [W] However is not that much longer particularly for AWS for cloud run and for verta. We do see some degradation in the time to service the first request.
+00:29:29 [W] So that's a quick overview of some of the key results and comparing serverless versus non serverless 4M L survey.
+00:29:40 [W] Before I wrap up with a key set of takeaways.
+00:29:43 [W] I do have a note on cost because cost can be one of the key reasons.
+00:29:47 [W] why teams decided decide to go the serverless root and this has to do with two things one is if we discuss only pure infrastructure costs, depending on the workload and the amount of resources necessary.
+00:30:03 [W] The pure and for cost may be comparable or even higher in a serverless setting than in a non serverless setting.
+00:30:06 [W] So if you have steady state in your query workload and your queries have good utilization of the server's it might be cheaper to just use a non serverless solution.
+00:30:17 [W] However, one place where serverless does shine is TCO or total cost of ownership. This is a combination of infrastructure costs maintenance.
+00:30:27 [W] Scoffs and development costs. So if TCO is extremely important to you then serverless would make sense.
+00:30:35 [W] Otherwise, it requires a more nuanced view on what are the infrastructure costs that were actually signing up for.
+00:30:43 [W] All right.
+00:30:44 [W] So with that let me quickly summarize what we learnt based on our benchmarking results and hopefully this is helpful for people to make their own decisions on whether serverless is a good fit for
+00:30:59 [W] Otherwise, it requires a more nuanced view on what are the infrastructure costs that were actually signing up for?
+00:30:58 [W] All right.
+00:30:59 [W] So with that let me quickly summarize what we learnt based on our benchmarking results and hopefully this is helpful for people to make their own decisions on whether serverless is a good fit for your
+00:31:30 [W] Use case.
+00:31:32 [W] So first of all, serverless solutions have hard limits on resources.
+00:31:37 [W] So if your model doesn't fit Within These resources that serverless might not be a good fit for you second. The ability to configure Hardware can lead to better performance and this is easier in on serverless systems.
+00:31:51 [W] So this is the case where the vertices down was 2x faster and it had to do with the environment that we were running in.
+00:31:59 [W] Next scaling with the serverless platforms is much faster than the vanilla auto-scaling that we could do in kubernative even with custom metrics.
+00:32:09 [W] There's a special optimizations that are performed by these platforms for auto scaling that aren't provided out of the box if you're running containers on kubenetes.
+00:32:20 [W] And then finally the query pattern and workloads.
+00:32:40 [W] So that's those were the key points that I wanted to convey regarding the Benchmark.
+00:32:47 [W] Please check out but II serverless inference Benchmark for the whole set of results and also to learn how you can run the Benchmark yourself.
+00:32:56 [W] So with that, thanks very much for your attention.
+00:32:59 [W] That's cheaper than on serverless for prediction requests to Emma models.
+00:33:05 [W] We need to close the other query patterns and workloads.
+00:33:10 [W] So that's those were the key points that I wanted to convey regarding the Benchmark.
+00:33:17 [W] Please check out virt IAI serverless inference Benchmark for the whole set of results and also to learn how you can run the Benchmark yourself.
+00:33:26 [W] So with that, thanks very much for your attention.
+00:33:28 [W] I would love to continue the conversation or on the Benchmark. Please feel free to reach out and want to see at Berta or data cereal with questions, and I'll be happy to feel down there. Thank you.
+00:34:07 [W] Someone's asking where they can get a copy of the slides. These are available on the scheduling system. So if you go to sehe d.com and you navigate to this particular top
+00:34:25 [W] I'm out.
+00:34:36 [W] There was also a previous question on how Kate knative would fit into the serverless model K native provides a set of components to build a serverless platform on top of kubenetes.
+00:34:50 [W] Knative provides a set of components to build the serverless platform on top of kubenetes. So Google Cloud run actually uses can native underneath Canada has a lower level of abstraction and we found that it was easier to work with
+00:35:06 [W] In Canada after work, we have a blog post on head of the details of getting it up to work as well as what it was like to deploy a moment rules on Google Cloud run.
+00:35:17 [W] So definitely check it out.
+00:35:18 [W] It is linked through the virt IAI serverless Benchmark page that I referenced earlier.
+00:36:21 [W] Got it, okay.
+00:36:28 [W] ensembles our graph so you can ask typically done with a lot of architecture questions either you can bundle all of your components into one model and then deploy it onto the platform if you have a
+00:36:43 [W] One two separately version and run individual models, then you can also do that and you can specify what your graph or your dag is supposed to look like.
+00:36:48 [W] So depending on the particular use case.
+00:36:51 [W] You can go both ways.
+00:36:51 [W] We have a slight preference for defining the dag or graphql. Then you can change different components of your model and keep the others the same allows you to have more fine-grained control as well as versioning.
+00:37:25 [W] Awesome, and for folks who are navigating to the page on our website.
+00:37:31 [W] It links to our spreadsheet.
+00:37:43 [W] It's off how serverless might fit into your workload.
+00:38:12 [W] how serverless might fit into your workload
+00:38:41 [W] I heard that that didn't quite come through. So I mentioned that if you navigate to the link that I mentioned in my slides for that AI serverless Benchmark several serverless
+00:39:01 [W] I've heard that that didn't quite come through. So I mentioned that if you navigate to the link that I mentioned in my slides for that AI serverless Benchmark several serverless
+00:39:16 [W] And find a spreadsheet that has all the values for running these benchmarks not only on NLP models, but also computer vision models in case that is the workload that you're trying to test against.
+00:39:43 [W] Yep, you just saw that message.
+00:39:46 [W] I think happy to take further questions on this like Channel or my email and Twitter handle are in the slide in the slides' please feel free to reach out.
+00:39:56 [W] Would love to continue the conversation.
+00:39:58 [W] I think serverless and MLM friends is super exciting, and there's probably some innovative solutions. Just waiting to be devised out there.
+00:40:06 [W] Thank you.

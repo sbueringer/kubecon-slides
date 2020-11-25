@@ -1,0 +1,358 @@
+﻿Advanced Persistence Threats: The Future of Kubernetes Attacks: QPGD-2600 - events@cncf.io - Thursday, August 20, 2020 12:43 PM - 106 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:43 [W] Hi.
+00:00:44 [W] Hi, I'm Ian cold water, and I'm Brad.
+00:06:48 [W] giesemann and we attract kubernative.
+00:06:50 [W] We're here to talk about the evolution of the kubernative project and its attack surface and to look into the future of what attacks on kubernative can look like and to make things fun. We'd like to show you a few.
+00:07:01 [W] He's 26 years old this year and both of us have been working with kubernetes for a few years now.
+00:07:12 [W] Both of us have watched the project and its rapid rate of adoption growth and change over time and we as attackers have evolved along with it.
+00:07:15 [W] When Brad and I first started learning who were not he's it was easier to be able to understand the whole stack this diagram here was the first kubernative architecture diagram. It's from 2014 before the project went public even back then it wasn't entirely accurate the person who made this diagram
+00:07:32 [W] Rosacea, not it as aspirational because at the time there wasn't any authorization of kubernative at all.
+00:07:39 [W] Kubernative gonna lot since then and it's security posture has improved a lot.
+00:07:46 [W] It's still not secure by default, but it's better than it was.
+00:07:48 [W] We learned kubernative back when things were simpler and possible to learn enough of everything but newcomers now have a much steeper Hill to climb.
+00:07:57 [W] Yeah, take a look at this image.
+00:08:01 [W] It's not just kubernative anymore that's growing and evolving the entire ecosystem around it is growing and evolving confused.
+00:08:08 [W] It's not just you few years ago kubernative was the platform now. It's a platform for building platforms.
+00:08:21 [W] This curse that image here is the cloud made of computing Foundation landscape, since you're at Cloud native con. You've probably seen it.
+00:08:22 [W] This image is so overwhelming.
+00:08:28 [W] But even this screenshot from cncf web page asks on the top if you're overwhelmed.
+00:08:34 [W] It's a lot for everyone to keep track of even for people who often work with and pay attention to this stuff additional features plugins and configuration on top of kubernative at whole new layers of complexity.
+00:08:43 [W] All of these have to be kept up with and secured independently and together and they don't always play nice with each other.
+00:08:48 [W] So it's complexity grows Defenders and operators have a much harder time understanding
+00:08:52 [W] Aspects of each component and their interactions in the environment with more moving Parts.
+00:09:01 [W] More to configure and with more complexity per part.
+00:09:04 [W] They're more likely to be misconfigured.
+00:09:04 [W] Historically new versions of kubernative have been released about every 90 days and the support for security fixes is only applicable to the most recent three releases.
+00:09:16 [W] That means given a given version is only supported for approximately nine months due to that rapid Cadence manage kubernative providers typically only support versions that are one or more minor releases behind the latest and organizations managing
+00:09:28 [W] Our own communities clusters often do this to as it always takes some time to test and validate new releases before they make it to production.
+00:09:37 [W] For example, the latest generally available kubernative release is 1.19, but many are running one that 15 or 1.16 in production, simply because those are the latest versions available to them, but that can actually work to our benefit as Defenders we
+00:09:51 [W] Use this time to look at new features now before they're actually used in a few months but as attackers that just means there's plenty of old clusters to break.
+00:10:00 [W] So everything is growing and evolving really rapidly and changing really rapidly. So as kubernative involves attackers have to evolve with it as the kubernative project is implemented more security over time attackers have had to learn more about kubernative
+00:10:16 [W] Is to be effective than they used to be it used to be really easy to attack kubernative.
+00:10:22 [W] You could just do things like execute commands is rude with an unauthenticated curl call not actually kidding.
+00:10:27 [W] Now, you need a deeper understanding of the moving Parts on the high level and also at the Linux Primitives that underlie the low levels.
+00:10:37 [W] So all of us have to level up attackers Defenders everybody and in that Spirit, let's look ahead a bit.
+00:10:41 [W] We'd like to help you level up.
+00:10:45 [W] does the landscape look like coming down the pike?
+00:10:46 [W] What might attackers be able to do moving forward?
+00:10:49 [W] We'd like to demonstrate some novel attacks to show you some examples of what attacks can look like in the future.
+00:10:59 [W] What could a sophisticated attacker who knows kubernative.
+00:11:01 [W] Well be capable of we're pretty excited about these attacks.
+00:11:03 [W] We know you will be too.
+00:11:04 [W] Oh, yeah before we get into the demos, let's get into an attacker mindset what might an attacker bent on foul play generally want to do in kubernative.
+00:11:15 [W] Well, here's what we might want to do first. We want to become cluster admin.
+00:11:18 [W] This could happen by either compromising the cluster and becoming cluster admin or maybe you are a malicious administrator Insider threat every attack that we're going to be demonstrating in this talk assumes that you've done this already.
+00:11:32 [W] Then you probably want to get all the secrets.
+00:11:38 [W] You don't want to get blocked for sure and establish persistence without getting caught.
+00:11:42 [W] It's important to remember that different attackers have different goals and motivations cluster.
+00:11:44 [W] Admin isn't always the on goal.
+00:11:46 [W] Not every attacker comes in from the outside and sometimes the goal can be outside of the cluster itself.
+00:11:50 [W] So on that, let's say we are maybe a malicious administrator or an attacker who has access to a cluster as cluster.
+00:11:58 [W] Admin.
+00:12:03 [W] we have access to all of the data and secrets in this cluster already and that's pretty cool. But we only have those for right now and they might change over time. So it would be nice to see it in real time and get the newest credentials if they get rolled or something like that as
+00:12:13 [W] Updated there is a component of the API server that we can misuse for this purpose. It's a form of admission control called a validating web hook.
+00:12:22 [W] A validating web Hook is a knative configuration option that lets a cluster administrator check with an external web service for whether or not to allow a resource to get created. If you've heard of projects, like open policy agent gatekeeper or k rail all of these projects use validating
+00:12:38 [W] Hooks as a mechanism for enforcing security policy.
+00:12:41 [W] Here's how it works. When a user submits a request to do something like create a new pod after going through authentication and authorization.
+00:12:50 [W] It gets to the validating and Mission controllers.
+00:12:54 [W] If a validating web Hook is configured a full copy of the Pod request is sent the admission controller been parses the request and uses custom logic to give a yes or no response if the logic allows it by sending a yes response the Pod can be saved in that City.
+00:13:05 [W] If not, they're not.
+00:13:07 [W] You can have multiple validating web hooks if you want to and you can pick which resources you want to trigger on and the best part is that request doesn't have to get sense or run inside the cluster.
+00:13:22 [W] It can go to any arbitrary URL on a system somewhere else.
+00:13:25 [W] That's an attacker or a malicious. Admin. You might want a web hook to be called only one Secrets or created or updated.
+00:13:34 [W] You could install a web hook like this filter only on secrets and then send it to an attacking system that just logs what it receives.
+00:13:44 [W] So revisiting this data flow, but with are malicious web hook in line some time passes and a user might create a new secret via the API server and we'll assume it gets accepted by the first validating webhook and steps two and three and step four.
+00:13:55 [W] Were the entire Secret Gets Sent to the attacker controlled application via web request we can configure our malicious application to Simply log the secret and always send an approval back to the response.
+00:14:09 [W] It gets saved into at CD then as normal but being good evil attackers.
+00:14:14 [W] We don't want them to notice if our custom web hooks Services ever down so we can tell the API server to wait up to 1 second for our web service to respond.
+00:14:19 [W] Yes, and then just fail open as if we sending us anyway if we don't send a response, so maybe we have
+00:14:25 [W] Add a tiny bit of delay, but not enough for most folks that even notice.
+00:14:29 [W] Let's demonstrate.
+00:14:30 [W] So we have a demo cluster and we have cluster admin access.
+00:14:36 [W] So we can run a coop control get nodes and see that we have a single control plane worker. Sorry single control plane own and a single time worker.
+00:14:47 [W] We're using kind here. If that wasn't obvious.
+00:14:57 [W] We can run a coop control get pods in our namespaces and get secrets to give you an idea that this is basically an empty cluster.
+00:14:58 [W] Okay?
+00:14:59 [W] So validating webhooks require TLS so we can generate a self-signed certificate.
+00:15:08 [W] We have a script to do just that.
+00:15:09 [W] What that's done is created a self-serve time and what that's done is created a certificate signing request and how to automatically approved and that was stored in the secret named validator.
+00:15:22 [W] So now that that was just generated and stored in the secret. We can fetch it out and save it locally to a file called sir.com.
+00:15:32 [W] So next we're going to install the malicious validating webhook application in validator, which is going to capture all the secret sent to it by the API server.
+00:15:46 [W] So we've deployed a config map the deployment itself and a service called validator that points to it.
+00:15:54 [W] So let's look at the validating webhook configuration that we're about to apply.
+00:16:00 [W] And as you can see, it's a validating webhook configuration resource, and we're pointing it at the validator service in the default namespace and the failure policy is to ignore which is fail open setting.
+00:16:18 [W] We only wait one second in case our application is ever down and we continue on anyway, we've configured the rules to trigger only on create update or delete of Secrets resources.
+00:16:29 [W] So let's install the validating webhook configuration into the API server.
+00:16:34 [W] Okay.
+00:16:37 [W] So and now when a regular user creates a new secret such as this one.
+00:16:42 [W] The damage is already done.
+00:16:49 [W] We can go look at the validating webhook Logs with capturing the secret in the clear from our malicious web hook application.
+00:16:59 [W] And as you can see, we have honk and that's the basics before encoded version of that secret. Awesome.
+00:17:10 [W] Awesome.
+00:17:18 [W] So now we have a permanent method for ensuring we are always aware of the latest credentials in secret stored in this cluster and real time.
+00:17:20 [W] That's pretty sweet.
+00:17:22 [W] And that was pretty cool, but it's not very stealthy the API server logs everything we do and an observant admin could maybe notice it the API serverless.
+00:17:30 [W] Also has a lot of authentication authorization options that administrator could use to stop us.
+00:17:37 [W] That's kind of a bummer.
+00:17:43 [W] We could maybe get around it by doing various things that are kind of convoluted, but I feel like maybe we could make it easier for ourselves Maybe.
+00:17:48 [W] If we bypass the API server, we don't have to conform to its security policy and maybe we won't be locked in some clusters. You can schedule pods on the same node as where the API server runs.
+00:18:03 [W] So what if we scheduled a full copy of the real API server on the same control play node and use the same keys and network paths to talk to Ed CD that the real control plane has but instead of logging activities or blocking anything.
+00:18:18 [W] We just have it set to allow full access.
+00:18:22 [W] There's an attacker that's pretty handy. Right keeps the logs of the API server clean the real one and maintains a persistent access channel to the underlying state of the cluster where all the loot is kept.
+00:18:32 [W] With our own access to add CD we can control everything in the cluster and depending on what kind of meta data is in there.
+00:18:43 [W] We could potentially control access to Cloud accounts outside of the cluster as well.
+00:18:45 [W] Let's see what that would look like.
+00:18:46 [W] Yeah.
+00:18:47 [W] So we've already made an exact copy of the current API server configuration, and we've made a few key changes.
+00:18:56 [W] So let's take a look.
+00:18:58 [W] We'll call your attention to us setting Anonymous off equals true and authorization mode to always allow this effectively disables authentication and authorization in the API server, and we set the insecure Portman the plain http.
+00:19:15 [W] Service listening on Port 443 the last thing I want to call attention to is because we're running on the same control plane node.
+00:19:26 [W] we have access to the certificates that are used to communicate with that CV. We're using TCP 443 because it's a common traffic court that is pretty unlikely to be blocked by a firewall rules.
+00:19:38 [W] Also traffic on 443 is not very likely to be noticed indeed. Let's go ahead and install that.
+00:19:41 [W] Alright, so we've installed that on the control plane mode right now.
+00:19:46 [W] So let's test our use of this.
+00:19:51 [W] What we can do is we can run.
+00:19:53 [W] we'll call it an attack pod inside the cluster and this is a tool that was built by our friend of ours Roy McCune great story.
+00:20:00 [W] So from this newly created attack pod we can simply just use Curl to hit our API server.
+00:20:11 [W] not the real one directly and dump all the secrets as you can see.
+00:20:17 [W] We're hitting it on the API V1 Secrets endpoint which is saying all secrets all namespaces and there we go everything coming from at CD directly.
+00:20:27 [W] Life, so now we can use our own API server to interact with SED directly whenever we want without fear of being blocked or logged this diagram explains.
+00:20:40 [W] Just did worked and that's pretty cool. But it's not quite a persistent strategy.
+00:20:46 [W] Let's broaden our Horizons a bit.
+00:20:48 [W] I think we could go bigger.
+00:20:49 [W] Hmm.
+00:20:51 [W] What if we deploy to see to a C2 is a command and control infrastructure red teamers or attackers might use it to exfiltrate data to an external place, or maybe have a persistent.
+00:21:04 [W] Don't channel that can move data back and forth. You can also command and control the server that you're attacking from your see to infrastructure and red teamers have, you know, given talks about
+00:21:19 [W] How you can set up your command and control infrastructure on kubernative basically teaching each other how to deploy things.
+00:21:26 [W] That's pretty cool. But that's not what I mean here.
+00:21:33 [W] I feel like what if we built a C2?
+00:21:34 [W] Not spinning it up on kubernative use. What if we built a C2 out of kubernative itself. We could call it C2 Burnett.
+00:21:49 [W] He's what if the moment we got cluster admin, we could deploy a persistence mechanism really quickly with the least amount of logs tracking that activity and the greatest chance of going undetected for the longest period of time we
+00:22:01 [W] Maybe do this by installing an agent on all cluster nodes that joined them to an external cluster that we control they would still be a part of their own cluster.
+00:22:13 [W] and otherwise behave normally so probably an admin wouldn't notice but they'd also just happen to be a part of our cluster to that would mean that as attackers we would be using kubernative as our Command and control infrastructure to control multiple compromised clusters in a single
+00:22:25 [W] Ice while staying lurking in undetected in the shadows.
+00:22:29 [W] How could we do this?
+00:22:31 [W] I have an idea we can build it using kubernative itself you we could build it using k3s.
+00:22:39 [W] What is k3s and why did we pick k3s to deploy rc2 with?
+00:22:45 [W] Casey s is smaller and simpler than a regular suit kubernative sister bution.
+00:22:51 [W] It's designed to be lightweight for resource constrained environments such as Internet of things and k3s is requirements reflect that k3s has different network requirements than regular kubernative which are advantages for the purposes of rc2.
+00:23:03 [W] Most importantly it only requires a single TLS connection outbound from knowns to the control plane, which is very likely to be available and also likely to blend in with valid traffic. So it might not be noticed k3s has nearly all of the same moving Parts as a full version of kubernative.
+00:23:18 [W] These on the right here in the slide is the simplified visual of the k3s control plane components and brain and the k3s nodes in red that will overlay into the next slide on the left of the slide is kubernative architecture diagram in a normal posture.
+00:23:33 [W] So, how could we use k3s to build a C2?
+00:23:37 [W] Well, I think we could install the control plane component on a VM and another Cloud say listening on TCP 443 again who blocks that anyway, but with cluster admin access to the Target kubernative cluster, we can deploy a workload that immediately escapes the container to the
+00:23:53 [W] Underlying host on every worker node from there.
+00:23:59 [W] We can install the k3s node in the background with a configuration to Auto join our k3s cluster on start and then the container just exits a few seconds after establishing that persistent the end result would look kind of like this
+00:24:11 [W] A couple really cool things that happened with this approach the k3s agents have full access to the real hosts file system so we can grab anything we want directly from all the nodes and the best part is the original cluster continues to be fully operational.
+00:24:26 [W] We didn't break anything that the admins might even know this the next time they run could control get pods on their cluster. They won't see any k3s pods and they won't see any logs of us hitting their API serverless.
+00:24:38 [W] Pretty cool.
+00:24:40 [W] So let's see that in action.
+00:24:41 [W] Shall we?
+00:24:41 [W] So now on our attacker own k3s control play node running on another Cloud virtual machine.
+00:24:51 [W] We've already set up the k3s control plane. And as you can see we have just the control plane node running. There's no worker nodes attached.
+00:25:01 [W] We also have recently compromise a gke cluster and it has three nodes.
+00:25:10 [W] We have cluster admin access to this cluster.
+00:25:12 [W] Let's look closely at our specially crafted see to Damon set.
+00:25:20 [W] So we're going to install in the coop system namespace.
+00:25:27 [W] We're going to run in the host network name space and it's just a busy box image and there's a lot going on here, but I'll summarize we're basically installing a separate Docker network if we need to and then we're running directly
+00:25:39 [W] Polizia Docker run in the background the k3s agent and we're supplying the privilege flag and the auto join credentials so that it knows how to phone home to our k3s control playing automatically and we're mounting the root
+00:25:54 [W] I'll system on the underlying node in / root fs. And we're just throwing in some Toleration is here to make sure we get scheduled on and you know, that is in a cluster.
+00:26:03 [W] So let's go ahead and deploy that c22 rgk cluster.
+00:26:10 [W] It's when we cou control get pods in the coop system namespace. We can see our honk see to Damon set is currently running.
+00:26:22 [W] Okay.
+00:26:24 [W] So back on k3s in our control playing we can run qu control get nodes again.
+00:26:31 [W] But this time the gke nodes are also part of our see to control plane.
+00:26:38 [W] So not playing favorites.
+00:26:45 [W] We've also compromised eks.
+00:26:46 [W] Let's get nodes on that cluster.
+00:26:49 [W] And there they are just like the GK cluster 3 nodes. Let's deploy RC 2 to e KS.
+00:27:00 [W] in the similar process
+00:27:04 [W] Finally last but not least.
+00:27:11 [W] We don't want to leave anyone out. We've compromised in AKs cluster.
+00:27:13 [W] And it too has three nodes.
+00:27:22 [W] So let's deploy rc2 to AKs in the exact same way.
+00:27:22 [W] Okay.
+00:27:25 [W] So we don't want to leave any tracks, right?
+00:27:33 [W] So now we can take the opportunity to clean up our Damon sets.
+00:27:35 [W] We can do that with a coup control.
+00:27:35 [W] delete. So now that's removed from the gke cluster.
+00:27:40 [W] And if we get Pods at all namespaces inside the gke cluster we can see that it's now gone.
+00:27:52 [W] So let's do that same process to eks Cluster.
+00:27:58 [W] Delete that Damon set.
+00:28:01 [W] I will do the same to AKs fully cover our tracks.
+00:28:07 [W] All right. So all of them are now deleted.
+00:28:11 [W] So back on k3s, we can now run qu control get nodes.
+00:28:20 [W] And we can see all three nodes from all three clusters from all three clouds.
+00:28:29 [W] How's that for a multi Cloud strategy?
+00:28:29 [W] No, right.
+00:28:31 [W] So in you were talking about stealing all the secrets, right?
+00:28:41 [W] Well now that we have the ability to see the root file system on all the nodes.
+00:28:45 [W] Why don't we make a Daemon set to run inside k3s, that steals all their secrets from the nodes.
+00:28:50 [W] Sounds awesome.
+00:28:50 [W] Let's do it. Yeah.
+00:28:51 [W] So a simple BusyBox image doing a find to get all the mounted Secrets attached to the kubelet.
+00:28:58 [W] And it's mounting the host file path.
+00:29:01 [W] And we can deploy that again.
+00:29:06 [W] We're deploying this to the k3s control plane so that it will run on all the Clusters.
+00:29:11 [W] And now we can review the loot.
+00:29:19 [W] Oh, there it is.
+00:29:27 [W] It's all the certificates all the keys all the service account tokens.
+00:29:27 [W] Not bad.
+00:29:28 [W] Not bad.
+00:29:29 [W] You also talked in about expanding to the rest of the cloud infrastructure, right?
+00:29:40 [W] So, why don't we ditch the instance metadata credentials?
+00:29:42 [W] That sounds great.
+00:29:44 [W] Then we can compromise the cloud accounts. Not just the Clusters.
+00:29:46 [W] So we can W get on the magic IPS for both AWS and gcp and for Azure, we can go go ahead and grab that from the file system of the worker nodes.
+00:29:57 [W] Again, a very similar Damon set.
+00:30:00 [W] So we can deploy that demon satin to the k3s cluster so that it runs on all the nodes across all the Clusters.
+00:30:09 [W] across all the clouds
+00:30:10 [W] Oh, and there it is. So we've got gcp access tokens.
+00:30:23 [W] S credentials and we've got Azure principles and client secrets.
+00:30:28 [W] All your clouds are belong to us.
+00:30:32 [W] We now have our cluster of clusters.
+00:30:37 [W] How is pretty sweet?
+00:30:40 [W] Yeah, as far as we know no one has ever done anything like this before we think it's a good example of what cloud native attacks can look like in the future from sophisticated attackers who understand kubernative is at a deep level know how to use it and have
+00:30:54 [W] Mindset of someone who can figure out how to misuse it this feature is exciting.
+00:31:01 [W] And if you're a Defender may be a little bit scary and all of us have to prepare for it because it sure is kubernative releases come about every 90 days.
+00:31:09 [W] It's going to keep coming.
+00:31:14 [W] So while we're looking into the Future Let's Take a look at what's coming and what's already here.
+00:31:23 [W] Here are some upcoming and new kubernetes features to keep an eye on but we're pretty excited about the possibilities of his attackers and maybe that
+00:31:24 [W] You might want to look out for in your environments if you're a Defender.
+00:31:27 [W] He's can do interesting things individually and together.
+00:31:34 [W] The first one we wanted to point out is a brand new one as of kubernative. 1.19 Coop CTR run now has a privileged flag. It's like Dockers privileged flag.
+00:31:43 [W] As penetration testers who working a painter environments. We know that setting your back or runs to privileged means that basically you're giving us a very short and easy day.
+00:31:56 [W] In previous versions kubernative components were largely configurable via the files on the nodes file system or via CLI switches.
+00:32:08 [W] this provided a natural separation between configuration in kubernative versus configuration of kubenetes components, but it can introduce friction when automating widespread configuration changes.
+00:32:19 [W] To help with this a couple of new feature gates are available that can enable Dynamic reconfigurations of kubenetes components via the kubernative API.
+00:32:28 [W] So for example, the dynamic audit log sink configuration can't modify which API actions to audit log, but it does control where those audit log should be set so we can use this Dynamic configuration setting to send all kubenetes
+00:32:40 [W] It logs to application that we control instead. We can then filter those logs and forward them on to the original destination to hide just our malicious log entries and send the rest on and thus covering our tracks.
+00:32:53 [W] That's pretty sweet.
+00:32:57 [W] But wait, there's two things on this side.
+00:32:59 [W] What can we do with Dynamic kublr configuration?
+00:33:08 [W] We can use our privileged access to kubernative to reconfigure kubernative itself and change its own security posture.
+00:33:09 [W] Wow, how many security posture really has improved a lot?
+00:33:15 [W] Remember those attacks? When we first started I do there's a simpler time. One of the ones I really liked was kubelet exploit grapes to Karis.
+00:33:21 [W] Kubermatic flight was one of the first kubernative tax.
+00:33:27 [W] It was involved in Infamous security peaches.
+00:33:31 [W] It could be easily used and was exploited in the wild since the defaults have improved. You can't really use kubelet exploit anymore. And personally I kind of miss its ease of use
+00:33:38 [W] Well, actually the kublr tapi exploit.
+00:33:44 [W] Is it really a nice boy?
+00:33:48 [W] It's just a configuration on the kubelet API that let you run arbitrary commands inside any pods container on that node without authenticating.
+00:33:53 [W] Okay sure, but historically it really was exploited a lot. Rudra kubelet default configuration has become more secure overtime disallowing old attacks that used to work like this.
+00:34:08 [W] But now that reconfiguring the kublr is so easy via the API, let's do that.
+00:34:09 [W] And bring the kubeedge boy back.
+00:34:11 [W] All right. Let's see. Let's see that in action.
+00:34:16 [W] So back on our demo cluster we can run another attack pod.
+00:34:24 [W] We're going to use the same images before.
+00:34:25 [W] And what we want to do is show you what it looks like to try the kubeedge sploit and see it successfully blocked by the kubeedge configuration. We can do this by executive into that attack pod and just using curl to hit the kubelet API on
+00:34:44 [W] 10250 against the running pods and point as you can see, it's unauthorized.
+00:34:50 [W] So before we want to change the kubeedge configuration, we probably want to get its current version and just tweak it a little bit.
+00:34:59 [W] So let's do that.
+00:35:01 [W] Let's pull the current kublr its configuration out of the cluster and save it as a local file so we can edit that will call it kubelet config Z Kai worker now, let's modify that
+00:35:13 [W] so what we want to do.
+00:35:18 [W] Is go to the web hook and disable that.
+00:35:23 [W] And turn on Anonymous authentication and then change the authorization mode from webhook to always allow.
+00:35:35 [W] Okay, we made that modification next we want to create a config map that's going to hold this kubeedge configuration.
+00:35:49 [W] We call a my note config and save it in the cougs system namespace.
+00:35:50 [W] Before we deploy that it just want to show you that we indeed have the web Hook off and anima Sophos true and the authorization mode is always allow.
+00:36:00 [W] So let's apply the updated kubelet configuration.
+00:36:07 [W] We do this by patching the node object.
+00:36:14 [W] We say change it to use the config.
+00:36:14 [W] I know in config in the kuma system namespace. Okay, so that's set.
+00:36:19 [W] Now, let's look at the new node configuration that the kubelet has taken on.
+00:36:24 [W] As you can see we've got the config source is the config map that we just described.
+00:36:31 [W] So back on our same attack pod we can now use Curl to hit the local nodes kubeedge API directly again using that same mechanism.
+00:36:45 [W] Miss time when we hit the running pods API, we're going to pipe it into JQ to make it a little bit easier to see and there we go.
+00:36:56 [W] We can see all the running containers pods.
+00:37:01 [W] And what namespace is there in on the cluster?
+00:37:02 [W] And what that lets us do?
+00:37:07 [W] With those bits of information it lets us run a curl command to list the root filesystem as an example command.
+00:37:20 [W] You can run anything against the kublr API and pointing that to The Coop proxy poddisruptionbudgets system. May space could proxy is a useful one to pick because it always runs privileged and it's available to every node.
+00:37:35 [W] So doing that.
+00:37:39 [W] We're pretty close to root access and as attackers, that's pretty cool. Nice.
+00:37:39 [W] So now we've come full circle.
+00:37:44 [W] What's old is New Again, the increasing complexity and security of kubernative and its ecosystem leads to demands from developers and administrators for more Simplicity and more ease of use.
+00:37:58 [W] this can lead to open and up new security holes or perhaps reopening old ones as attackers.
+00:38:07 [W] We're really excited about the possibilities, but we see in the future and we would like to encourage you people who are maybe developers or
+00:38:13 [W] operators are Defenders to take a look at these upcoming features and the system's you build through our eyes, you know how you would use it, but how might an attacker misuse it being able to look at your systems
+00:38:28 [W] and what you're building with the perspective of an attacker can help you understand and building what you're building with this perspective in mind can help you protect against it and make your systems more secure overall because as attackers we promise
+00:38:43 [W] We're going to keep finding ways to misuse things.
+00:38:47 [W] We're pretty excited about this.
+00:38:49 [W] We also really like challenges.
+00:38:51 [W] So we'd like to encourage you to secure your systems against looks like us so that we have some challenges.
+00:38:57 [W] Here are some resources and further reading if you want to learn more about hacking and hardening kubernative for yourself and together you and I would like to say on the planet.
+00:39:09 [W] Thank you all very much for taking the time with us.
+00:39:11 [W] We really appreciate it.
+00:39:12 [W] Have a great coupon.
+00:39:13 [W] All right, so Ian, can you hear me?
+00:39:31 [W] Yes, Greg. Can you hear me?
+00:39:33 [W] Awesome?
+00:39:34 [W] So we have some questions and I know we actually refused if you want to keep sending them on in.
+00:39:40 [W] I know we answered a few in chat, but you know, I think there was one that you wanted to pick up on about the well, I don't know if it's a when we should do first. Somebody asked do you think that red teamers will start using
+00:39:54 [W] See to Burnett. He's rather than more conventional see two setups and my answer as somebody who spends time with red teamers is mostly probably not because often red teamers are lazy and don't want to learn kubernative internals
+00:40:09 [W] In order to be able to set up there see to that said who I do think will be end up using something like this a lot will be people who are trying to Federate cluster setups in an easy-to-use way.
+00:40:23 [W] I actually think that a lot of this Tech will end up being useful for Ops people for whatever that's worth.
+00:40:25 [W] That's fair.
+00:40:27 [W] That's fair.
+00:40:28 [W] That's fair.
+00:40:29 [W] That's fair. Let's see.
+00:40:33 [W] What's your advice for catching up with the latest release from production.
+00:40:35 [W] Should we always upgrade to latest or One release behind?
+00:40:46 [W] I don't have very specific advice other than to say the latest minor release version for a supported release, right so and - 3 minor versions and the latest version of that that
+00:40:51 [W] And run typically that's what's going to get your patches and fixes and keep you up to date for that.
+00:40:56 [W] What's the next one the shadow API server only works at the attack and deploy something to the control plane.
+00:41:05 [W] Oh, that's correct.
+00:41:07 [W] That's an assumption that if you're able to run workloads on the control plane nodes, that's what you need to be able to deploy the shadow control plane and so manage providers.
+00:41:17 [W] Typically that's not a feasible approach.
+00:41:19 [W] The next question secrets are in memory and not in the file system there in ten FS, which is a memory back to file system. So as root we have the ability to see all the things and we can just find and grab them out of the virtual file
+00:41:35 [W] System what else is next question is do you see a general security issue in the architecture of k3s and I think one thing if you're going to take things out of this talk, is that a lot of
+00:41:50 [W] Things working as designed that don't necessarily inherently have security issues can be used in ways that can cause security issues by a malicious attacker who is inclined to figure out ways to misuse them.
+00:42:03 [W] And so this isn't a dunk on k3s.
+00:42:11 [W] This is a hey they've set something up that's useful for people to be able to move traffic around attackers can also move traffic around.
+00:42:19 [W] So I think we'd really like to encourage people who are watching this talk to be able to look at the systems that they're building and think about how an attacker might look,
+00:42:20 [W] Get them and how somebody like us might misuse them.
+00:42:23 [W] Yeah, that's a good point.
+00:42:26 [W] There was another question.
+00:42:27 [W] I think it was on slack about like what are we doing to block the installation of this Damon set in Mission Control is probably the easiest way to go.
+00:42:39 [W] So we use toast path and we were running as a root container and that way we could Mount the local file system and get access to the docker socket so we can just run a Docker run command directly so running as root and not
+00:42:50 [W] Counting hose path is something that in Mission Control can prevent and we strongly encourage that in your clusters for many more reasons than that, but one of them is to block, but we used it.
+00:43:05 [W] Can I find that c 2 sh somewhere?
+00:43:16 [W] the intention was that after this was live we can sort of scrub that repo little bit and publish that so you can sort of see the work and get the animals and play with it yourself.
+00:43:18 [W] And somebody asked if the kubelet exploit attack wasn't related to the sea to not particularly the kubelet exploit attack was partly because we wanted to show how Dynamic configuration could be used in order to create.
+00:43:34 [W] Security holes either new ones or reopen old ones and partly we thought it was poetic and Wellesley that we could bring back the oldest flashiest kubernative attack via new kubernetes features.
+00:43:49 [W] Yeah, I think all that and I think the componentconfig or mixing the configuration layer of kubernative itself and what's running in it if be very very careful.
+00:43:59 [W] So making sure that our back is correctly set here so that you know the compromise of the
+00:44:04 [W] Stir via one weak link does it mean that they can change everything things like external controllers to spin up Cloud resources from CRS? Like that's something that you have to really protect against because otherwise it's a couch control and you get free
+00:44:19 [W] Whew, you know, for example, so there's a lot of things like reconfiguring the API server itself and the kublr itself that you can do potentially once you gain privilege inside of a cluster, so just to be aware of those sort of mixing of the layers.
+00:44:33 [W] Somebody asked if we were going to make sure it's that said all our clothes belong to are belong to us.
+00:44:40 [W] Sure.
+00:44:41 [W] Okay.
+00:44:42 [W] I'm down for that.
+00:44:44 [W] If anyone knows a good logo designer.
+00:44:45 [W] holler at us.
+00:44:46 [W] Yeah, we can use one for a couple of reasons and let's see any other ones that you're really feeling.
+00:45:00 [W] There are a lot of really good questions here a lot of really nice comments.
+00:45:01 [W] Thank you so much for the appreciation. Let's see monitoring for
+00:45:06 [W] Specialist demon sets does Falco detect this?
+00:45:15 [W] Yes, it can detect some of the activity a doctor run from inside a container isn't assuming admin access of a bit too much. So like yes, there's a presumption that you have to have privilege, but I can assure you that there are
+00:45:26 [W] Our one two three ways in most clusters to gain that without too much difficulty.
+00:45:36 [W] If you gain a certain level of privilege like the ability to run a container or get a shell on the container.
+00:45:39 [W] It's typically pretty straightforward to go from there to Cluster.
+00:45:39 [W] admin.
+00:45:41 [W] So that's that's what we're talking about.
+00:45:43 [W] Okay, the pages of the cloud we're going to take these questions and take them to slack and then possibly tweet them if we run out of slack time. So feel free to ask questions.
+00:45:56 [W] We will answer them somewhere and if we have 40 seconds to tell everybody anything, what do we tell people bread?
+00:46:04 [W] Our back admission control Network policy hygiene.
+00:46:10 [W] It's hygiene.
+00:46:13 [W] It's not necessarily whiz-bang and fancy.
+00:46:14 [W] It's like do the basics build on that and and again look at your systems and consider them in the way an attacker might look at them.
+00:46:28 [W] Think about how somebody might misuse these things and threat model for them because you can get pretty far and being able to think on how to secure your systems if you understand what's in your system how it works how it works together.
+00:46:34 [W] Where the trust boundaries and holes might be and how an attacker might misuse those definitely.
+00:46:38 [W] We're super excited about this.
+00:46:43 [W] Thank you all so much for coming and spending time with us at the very last talk of coupon. We really appreciate you and we hope you had a great time we did.
+00:46:50 [W] Oh, we'll see you in slack.

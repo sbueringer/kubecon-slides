@@ -1,0 +1,112 @@
+CLOSE CAPTIONING TRANSCRIPT_Lesson Learned on Running Hadoop on Kubernetes: NYXF-4161 - events@cncf.io - Wednesday, August 19, 2020 11:40 AM - 1137 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:02:31 [W] Welcome everyone.
+00:02:36 [W] Thank you for joining lesson learned on running Hadoop on kubernative session.
+00:02:42 [W] My name is qian. Qiang.
+00:02:45 [W] I'm part of data SRE team Ellington. Our team manages entire offline data infrastructure, including Hadoop spok prestel and many others kubenetes and Linkedin started about a year ago.
+00:02:57 [W] Our team was one of the first users and our main use case is to launch ephemeral Hadoop cluster for development and testing purposes.
+00:03:13 [W] There are many lessons learned from our journey and would like to share some of the challenges problems we encountered as well as Solutions in order to successfully running Hadoop on kubernative with overlay
+00:03:22 [W] Oranges problems we encountered as well as Solutions in order to successfully running Hadoop on kubenetes with overlay Network.
+00:03:24 [W] In this session, I will cover Hadoop basics for audiences who are not familiar with Hadoop and a briefly touching on Hadoop footprint at LinkedIn.
+00:03:41 [W] I will talk about the initiatives for this project architecture overview and a challenges work through in addition.
+00:03:50 [W] I would like to share the insights of what currently we are working on and a future role map at the end. It will be a 10 minute video.
+00:03:56 [W] Including spin it up a secure Hadoop cluster around kubenetes doing some file operation running a Hadoop job as well as in place expansion.
+00:04:09 [W] Let's start.
+00:04:10 [W] What is Hadoop Hadoop is a collection of Open Source software designed to handle big data storage and computation the main components of Hadoop our Hadoop distributed file system hdfs.
+00:04:24 [W] Which is a parsec slide file system in the design for distributed computing framework and it is highly reliable and resilient hdfs has three types of components.
+00:04:40 [W] Let's start.
+00:04:53 [W] What is Hadoop Hadoop is a collection of Open Source software designed to handle big data storage and computation the main components of Hadoop our Hadoop distributed file system hdfs,
+00:04:54 [W] Above hdfs there's a yarn and manages all distributed compute resources, including CPU memory and GPU across many worker nodes yarn has four type of components resources
+00:05:09 [W] Resources schedules workflows and a monitor jobs history server are caves completed jobs and a proxy server.
+00:05:18 [W] redirect users request to either results as a manager or history serverless. Depends on the job State last is the no manager.
+00:05:29 [W] that is a one actually runs the task on top of those there are many distributed computing framework such as mapreduce spok prestel and many others.
+00:05:39 [W] Last but not the least is the client such as Gateway for CLI and a many other open-source schedulers such as as caban Apache woozy and airflow.
+00:05:54 [W] I do bad LinkedIn LinkedIn is a large Hadoop shop and a we have been continuously investing in Hadoop for past 10 years.
+00:06:06 [W] We are running one of the largest Hadoop environment in Industry.
+00:06:11 [W] We have more than 10 Hadoop clusters and all of them are running on Bay Meadows. Our largest Hadoop cluster is over 7,000 physical servers with storage capacity of 400 petabyte-scale.
+00:06:23 [W] If million CPU V course and a 1.6 petabyte-scale memory and we are constantly pushing the limit by adding more notes.
+00:06:35 [W] A large Hadoop shop and a we have been continuously investing in Hadoop for past 10 years.
+00:06:40 [W] We are running one of the largest Hadoop environment in Industry. We have more than ten Hadoop clusters and all of them are running on Bay Meadows. Our largest Hadoop cluster is over 7,000 physical servers
+00:06:43 [W] Thousands of users across entire company our average hdfs read and write throughput over six hundred gigabytes per second respected respectively and every day we have over 300,000 jobs with
+00:06:55 [W] thousand jobs with with a hundred millions of
+00:06:57 [W] With a hundred millions of containers running our hdfs is a very well tuned and it can easily handle more than 100,000 QPS. Our team also manages ldap Kerberos and a DNS infrastructures to
+00:07:13 [W] Hadoop clusters are average ldap KDC and a DNS QPS are 150 thousand five thousand and ninety five thousand our Hadoop environment generates huge Network traffic with average bandwidth of 15 petabyte-scale.
+00:07:29 [W] terabits per second
+00:07:33 [W] So as I mentioned LinkedIn has a large in-house Hadoop development and SRE teams that constantly working with open source Community contributing features and Bug fixes having Hadoop ephemeral cluster running on
+00:07:51 [W] It has a large in-house Hadoop development and SRE teams that constantly working with open source Community contributing features and Bug fixes having Hadoop ephemeral cluster running on kubenetes allow
+00:07:53 [W] Allow every engineer to have own cluster for testing and development. In addition. The cluster is with running with immutable container images. So the issue is always reproduce
+00:08:07 [W] We boost the productivity and efficiency with only three minutes to spin up a secure Hadoop cluster comparing two hours or days building a testing environment on the bare metal.
+00:08:23 [W] Let's have a quick architecture review.
+00:08:27 [W] It builds on top of kubernative overlay Network each component requires a kubernative service to have a static and a DNS resolver hostname for communication between Parts as well as
+00:08:42 [W] Discovery for ariadne notes such as Journal node name node resources manager. There is a service associated with that with one to one mapping for worker nodes, which is a data node and no manager.
+00:08:58 [W] It is an to one mapping or data node or no managers shares the same service.
+00:09:05 [W] So the graph here shows all the communication paths in between and all the connections through service and point.
+00:09:12 [W] Let's move to the challenges over the course of the project.
+00:09:24 [W] We encountered many challenges and I would like to share some highlights with everyone here.
+00:09:33 [W] First. One is the NS. It took us days to find out a good solution without compromising security.
+00:09:36 [W] Next is Network by default.
+00:09:38 [W] There is no fixed all predetermined hostname in parts or deployments over with overlay Network Hadoop it at me notes.
+00:09:48 [W] Nurse those fixed hostname to be listed in the Hadoop configuration before us before the deployment.
+00:09:56 [W] third is the identity insecure Hadoop every part requires a unique Kerberos credential for authentication due to the unknown of IP addresses or hostname at lunchtime. We are not able to
+00:10:09 [W] Last but not the least is the orchestration because there are strong dependencies between Hadoop components.
+00:10:18 [W] For example hdfs name node, must star after all the general notes up and running now.
+00:10:27 [W] I'm going to walk you through every problem in detail with solution.
+00:10:30 [W] First one is that the NS a Hadoop or worker nodes, which is a yarn no manager or hdfs data node talks with each other using host names by default.
+00:10:49 [W] There is a no Global resolvable host name associated with it.
+00:10:49 [W] Also.
+00:10:54 [W] It is impossible to have one service / Wok part because it won't scale natively with kubernetes.
+00:11:03 [W] Second is insecure Hadoop authentication also required IP reverse lookup meshmark.
+00:11:05 [W] Notes Kerberos principle, for example yarn / underscore host the underscores the will be replaced by the host name in the Hadoop logic with host name - chef and a mismatch.
+00:11:20 [W] Well obviously result authentication failure.
+00:11:24 [W] Next is the website if s, which is the rest API endpoint for hdfs when name node sends the redirect requests back to the client it contains a host name of designated.
+00:11:37 [W] Is for mapreduce or spok jobs application master and a spok driver are sharing their host names with the workers.
+00:11:54 [W] So the solution here is by default. The Pod does not providing a global DNS root DNS resolver hosting the solution is to using stay for set with headless service.
+00:12:02 [W] It's every pot with a global resolvable hostname.
+00:12:09 [W] Unfortunately, it does not solve the problem.
+00:12:15 [W] We found the host name resolution in a reverse lookup was inconsistent as you can see my example here.
+00:12:23 [W] So when I do the host name - af-link come up with the hostname with poddisruptionbudgets do a DNS resolution on that.
+00:12:32 [W] It shows up as a no record then
+00:12:33 [W] I do a reverse lookup of the part IP addresses I get a actual DNS resolver host name.
+00:12:41 [W] So the solution here is we injecting the actual DNS resolver hostname to the pot CTC hosts file at startup time.
+00:12:56 [W] Then it resolved or the DNS issues. We have to running actual workload on Hadoop as you can see I get the another example here underneath it is after we injecting the actual resolvable hostname into etcd hosts
+00:13:05 [W] Then or the forward and reverse lookup I matching next one is the network.
+00:13:15 [W] There are many components in Hadoop and they are communicating with each other why the cluster is up and running like for example with data nodes initiate the connection to the name node.
+00:13:28 [W] manager initiates the talk to the resources manager and there are many intercommunication between components as well and Hadoop configuration must be pre-populated with those.
+00:13:37 [W] Those host names of with those hostname of amye notes in place before we start the service the solution is to creating a kubernative service for every Hadoop and main parts. It provides a DNS
+00:13:51 [W] Anise and structured hostname which can be defined and populated in Hadoop configuration before the actual deployment.
+00:14:02 [W] So I include a snippet of configuration XML for Hadoop name node.
+00:14:10 [W] So as you can see here is we have name node haym and HHA and each of them using the service and point.
+00:14:14 [W] Next one is identity.
+00:14:19 [W] It only applies to the secure Hadoop cluster with Kerberos enabled every Hadoop component requires a key tab file with a service principle. For example hdfs / DNS resolver
+00:14:35 [W] It only applies to the secure Hadoop cluster with Kerberos enabled every Hadoop component requires a key tab file with a service principle. For example hdfs / DNS resolver will host
+00:14:37 [W] HR Kerberos wrong the hostname has IP addresses embedded and it is impossible to pre generate them and pushing them apart.
+00:14:51 [W] Our solution is to introduce a key tab delivery service running in kubenetes. It authenticates the request from Hadoop pots generating a QA only key Tab and an assembly back to the client
+00:15:00 [W] Pod, we have an in a container to reconstruct the hostname by replacing the underscore IP with the actual DNS resolver host name and send the request to the key type of delivery service,
+00:15:16 [W] We don't have much time to go through the authentication workflow. But luckily it uses the same authenticate authentication mechanism at LinkedIn recently open source project Coop to Hadoop and now it is available on GitHub.
+00:15:32 [W] Please feel free reaching out to me if you would like to know more.
+00:15:35 [W] Orchestration last is the orchestration as I mentioned Hadoop components have have hard dependencies in between for example name node. Must star after General notes are up.
+00:15:54 [W] The obvious solution is to launching General note part first. Then name node, pause next such approach usually results long deployment time and a complicated external logic to orchestrate deployment sequence
+00:16:06 [W] I must star after General notes are up.
+00:16:07 [W] The obvious solution is to launching genoud part first. Then name node, pause next such approach usually results long deployment time and a complicated external logic to orchestrate deployment sequence.
+00:16:08 [W] Papa Luis is introducing a in a container to constantly pulling status of the pendings service using service Discovery with part EMV in a container what exists successfully
+00:16:21 [W] Depending service is up and at the main container can proceed with this implementation.
+00:16:31 [W] We are able to launching our parts simultaneously and a reduce cluster deployment time down to two to three minutes.
+00:16:42 [W] I include a example of in a container here that polling the status of hdfs General node.
+00:16:45 [W] So that is the end of our challenges and what is the next so it is a great lesson. We learned to having Hadoop running on kubenetes as testing and sandbox environment.
+00:17:01 [W] We are almost done to have other big data components such as spark prestel as cabin Hive as part of our ephemeral Hadoop cluster in meanwhile.
+00:17:12 [W] We are also working on Long running Hadoop cluster on kubenetes to replace integration environment that is currently running on bare mayadata.
+00:17:16 [W] I was and of the number of issues we've encountered are not less but we do see 20 times faster deployment speed our next major goal will be kubernative Custom Custom resources definition and
+00:17:31 [W] Hopefully we can open source those when they are ready.
+00:17:35 [W] The key takeaway for this presentation will be a opens the opportunity to combine different workload you onto the same resources management platform.
+00:17:54 [W] I know a lot of company has separate infrastructure serving online and offline and the online infrastructure usually Idol or less load during off-peak hours leveraging those idling resources will easily save company
+00:18:04 [W] Benny has separate infrastructure serving online and offline and the online infrastructure usually Idol or less load during off-peak hours leveraging those idling resources.
+00:18:06 [W] Well easily save company millions of Hardware cost second is it may change the way how the big data infrastructure are running a lot of Hadoop knative distributed framework now running natively on kubenetes
+00:18:17 [W] Change the way how the big data infrastructure are running a lot of Hadoop knative distributed framework. Now running natively on kubenetes for example, spark and a LinkedIn open-sourced samsa and the last
+00:18:22 [W] And make Hadoop to community transition much easier, which kind of resonant the very first point.
+00:18:30 [W] That is the end of the presentation. By the way, there is another session tomorrow presented by my colleagues.
+00:18:42 [W] I've been and Frank talking about petabyte-scale ail LinkedIn.
+00:18:46 [W] let's move jump into the demo session. Thank you.

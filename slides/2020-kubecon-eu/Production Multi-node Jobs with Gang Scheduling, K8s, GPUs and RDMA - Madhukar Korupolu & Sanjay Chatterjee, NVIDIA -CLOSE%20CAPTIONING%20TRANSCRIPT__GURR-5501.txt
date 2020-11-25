@@ -1,0 +1,290 @@
+﻿Production Multi-node Jobs with Gang Scheduling, K8s, GPUs and RDMA: GURR-5501 - events@cncf.io - Wednesday, August 19, 2020 10:45 AM - 1190 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:01:11 [W] Hello, everyone.
+00:09:27 [W] Welcome to our virtual cute concession.
+00:09:31 [W] we have an interesting topic today is on multi-node jobs with kubernative is
+00:09:36 [W] m*********** and this will be a joint presentation with my colleague Sanjay Chatterjee.
+00:09:42 [W] Let's begin.
+00:09:46 [W] And work is motivated by applications of deep learning.
+00:09:52 [W] As you know deep learning is becoming popular in several areas.
+00:09:58 [W] example in transportation self-driving cars
+00:10:03 [W] Medical Imaging smart cities Robotics and so on
+00:10:09 [W] be planning is
+00:10:13 [W] enabling more automation
+00:10:15 [W] and also adding new value by uncovering more insights.
+00:10:21 [W] Now if you look into the AI deep learning stack there are several layers.
+00:10:30 [W] The top layer we have the different applications the computer vision with image classification.
+00:10:38 [W] Natural language processing recommendation engines languages and so on.
+00:10:43 [W] The bottom layer we have the hardware components the GPU CPUs.
+00:10:51 [W] The various systems that are built into these components.
+00:10:55 [W] Both of them are the architecture specific libraries, they could nickel and so on.
+00:11:04 [W] About those on the Deep learning Frameworks like tensorflow by torches.
+00:11:10 [W] Now for an application to work, well all these layers must function well together.
+00:11:16 [W] There's a lot of innovation happening in each of the layers.
+00:11:20 [W] So in this talk, we'll see how to put these things together.
+00:11:27 [W] to work well
+00:11:29 [W] So a trend we see in all these applications is that the data is becoming big?
+00:11:38 [W] complex and larger
+00:11:43 [W] It's an example for natural language processing bird is a recent popular model.
+00:11:50 [W] It began with around hundred and ten million parameters.
+00:11:54 [W] And Bert large crew to around 330 million parameters.
+00:11:58 [W] More recent ones are like 8 billion and 17 billion parameters.
+00:12:03 [W] So for those of others large models.
+00:12:08 [W] Training them takes a long time.
+00:12:10 [W] even with a single GPU
+00:12:12 [W] Because of this is a demand for multi-gpu jobs as an example if you look at the graph here.
+00:12:21 [W] It shows the training time for bird launch using different numbers of gpus x-axis is the number of in bdmv one and gpus.
+00:12:31 [W] And y-axis is the training time in minutes so we can see that 16 gpus. It takes around 60 hours after on two point five days hundred thousand gpus it comes down to what an hour.
+00:12:46 [W] So this speed-up is significant because the data scientists can then.
+00:12:54 [W] Have a faster turnaround debug Pastor iterate faster and improve the results.
+00:13:00 [W] They can also handle larger problems.
+00:13:04 [W] submit their best training results for popular benchmarks
+00:13:15 [W] And even there we see that more gpus Wheels faster running times.
+00:13:21 [W] Now given the demand for this multi-gpu systems. How do we build them?
+00:13:30 [W] So here's a sample multigp node from Nvidia called DJ x 1.
+00:13:37 [W] So this has eight V100 gpus shown in green here and the connected by NBA link to the board.
+00:13:44 [W] The north has dual circuit CPUs and fornix.
+00:13:52 [W] These are mellanox EDR next capable of about hundred GPS.
+00:13:57 [W] So we can run up to an 8 GPU job inside this node using fast and willing.
+00:14:03 [W] And if you want to go beyond a gpus then we can connect multiple nodes together.
+00:14:10 [W] We can connect them using infiniband or walkie, which is a dma over internet.
+00:14:15 [W] And we do that by collecting this for next too.
+00:14:20 [W] Connected fabric using the current apologies like Factory dragonfly or other things based on our requirements.
+00:14:30 [W] So that's the hardware part.
+00:14:32 [W] Now, let's look at the software side.
+00:14:35 [W] There are two popular approaches data parallelism and model parallelism.
+00:14:46 [W] And you can also have a hybrid of this combining the two so in this talk will focus on data parallelism.
+00:14:53 [W] Another important concept with deep learning is that of SGD stochastic gradient descent. This is where in the backward pass of the neural network.
+00:15:05 [W] We compute gradients and apply them to the weights of the neurons.
+00:15:08 [W] The to popularize gdf touches a sink and sink. So async is Judy is the parameters of our approach shown here and sink as Judy is the already is approach shown in the figure below.
+00:15:22 [W] So here the different workers.
+00:15:25 [W] Come on GPU nodes that we are computation.
+00:15:30 [W] And in the end of the cycle The Exchange the gradients in all reduced version and that's implemented through nickel or MPI. Nickel is NVIDIA Collective communities is liability.
+00:15:42 [W] And it internally handles and mailing.
+00:15:46 [W] And also infiniband Rocky across notes.
+00:15:50 [W] So does it makes use of the fastest connects the recent Harvard Library from Uber makes it easy to run the already has approached tensorflow and fight Orange.
+00:16:04 [W] So we can be increasingly popular.
+00:16:14 [W] to orchestrate this clusters
+00:16:16 [W] mainly because of its advantages in ease of management operations ci/cd, and then other aspects
+00:16:27 [W] Over running multi-node and kubernative has multiple challenges.
+00:16:33 [W] So we divide this into two parts the left side part 1
+00:16:36 [W] Is how to get a single multi-node job running into end?
+00:16:42 [W] The right side is for two.
+00:16:45 [W] Where we look at running multiple multi-node jobs at the same time in a cluster shared cluster.
+00:16:52 [W] So let's focus on the left side and here we will look into the into and flow like array jobs in pi gang scheduling and multi rail at the ma.
+00:17:04 [W] Towards that here's a big picture overview of the flow user submits a multi node job using a CLI on UI that goes to the EPA server.
+00:17:18 [W] It's a custom Control job controller which watches for that and creates an MPI job.
+00:17:24 [W] And we use the Upstream MPI operator from kubeflow.
+00:17:29 [W] That watches for the MPI jobs and then creates corresponding pods for the MPI job.
+00:17:36 [W] What is scheduled the cubelet?
+00:17:44 [W] Takes up the Pod and tries to run it.
+00:17:56 [W] So it pulls the containers and the container image has a necessary libraries will have framework tensorflow pie torch nickel MPI and so on.
+00:17:58 [W] Once these pods are up and running they communicate using nickel on the back end.
+00:18:03 [W] So that's how the system works.
+00:18:06 [W] Now, let's look at a sample white or job import job with two nodes how you do that?
+00:18:19 [W] So on the left side, we see a command on node 0
+00:18:22 [W] Lord one which is a 920 and then the command on node to which is ranked 1
+00:18:28 [W] so in both these nodes be done torch don't distributor dot launch and then that starts up eight crosses on the Node one on each GPU.
+00:18:40 [W] And an HG POV run the boat train not py script the single GPU script. So we run the it eight times on non zero and then one
+00:18:51 [W] can the master-at-arms is set to Local Host on rank 0 + IP address of nine zero on blackboard.
+00:19:00 [W] So that's how they communicate.
+00:19:01 [W] So the right side we see how we launched the same job using MPI run.
+00:19:09 [W] domes on node 0 and then for one
+00:19:11 [W] can the master-at-arms is set to Local Host on rank 0 + IP address of nine zero on blackboard.
+00:19:12 [W] So that's how they communicate.
+00:19:13 [W] So the right side we see how we launched the same job using MPI era.
+00:19:13 [W] So we use MPA run is the launcher specify the number of replicas which is array size.
+00:19:14 [W] and then it creates that many instances of
+00:19:17 [W] the thoughts distributed launch
+00:19:20 [W] So that's tall is same as before so note that we use MPI run is the launcher here.
+00:19:26 [W] here. The back end is still nickel.
+00:19:28 [W] So we manage these MPI jobs using the MPI operator and for that I'll hand it over to Sunshine.
+00:19:38 [W] Thanks Mother.
+00:19:42 [W] Hi, I'm Sanjay Cherokee and it's great to be presenting at Q Khan Europe 2020 virtual.
+00:19:50 [W] Alright, so we have seen how a multi node job can be submitted by the user now.
+00:19:57 [W] Now. Let us look inside the cube in it is cluster in slightly more detail that typically clusters have many different implementations different Hardware different stack Etc. So we use the term array jobs as an abstraction for all.
+00:20:11 [W] Kinds of multi-node jobs and users can configure the type and size of the job. They want after another a job is submitted to the cluster a an internal job spec for the
+00:20:24 [W] Let us look inside the cube in it is cluster in slightly more detail that typically clusters have many different implementations different Hardware different stack Etc.
+00:20:25 [W] So we use the term array jobs as an abstraction for all kinds of multi-node jobs and users can configure the type and size of the job. They want after another a job is submitted
+00:20:26 [W] It and this pack is converted by the control plane components to create the actual k8s pods for a multi node job now. We use a component called MPI operator from Upstream in
+00:20:40 [W] Which creates the pods and also manages their life cycle as a group or gang of PODS. Now the pot specs include the set up to handle all the multi-part job launch as well as
+00:20:56 [W] The note specific resource requests as shown here.
+00:21:01 [W] And finally all the parts belonging to a specific job Our Gang schedule by the scheduler to run on the Clusters nodes. Okay. Next we will focus on a few key areas in this flow
+00:21:17 [W] See what's going on under the hood.
+00:21:21 [W] First let us look at how we enable high speed networking for multi-node jobs in a kubernative cluster.
+00:21:32 [W] Now, this is an absolutely key requirement for high-performance distributed deep learning applications.
+00:21:37 [W] We've seen earlier.
+00:21:45 [W] I single Nvidia D GX 1 node comes equipped with eight Volta be 100 gpus and for 100 Gig.
+00:21:49 [W] Mellanox our DMX along with dual 10 gig ethernet necks.
+00:22:03 [W] So when the Kata spot spec requests all these resources as shown here with the S 4 S RI V RDMA resources and the gpus we need to make all these available to the
+00:22:07 [W] When it lands on the Node now, the kublr is the kubernative snowed agent and it manages all the allocatable resources on the Node photo portworx.
+00:22:37 [W] So when the Kata spots back requests all these resources as shown here with the S 4 S IV RDMA resources and the gpus we need to make all these available to the board when it lands on the Node.
+00:22:49 [W] Space and to do this it invokes the associated cni-genie.
+00:22:57 [W] Since the DG x 1 node has multiple network interfaces.
+00:23:06 [W] We use a meta plug-in called malta's which can delegate to multiple other plugins.
+00:23:14 [W] Now, all of these other plugins can be specific to a different kind of network interface.
+00:23:20 [W] So we have a SR IV cni-genie.
+00:23:27 [W] Defaulted zero interface and both of these are managed by a Maltese.
+00:23:34 [W] Okay.
+00:23:41 [W] The next thing we are going to focus on is the scheduling of a real job specifically the gang scheduling aspect of it.
+00:23:48 [W] We've seen earlier that in a rage of in Cuban. It is will create multiple k8s pods.
+00:23:52 [W] Now further requirement of these pods is to run as a gang that is at all or none policy meaning either all the possible longing to the same multi-node job will get scheduled to run or none of them can run.
+00:24:03 [W] similarly one fails then.
+00:24:04 [W] Now the default Cube scheduler schedules for this one by one and so if parts from different array jobs yet scheduled in an interleaved manner it can lead to Deadlocks sogang scheduling is currently
+00:24:36 [W] Words from different or a jobs yet scheduled in an interleaved manner. It can lead to Deadlocks sogang scheduling is currently actively discussed in the community and one proposal is to repeatedly
+00:24:42 [W] Unity and one proposal is to repeatedly try scheduling the pods and if that fails then back off and repeat again and the this approach there might be a potential for
+00:24:52 [W] Flock, so we're experimenting with a different approach namely using a reservation system for full node bonds.
+00:24:59 [W] Right. So in our approach to gang scheduling we use something called as a pod groups to be the unit of scheduling for multi-node jobs or groups are essentially a logical grouping of PODS belonging to this single
+00:25:15 [W] And currently we only support scheduling full node pods in a multi node job. So to schedule bot groups. We made some extensions to the default given a schedule which include a new scheduling
+00:25:32 [W] Loodse or groups that is in addition to the regular pods.
+00:25:42 [W] We are also experimenting with a new module called the pot group manager, which can reserve full nodes for the pods.
+00:25:52 [W] The note reservations are actually added as a label on the bottom and this allows the main scheduling control Loop to bypass the regular pot scheduling and directly bind the pods to its Reserve nodes.
+00:26:01 [W] Okay. Now we're going to look at a demo that will actually show the scheduling and end-to-end flow of the multi-node jobs.
+00:26:16 [W] So here I'm submitting a two node by to Bert by torch multi-node training job, and we will see that the job will be creating kubenetes pods that will be scheduled and will be expected to run on the nodes.
+00:26:26 [W] On the job is created we can look into the cluster and see that the pods are created and we see that to project created worker 0 and worker 1 or the same job ID and they are currently in the pending state so we can look into the pods annotations
+00:26:43 [W] You reason to see why it's pending and we can see that the reason is resources are unavailable. And if you look at the current state of the queue, we can see there's a number of Q and pods that are in queue.
+00:26:59 [W] Came to the Pod Speck in more detail to see the same command.
+00:27:07 [W] Eventually.
+00:27:09 [W] These pods will get to the running State and then the user can actually look at some real-time Telemetry some utilization numbers. And with these real time. They can
+00:27:22 [W] This history and some logging as well.
+00:27:26 [W] Okay.
+00:27:29 [W] So now let's take a look at a the job Telemetry in slightly more detail.
+00:27:43 [W] This is an experimental you I created for some internal users and it's a very useful tool for them to monitor their jobs in real time.
+00:27:49 [W] Now as we can see here, they can see some key metrics from their jobs such as utilization numbers for gpus tensor course CPU.
+00:27:59 [W] Whose memory PCI lanes and so on and we've built a monitoring and logging pipeline that exports all these node level performance counters and other information to the users so that they can view
+00:28:14 [W] Opposed CPUs memory PCI lanes and so on and we've built a monitoring and logging pipeline that exports all these node level performance counters and other information
+00:28:17 [W] Jobs are progressing in real time.
+00:28:19 [W] Okay, if you remember we had submitted a bird multi-node training job in the demo.
+00:28:31 [W] So here's some throughput scaling numbers from a similar bird job and they have two different configurations Phase 1 and Phase 2
+00:28:40 [W] Sample training data sets now.
+00:28:47 [W] We know all the performance depends on a number of system and application dependent factors such as that size for GPU.
+00:28:59 [W] We have seen that the throughput scaling results. For example here the sequences per second have been consistently high in terms of their Peril efficiency.
+00:29:05 [W] And in this case we can see that the application can scale close to Ideal even when running on a very large number of gpus for example here on thirty two nodes.
+00:29:21 [W] was actually using 256 gpus concurrently.
+00:29:24 [W] And mind you these results are from a shared cluster where multiple other jobs were also running and sharing the cluster Network.
+00:29:33 [W] Alright, so now I'm going to hand it back over to Mother curve for the rest of the slides. Thank you.
+00:29:41 [W] Thank you Soldier.
+00:29:46 [W] So we now looked at part one which shows how to run a single multi-node job. And to end this is the bird example now, let's look at part 2.
+00:29:56 [W] Here's how do we run? Multiple multi-node jobs at the same time. They shared cluster.
+00:30:01 [W] so towards this they have a
+00:30:15 [W] building a production k8s cluster the multi-node jobs
+00:30:20 [W] This is a shared on-prem cluster inside a Datacenter us.
+00:30:26 [W] And is currently comprised of about hundred djx nodes arranged in a single hop fashion.
+00:30:32 [W] And it's being tried out by early internal users.
+00:30:38 [W] So these are data scientists were interested in joining large models.
+00:30:42 [W] so if
+00:30:44 [W] To enable these users to share the cluster efficiently.
+00:30:49 [W] We enforce quotas each user has a default GP quota the motor to gpus
+00:30:54 [W] and that determines how many they can be used concurrently configurable.
+00:31:00 [W] You also enforce time limits on jobs the wall time limit and also a node our limit.
+00:31:07 [W] Let's say 128 not ours, which means 16 note job can learn about eight hours.
+00:31:11 [W] 1K angle with multi-node jobs, is that of starvation?
+00:31:18 [W] But really what this means is because gang scheduling is non-blocking.
+00:31:23 [W] There's a large multi node job.
+00:31:26 [W] Say 32, not job up front.
+00:31:28 [W] It can store for a long time.
+00:31:30 [W] So to work around that we enforce is threshold and Beyond the threshold we start looking for that job.
+00:31:38 [W] Go the final notes.
+00:31:43 [W] So then we backfill the nodes using smaller jobs short of jobs.
+00:31:47 [W] That's helped us to improve utilization.
+00:31:50 [W] this is a work in progress. We have some initial things in place, but
+00:31:53 [W] looking for more input and feedback into that.
+00:31:57 [W] We also enforce fairness where the drf score so Dr. F stands for dominant resource fairness so popular measure.
+00:32:06 [W] We also use starvation and age as factors will job and combine all these integrated function. So this gives us a dynamic quality for the job.
+00:32:17 [W] So that the scheduler can use that to decide which job to pick next.
+00:32:22 [W] For a production cluster. We also need good operations. Like I sorry ci/cd and also dashboards and alerts.
+00:32:33 [W] So here's an example.
+00:32:36 [W] Is the scheduler and MPA operator dashboard, it shows number of jobs in the queue. How many over quota how many under Kota?
+00:32:46 [W] It's all scheduling latency.
+00:32:49 [W] Starvation duration and so on even when the MPAA operator, it shows latency and other angles.
+00:33:02 [W] dashboards and alerts
+00:33:10 [W] So here's an example.
+00:33:10 [W] This is a scheduler a temporary operator dashboard.
+00:33:11 [W] It shows number of jobs in the queue. How many over quota how many under Kota?
+00:33:11 [W] It shows scheduling latency.
+00:33:12 [W] Starvation duration and so on even when MPA operator, it shows latency and other angles.
+00:33:13 [W] So this is a regular graph on a chart built using Prometheus metrics and one can build different dashboards like this easily using graph Anna. These are you this can be used by
+00:33:14 [W] I've been sent out to engineers.
+00:33:16 [W] We're also trying to enable alert so that SRE can react to changes quickly.
+00:33:21 [W] So in summary we have looked at.
+00:33:26 [W] Multi-node clusters with kubernative how to enable that using gang scheduling ntia image Club.
+00:33:36 [W] So this is a work in progress.
+00:33:37 [W] As next steps. We are looking too hard in this production deployments.
+00:33:42 [W] Also need to improve performance using storage caching and so on multi-node clusters.
+00:33:48 [W] also looking to add additional array types like MPI Spark
+00:33:55 [W] also aligning with the Upstream framework and so on.
+00:34:00 [W] So there's a work in progress and would like to hear from other folks who are trying similar things.
+00:34:07 [W] One thing I would like to draw attention to is the multi mode enabled containers.
+00:34:17 [W] So for Frameworks like tensorflow by torch and also models like Bert multi-node enable containers.
+00:34:23 [W] So let us study libraries in packages. These are available from NGC Road and we are not calm.
+00:34:28 [W] So we encourage all of you to download it from there and use them.
+00:34:33 [W] Earlier, I would like to acknowledge the contributions of various team members.
+00:34:40 [W] I would like to acknowledge the contributions of various team members.
+00:34:40 [W] With an Nvidia and also outside folks are working on different layers of this track the Deep learning stackrox.
+00:34:48 [W] We'd also like to thank you God for giving us this opportunity.
+00:34:54 [W] Thank you and will now take questions.
+00:34:58 [W] So we'll know so we have a few questions. So one question is
+00:35:18 [W] Is the Telemetry dashboard open sourced?
+00:35:22 [W] So some of the components we have used our open-sourced like we have Upstream the DC GM is a data center GPU manager, sweetie.
+00:35:34 [W] Cute exports all the parameters from the nodes into Prometheus and those things and using that one can build different dashboards.
+00:35:47 [W] The particular one. We showed is an internal experimental one.
+00:35:49 [W] So we are trying more combinations there.
+00:35:50 [W] and anybody can use the metrics to build Griffon a dashboards and the like
+00:35:56 [W] you can also add goes away.
+00:36:07 [W] From our users to see what makes more sense to the users as well.
+00:36:15 [W] She looks green ones.
+00:36:31 [W] Yeah adding on a related question. We can also add that so several of the components. We used are already Upstream like the cni-genie swv's Upstream Imperial operator is just Upstream.
+00:36:50 [W] And several of the GPU components like the device plug in GPU operator upstream and there is Gang scheduling work happening in Upstream.
+00:37:03 [W] So one can put this together to build.
+00:37:05 [W] Multi-node clusters as possible.
+00:37:10 [W] So here we are trying out different combinations.
+00:37:12 [W] Yeah.
+00:37:20 [W] Request to upload a presentation on scat.com Sharia will do that to the right of the presentation.
+00:37:37 [W] Yeah, we would also like to if anybody has tried similar things and would like to share their experience will be when you visit to discuss it. We can do it offline in the slack channels also.
+00:38:17 [W] Yes, so I can see there's another question.
+00:38:56 [W] So it's a question is is Gang scheduling open sourced the PGM part.
+00:39:03 [W] So like we said we are we have this experimental module called the pot group manager and we are working out how it works
+00:39:14 [W] Looking at different aspects of it for gang scheduling many of our activities are like work in progress.
+00:39:25 [W] For example, the mother was talking about for starvation handling backfilling. So we haven't yet open sourced it experimenting with what works well at
+00:39:39 [W] backfilling so we haven't yet open sourced it experimenting with what works well at scale and so once we have something which
+00:39:46 [W] Once we have something which we are confident, then we will plan on the next steps of open sourcing it.
+00:39:57 [W] Okay.
+00:40:01 [W] So the next another question is what is the network bandwidth requirements for share GPU experiments?
+00:40:17 [W] So many of our so we have different implementations of the Clusters.
+00:40:27 [W] and many of our applications depend on the all reduce collectives in the Deep learning applications,
+00:40:43 [W] in by the nickel communication layer
+00:40:47 [W] So we are we have seen that there is enough.
+00:40:59 [W] I think it depends on how the applications are written. Some applications have good amount of computation and communication overlaps and
+00:41:12 [W] The applications are written some applications have good amount of computation and communication overlaps.
+00:41:13 [W] And but we but with nickel we are able to see they're able to use the network.
+00:41:25 [W] Well because it uses the GP direct RDMA.
+00:41:27 [W] Transparently so on a for example on a rock Network. It is able to utilize the entire bandwidth of the network.
+00:41:41 [W] And that actually helps quite a lot with the scalability of these applications.
+00:41:50 [W] So the next question is on comparisons with volcano.
+00:41:59 [W] So when we started a few months back, I think volcano was still not in the production ready state.
+00:42:16 [W] And also we wanted to use like the high speed networking with Rocky material and
+00:42:18 [W] Working with the some of the network setup that we showed earlier like the DJ X specific features.
+00:42:26 [W] With the multi Rail and also the severe some GPS specific requirements like working with full load jobs.
+00:42:38 [W] So our solution is kind of tailored to the GPU specific requirements and then
+00:42:41 [W] Today few months back. I think volcano was still not in the production ready state.
+00:42:43 [W] And also we wanted to use like the high speed networking with Rocky material and
+00:42:44 [W] working with the some of the network setup that we showed earlier like the DJ X specific features.
+00:42:44 [W] with the multi Rail and also the
+00:42:44 [W] severe some GPS specific requirements like working with full load jobs.
+00:42:45 [W] So solution is kind of tailored to the GPU specific requirements and then
+00:42:45 [W] Yeah, I think we need to follow up with new developments in volcano and see what can be added there.
+00:42:48 [W] So one thing we would like to add is that as we shown the future work screen this brings together a lot of different components like the networking part the MPI part and also like
+00:43:20 [W] So one thing you would like to add is that as we shown the future work screen this brings together a lot of different components with the networking part the MPI part and also like
+00:43:22 [W] How do we hide it in production?
+00:43:24 [W] And other key part is like storage and then how do we download the containerd images effectively.
+00:43:36 [W] So all these things need to come together to work well in a production cluster and our goal is to share our learning from these things and also learn from other folks in the community.
+00:43:44 [W] And if you have more questions, please send them over through slack.
+00:44:09 [W] We can answer them you after the session.
+00:44:11 [W] Yeah, we can continue on the slack Channel.
+00:44:16 [W] So thank you all for joining and I think will now close the session and continue on the slack Channel.
+00:44:26 [W] Yeah, we can continue on the slack Channel.
+00:44:53 [W] So thank you all for joining and I think will now close the session and continue on the slack Channel.

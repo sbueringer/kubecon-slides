@@ -1,0 +1,256 @@
+﻿Make Prometheus Use Less Memory and Restart Faster: VUXM-0072 - events@cncf.io - Thursday, August 20, 2020 6:54 AM - 59 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:02 [W] Welcome everyone to my talk meet Prometheus use less memory and restart faster little bit about myself.
+00:06:09 [W] I am Ganesh vinegar.
+00:06:11 [W] I'm a software engineer at Griffin elapsed and I'm also Prometheus member and I maintain the tsv engine of the Prometheus.
+00:06:17 [W] So before we understand how we achieved a reduction in memory and fast restart, you need to know how a sample goes through in the TST be here.
+00:06:30 [W] I am assuming that you already know a little bit about Prometheus.
+00:06:35 [W] And what does a memory series mean or a series mean?
+00:06:39 [W] So let's dive into a life cycle of a sample.
+00:06:42 [W] So this is how t St. B looks at a higher level.
+00:06:44 [W] There is something called the head block, which is the in-memory part of
+00:06:49 [W] database and there is a right ahead log, which keeps its on the disk, which keeps the record of all the samples and series that are incoming in the head so that in whenever there is a crash we can recover the data from the right I had log
+00:07:02 [W] And there are blocks which are persistent blocks on the disk.
+00:07:10 [W] These are just data flushed from the head block onto the disk.
+00:07:16 [W] And whether in this diagram the time goes from left to right.
+00:07:18 [W] So the block on the left side is the oldest block.
+00:07:23 [W] This one looks bigger because it's formed by merging to block some more.
+00:07:26 [W] So the main focus of this work is going to be the head block and the right I had log because the memory
+00:07:33 [W] Editions and the restart all are linked to this particular section.
+00:07:39 [W] So let's Zoom a little bit into this and understand in depth about the life cycle of a sample.
+00:07:45 [W] So in in all the discussions going forward, I will be talking with respect to a single series.
+00:07:56 [W] And yeah, all the discussions are just about a single series.
+00:07:58 [W] I have a horizontal line here anything that's represented about this is in the memory anything that's below. This is on the desk.
+00:08:06 [W] So here we have a sample in coming inside the head block and we store the samples in something called chunk a chunk is a compressed unit of up to 120 samples as let's say you are scrape interval is
+00:08:21 [W] Ten seconds that means 120 samples would span up to like 30 minutes.
+00:08:33 [W] So here I have represented the chunk which is actively being upended to in the color red and whenever we write a sample to the Chunk, we also write it to the right ahead log so that whenever there is a crash we can recreate the same sample
+00:08:42 [W] And as I said, it's a compressor unit of 120 sample. So what happens after you cross one 20 samples.
+00:08:51 [W] we just cut another chunk.
+00:08:54 [W] So we end the life cycle of a single chunk.
+00:08:56 [W] So this one was read before now. It has been cut up to 120 samples and there is a new chunk which will be actively appended to so once you cut a chunk the chunk you seen the logdna
+00:09:10 [W] Three down lie that it's never offended too or no sample is deleted before we flush it into a block similarly.
+00:09:18 [W] The chunk just keeps getting the data and the new chunk is cut after every 30 minutes if you assume 15 minutes 15 seconds, scrape interval, and yep, every chunk has 120 samples and considering the
+00:09:36 [W] Had block range is like two hours like the blow of first block that you cut is two hours in size the head block will store up to three hours of data.
+00:09:50 [W] So if we count the chunks here 30 minutes 30 minutes 30 minutes this pants up to three hours of data and only the red color chunk is mutable. Like the samples will be added but it won't be deleted and the rest of the chunks are read-only.
+00:09:59 [W] The once we come to this stage where the head block spends three hours.
+00:10:05 [W] we cut a block we take the first two hours of data, which is the first four chunks here leaving aside the fifth and the sixth chunk and this is flushed into the disk as a part as a block If You observe from the beginning
+00:10:21 [W] The right I had log it's growing as and when the data is incoming and once we cut the block.
+00:10:28 [W] The right head log is truncated.
+00:10:31 [W] And the block consists of its own index and search chunks or separately the index is required to search into the chunks and here in the head block.
+00:10:45 [W] I'm not showing you other parts like the in memory index.
+00:10:51 [W] I'm just showing the chunks because that's more relevant for this talk, but there is index here to for the head block.
+00:10:56 [W] So this cycle repeats now you see the chunk is Phi again.
+00:11:02 [W] It gets more samples.
+00:11:05 [W] There are more chunks and the block is cut again sweet.
+00:11:07 [W] So the block the diagram is a change little bit to represent the active chunk, which is in red color here and the index for the blocks.
+00:11:16 [W] And we created smaller blocks. Once it grows back in time it the blocks are merged to form pick up blocks.
+00:11:27 [W] So now let's save some memory and the as you see as you can already see here.
+00:11:35 [W] It's done through memory mapping from disk.
+00:11:37 [W] So, let's see how that's done.
+00:11:40 [W] It's done by these two PS that I've worked on and this work is in the Prometheus release 2.19. So you can appear to that if you wish to have this optimization in so let's go back to the initial state where there
+00:11:52 [W] One active chunk and the sample was being appended to that and obviously there is a writer headlock.
+00:11:58 [W] As I said when there is a chunk the yellow chunk which is already cut.
+00:12:08 [W] It's just read only and cannot be returned to or it cannot be deleted.
+00:12:12 [W] It's similar to a block where the chunks in the block are immutable.
+00:12:19 [W] Hence. You memory map from the disk. Memory mapping is a feature given by the OS where you need not load the entire file into the memory if you want to access and you can just say I want to access this part of the file and the
+00:12:28 [W] This will take care of loading just that part of the file into the memory, which is great.
+00:12:37 [W] We it removes a lot of complexity from the code. So similarly because remember my Chums chunks from the disk for the blocks.
+00:12:45 [W] Why can't we do it for even the head block?
+00:12:47 [W] So that's what we exactly do once we cut a new chunk for the head we flush that to the disk as you can see. I already mentioned this line is separates the memory from the Disco now.
+00:12:58 [W] Now the chunk is on the desk.
+00:13:01 [W] And while the chunk is on the disk, we just store a reference for this chunk into the memory.
+00:13:13 [W] So the chunk can grow up to like 120 bites of 150 bytes or maybe even 200 bytes that's replaced by just eight bytes of reference into the memory.
+00:13:18 [W] Similarly as and when we are cutting the chunk here the new chunk.
+00:13:25 [W] There is a second Chunk in coming immediately.
+00:13:28 [W] We flush it to the disc If You observe carefully the right head log.
+00:13:32 [W] It grows like one sits flush to the disc. The right headlock is not truncated it grows.
+00:13:42 [W] I will explain why this happens in the moment.
+00:13:45 [W] So similarly, we have one chunk to chunk and all the five chunks memory map to the disk.
+00:13:55 [W] So when the compaction happens the chunks are taken from here and the truncation doesn't happen immediately or I'm not going in deep about how cover my chunks are truncated because it's not much.
+00:14:04 [W] To learn for this talk but yep, that's how we are saving memory though. It feels like you are saying like 5/6 of the memory, but it's really not 5 6 because there are other factors are considered like the in memory index
+00:14:18 [W] X the symbols that is 2 and the memory required to load a block and lots of other things so realistically speaking the memory savings is like 30 to 40% in best case or up to 50%
+00:14:33 [W] And then when there is a high chance when I say Chan it means the rate at which new series are being created or new series are being deleted when that is high.
+00:14:43 [W] the savings are less. But if we go back to the discussion of 15 seconds crepe interval, we used to store six chunks into the memory in the worst case, but now it's in for all this crap intervals.
+00:14:57 [W] It's up to one chunk that we store it into the memory, which is sweet. So we run something called prom bench which
+00:15:04 [W] Is a heavy Benchmark for every lease that we cut out.
+00:15:09 [W] So this is comparing the release 2.19 with the release 2.18 and you can see there is 30 to 40 percent reduction in the memory usage.
+00:15:21 [W] There are lots of lines here not to confuse with many other lines that we have is the yellow line here and the green line that is being compared to and this is when the journey is low which means the rate at which new series being is being created is very less.
+00:15:32 [W] And when there is a high chance there is still some reduction which is like 10 to 20% And this is from gitlab from one of the GitHub gitlab issues.
+00:15:48 [W] So when they upgraded to Prometheus 2.19, they saw a reduction of up to 50% If you see on the left side before memory mapping, they are spikes every two hours because as you see also
+00:15:58 [W] Initially in the life cycle of a sample the head stores up to six chunks if we take the scrape interval of 15 seconds.
+00:16:12 [W] So with time the memory grows forehead block and after compaction, it comes down grows for two hours after compaction.
+00:16:20 [W] It comes down but you see after memory mapping because we store up to one chunk into memory in the worst case remember is little stable.
+00:16:27 [W] There is no ups and down like this.
+00:16:27 [W] So that's sweet.
+00:16:29 [W] No talking about little fast replay. This is not the ultimate fast Replay that I'm going to speak about. This was a good side effect of the memory mapping work. So explaining a little bit about replace the replay consists of going through
+00:16:45 [W] Right. I had log records and be playing each and every sample that we invested before.
+00:16:58 [W] So the replay consists of recreating the compressed chunks that we have in the memory, or you can see the memory map chunks.
+00:17:05 [W] So recreating those compress compress chunks is an additional CPU tasks and takes a bit of time.
+00:17:11 [W] So because we already have the entire chunk flushed on the disk whenever we are iterating through the samples.
+00:17:16 [W] We look back and see if there is a chunk of memory map chunk, which is already present for this time range, and hence. We skip the sample. So we don't need to create recreate all the chunks that are already there on the desk and
+00:17:30 [W] Because we don't have to recreate the compressed chunks. This causes a reduction of restart Time by up to 20 to 30 percent that we saw in the from inch which is a nice side effect of this.
+00:17:45 [W] now so I mentioned I will talk why we should not be don't and Kate the right a headlock because the right headlock is required during replay to recreate this Chunk in the memory, but because there are
+00:18:02 [W] Millions of series. We don't know where exactly is the sample for this right I have for this Chunk in the right a headlock.
+00:18:13 [W] So if we had to truncate the right headlock for these chunks, we have to go through the entire right ahead log and remove the is relevant samples and rewrite the right I had log which is very inefficient and very expensive in terms of desk.
+00:18:25 [W] And yep. It will just all lot of other pressure from it has so we don't truncate the right I had lost.
+00:18:34 [W] Dog immediately, we truncate it like before whenever a compaction of had happens.
+00:18:38 [W] And also remote right depends on right I have laug to send it to remote storage for long-term retention.
+00:18:47 [W] So unless the remote right starts using the memory map chunks for remote writing.
+00:18:54 [W] We cannot truncate the right headlock very soon. So that's one of the reason
+00:18:57 [W] and there are some things to keep in mind this memory saving is not like the final thing that you see the memory can grow because as I said memory mapping is an OS feature and if you want to access it, it's brought back into the memory
+00:19:13 [W] Again, so that happens when you have a query hitting the memory map chunks.
+00:19:26 [W] So for example, if you have a query which touches like all the series for the past three hours of data, then it's going to load back all the chunks into the memory, but realistically speaking that doesn't happen often.
+00:19:33 [W] So if you don't run very heavy queries for very well-liked past two or three years of data, then you should be good in this regard also because we are flushing the chunks immediately to the disk.
+00:19:49 [W] There is an additional disk space requirement because even when the compaction of had happens, there is still some chunks like the memory map chunks on the disk.
+00:20:01 [W] So that takes some extra space. So if you are tight on disk space this
+00:20:05 [W] Something to keep in mind to adjust your retention or the desai's base retention or just give more space to it.
+00:20:12 [W] Now that we have seen, how are we saving the memory?
+00:20:28 [W] Let's talk about fast restarts because when you have like millions of series the restart can span up to 10 minutes or more, which is not so ideal in terms of monitoring because you are using this for
+00:20:31 [W] Hurting and you wanted to be up for most of the time I am saying it's coming soon because it's a work in progress and it should be in sometime soon in the future.
+00:20:42 [W] So this is how the TST be specifically the head block and the right had log looks after the memory mapping and as I briefly talked before we are iterating through the entire
+00:20:58 [W] Right. I had log just to create this last chunk because we don't know where are the samples for this last chunk. And even though we have the chunks already flushed and third a disk like the old chunks.
+00:21:14 [W] We are still going through the samples for these chunks just to discard it later.
+00:21:18 [W] What if we knew what are the exact samples for this chunk so that we don't need to go through the entire right head log.
+00:21:26 [W] Yep, you guessed it, right?
+00:21:29 [W] We just flush this last Chunk on the disk, and we call it a snapshot.
+00:21:35 [W] So this happens during shutdown initially.
+00:21:37 [W] We thought we could take a regular snapshot but with some calculations we came to a conclusion this can cause up to 50% or more write amplification, which is not really decide. So in this what we do is whenever
+00:21:51 [W] We are shutting down the Prometheus.
+00:21:54 [W] We just flush this chunk which is being upended to to the disc along with its labels and values which are part of the series.
+00:22:06 [W] if I'm not going in detail about the Prometheus, but if label values are part of memory series
+00:22:10 [W] So at this point, you know, what are the old chunks and you don't need to go through the right ahead log because you already know what are the samples in the active chunk because we just flushed it during shutdown.
+00:22:24 [W] So the replay with the snapshot in just consists of going through this memory map chunks and the snapshot and you don't need to go to the right a headlock.
+00:22:41 [W] So I mentioned recreating the compressed chunk is one of the CPU intensive tasks.
+00:22:48 [W] The another thing which is cpu-intensive is decoding the wreck right had log records from the disk, which forms a majority of the right ahead log replay time.
+00:22:54 [W] So with this snapshot in there is no need to go through the right a headlock.
+00:23:00 [W] But when we talk about restart time, it's not just about when Prometheus is coming up now that we have snapshotting into the picture when shutting down.
+00:23:14 [W] we also need to consider the time that it takes to create this snapshot but surprisingly snapshotting like a million series takes two to three seconds or maybe Max 5 seconds, so which is great and
+00:23:26 [W] The entire turnaround time which is shutting down and styra playing the right headlock and getting the Prometheus back up again is like Phi X first which is like 80% reduction in time to give you some realistic numbers when we ran this using from
+00:23:41 [W] And we started the Prometheus server without this snapshotting.
+00:23:49 [W] But with the memory mapping the replay was like two and a half minutes and with the snapshotting in place the re the entire turnaround time was like less than 30 seconds so it can be little more than 5x
+00:24:01 [W] Because the test was done before this, right I had log could grow for entire three hours.
+00:24:16 [W] It was more like like one out of one to two hours of right I had log but if the Prometheus was Capital Dunning for longer and then we started the gains could be more than Phi X faster. So that is sweet.
+00:24:24 [W] So more about snapshotting Yep.
+00:24:33 [W] This is best effort. As I already said this is during graceful shutdown, and it's not done in regular intervals.
+00:24:43 [W] So if you have Prometheus happens to crash in between for whatever reason then the restarts will be slow as before and it won't be fast and because we are taking snapshot it's going on the disk. It's going to
+00:24:52 [W] require a little more disk space which you need to take into account when you plan your resource requirements or the retention period
+00:25:02 [W] so this is a work in progress majority of work is done like the designing and lots of iterations and how it should be done in the format Etc.
+00:25:15 [W] So I expect to be done in August or latest by September because I'm going to work on this why I am giving an idea of based on what I think will be done.
+00:25:26 [W] But yep with snapshotting in place. The restarts are like 80% fast and they are more exciting things coming in the tikv.
+00:25:34 [W] Is to be these to just scratch the surface of what's has done has been done in the property STP and what's coming up but a blog post will be soon out or it will be already our by the time this talk.
+00:25:49 [W] Is up in the Griffon a Blog where I talk more about what's more coming up in the TCB space and what you should be looking forward to?
+00:26:00 [W] Yep to summarize what we have discussed till now in the memory mapping.
+00:26:09 [W] We flush the chunks on the disk.
+00:26:10 [W] And hence. We save the memory and in snapshotting because we have just the last chunk that is on the memory which needs to be recreated.
+00:26:21 [W] We just flush it to the disc during shutdown taking a snapshot and we don't need to go through the right headlock again and the replay just consists of going through the memory map chunks and the snapshot and that's how
+00:26:32 [W] Are making the restart faster.
+00:26:33 [W] Thank you.
+00:26:35 [W] That's all and by the way, this is my Twitter handle if you have any questions, or if you have if you are watching this talk after it's aired. You can feel free to reach out to me for any questions that you have.
+00:26:50 [W] Thank you.
+00:26:51 [W] So hello everyone.
+00:26:58 [W] Thank you for tuning into my talk before I start answering the question answers.
+00:27:03 [W] Let me just announced that there is a Prometheus project Pavillion sometime later today.
+00:27:14 [W] So if you have any general Prometheus questions, you could just drop in there to ask the questions that you have.
+00:27:18 [W] To skip the questions which are not exactly related to the top which you can ask in the Prometheus project by billion.
+00:27:25 [W] So I'm going through the questions from the oldest to the newest.
+00:27:28 [W] There's a question.
+00:27:29 [W] Can I get more information regarding this discussion is very weak.
+00:27:34 [W] So I'm going to skip this I don't know what more information what you want and this and what is the high level the next question is what is the high level you try to explain here? So
+00:27:45 [W] specifically talking about two features that were implemented in Prometheus. But if you want to take out something from this talk, it could be if there is some data that you're storing into the memory and it's immutable you could save a bunch of memory
+00:28:00 [W] By just storing it on the disk and memory mapping it and read whenever it's required.
+00:28:13 [W] But if it's something which is accessed very frequently than you can skip the disc and stored in the memory because in Prometheus not all the memory series will be accessed all the time so we can save a bunch of memory by just flushing them to a disk and fetching them
+00:28:21 [W] But and snapshotting is well documented database technique where you take regular style snapshot of the data from in the memory so that the restarts get faster. So it's just the basic database
+00:28:35 [W] Concept that was implemented here.
+00:28:40 [W] And there's another question how you reduce the memory consumption of ram, which is 2.18.
+00:28:45 [W] So this question is out of this after the scope of this talk, but still I will answer it like in 2.18.
+00:28:58 [W] There was no reduction in memory, but there was reduction in right headlock replay time. It was done by just truncating mode right headlock at every cycle instead of keeping them around and hence the restarts of Astro.
+00:29:07 [W] And the next question is does it mean we need better disk because now you write more to the disk than before while I just talked about the head block.
+00:29:19 [W] We are actually not writing a lot compared to before we used to create the persistent disk, not percentage the persistent blocks and multiple blocks get compacted to a bigger block so you can
+00:29:31 [W] And this is like this is like writing just another block so you don't need better disk, but you might need a little more discs and you should be fine.
+00:29:42 [W] It doesn't add a it doesn't amplify the rights much.
+00:29:47 [W] So the next question is how does a restart on Prometheus result in memory rebuild will the head chunks be rebuilt from the right a headlock?
+00:30:03 [W] So I guess this question came even before I've explained how it's rebuilt from the map chunk. So I guess this is already answered.
+00:30:07 [W] We don't rebuild from the right headlock. We just go through the chunks that we have written on the disk and restore the references.
+00:30:13 [W] The next question is are there any recommended configuration changes from the default values that an end user should consider changing served? Skip this question you could go to the Prometheus project a billion where they'll be a lot of Prometheus mention just one sir this question.
+00:30:30 [W] So next question is can you remind me what is compaction?
+00:30:39 [W] So compaction is a present databases or anything where you do a regular maintenance of the data in case of Prometheus they can be tombstones which means it marks the data that has been deleted.
+00:30:50 [W] Need to do compaction where we delete the we actually delete the deleted data from the disk. And also in the compaction we merge bigger blocks to form a larger blocks which helps in query performance and when we talk about head
+00:31:05 [W] Compaction. It's about recycling the head truncating the data from the head and putting the disk all these maintenance that we do in the database in the background late be deleting the stain samples managing the retention
+00:31:19 [W] On all those stuff that's compaction basically and the last question here. Is this approach needs faster.
+00:31:29 [W] I Ops disk, right?
+00:31:31 [W] Not really if you look at the if yo, Prometheus is running fine currently, then you don't need higher describes because the highest scoffs where will be taken by compaction which is which runs in the background. But if you take the
+00:31:45 [W] Hot path of ingesting the samples that is right.
+00:31:49 [W] I had log where we write to write a headlock for every script request that comes in.
+00:32:04 [W] But if you look at the memory map this memory mapping it happens once in a while, which is once when the member chunk is cut totally and it's not flush to the desk immediately.
+00:32:07 [W] There is a in memory buffer which keeps up to few kilobytes of me megabytes of chunks into the memory before it's actually flashed on the
+00:32:17 [W] Disc so there is buffering and it's not a high rate iot compared to the right head log.
+00:32:25 [W] So if you have Prometheus is running fine right now, it will run fine. Even with the memory map chunks.
+00:32:29 [W] So, I guess that's all the questions.
+00:32:34 [W] They still nine minutes by the wish you have any more questions?
+00:32:43 [W] Okay, I'm done.
+00:32:57 [W] I was on the page when they are actually a very more questions than I thought is this feature enabled by default in 2.19.
+00:33:03 [W] Yes, there is no way to opt out of this so it will stay forever.
+00:33:07 [W] Yeah, the next question is do we need to change any configuration 2.19?
+00:33:16 [W] No, you don't need to change any configuration.
+00:33:18 [W] It's automatic.
+00:33:20 [W] It's just done by default in which version?
+00:33:22 [W] Is this introduce 2.19?
+00:33:27 [W] Can we have link to the blog post so I can just tweet out the blog post? I cannot give it right now because of shortages time can just follow me on Twitter.
+00:33:37 [W] Please please share the section. So I'll be tweeting this lights out shortly after this so you can just look for underscore code.
+00:33:48 [W] code some on Twitter.
+00:33:51 [W] Link to the blog post again.
+00:33:55 [W] Yep.
+00:33:55 [W] I'll treat it out.
+00:33:58 [W] Can you download the slides again the same question? Yes, I will get it out.
+00:34:00 [W] So most of these changes will incur on higher disk usage how much more disk should be have in percentage in newer versions of Prometheus. So percentage increase in the disc uses will highly depend on
+00:34:20 [W] What's your attention? But roughly you can consider its up the data that color the first block that is cut from the head block which is of two hours.
+00:34:35 [W] Need that much extra space in terms of disc when you use these features if my answer was not clear.
+00:34:46 [W] Maybe you can ping me again and which are somewhere and I can answer your question.
+00:34:51 [W] But basically you need disc enough to keep additional discs enough to keep two hours more of data and the next questions.
+00:34:54 [W] What is the approximate definition of lotion that was mentioned earlier discussion. So when I say lochan the rate at which new series are being created is less.
+00:35:10 [W] So basically the churn is the rate at which new series are being created if your series are stable like they are no new series the same series is getting data again. And again, that means it solution.
+00:35:19 [W] Which Prometheus version decision trees during 2.19, but the snapshotting is still not Upstream. It will be there in the future sometime. But the memory mapping is there in 2.19 if using 2.19 you should use tufin 19.3
+00:35:34 [W] Because the previous two minor versions have some small bugs.
+00:35:38 [W] Should we do something to enable snapshotting on Prometheus shut down, so it's not Upstream yet, but it will be enabled by default and there won't be any configure option to shut it down.
+00:35:50 [W] Could you kindly recommend some troubleshooting routines for out of memory killed problems?
+00:36:01 [W] So that question goes to Prometheus project parylene. I will just skip the question here.
+00:36:03 [W] The snapshotting of in memory chunk would only happen during shutdown.
+00:36:12 [W] Is it also possible to frequently do this and benefit from it?
+00:36:24 [W] Even when on graceful shutter? I think I answered or mentioned why we cannot do this in the TOC. It calls a lot of write amplification, which is the main thing that we try to avoid in Prometheus to dr. X
+00:36:27 [W] Mode from 1 dot x 2 dot X, so that's not an option.
+00:36:32 [W] We already discussed this option and snapshot cannot happen regularly.
+00:36:37 [W] Is a mapping it you'll be supported in go.
+00:36:41 [W] Yes. We just use the function calls that go provides for memory mapping.
+00:36:46 [W] I have heard yesterday. The memory from meteors consumes rather. Depends on what you query then what you ingest. Is this correct? What are the limitations of each?
+00:36:59 [W] That questions also belongs in Project Pavilion, but in general when you acquiring a data for requiring old data, which touches lot of series you need to load the chunks which are there in the persistent block to the memory.
+00:37:16 [W] So if you have very heavy queries, then it will use a little more memory.
+00:37:30 [W] But if you have just alerting and few courage to do for recent data, then the money should not matter but you can take this question to the project by Willian. So do you get more answers and more views on this?
+00:37:31 [W] Any method to predict how large memory and CPU should assign to Prometheus.
+00:37:46 [W] If you are talking about with the memory mapping, you can keep the same I guess so that it can have some Headroom for memory spikes. But other than that this question goes to project a villain.
+00:37:49 [W] Can you replace by wood?
+00:37:52 [W] I by I would not want this.
+00:37:55 [W] you would not want this if you have lots of money burning taking lots of memory and know what this question means but you always want to optimize the memory usage so that the Prometheus
+00:38:12 [W] - because it it's like a central point for your monitoring and alerting and Prometheus needs to be stable.
+00:38:21 [W] So the lower memory takes the better I guess.
+00:38:22 [W] The same question but looks like you move do more iOS than before right a little more iOS. Yes, but not too much. Like I explained a while ago comparing it with the right ahead log and the blocks.
+00:38:36 [W] Any ideas for employing startup time when there is no graceful shutdown right now.
+00:38:46 [W] There are no ideas. Like we cannot have regular snapshots. So right now in the current scope, it's only for graceful shutdowns.
+00:38:52 [W] What is the definition of lotion I guess I already answered that.
+00:39:02 [W] With focus on less restart time. Is there any significance of running multiple replicas like people already run multiple directly replicas to make it a highly available.
+00:39:18 [W] You can run to Prometheus from ETI scraping the same targets you make it highly available. So if you want to highly available Prometheus pair then
+00:39:27 [W] Running two replicas make sense.
+00:39:29 [W] How do using golang exp MFD data structure?
+00:39:43 [W] Like the thing was already there in the Prometheus implemented, so I don't know much about it. But I guess there is a map system called in go which you can use to directly memory map the file.
+00:39:46 [W] If you are using go exp mfi don't know what is go xbm map and says it's experimental. This feature is actually stable.
+00:40:04 [W] The memory mapping is already used for the persistent blocks, which is there since the beginning of 2 dot X.
+00:40:11 [W] So the memory mapping that we are doing will be considered stable.
+00:40:13 [W] It says one minute left and I guess I am on the last question right now.
+00:40:20 [W] What group should be joined to discuss more Prometheus topics?
+00:40:28 [W] So the if you go to Prometheus dot IO / Community. There are the channels are listed there the chance of basically IRC channels and all the maintenance will be available there, but not the
+00:40:39 [W] Slack
+00:40:40 [W] so it's going to be a assistance and the Google Groups. I think we are running out of time, but you could check Prometheus dot IO / Community for all the links to over links to the forums and the Chance where you can communicate with the maintenance or other folks.
+00:40:56 [W] Guess we are on time and I'm done with the questions nice.

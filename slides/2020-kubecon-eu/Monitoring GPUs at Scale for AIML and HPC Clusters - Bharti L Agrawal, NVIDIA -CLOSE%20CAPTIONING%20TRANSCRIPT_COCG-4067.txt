@@ -1,0 +1,288 @@
+﻿Monitoring GPUs at Scale for AI/ML and HPC Clusters: COCG-4067 - events@cncf.io - Wednesday, August 19, 2020 11:38 AM - 1142 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:02:06 [W] Hi everyone.
+00:02:09 [W] welcome to my car on gpus monitoring gpus at scale.
+00:02:12 [W] For a IML and HPC clusters.
+00:02:20 [W] My name is Marty Agarwal.
+00:02:21 [W] I'm a software architect at Nvidia working on logging and monitoring staff in the Nvidia Saturn V Data Center.
+00:02:29 [W] We manage the Nvidia certified data Centre using kubelet.
+00:02:41 [W] He's this supports thousands of GPU servers, which supports hundreds of users running their machine learning training dogs. These jobs use terabytes of data.
+00:02:51 [W] We also have stakeholders and other users with observability needs how to support monitoring at this scale.
+00:02:55 [W] For our again that today we will first look at what the Saturn V data center is then we will review the various users. We have to support for observability.
+00:03:08 [W] We will look at the size and the scale.
+00:03:12 [W] Of the data center and the requirements that come out of that next. We will go over the stack and a couple of architectures of the stack that we set up to meet these requirements.
+00:03:32 [W] Oranges we've had and how we solve for them.
+00:03:39 [W] Finally. We would look at some example user views.
+00:03:41 [W] Let's look at the Nvidia sudden five Data Center.
+00:03:46 [W] So what is the Nvidia certain v data center or nsv for short?
+00:03:52 [W] I didn't media. We have a lot of users who need to run their artificial intelligence and machine learning jobs on the GPU server.
+00:04:03 [W] They can set up their own server to do this. But this limits them in the size of the dog and the technology.
+00:04:08 [W] It would also add cost to maintain these knobs.
+00:04:11 [W] In order to facilitate. These users are keying set of clusters with hundreds of GPU nodes with the latest Technologies for the user to deploy their jobs on
+00:04:23 [W] we also added a CPU control frame to allow us to add a scheduler for the user for the juicer jobs and to support observability.
+00:04:33 [W] On top of this. We added the NSP Cloud control twin for the users to interact with the users use the nsv API to schedule their jobs on the nsv cloud controlled name.
+00:04:48 [W] The request is then sent to the CPU control plane, which forwards it on to the scheduler.
+00:04:58 [W] The users are also able to leverage the NDC registry which contains containers data sets and pre-trained models for them to use.
+00:05:16 [W] This is great users get the latest technology and are able to deploy their jobs and be guaranteed that they will have resources.
+00:05:24 [W] To run on however, we need to ensure we can meet this guarantee observability is the key to this County.
+00:05:33 [W] Let's look at the setup and the use cases. We need to support for this.
+00:05:37 [W] Next let's look at the users the size and the scale.
+00:05:46 [W] As we saw in the NSA data center, we have the kubernative cluster with GPU notes and CPU control plane from the observability perspective apart from the end users.
+00:06:01 [W] We have various users accessing the system.
+00:06:02 [W] We have the admin user who would like to get a view on the overall health of the cluster and get real time alerts in slack and pagerduty.
+00:06:15 [W] We have the machine learning and artificial intelligence and users who'd like to see the performance of their jobs in terms of the job climate rain and the application telemetry.
+00:06:23 [W] We have the stakeholders.
+00:06:27 [W] Capacity planning purposes then we have the nsv developers.
+00:06:42 [W] These are developers like me who worked on the scheduler and observability stack.
+00:06:46 [W] These users would like to be able to get a view into the health and resource usage of the components and be able to roof cause issues.
+00:06:55 [W] How do we how do these use cases map into requirements for the end user who wants to see how efficiently they jobs are running in terms of resource usage and they custom metrics.
+00:07:13 [W] We need to collect the resources resource and application metrics and send them to the nsv cloudbees program.
+00:07:18 [W] For the nsv admin user who wants to monitor the overall health of the system get real-time notifications on incidents and be able to Route calls them effectively. We need to centralize the metrics and logs in real time.
+00:07:34 [W] The real time alerts also need to be sent to slacken pagerduty.
+00:07:42 [W] We need to ensure that the stack is highly available and can scale horizontally as nodes get added to the customers.
+00:07:45 [W] For the stakeholders.
+00:07:49 [W] We want to get metrics aggregation at the job level and retain these for one year.
+00:07:54 [W] We also need to show you and efficiently in a dashboard and weekly reports finally the nsv developer.
+00:08:02 [W] We need to centralize the metrics and logs in real time.
+00:08:05 [W] The real-time alerts also need to be sent to slack and Faded we do we need to ensure that the stack is highly available and can scale horizontally as nodes get added to the customers.
+00:08:07 [W] For the stakeholders.
+00:08:07 [W] We want to get metrics aggregation at the job level and retain these for one year.
+00:08:08 [W] We also need to show you and efficient in a dashboard and weekly reports finally the nsv developer.
+00:08:09 [W] For them, we need to collect and centralize the metrics and logs of the nsv components.
+00:08:10 [W] Our system needs to support multiple production clusters each with up to six hundred nodes.
+00:08:20 [W] You hundred fifty of which contain mm gpus along with this. We have several nonprofit clusters where we need to support the same logging and monitoring start. We use ci/cd processed for
+00:08:32 [W] Support multiple production clusters each with up to six hundred nodes 250 of each contain.
+00:08:33 [W] mm gpus along with this. We have several nonprofit clusters where we need to support the same logging and monitoring staff. We use ci/cd process to for promotion to manage these these
+00:08:35 [W] growing
+00:08:37 [W] let's go over the system requirements that come out of this.
+00:08:42 [W] For the functional requirements. We need to centrally collect the metrics for all levels the cluster the node the kubernative system and jobs at scale.
+00:09:01 [W] We need to meet the SLA to allow users to get real-time metrics that is to say less than one minute from node 2 system.
+00:09:06 [W] These metrics have to be forwarded to external systems. The growing data needs to be retained to support long-term views.
+00:09:14 [W] for the non-functional requirements
+00:09:17 [W] We we need to consider data durability that is to say they should be no data loss.
+00:09:26 [W] The system should be highly available.
+00:09:31 [W] The stack should scale as we add nodes and it should be resilient.
+00:09:34 [W] We also need to keep Security in mind when we send metrics to the external cloud.
+00:09:37 [W] Let's now look at the stack in the architecture.
+00:09:44 [W] These are the components are stacked insists. So we decided to use kubernative prostration and lifecycle management of the system.
+00:09:54 [W] the system uses kubernative device plug in
+00:09:58 [W] for GPU enablement and the kubernative use
+00:10:02 [W] some controller
+00:10:07 [W] for the Observer T staff. We have the Nvidia data center GPU manager component for GPU metrics.
+00:10:14 [W] We decided to use Prometheus operator for metrics collection and alerting this Stackhouse with grow fauna for visualizing.
+00:10:25 [W] This is knative to kubernative and widely used with a lot of Community Support behind it. It is highly performant in collecting metrics and writing to remote storage.
+00:10:33 [W] You support in cluster data persistence we use in flux daily.
+00:10:38 [W] Finals and swisstack optic store are used for data durability and Storage.
+00:10:44 [W] Fluent the agent is used for the log collection and sending blogs to the central login service, which can be in flux TV or rela. We use nginx Ingress controller for exposing the stack and points to the users.
+00:11:00 [W] In some clusters based on requirements.
+00:11:05 [W] We are using gray log instead of in flux CB for logs.
+00:11:07 [W] This is how it all comes together in terms of the overall architecture. We use all open-source components.
+00:11:17 [W] On the left hand side, we can see how the metrics are centralized node exporter is running on the computer worker nodes.
+00:11:28 [W] Point these metrics are scraped by Prometheus running in the CPU control plane at a 30-second interval.
+00:11:43 [W] These metrics are sent to in flux cv4 class in cluster persistence.
+00:11:49 [W] From here.
+00:11:53 [W] They are forwarded to the metrics transporter.
+00:11:56 [W] Why are the inputs TV subscription setup this class photo then forwards them to the external Power Systems.
+00:12:00 [W] Having metrics transporter on a different node from The Source node with the separate PPC allowed us to enter introduce a level of security.
+00:12:12 [W] To ensure that the data was not would not be packed.
+00:12:16 [W] We also have Thanos sidecar running on the system that sends these metrics to switch back Object Store for long-term storage and data durability.
+00:12:35 [W] The fauna is used to visualize these metrics for the NSP developers and the admin users alerts evaluated by Prometheus and forward it to alert manager, which will then forward them to slack and pagerduty on the right hand side.
+00:12:44 [W] We also have tunnel site car running on the system that sends these metrics to switch back Object Store for long-term storage and data durability.
+00:12:45 [W] The fauna is used to visualize these metrics for the nsv developers and the admin users alerts. I evaluated by Prometheus and forward it to alert manager, which will then forward them to slack and pagerduty on the right
+00:12:46 [W] No, four logs affluent. The agent is running on the nodes to collect the system and send the system logs doing flux preview.
+00:12:52 [W] An application can also add a fluently logging sidecar and send their log for the same Center by Service as well?
+00:12:59 [W] The users will this will see this data in the NDC UI and the stakeholders will use llp's act on the data like to visualize the job metrics stakeholders also get a weekly yield and show back report that uses the data
+00:13:15 [W] The news out the outside on the data link to visualize the job mechanics stakeholders also get a weekly yield and show back report that uses the data from the data Lake.
+00:13:17 [W] Here is a variation of the architecture is set up for another cluster.
+00:13:27 [W] The only change here is that we do not need to send metrics to external systems.
+00:13:31 [W] So we were able to replace in fact CV with Gradle for logs. This has care better for us for our loaves.
+00:13:35 [W] We also introduced the Tanis receiver to give us better data their abilities.
+00:13:41 [W] As you can see we were able to adapt our architecture for a slightly different set of requirements.
+00:13:49 [W] Let's take a quick look at the details of how we collect GPU Matrix in this diagram.
+00:13:58 [W] You will see on the GPU node on the bottom. We have several jobs running.
+00:14:01 [W] No Dex photo part has a data center GPU manager or DC GM exporter as a container that collects GPU metrics from the DC GM Library running in the pot as well to get hard level details
+00:14:17 [W] Details of how we collect GPU Matrix in this diagram you will see on the GPU node on the bottom. We have several jobs running.
+00:14:18 [W] no Dex photo part has a data center GPU manager or DC GM exporter as a container that collects GPU metrics from the DC GM Library running in the pot as well to get hot level details
+00:14:20 [W] products Porter haproxy Q black to see which part is using the GPU with this integration we can get
+00:14:27 [W] job level metrics
+00:14:29 [W] In Prometheus in the monitoring nodes, we will scrape these metrics at every 30 seconds these then gets sent via in flux TV to the metrics transporter and from there to the cloud systems.
+00:14:45 [W] some of the key GPU Matrix harvested here
+00:14:48 [W] To break the flow of it. I want to show one example of you that comes
+00:15:01 [W] out of the first architecture we covered. This is a view of the job to let me free. The end user will see at the top. You can see the job runtime and the time the gpus are active and the average CPU utilization across the
+00:15:16 [W] Been used by this job below that you can see a line graph for the average. If you metrics over time, like GPU active pencil corrective GPU memory and GPU power.
+00:15:31 [W] In this job. You can see the GPU is being kept busy with tensor coredns 25%
+00:15:37 [W] The overlay shows the breakdown of the metrics at any point in time.
+00:15:44 [W] You can see details like the pcie read/write bandwidth values the in wavelength band with values the CPU and memory usage the heat map below shows GPU utilization and the pencil correlation
+00:15:56 [W] you
+00:15:58 [W] let's now look at the scale challenges.
+00:16:03 [W] As you saw in the architecture diagram, we used a lot of cncf components. These are great as there are many solutions that exist and independently, they solve for a lot of our functional requirements.
+00:16:21 [W] They're all knative Cloud Technologies and have strong Community Support behind them.
+00:16:31 [W] This allows them to continuously evolve and with the growing needs of the community.
+00:16:34 [W] This has been a lifesaver for us many a times just an upgrade of the Stag goddess the resolution for an issue and improve the performance.
+00:16:41 [W] All the components are also easily configurable why I helped the stable Helm charts.
+00:16:47 [W] However, there was a lot of trial and error involved in finding the right configuration for us for our requirements.
+00:16:57 [W] The community has many references for the Integrations and we were able to leverage this. We took a lot of the best practice and adapted them for our lives.
+00:17:04 [W] We had to kill for sighs. Hi Wilbur T scalability and durability.
+00:17:12 [W] working not only did we have to optimize the configuration, but we needed to get a good understanding of how to adapt them as the question clue.
+00:17:21 [W] Other components we have to understand the resource requests and limits that would work. Well for our Lord's there's room to grow to size each component.
+00:17:39 [W] Well, we had to understand how it use the resources Prometheus for example keeps two hours of data in memory.
+00:17:44 [W] The till it is compacted to this.
+00:17:47 [W] Prometheus size of dependent on the total number of series. It is supporting you can see some of our load numbers here.
+00:17:55 [W] It restarts at restart. It also loads more files which depending on the load can be large this impacts the restart time of the materials as well as a memory usage. We did rigorous load tests to get a baseline for the size of each
+00:18:11 [W] This helped us avoid frequent failures in production.
+00:18:21 [W] However, due to the unpredictable unpredictability of production environments.
+00:18:23 [W] We kept a close eye on the systems in production to ensure that we did not pit out of memory or CPU throttling errors.
+00:18:29 [W] We do regular evaluations of our system to ensure that the sizing is working low as we add nodes to the cluster. We review these settings.
+00:18:39 [W] To make the system highly available.
+00:18:47 [W] We had to learn what load could be supported by Prometheus with acceptable restart X versus where we needed to add another replica.
+00:18:51 [W] Scanning from ETS rely on sizing of the instances from our Lord tells so far. We've been able to manage each cluster with two instances with tuning on the resources.
+00:19:03 [W] There were some tricky a challenge as we hit the first of this was Data persistence.
+00:19:12 [W] We needed the metrics to always be available.
+00:19:12 [W] For viewing for this we needed to add in cluster persistence will replication.
+00:19:19 [W] We use in flux TV with for remote feed and right to cover this this work well up to a certain glow after which we started seeing data gaps.
+00:19:30 [W] openmetrics so there are several points of failure
+00:19:46 [W] with the 2.8 version of Prometheus by Prometheus introduce wall for remote, right?
+00:19:53 [W] This occurrence was reduced but prior to that we had to go we had to optimize the downstream components as well as the buffer of the Prometheus. So Matrix did not get dropped.
+00:20:04 [W] I will go into some details of the downstream components in the next five slide.
+00:20:08 [W] For the data durability, we had to introduce tunnel sidecar in one instance and tunnels receiver in another.
+00:20:17 [W] Monocytes are works. Well for us but panels receiver was new and we had a lot of challenges with it with the updated version of Prometheus.
+00:20:33 [W] We had to optimize the max ampoules max shards and capacity science to optimize based on the samples size of the cluster.
+00:20:36 [W] Load test help us get to the optimal setting for this.
+00:20:40 [W] The in flux TV you tuned in for sizing KJ and scalability was swindler similar to Prometheus in flux TV keeps a lot of data in memory and restarts climbs along as a containerd needs reads the Wall Files.
+00:21:02 [W] We also found that in flux TV did not scale.
+00:21:04 [W] You start times for hav needed to add replicas. We added in fact, we're even for application.
+00:21:23 [W] however in flexi reading is not supported anymore. So we had to support it ourselves or our self.
+00:21:26 [W] This also helped for the data persistence requirements.
+00:21:30 [W] Sizing of the resources Harper's support the scale.
+00:21:39 [W] However Infinity we did not scale to our minimum requirement of two weeks detention.
+00:21:44 [W] We could only support three days of attention with confidence for getting longer retention.
+00:21:49 [W] We introduced an off-site car in one set up and moved away from in flux TV to Hannah's receiver in another as I mentioned. We had added in for 3, we in our architecture for data persistence in the pasture.
+00:22:01 [W] Since this is a kubernative cluster of Hearts can restart for various reasons and land on new nose.
+00:22:04 [W] The persist data for in flux TV.
+00:22:11 [W] We are using post path assessment volumes with patri starts. We could easily have pots land on different nodes and loose data, rhs Russian of in clustered application help here.
+00:22:20 [W] Here we have to ensure that the data we are sending to external system had no gaps as well.
+00:22:32 [W] This turned out to be a very hard issue to debug and solve for and needed detailed investigation into the componentconfig to understand how best to solve it the solution involved updates to the code of the services.
+00:22:40 [W] Tunnels which we use for data durability comes with many components sizing for Thanos and World understanding each of these and how best to optimize them for our lobes for example, ton of Stone Fort honest or we needed to set max cash
+00:22:58 [W] Puts on his receiver.
+00:23:06 [W] We discovered that setting the TST women block and match block. The 15-minute would reduce the wall size which allowed us to reduce the restart times and have panels receiver not use increasing amounts of memory.
+00:23:13 [W] H-he was easy supported by Thanos by optimizing the replicas for the components as needed for scale empowerus receiver.
+00:23:24 [W] receiver. We had to move to the grpc version.
+00:23:25 [W] Tan has helped us solve the issue of barad-dûr ability and data persistence data in a kubernative cluster is ephemeral on a sidecar sends data to an object story called the tree.
+00:23:40 [W] This component is very robust and gave us data durability for data persisted to disk.
+00:23:42 [W] This is Prometheus. This information is as every two hours and we use in flux TV for the immediate time window.
+00:23:51 [W] This worked. Well, however in a variant architecture that I showed where we use saunas receiver, we had a lot of issues with load.
+00:24:00 [W] We had to delve into the code and figure out the root cause and then see how best to solve for it.
+00:24:06 [W] Luckily, we were able to upgrade Prometheus and tunnels versions and kill the configurations to solve for our lobes.
+00:24:14 [W] We had to do it we have to do rigorous field has to set up the macstadium smack samples and capacity for Prometheus report drive for our lives.
+00:24:25 [W] However, in a variant architecture that I showed where we use tunnels receiver. We had a lot of issues with load.
+00:24:29 [W] We had to delve into the code and figure out the root cause and then see how best to solve for it.
+00:24:30 [W] Luckily, we were able to upgrade Prometheus and tunnels versions until the configurations to solve for our lobes.
+00:24:31 [W] We had to do it we had to do rigorous field has to set up the Max args Max ampuls and capacity for Prometheus report drive for our lives.
+00:24:33 [W] Downsampling allowed us to support longer data retention and querying.
+00:24:35 [W] In some of our deployments we use Greylock for logging.
+00:24:39 [W] We're all uses elastic search and mongodb underneath each had to be separately understood and Kuhn.
+00:24:46 [W] Load test help us but we also had to have we also have a lot of battles cards for sizing we had to look at how to tune each component.
+00:24:59 [W] These are written in Java.
+00:25:03 [W] So we have to optimize the Heap size and the container sizes.
+00:25:06 [W] We also learned that we had to setcpu limit as without it Java would default to just one CPU.
+00:25:11 [W] For high availability initially we added replicas though elastic certain Mongo DB did fairly well with the default replicas Grail of performance seem to do better with multiples as our Lord's grew we quickly hit scale
+00:25:28 [W] Because those elastic search and Mongo DB did fairly well with the default replicas Grail of performance seem to do better with more up because as our Lord's grew we quickly hit scale issues with PayPal just adding
+00:25:32 [W] help
+00:25:32 [W] We had to look at sizing as well.
+00:25:37 [W] We learned there was a heap size recommended for elastic site. That made it perform optimally.
+00:25:41 [W] For data persistence. We added a persistent volume for very long Journal data written to elastic search was already. Well managed way log and elastic search and of data be rebuilding wrong.
+00:25:56 [W] Let's now look at some user views.
+00:25:59 [W] Here is an example of the nsv.
+00:26:04 [W] admin view.
+00:26:06 [W] This is a capacity dashboard.
+00:26:08 [W] It shows the cluster capacity with total nodes in the cluster and total number of code nodes cotton on the top and below that it shows nodes coordinate by no type.
+00:26:19 [W] On the right it shows the availability of the different note house with this. The admin users can get a good view into the cluster capacity.
+00:26:28 [W] This view shows us that nsv developers View for the job controller the pie charts at the top showed counts of jobs in the different states and below that we see the timelines for jobs in various States running Q has claws 10 pair.
+00:26:46 [W] This gives a good view to the Developers for the current state of the dog controller.
+00:26:52 [W] This is a stakeholders view the pie chart at the top left shows the jobs in different states at the moment.
+00:27:02 [W] This view shows us that nsv developers.
+00:27:03 [W] We for the job controller the pie charts at the top show count of jobs in the different states and below that we see the timelines for jobs in various States running cute as cost and fairer.
+00:27:05 [W] This gives a good view to the Developers for the current state of the dog controller.
+00:27:06 [W] This is a stakeholders view the pie chart at the top left shows the jobs in different states at the moment.
+00:27:07 [W] Then we have timelines of dog running by different aspects, but I'm by GPU allocated running duration or team registry Etc.
+00:27:10 [W] And finally, we have the you to view it shows you by jobs the green bars or GPU hours the Blue Line, you can see the dips and board when we have issues in our pastor.
+00:27:28 [W] For example, when cryo was down users could not download their job containers this in turn calls are you to drop?
+00:27:36 [W] Thank you for your
+00:27:41 [W] Or I can make I will now take questions.
+00:27:45 [W] Can you hear me?
+00:29:25 [W] Am I on?
+00:29:33 [W] Hi everyone.
+00:29:39 [W] Okay, so we have a few questions here.
+00:29:41 [W] um
+00:29:44 [W] Okay, let's see.
+00:29:48 [W] Can you hear me?
+00:30:02 [W] Am I on?
+00:30:02 [W] Hi everyone.
+00:30:03 [W] Okay, so we have a few questions here.
+00:30:03 [W] Okay, let's see.
+00:30:03 [W] Our the Griffon our dashboards available anywhere for folks to look at the ones I've shared here was done by us their custom dashboards.
+00:30:07 [W] But if you download the Prometheus operator mlperf comes with some predefined dashboards that you'll get out of the box, so you should be able to kind of install it and look at it.
+00:30:16 [W] No, can we use nsv scheduler?
+00:30:27 [W] Is it open source? Unfortunately not.
+00:30:28 [W] It is an internal scheduler that we are using within in media.
+00:30:32 [W] Sorry about that.
+00:30:33 [W] How is the GPU usage calculated for different applications running in the k8s so that there are surveys are satisfied.
+00:30:52 [W] So basically we are monitoring the actual utilization of the GPU.
+00:30:57 [W] So we have several profiling metrics that we grab we grab the percentage usage percentage active for the you GPU the percentage active of the tensor core. So while the job is running we are monitoring it.
+00:31:09 [W] Almost every second but we're connecting the metric at every 30 second rate. So engineer's can see that what rate they using the GPU add and optimize it.
+00:31:25 [W] How is the GPU usage calculated for different applications running in the k8s so that there are surveys are satisfied.
+00:31:34 [W] So basically we are monitoring the actual utilization of the GPU.
+00:31:34 [W] So we have several profiling metrics that we grab we grab the percentage usage percentage active for the you GPU the percentage active of the tensor course. So while the job
+00:31:36 [W] Is running we are monitoring it almost every second but we're collecting the metric at every 30 second rate.
+00:31:38 [W] So engineer's can see that what rate they using the GPU add and optimize it.
+00:31:38 [W] So it's really up to the engineers to kind of do the tuning we help guide them some of our senior mln janeers will help guide them how to tune it better but the application is really the one that needs to kind of
+00:31:40 [W] In is really the one that needs to kind of satisfy their own SLS.
+00:31:41 [W] Let's see. What else?
+00:31:43 [W] Okay, let's see if I have any more questions.
+00:32:05 [W] Can we wait a little while longer?
+00:32:28 [W] See if any more questions come in.
+00:32:31 [W] Okay. So let's see some medium level ones that are coming in.
+00:32:53 [W] So thus for the slide you guys can kind of download it just from the the you II think so.
+00:33:10 [W] Handouts widget below to download the slide deck.
+00:33:14 [W] So that's that.
+00:33:17 [W] Would you mind sharing okay?
+00:33:29 [W] And then you have a is GPU.
+00:33:36 [W] Okay, hold on. How is questions coming in?
+00:33:39 [W] How about if there happened anomaly and causes to use GPU more than the normal level I think that's more about just GPU usage
+00:33:54 [W] I'd lost a question.
+00:34:00 [W] Just a second.
+00:34:09 [W] So I mean that's really up to the engineers to kind of resolve those types of things.
+00:34:15 [W] We are just about setting up the scheduler to allow them to run their jobs, you know, they can get the resources but optimizing and tuning the application.
+00:34:25 [W] So I guess what you ask you if there's an infrastructure normally that potentially causes them to use.
+00:34:32 [W] You more than the normal level.
+00:34:34 [W] to level would be like they may not be able to mount this F5 all you moms or their data sources and then that is when we would step in and try to address that but if in terms of because they're in a
+00:34:56 [W] In the container, I don't you know, usually they have to tell us exactly how many gpus they want.
+00:35:08 [W] So they restricted to the number of gpus so they can't really use more than they're asking for.
+00:35:09 [W] I hope that answers your question.
+00:35:14 [W] I'm not I'm sorry if it doesn't answer it very well.
+00:35:23 [W] Okay, so this is why in flux TV wasn't honest enough to satisfy long-term storage at the time that we did it the first install that we did it Thanos was not quite there yet
+00:35:31 [W] Started like six months after we did the first implementation.
+00:35:41 [W] So at that time the industry most of the community was using in flux DB for the long-term retention from Prometheus.
+00:35:44 [W] So that's why we started with it. Then first baby and we did see scaling problems with it. So our second iteration that is second architecture that I shared with you has Tha nose in it.
+00:35:54 [W] It doesn't happen flux TV.
+00:35:59 [W] So we quickly upgrade it to Thanos as soon as as soon as it was ready.
+00:36:00 [W] Is GPU sharing talked into account taken into account in your chatbots GPU sharing is not yet taken into account in the
+00:36:19 [W] Just talking about GPU affinity and a scheduler.
+00:36:28 [W] We haven't really talked about GPU sharing as such between I assume you mean between multiple jobs by a team of users.
+00:36:36 [W] I think what we're going to do is in the next interview.
+00:36:40 [W] Next upgrade will be introducing some of those capabilities, but that's not in place yet.
+00:36:42 [W] So once it's there, then I'm sure the dashboards will be there for that.
+00:36:48 [W] They're not there right now.
+00:36:51 [W] Would it be possible to go granular that is to schedule to GPU cores and monitor many users and how they're using these cores.
+00:37:03 [W] How about scheduling?
+00:37:11 [W] Yeah, so we are trying to go more granular by splitting the GPU and you know schedule at the GPU. I mean, I think what the
+00:37:13 [W] way the design is I think this is public that we are gonna make it part of the Upstream in architecture for GPU sharing which is to spread the GPU, you know, and then the jobs will Define
+00:37:28 [W] More granular by splitting the GPU and you know schedule at the GPU.
+00:37:30 [W] I mean, I think what the way the design is, I think this is public that we're gonna make it part of the Upstream in architecture for GPU sharing which is to split the GPU, you know, and
+00:37:30 [W] Of those splits using and then the scheduler will also be supporting that so you should be able to do it at that level and once it's that is in place, then we'll be able to kind of monitor it as well.
+00:37:44 [W] So I hope that answers all the bits of your question.
+00:37:47 [W] Thank you all for joining. I think we'll be wrapping it up now.

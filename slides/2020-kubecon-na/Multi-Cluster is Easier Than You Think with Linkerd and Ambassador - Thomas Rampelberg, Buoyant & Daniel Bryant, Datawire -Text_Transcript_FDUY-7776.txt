@@ -1,0 +1,346 @@
+﻿Multi-Cluster is Easier Than You Think with Linkerd and Ambassador: FDUY-7776 - events@cncf.io - Thursday, November 19, 2020 2:56 PM - 41 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello kuchen, and welcome to multi cluster is easier than you think with linkerd E and Ambassador. We're going to be showing you how to multi cluster the easy way and at the end I'm going to give you a couple great use cases for multi cluster that you can go use on your
+00:00:15 [W] Before we get started.
+00:00:16 [W] Let me introduce my co-presenter Daniel Bryant Daniel.
+00:00:19 [W] Why don't you tell us a little bit about yourself?
+00:00:21 [W] Thanks Thomas.
+00:00:22 [W] Hello, everyone, Daniel Bryan product architect Ambassador Labs here working on the Ambassador API Gateway project for the past three or so years loving this technology, of course, loving linkerd e loving servicemeshcon General combination of Ambassador and linkerd E4 multicast or a super interesting. So looking forward to bringing you the demo today.
+00:00:39 [W] And my name is Thomas Rand Paul Berg.
+00:00:41 [W] a software engineer at buoyant the creators of linkerd EA cncf servicemeshcon.
+00:01:08 [W] Authentication rate-limiting request filters and Ambassador does an absolutely fantastic job of all of those.
+00:01:15 [W] It is open source, and I would recommend checking out their website to go and kick the tires on that if you've been looking for Ingress controller, I work on linkerd E, which is a servicemeshcon.
+00:01:26 [W] It is a ultra light Ultra fast Security First servicemeshcon kubernative you get observability reliability and security right out of the box, which is kind of all of the normal servicemeshcon.
+00:01:38 [W] Then you can imagine so let's talk a little bit about what we're going to go over to do multi cluster the easy way you really need to have four separate things.
+00:01:28 [W] You need to understand how service Discovery works and be able to discover Services across clusters.
+00:01:33 [W] You need to have cross cluster access.
+00:01:35 [W] You need to be able to get the requests from one cluster to the other you need to be able to Route the requests in an intelligent fashion and my favorite part of multi cluster the easy way is profit.
+00:01:47 [W] So to get started Daniel, why don't you give us a little bit of a sneak peek into the demo and everything that we're going to be working on here.
+00:01:57 [W] So welcome to the demo.
+00:01:58 [W] Let me start at the end.
+00:02:00 [W] This is actually what we're going to end up here.
+00:02:02 [W] You can see I've got a command line terminal showing a East kubenetes cluster.
+00:02:07 [W] This is a gke Keda lackluster running front end important for services and you can see I've got a local doctor desktop cluster down here on the context of West I'm again.
+00:02:17 [W] In front end and put him over here, but I'm also running a service mirror of porting info East.
+00:02:22 [W] So the podium vo East service in my local doctor desktop-class.
+00:02:26 [W] There was actually pointing to the gke cluster actually pointing to the mirrored service there and you can see I've exposed using Ambassador localhost onto the front end service running in my dacha desktop cluster.
+00:02:38 [W] And because I've got some traffic split setup using SMI, which I'll show you at the end.
+00:02:41 [W] You can see as I'm actually making the request.
+00:02:44 [W] And you can see I've got a local doctor desktop cluster down here on the context of West I'm again running front end and prodyna though here, but I'm also running a service mirror of porting fo East so the podium vo East service in my local doctor desktop-class. There is actually
+00:03:34 [W] sing West and East versions of poddisruptionbudgets
+00:04:03 [W] up your own
+00:04:05 [W] So for today's linkerd e an ambassador multi-class the demo I'm going to be using to kubernative clusters are spun up one already to save time in gke using the g-cloud command line tool as one that I've in the u.s. East region.
+00:04:18 [W] I'm going to be calling that cluster the East cluster.
+00:04:20 [W] That's my top right window here.
+00:04:22 [W] I've also spun up a local Docker desktop a cluster. That one's gonna be shown in the bottom right window here and I'm going to be running my commands against the Clusters using the different contexts of east and west and I'm gonna be running all the linkerd e commands and then
+00:04:34 [W] Master commands in my console on the left here these classes at the moment are both empty.
+00:04:40 [W] So let's pop along to the Kate's initializer and use this to bootstrap the Clusters.
+00:04:44 [W] This is a free tool you can install a bunch of stuff Ambassador for Ingress Prometheus monitoring Jaeger key.
+00:04:50 [W] click Argo CD Etc.
+00:04:52 [W] You can select the configuration and auto generate the JAMA land simply apply it to your cluster.
+00:04:56 [W] So for DACA desktop, for example, my West Gloucester. I select dock a desktop don't want to terminate TLS.
+00:05:01 [W] I can select more down here if I want but today let's keep it nice and simple I go review an install and how will our I get some kublr ply commands. I can run against my cluster and I've got some pre-configured commands.
+00:05:13 [W] I've done already because I want to put the context since I'm not going to be copying pasting from here, but this is exactly what I would I would do.
+00:05:19 [W] Let's go back and I'll show you with the gke one is exactly the same select.
+00:05:23 [W] Gke I'm going to be using an elf or load balancer don't want to terminate your lesson this toy example public hostname of star and I review an install.
+00:05:31 [W] And again, I just install that against my cluster.
+00:05:34 [W] Let's actually do that now with my pre-configured and cheat sheet.
+00:05:49 [W] First I'll run my watch commands on the kubenetes Clusters at the top here.
+00:05:55 [W] I'm going to be watching the East context are gke cluster. I'm looking for services in all namespaces. So as we add more things you'll see more services appear in here.
+00:06:06 [W] And in the bottom window, I'll do the same for the context of West my doctor desktop plaster. So you can see as I have more things here, right?
+00:06:14 [W] Let's install Ambassador in both clusters.
+00:06:16 [W] The East cluster node, um, we can see in the top window.
+00:06:13 [W] We've got our ambassador services in addition to our communities core services to let us now install Ambassador on Docker desktop.
+00:06:29 [W] Now we've installed in bastard on Docker desktop.
+00:06:32 [W] So we have our Ingress is set up in both clusters both the remote cluster gke and also local doctor desktop cluster. Let's now move on to the linkerd E multicolor setup.
+00:06:42 [W] The first thing we're going to do with our multi cluster set up with linkerd e is to create a shared trust anchor public private Keys between the two clusters that enables them to communicate securely.
+00:06:52 [W] going to use this step see like man, you could use openssl whatever you like and generate my certificates into my directory here.
+00:07:02 [W] Once that's done.
+00:07:03 [W] Let's run the linkerd E install command in both are clusters using a little bit of a cheat here to do both East and West at the same time and you'll notice on the windows on the right the as linkerd ESS toward you'll see some of the services popping up here.
+00:07:23 [W] Is ooh looking good. Now, you can see the linkerd E namespace and then get these Services both in my GTE class that and also my doctor desktop-class the down here.
+00:07:31 [W] Let's do a quick check on the linkerd E. Config.
+00:07:34 [W] The status checks look good.
+00:07:31 [W] There's one thing I do remember like about the linkerd EC a lie, you can run all the health checks and it presents everything in a very nice way. We can scroll up and down and look at all the various convict parameters and know everything is good.
+00:07:41 [W] Thanks Daniel. It is really cool to see what it takes to get Ambassador up running on not one cluster, but two clusters as well as linkerd e all set up and ready to go now for those of you who are hopefully going to be trying this out at home.
+00:07:55 [W] I would like to note that while it was it's going to be pretty quick for you.
+00:07:59 [W] Probably will be a little bit slower on your own clusters because I used a little bit of movie Magic there and spread everything up great.
+00:08:07 [W] So with every all of the components for Ambassador in the crew to set up let's talk a little bit about what's required and what all of those components do. So to get multi cluster up the easy way. The first thing to dig into is service discovery.
+00:08:23 [W] To talk a little bit about service Discovery though first.
+00:08:27 [W] let's go into what it means in kubernative use. So in kubernative I'm going to be using the Pod infoservice here as a example kubernative has a resource type called Services when a service is created
+00:08:42 [W] Ty namespace you get DNS for it automatically I've got that up here on the slide.
+00:08:31 [W] It's a pot info test SVC cluster local and the front-end app that I've got listed here can address pot in fo directly when it does that the DNS response from Cordia Nest returns a cluster IP.
+00:08:46 [W] That cluster IP gets Rewritten through the magic of kublr oxy and ends up directly at the Pod.
+00:08:40 [W] This is great.
+00:08:40 [W] It works out of the box kubernative is fantastic on service Discovery. But once we add another cluster, there's a little bit of a problem that we run into very specifically you can't out-of-the-box share resources between two kubernative clusters
+00:08:56 [W] Go and get the pot infoservice visible and addressable from the front-end app.
+00:08:58 [W] If the pot info is in the East cluster and front end is in the west cluster.
+00:09:02 [W] Well, very very very naively here's your answer Coop's ETL contacts East get the pot info.
+00:09:12 [W] Yeah Mel and pipe it into the West cluster.
+00:09:14 [W] That's pretty much all you really need to do. Now. There's a couple of downsides to this and is we're going to go into why we installed.
+00:09:22 [W] All the component to do this, but that moves the pot and full-service over to the West cluster from the East cluster. And now there's going to be DNS that can be addressed for front-end.
+00:09:33 [W] But as I'm sure some of you have already thought through one of the biggest problems there is that it isn't going to get updates if pot in fo was changed if it was deleted. You wouldn't get those notifications on West and so
+00:09:48 [W] T we introduced a controller kubernative has a controller patterns deployments are managed through controllers services are managed through controllers and those controllers basically watch the API server for resources.
+00:09:59 [W] Updated and then do something and so the linkerd E servicemeshcon watches the East clusters API server and when it sees pot in fo created deleted updated it goes and does that on the west cluster?
+00:10:03 [W] That's pretty much all it does the one important thing to point out here though.
+00:10:09 [W] is that it adds the East clusters name as a suffix to poddisruptionbudgets. Can you can directly address it?
+00:10:22 [W] Great. So all we've done is tackle service Discovery.
+00:10:29 [W] We're going to go into a little bit about how the cross cluster access works next.
+00:10:34 [W] But before we do that Daniel, why don't you give us a little bit of a demo on what it takes to install the service mirror with linkerd e on a cluster that's not a look at installing multi cluster and very much the same way.
+00:10:45 [W] This is a command will be running here.
+00:10:47 [W] I won't be installing the Gateway. You'll notice here install Gateway. It was false because we've already set up.
+00:10:52 [W] Ambassador and we're going to be using Ambassador as our Gateway.
+00:11:00 [W] With service Discovery set up we can now address services in the East cluster.
+00:11:06 [W] But how do we actually get packets to go over there to figure that out?
+00:11:11 [W] I'm chatting about it. And that is the end point resource.
+00:11:15 [W] The endpoint resource in kubernative is kind of like this yam all that.
+00:11:20 [W] I've got up here really just the pot IP addresses for a service.
+00:11:26 [W] So the endpoint controller watches services and takes the Pod selector from those Services goes and looks up the pods and adds IP addresses to an endpoint object for that.
+00:11:42 [W] Just like our service members sinking the services across we could just stop here and sink the Pod or the endpoint resource across the Clusters attach that to are mirrored surface and let everything go through.
+00:11:57 [W] Presents two problems problem number one is that pot IP address is would need to be routable between Cluster West and cluster East if you can imagine a multi-cloud scenario where you're running a kubernative cluster into different manage providers.
+00:12:04 [W] That would be pretty difficult possible. But pretty difficult the overlays configuration.
+00:12:02 [W] There would not be something I would want to do.
+00:12:04 [W] Perhaps the bigger problem though is bandwidth interestingly enough. The endpoints object here has all of the IP addresses for the pod infoservice in it.
+00:12:15 [W] So any time those are updated it'll get synced across from the East cluster to the West cluster. Not only is that going to chew up a bunch of bandwidth, but it will also have some issues around keeping.
+00:12:27 [W] Being everything up to date imagine a pot IP going away a nice cluster and not getting updated in the west cluster. You potentially could have some lost packets.
+00:12:36 [W] So what's the solution that we have to this problem?
+00:12:41 [W] Well, if you've been waiting the solution to this problem is actually Ambassador.
+00:12:47 [W] Why not use the same Ambassador that you've got already managing your Ingress for the multi cluster communication.
+00:12:56 [W] Ambassador already has a public IP address its routable from the West cluster.
+00:13:00 [W] There's no need to pay for an extra load balancer and it can manage the traffic for you as part of its production set up already.
+00:13:08 [W] So what do we need to do to get that all wired up?
+00:13:12 [W] Load balancer and stick that into the endpoints one thing to note here.
+00:13:15 [W] is that when the service member has since the pot infoservice from the East cluster to the West cluster it also removes the Pod selector to make sure that the built-in kubernative endpoint controller doesn't go and modify any endpoints for us pretty cool, right?
+00:13:32 [W] That's it.
+00:13:32 [W] Now all of our traffic from Front End can get correctly addressed to pot in fo - East and that will be forwarded by kubernative.
+00:13:42 [W] He's over to Ambassador, which will finally pass it on to the Pod info pods in the East cluster.
+00:13:49 [W] I'd like to have one note here really quick around the routing because all of this traffic is going over the greater internet security is pretty important.
+00:14:03 [W] Linkerd e provides empty LS out of the box for both sides because there's proxies on the front end West cluster and Ambassador East cluster that communication across the internet is encrypted because
+00:14:18 [W] Remember, it's the mutual part.
+00:14:18 [W] It's also authenticated.
+00:14:20 [W] And so the Ambassador only allows traffic from the West cluster or more specifically signed with the same a certificate signed with the same trust route into the cluster to get to poddisruptionbudgets.
+00:14:33 [W] Oh, your traffic is secure and access is also secured so you don't need to worry about the security there that said security is a amazingly deep deep deep dive and I've added a link to
+00:14:47 [W] this slide so that you can go and take a look and go into all the nitty-gritty details if that's something that you're interested in.
+00:14:55 [W] Fantastic, Daniel.
+00:14:57 [W] Can you show us what it takes to get Ambassador set up as a Gateway for all of this traffic in a multi cluster solution.
+00:15:05 [W] Looks good.
+00:15:06 [W] This is one of the most interesting patch here patching the gateway to it open ports and ambassador to allow linkerd e to talk through and sort of the to the mirrored services on either side of the cluster.
+00:15:20 [W] That all looks good.
+00:15:21 [W] You can see now lots of extra things are spinning up there. And also the timing is nudging the window a little bit to display slightly strange.
+00:15:36 [W] We'll just that check the rollout is working successfully his nice command line dare cheat we can use to do that.
+00:15:41 [W] Eli as well
+00:15:40 [W] I know just get all the linkerd e multitask the config.
+00:15:44 [W] Everything is looking good.
+00:15:44 [W] Everything's up and running here. And now I can link the two clusters with this command here.
+00:15:49 [W] You can see I use the linkerd E command here from the context of the East linking in the west and actually a kublr thing apply into the docker desktop cluster.
+00:16:00 [W] That all looks good.
+00:16:02 [W] Let's now run our checks.
+00:16:04 [W] Once again context West check multi cluster.
+00:16:10 [W] You notice here. We can I see the cluster East Gateway Ambassador Ambassador. That's our gke cluster is now configured linkerd e running in Dhaka desktop in the west cluster now access the Gateway of the G key cluster now to make the
+00:16:26 [W] I'll stop all namespaces. And when I switch to the test name space as we set up some services to play around with the servicemeshcon.
+00:16:22 [W] I still can't believe how easy it is to get Ambassador set up so that it works as a Gateway for multi cluster.
+00:16:30 [W] It's pretty awesome.
+00:16:31 [W] Thank you Daniel. Now that we've got the Gateway setup. We've figured out how to do service Discovery across clusters. We have showed how to get packets across securely and now let's talk a little bit about request. Wow.
+00:16:43 [W] adding and why that matters being able to address services and other clusters as cool as you'll see here were directly addressing pot in fo East but you know, what would be even cooler being able to shift the traffic over without needing to change code or even restarting anything
+00:16:58 [W] The cloud native dream after all so far. We have had a bit of a theme we have built on top of kubernative Primitives and only kubernative Primitives. And the reason for that is that the kubernative ecosystem can compose and build on top of those very
+00:17:01 [W] Ecosystem can compose and build on top of those very easily. We've used Services. We've used endpoints. We've used load balancers and we've used Ingress controllers. All of those are standard off-the-shelf components.
+00:17:06 [W] This is perhaps the first non standard component though.
+00:17:10 [W] It's part of the servicemeshcon turf Ace spec and what it does is allow us to split traffic and because all of our service mirroring is using Services all it does is split traffic between two services. So here in our
+00:17:24 [W] R-Spec we have said that any traffic addressed to potiphar should be split fifty percent to the pot infoservice on the west cluster because we're going to be talking about the West cluster here and 50% to the Pod info East service on the East cluster.
+00:17:39 [W] All you need to do is modify this kubernative resource and all the traffic coming out of the front end application addressed to pot in Pho will get split 50/50.
+00:17:51 [W] And this is how it ends up looking being able to modify the eventual destination of the traffic to pot in fo really opens up a bunch of interesting possibilities.
+00:18:00 [W] And because this is built on top of kubernative Primitives, it opens up the world outside of servicemeshcon and API gateways.
+00:18:10 [W] Daniel do you think you can install the front end and pot in fo services on your clusters in West and East and show us how the traffic splitting actually works in the real world?
+00:18:21 [W] What I'm doing is I'm just watching in the name space of test.
+00:18:24 [W] This is the East Coast that you can you cancel the top here and the bottom I'm again looking into the service and namespace.
+00:18:30 [W] I'm looking for services in the namespace test. But this is in my doc a desktop environment now, I'll run some simple script courtesy of the buoyant team too.
+00:18:40 [W] Go to the linkerd E gets hung up download some some services and example Services some of them based on pollen fo from Stephen Pradhan and some other simple apps as well, which we can use to demonstrate the servicemeshcon between Daka desktop-class that and the remote gke cluster
+00:18:55 [W] NT to install
+00:18:55 [W] with our deployment complete we can now see in both glasses. We have the front end service and the Pod infoservice the GTE class at the top here and then the doctor desktop last day and the bottom here.
+00:19:06 [W] Let's now expose a very simple mapping in the Ambassador Gateway just to map the prefix of / I'm exposing Docker desktop on localhost.
+00:19:16 [W] So localhost / at the root will now Matt's the front end service running in the test name space on port 8080.
+00:19:22 [W] Let's do that now.
+00:19:25 [W] now if I pop along to the
+00:19:28 [W] our browser and do localhost / o Allah we are now looking at the podium for the front end and put in fo Services running in my doc a desktop West local cluster all looks good.
+00:19:41 [W] Now, let's do some servicemeshcon. So I clear my terminal and I'll copy and paste in this command here.
+00:19:47 [W] I'll use the linkerd E.
+00:19:49 [W] multi cluster export service to add some annotations to my services. You can see I'm configuring the Gateway name as Ambassador and the Gateway namespaces as ambassador to this ovhcloud.
+00:19:57 [W] Riding the defaults of the linkerd E Gateway, but other than that, it's nice and straight forward hopefully and we should see in my dacha desktop cluster in the bottom right here.
+00:20:06 [W] To get the end points for the Pod info East running in my doctor desktop cluster and I can also get the Ambassador at Global local Global load balancer IP address as well and compare them and there you go.
+00:20:05 [W] You can see that the West part of the East service endpoint IP is equal to the Gateway IP in our East cluster.
+00:20:15 [W] So basically the docker desktop prodyna though East servicemeshcon Lon and at the Gateway of the gke cluster that
+00:20:23 [W] East cluster now running some traffic generation in the back end as part of the demo so you can do all the cool regular stuffy can be linkerd e you can get your stats to see what kind of latency and requests are going through.
+00:20:35 [W] You can also look at the actual you do a tap look at the traffic to which is quite nice.
+00:20:40 [W] You can see here. Also, I'll just pause this second TLS true. Although ambassadors are not running over TLS exposed in this toy example, because we've got our shared trust anchor we're of course encrypting traffic between the Clusters courtesy of linkerd E.
+00:20:53 [W] Is great to linkerd e command line is fantastic as is the dashboard for debugging poking around the services frequently find myself in there looking to make sure I've got my traffic config all set up correctly.
+00:21:03 [W] Now, I could simply expose the Pod info East Via my West Gate Way Varma West Ambassador, but make it more interesting and we're going to be using the SMI the servicemeshcon to face config to do some traffic split. So if you can see here,
+00:21:19 [W] I've got our shared trust anchor we have course encrypting traffic between the Clusters courtesy of linkerd e which is great to linkerd e command line is fantastic as is the dashboard for debugging poking around the services frequently find myself in there looking to make sure I've got my traffic
+00:22:02 [W] I am I doctor desktop cluster by traffic split up important for across the bottom photo that's running in the doctor desktop West cluster and I'm going to also split 50-50 to the pod in fo East service and that is going to mirror into the East based on the
+00:22:18 [W] But infoservice, let's apply this now all looks good. If I pop back to my browser and do a refresh or we're already seeing East perfect.
+00:22:29 [W] And there we go. He's West.
+00:22:31 [W] We have this is the next looks good.
+00:22:33 [W] How cool is that?
+00:22:35 [W] We've now gone through getting multi cluster set up the easy way and that's pretty much it.
+00:22:41 [W] We've shown what you need to do to get service Discovery so that you can see services from one cluster in another we've outlined what it takes to get cross cluster access and make it secure and we've shown everything you can use to do request routing. So the most important of
+00:22:56 [W] Is right now profit where we set back sit back in our chairs and talk about all of the amazing things that we've enabled with this.
+00:23:02 [W] So what have we enabled? Well, one of the most interesting use cases for me is cluster isolation.
+00:23:09 [W] Imagine that you're managing credit card numbers and that's a compliant environment that you need to have audited instead of having one big kubernative cluster that has everything in it you now can go and stick that into a very small cluster.
+00:23:24 [W] And make your auditor love you because they have a smaller surface area to check now.
+00:23:29 [W] You've got an insecure cluster that you can open up access to the rest of the company on and you don't need to go and put some crazy policies in place another use case for this is disaster recovery.
+00:23:40 [W] Imagine a very important service failing the front end can now get automatically redirected to your backup cluster or perhaps more interesting the backup cluster can be tested with real traffic.
+00:23:54 [W] During normal operation. So instead of having to hope and pray that your backup cluster is going to work you can go and test your Disaster Recovery during the day at any time that you want.
+00:24:03 [W] Perhaps the most exciting use case for me though is development.
+00:24:09 [W] I know we're virtual so I can't see anybody's hands raised but I'm going to raise my hand how many of us have worked on microservices and had it get to the point where it doesn't fit on your laptop anymore.
+00:24:19 [W] It slows my laptop down and it's a pain in the butt to use you can use this multi cluster go have a shared cluster now. So any Services you're not actively working on just go use them in a remote shared cluster and you can work on your service locally,
+00:24:29 [W] I need so that's everything that we've got for multi cluster.
+00:24:22 [W] Just a couple more slides here to talk about first off.
+00:24:26 [W] I'd like to introduce the linkerd E Community anchor program.
+00:24:30 [W] We really like to get the community involved and especially if you're using Ambassador and linkerd E.
+00:24:36 [W] We would love to know about it.
+00:24:37 [W] So jump onto that link down at the bottom of the slide if you're interested in becoming a cloud native expert and getting a little bit of help from us to tell your story.
+00:24:47 [W] re
+00:24:49 [W] Also join both of our communities. I've got links to our GitHub and slack accounts Daniel and I both are slack junkies and are sitting around waiting for your questions with bated breath.
+00:25:02 [W] So please dive into those and then finally here are links to everything that we've gone through so far today, I would really love to see everyone here go through the tutorials deep Dives and get up and
+00:25:17 [W] Cluster on your own clusters.
+00:25:17 [W] Thank you so much and have a great rest of your coupon.
+00:25:29 [W] Hello, everyone there folks move.
+00:25:34 [W] We have lots of great questions to whatever that's seen you answering a bunch of them in there.
+00:25:38 [W] Should we run through some of the highlights?
+00:25:40 [W] Yeah.
+00:25:41 [W] Why don't you get started pick one? So lonely ones are asking about performance Thomas.
+00:25:47 [W] I know you've mentioned that the key thing is if you are hopping across networks coming up hopping across clusters DS there is going to be latency issues.
+00:25:56 [W] They're just worth bearing in mind but the failover scenario that you talked about Thomas has a use case that's usually perfectly acceptable. The normal case is going to be in
+00:26:04 [W] Cluster, but then you might fail over to the other cluster. For example.
+00:26:10 [W] And it's important to call out that because that link latency is there you're going to really want to think through all of your slos and retries and timeouts because you'll you know, if you're jumping across the u.s.
+00:26:24 [W] You're going to automatically add fifty to a hundred milliseconds right there.
+00:26:28 [W] And so it's pretty important to plan that out.
+00:26:30 [W] But from the like Ambassador in liquidy side, you're probably P99 not going to get more than one or two milliseconds of latency because we've got a couple extra hop
+00:26:39 [W] in there
+00:26:41 [W] Very nice.
+00:26:42 [W] Very nice.
+00:26:42 [W] Very nice.
+00:26:42 [W] To select the services to mirror and someone mentioned about it's not happening automatically.
+00:26:37 [W] That's a deliberate choice.
+00:26:38 [W] We're adding an annotation to expose only certain Services the ones we want to mirror and explicitly call them out.
+00:26:45 [W] out. So it is happening automatically in the background as soon as we add the label to our Padre want to mirror
+00:26:52 [W] Hmm. And again, that was once you add The annotation on the remote service, it will get mirrored to everything that's are automatically connected.
+00:27:02 [W] And so you just get to pick what shows up in the other cluster so that if you know someone accidentally connects and has a thousand Services, your cluster doesn't have any negative performance issues.
+00:27:14 [W] actually kind of leads into Sanjay's question here, which is could you elaborate on Multi cluster communication when pods are restarting?
+00:27:21 [W] On one of the Clusters.
+00:27:24 [W] This is actually one of the architectural decisions that we made when building the solution out. And the reason for that is if you just synched all of the endpoints for all of the pods across the cluster you would have bandwidth issues you'd
+00:27:39 [W] In Tucson Jays question here, which is could you elaborate on Multi cluster communication when pods are restarting frequently on one of the Clusters.
+00:27:33 [W] This is actually one of the architectural decisions that we made when building the solution out. And the reason for that is if you just synched all of the endpoints for all of the pods across the cluster you would have
+00:28:03 [W] Is more importantly you could imagine one cluster deos another cluster from the IP tables could proxy perspective because there's only one IP the Ambassador load balancer IP.
+00:28:17 [W] You can cycle through pods and another cluster infinitely and you won't have any performance implications there.
+00:28:26 [W] Another ancient E1 lots of folks are saying two combinations of different Technologies. I want to call it one in particular around Ambassador using Envoy and then kadhi the own proxy that is not a problem that the to play happily.
+00:28:37 [W] This is the beauty of the cloud native space everything works very nicely together and in particular with the TLs or the empty less thing being discussed Ambassador in in the examples. We showed is not terminating TLS link dear.
+00:28:52 [W] Then you actually mentioned this Thomas linkerd is doing all the TLs in this case.
+00:28:57 [W] I'm Grisha. Just ask the question. Can Ambassador be exposed to have a private IP hundred percent.
+00:29:03 [W] It just needs to be routable between two clusters.
+00:29:05 [W] So if you've got a VPC setup or something like that, you can totally do it.
+00:29:09 [W] I know a couple folks that use internal AWS load balancers for that and so a hundred percent you can do that Dennis to answer your question, which is is it possible to use multi cluster with service traffic other than http.
+00:29:24 [W] It is not
+00:29:25 [W] Those two have a private IP hundred percent.
+00:29:28 [W] It just needs to be routable between two clusters.
+00:29:30 [W] So if you've got a VPC setup or something like that, you can totally do it.
+00:29:34 [W] I know a couple folks that use internal AWS load balancers for that and so a hundred percent you can do that Dennis to answer your question, which is is it possible to use multi cluster with service traffic other than HTTP it
+00:30:15 [W] If everything works out Conrad are there plans for better generalization of nginx and Ambassador with linkerd e so it's a bit more pluggable.
+00:30:24 [W] It's super pluggable.
+00:30:27 [W] We've only written docs for linkerd e and Ambassador, I would love it if y'all could go write some doc's on traffic or glue or one of the other really great Ingress controllers that are out there.
+00:30:42 [W] I happen to love Ambassador a whole ton and I have been doing nginx for too long and so nginx config is what I dream when I go to bed.
+00:30:53 [W] Nice Stanley.
+00:30:57 [W] Why would you choose to use a different service name pot in fo East instead of the original you don't have to if you use traffic splits the way that you saw us doing the demo, you can choose whatever name you want.
+00:31:08 [W] The reason why we make the automatic mirror explicit is so that there is an explicit way to forward traffic to that and we don't accidentally step on anything.
+00:31:16 [W] imagine a mirror automatically happening behind the scenes for cluster that's already running poddisruptionbudgets.
+00:31:23 [W] Fo you could imagine that blowing things up really quickly.
+00:31:26 [W] So this is all about being really slow and incremental as adding things in.
+00:31:33 [W] To answer your question Frank.
+00:31:34 [W] Yes, you can use linkerd e alone the way that you do that is we've got a Gateway bundled from nginx. The reason why you would use Ambassador is that you get down to a single Ingress controller, which is pretty great more importantly Ambassador gives you all of the totally awesome
+00:31:50 [W] there
+00:31:49 [W] Chase Thomas.
+00:31:50 [W] I see some folks asking around stateful back ends.
+00:31:53 [W] Be careful with the latency is what I'd say on this if you are going to do these kind of things because particularly I've had problems we know in the past when I'm sending a large amount of data over the wire as Thomas mentioned up front just the speed light gets in the way the network Hops and so forth.
+00:32:07 [W] So be careful with using data from technology I'd say
+00:32:12 [W] David asked a question how this works within Point slices?
+00:32:15 [W] I've not tested it. So tested it. So in linkerd E 2.9. We landed support for endpoint slices and service topologies which as you can imagine a service topology with multi cluster is super exciting.
+00:32:27 [W] I haven't tested it would love it if you went and tested it and told us how it worked.
+00:32:32 [W] It would be easy to go and get that work folded into the 210 release as part of all the rest of that if you know you wanted to go check that out.
+00:32:42 [W] Ranana, you've got a question about what the sorry go for it.
+00:32:46 [W] I think we actually go to the same questions.
+00:32:48 [W] I was going to the limit on the number of customers that can be connected.
+00:32:51 [W] That is an interesting question.
+00:32:52 [W] Yeah, so I'll admit I've only tested it up to 10 or 15.
+00:32:57 [W] Theoretically the limits probably over a thousand what you're going to run into is the number of watches that can be running as part of client go and so the limitation there is going to be client go.
+00:33:10 [W] Not actually anything in the architecture itself.
+00:33:13 [W] It can be running as part of client go and so the limitation there is going to be client go not actually anything in the architecture itself.
+00:33:24 [W] Questions are coming in thick and fast, don't they?
+00:33:27 [W] Seriously before the TOC ends.
+00:33:32 [W] I'll just put in this as well.
+00:33:33 [W] I'm hanging out in the cncf slack in all of the slack for rooms and would love to answer questions afterwards for any questions that you've got.
+00:33:42 [W] So if you ask a question and you didn't get an answer jump on into slack and we can answer their when the talk is over, but we still got time. So I'm scrolling through the questions to find something here.
+00:33:55 [W] Is it interesting question about case for local development?
+00:33:58 [W] So I think John's asking you to perhaps elaborates back on that love the use case for local development how might you handle cases where one service and the sheriff Buster needs to connect back into local.
+00:34:07 [W] Can I do a subtle purple telepresence cncf project that Ambassador lab Steward telepresence some do that use S as well, and I'm sure you can use some clever stuff with linkerd e but there's often lots of options to solve your problem there.
+00:34:19 [W] Yep, in fact telepresence is probably the best solution when you've got a shared cluster like that the multi cluster support in linkerd E really kind of assumes that everything is getting routed between them and telepresence will allow you to be a little bit more
+00:34:35 [W] About what the shared cluster routes back for you. Yeah, that's why I'm often using sort of like debugging on what using telepresence and that use case a good question jump.
+00:34:48 [W] And yes, you could duel mirror with to public clusters and Global DNS load balancing between them so that the Clusters mirror each other a hundred percent. You could do that Harvey your question is do you know if the setup is used in production anywhere?
+00:35:02 [W] I do know of a couple production users as this is somewhat recent support.
+00:35:07 [W] I don't know of any massive installs, but it's definitely being used in production.
+00:35:16 [W] There's a question here.
+00:35:18 [W] What if the second cluster goes down does Ambassador take care of Health the other cluster the service me R inside of your local cluster with linkerd e is doing a Readiness check on the remote cluster.
+00:35:30 [W] And so if the remote cluster goes down the end point gets removed and you'll get basically circuit breaker failing fast kind of stuff.
+00:35:39 [W] We've got a question here.
+00:35:42 [W] Do you remember recommend using linkerd E4 microservices talking?
+00:35:45 [W] Okay RPS.
+00:35:46 [W] Yes though at a hundred K RP s obviously you're going to have a bunch of PODS doing that for something like multi cluster.
+00:35:55 [W] kind of traffic
+00:35:52 [W] It's one question. Conrad's got a trench mocking servicemeshcon.
+00:36:21 [W] Marking tooling that they used to pull that up.
+00:36:25 [W] So I would recommend them as well though.
+00:36:26 [W] measure e is a really great opportunity there.
+00:36:32 [W] Another one engine to tell my space.
+00:36:33 [W] Can you compare the local development use case the scaffold what I'd say is they actually work in harmony scaffold is really good for doing builds and automatically deploying I often use in combination with things like telepresence as well scaffolds are really nice tool chain for Dev and for ci/cd,
+00:36:49 [W] Is a really great opportunity there.
+00:36:50 [W] Another one is you tell my space.
+00:36:52 [W] Can you compare the local development use case to scaffold? What I'd say is they actually work in harmony scaffold is really good for doing builds and automatically deploying I often use it in combination with things like telepresence as well.
+00:37:03 [W] scaffolds.
+00:37:04 [W] got a really nice tool chain for Dev and for ci/cd but as far as I'm concerned unless you could get scaffold to be very complimentary to the linkerd E multicast use case.
+00:37:14 [W] Yeah, you kind of need to look at it exactly right as the difference between linkerd e is going to manage the connectivity.
+00:37:20 [W] And scaffold is going to go and run your pod specs for you and make sure that your images get updated John's got a question about the mpls, which is another one.
+00:37:31 [W] So there is a little bit of magic that we do on the mpls side where Ambassador will get the TLs connections for anything that requires a TLS cert linkerd e looks for
+00:37:47 [W] On your pod specs for you and make sure that your images get updated John's got a question about the mpls, which is another one.
+00:37:54 [W] So there is a little bit of magic that we do on the mpls side where Ambassador will get the TLs connections for anything that requires a TLS cert linkerd e looks for
+00:38:27 [W] PLS certs that it generates and goes and terminates that TLS if that is what's coming through and so if it is a linkerd e proxy on the client side, the server will terminate the mpls and then pass it
+00:38:42 [W] Ambassador if it is a public cert that linkerd he doesn't know anything about it. Just passes it right on back to Ambassador in the normal thing happens there.
+00:38:52 [W] Grisha asked. Is there any additional configuration from Gateway East to poddisruptionbudgets track configuration? You just export the service and that's pretty much it. Then you get to pick the name that you want through traffic
+00:39:07 [W] And you're good to go.
+00:39:16 [W] I think we've pretty much gone through until I set my tamale.
+00:39:20 [W] oof
+00:39:22 [W] It's questions.
+00:39:23 [W] I can't make it so I can't stop talking for a couple minutes, but it will definitely share The Links at the end of the presentation Thomas on the sax.
+00:39:33 [W] It's a lot of folks are asking for GitHub link.
+00:39:34 [W] Yes, and a totally understands ID type a lot of commands there but we've got it all sketched out for you and we can definitely give you links to I think they'll be really useful for folks.
+00:39:52 [W] Other than that, I think we're almost ready to wrap up boy.
+00:39:55 [W] I think you're right Logan. Just ask the question. How does the linkerd E dashboard work with multi cluster?
+00:40:04 [W] They're separate at the moment.
+00:40:06 [W] There's nothing special there.
+00:40:08 [W] I will pitch the buoyant product though.
+00:40:13 [W] It's called Point cloud and that is a multi cluster view that you would get but it's going to look at it a little bit differently than the linkerd E dashboard.
+00:40:21 [W] I would recommend that if you want a view of all of your clusters that single pane of glass for all of your workloads and all of your clusters.
+00:40:29 [W] I think you're right Logan. Just ask the question. How does the linkerd E dashboard work with multi cluster?
+00:40:35 [W] They're separate at the moment.
+00:40:36 [W] There's nothing special there.
+00:40:39 [W] I will pitch the buoyant product though.
+00:40:43 [W] It's called Point cloud and that is a multi cluster view that you would get but it's going to look at it a little bit differently than the linkerd E dashboard and I would recommend that if you want a view of all of your clusters that sysdig.
+00:40:56 [W] single pane of glass for all of your workloads and all of your clusters
+00:41:06 [W] Alex that we are getting hooked off a stationary Thomas this is the continue the conversation on the operations channel on slack. So see everyone there.
+00:41:15 [W] Awesome.
+00:41:16 [W] Thank you.
+00:41:17 [W] Everybody.
+00:41:17 [W] Have a great rest.
+00:41:18 [W] You can cram.
+00:41:18 [W] Yeah.
+00:41:19 [W] Thanks everyone. See you later.

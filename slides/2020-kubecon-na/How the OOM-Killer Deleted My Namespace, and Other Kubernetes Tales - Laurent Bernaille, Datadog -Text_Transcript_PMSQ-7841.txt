@@ -1,0 +1,231 @@
+﻿How the OOM-Killer Deleted My Namespace, and Other Kubernetes Tales: PMSQ-7841 - events@cncf.io - Thursday, November 19, 2020 4:52 PM - 32 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello everyone.
+00:00:00 [W] I'm very happy to virtually present today.
+00:00:03 [W] I'd rather be in the same room as you are, but we can do that. Hopefully next year.
+00:00:09 [W] And so first of all, let me introduce myself and looking back now.
+00:00:15 [W] And I work on kubernative stomachs. Mostly and today. I'm going to share a few stories of incident we had from which we learned a lot and I'm going to share what we learned during this incidents.
+00:00:32 [W] In case you don't know datadog where assets based monitoring company, I gave some figures on the left hand side of the slide.
+00:00:40 [W] But today we're not going to talk about datadog the product. We're going to talk about our infrastructure and to give you an idea because it is what will matter today.
+00:00:50 [W] We're running dozens of Kuma this gesture some of them up to four thousand nodes and we have tens of thousands of node, and we're going pretty fast.
+00:01:02 [W] In terms of context, we shared a few stories about migration to kubernative over the last two years and I give some examples there and what has changed in the meantime is our infrastructure as kept
+00:01:17 [W] And it's getting bigger and we found new scalability issues and also much more complex problems.
+00:01:25 [W] And doing this we Face a lot of issues. And and today I've picked a 3D current incidents that I personally like for different reasons.
+00:01:36 [W] And the first one is actually the title of this talk and and we're going to talk about this incident because it's interesting how interaction between different components made this very surprising Heaven happen.
+00:01:52 [W] So this incident started when an engineer reached out to us and told us well my name space and everything you need is gone.
+00:02:00 [W] Of course. The first thing we did is help the team recover and redeploy everything but then we wanted to understand what had happened, right?
+00:02:11 [W] So we started investigation. And the first thing we did is look at audit logs to see what happened. And of course we found a lot of deletion calls for every single thing in the namespace right from replica says to events and deployments.
+00:02:27 [W] And of course this was matching perfectly the issue the engineer has seen.
+00:02:34 [W] However, we didn't see the delete namespace called.
+00:02:38 [W] So the initial call that should have triggered this events.
+00:02:41 [W] And of course the question became why was the namespace deleted?
+00:02:47 [W] So we're looking at other slugs and we couldn't find anything and we're zooming out coming out looking at ovhcloud namespace and after zooming out enough we discover David kalon the namespace for days before.
+00:03:02 [W] The one I liked it there. So this is when the namespace was successfully deleted. However, this successful in in space division happened and the 13th when the did the resource efficient happened four days later.
+00:03:17 [W] So, of course, we reached out to the engineer that did the lead goal and we're like, why did you delete the namespace or happens?
+00:03:26 [W] And you told us well, I didn't intend any space. So it was all very weird and we started discussing and he explained to her that he was migrating to a new deployment method. So let's take a look at how deployments work at data work.
+00:03:42 [W] The V1 version of our deployment methods is the one on this slide where Engineers with modify the charts. It would go to see I we would create a rounded shot with everything in it and at a later time and another engineer would trigger
+00:03:58 [W] Deployments are using Spinnaker that would retrieve the run the chart and use qtl prior to apply to the culture.
+00:04:04 [W] Okay straight forward this was working fine, but we were trying to make things better and we decided to move to a new version that is described here where all the first part is the same but at the end
+00:04:19 [W] The to deploy to the cluster we are using handed grade instead of cube City loci.
+00:04:25 [W] it looks very similar, right, but there's a difference.
+00:04:30 [W] If you use the first method and you have a chart with three resources a b and c and you create a new version of this chart with new versions of B and C.
+00:04:40 [W] And where you remove a when you do keeps it apply b and c will be a date of course, but a will remain because keeps its yellow won't delete it.
+00:04:51 [W] However, when you use Helm great Helm is keeping track of the resources deployed. So it's going to see that a is not there anymore and it will remove it.
+00:05:03 [W] So that's a big difference right? If you remove something from your child. It's not gonna be in the cluster anymore.
+00:05:09 [W] And so what happened here is the chart was affected and the namespace was moved out of the chart.
+00:05:16 [W] And so when the chatbots be applied using Helm the namespace West he did.
+00:05:21 [W] did. So now we understand why the name says was deleted. But what was very surprising was why did it take four days?
+00:05:30 [W] So to understand what happens what happens we had to look at the name space controller code and here on this slide. You can see the function responsible for handling the delete namespace called and this function is
+00:05:45 [W] Is made of two important parts. The first part is getting all the resources in the namespace all the available resources and the second part is iterating over all this APA resources and deleting them pretty simple, right?
+00:06:00 [W] Let's zoom on the Discover all API resources parts.
+00:06:05 [W] If you look at this, this is how the name space controller discover all the API resources that are Mainstays and if you can see the path I highlighted there you can see that if the discovery call fails then
+00:06:20 [W] The function immediately returns, which means if you can discover all resources in the cluster that containerd limb says won't be deleted.
+00:06:29 [W] Note that this Behavior has changed increment as 116 but this is what happened there.
+00:06:37 [W] When we saw that we look at the code from the controller manager where the name space controller is running and in the logs, we so many occurrences of this line that says I'm in able to retrieve the complete list of a pi server apis
+00:06:53 [W] Because this one is not answering and the metrics one.
+00:06:56 [W] So the problem with this log that that make that makes it a bit hard to to pass is that there's no context.
+00:07:04 [W] You don't know that this log is coming from the name space controller. So it's hard to Lucas incidents.
+00:07:09 [W] now that we know that this is the error from the discovery call and we have potential likely codes The Matrix API.
+00:07:19 [W] So let's talk about the Matrix API.
+00:07:22 [W] So if you're familiar with kubernative, you've probably heard about metric server Network server is an additional controller provide providing metrics about nodes and birds and so you can do cute little tip for instance or use
+00:07:37 [W] horizontal but the scaling and it registers an API service, which is an additional set of Kudo CP is and in that case Matrix API, and it's managed by an external controller and when
+00:07:52 [W] These API service is registered to pieces of information.
+00:07:56 [W] I provided the additional apis you providing and where to forward this API call in that case the metrics that were controller in the keeps extending space.
+00:08:06 [W] So let's go back to the series of advanced so far on the Family's search engines. The namespace was deleted in the next four days namespace controller failed to list resources and and
+00:08:22 [W] As a consequence didn't didn't delete the content of the namespace and then something happened on the 17th that and blocked the namespace controller and then everything with the video.
+00:08:35 [W] So we look at events and network server and we discover that on these dates.
+00:08:40 [W] The metric server was umm killed and it was started and afterwards it was working fine and everything wasn't locked and everything was defeated.
+00:08:48 [W] So the next question was but why was metric 7 failing?
+00:08:53 [W] So Congress and this we need to look at how metric server is deployed in a setup.
+00:08:58 [W] setup. So Matrix ever is using assets three kids, so to verify its identity and
+00:09:05 [W] Have to rotate the settlement date and we use a sidecar to generate a certificate on a regular basis and Signal Network server to reload.
+00:09:13 [W] So that was completely fine.
+00:09:15 [W] But it requires a specific Windows feature, which is called s***.
+00:09:19 [W] It's namespace. So the sidecar can actually find matrix Amber and for this feature to work you need to think you need to modify the speck of your pad that you also need feature Gates on the API server and most importantly for our example.
+00:09:35 [W] here on the cupid
+00:09:38 [W] In terms of how metrics ever was deployed.
+00:09:40 [W] It was running on a set of nodes where we run all our controllers and this was working completely fine, except it wasn't exactly like this.
+00:09:49 [W] Looking like this.
+00:09:51 [W] So what I want to highlight in this new diagram if that knows where the difference we had recent notes where the feature get was enabled and old nodes where the feature get was missing.
+00:10:03 [W] So when we deploy metrics ever it had been deployed on a new node and everything was fine.
+00:10:08 [W] And at one point it was rescheduled on an old mode and sing something fairly because the sidecar wasn't able to Signal metric serverless.
+00:10:17 [W] For example, didn't follow its that silicate and then
+00:10:19 [W] When they Pi server was failing to contact it.
+00:10:24 [W] So here is the overall sequence of events some time before the 13th metrics ever was rescheduled on a node node and Discovery calls failed and after being umm killed it picked up
+00:10:39 [W] Every since it's figured that the sidecar are generated from this and everything was working fine again, and in our case was a bad thing because when everything started working fine again, everything was defeated.
+00:10:52 [W] So key takeaway it be a separate extensions are great because you can extend your API your computer search have new apis and but they can be tricky Ethiopia is not used very much.
+00:11:05 [W] extensions can be done for days without any any back, right? However, some controllers rely this API to be available to work properly and can trigger issues.
+00:11:18 [W] In addition the communication between the API server and apix services is tricky to do write in terms of security. And if you're interested, I really invite you to go and see this talk by Tabitha a colleague of mine where you
+00:11:33 [W] And a lot of out TLS and API service extensions.
+00:11:39 [W] So we're not going to talk about a very different incidents and I really like this one because it's a low-level bug that also involve networking which I tend to like quite a bit.
+00:11:54 [W] So
+00:11:56 [W] likely incident on the app engine staging but it's still interesting.
+00:12:00 [W] So we're sharing what we learn from it.
+00:12:02 [W] So we run our and nodes in communities and to do that course, we have to build images and an engineer on the team pushed a small change and when we're testing this new image, we noted that nodes were becoming
+00:12:17 [W] projector a few days
+00:12:20 [W] and what was weird is that change was in? No way related to the cubed or the runtime, but of course the nodes were not working so we couldn't promote the production.
+00:12:32 [W] So we started investigation and the simplest thing to do was to describe the node and we can see this message here where the kubelet was not ready because the containerd runtime was down.
+00:12:45 [W] Containerd runtime is down.
+00:12:46 [W] Well, we use containerd e at the runtime. And so the first thing we did is check if containerd it was working properly and services. Yell seem to say well yeah containerd is working fine.
+00:12:59 [W] So we went back to the cutest dogs, and we found this line that were interesting especially the one I liked it at the in the middle of the slide status from runtime service fails, so we wondered maybe we can use ci/cd
+00:13:14 [W] No to do this that to school it turns out there is a city is set right method to do that.
+00:13:20 [W] And and so we wanted to do it with our eyes TL. There's no ci/cd l status sub-command.
+00:13:27 [W] However, there is an info concept command that looks very close.
+00:13:31 [W] And so we check in the code and if you call ci/cd have info it actually invokes the status sir, I method.
+00:13:41 [W] And look we did ci/cd our info and everything was completely blocked.
+00:13:47 [W] So now we know that there was an issue with a big debate was right.
+00:13:52 [W] So we looked at the code of the status function in containerd E and it doesn't do much except invoking this function here that plug-in that status. So while the next step was to look at this function.
+00:14:07 [W] This function is not really doing much as you can see.
+00:14:11 [W] It's basically the refining that you successfully passed cni-genie.
+00:14:37 [W] Six we have luck attempt.
+00:14:40 [W] We have something that hangs we have a luck. Could this be related?
+00:14:45 [W] So what we did next is take a dump of all the routines from containerd G to find blocked ones and we found quite a lot of them and as you can see here, all these collections are block trying to acquire a lock.
+00:15:01 [W] And there's a different one every two minutes which is interesting because the errors were singing the kubelet. We're also happening every two minutes.
+00:15:10 [W] And if we look at the stack Trace from one of them we can see that the lines much exactly what we're looking at before in the code. So it's exactly the problem, right but look is the problem.
+00:15:23 [W] So it's definitely seems scenario related now. So let's bypass containerd e and the kubelet and see if we can reproduce more simply.
+00:15:32 [W] So what we did is we simply creating a network name space and use these very convenient tool cni-genie.
+00:15:54 [W] The Next Step was we tried to delete the network name space and this completely booked to so we actually add identified at that point that the vehicle was a problem and
+00:16:09 [W] After doing that we looked at the process tree and we found this comment here that had been blocked for quite some time.
+00:16:19 [W] So let's talk about how we do cni-genie this cluster.
+00:16:24 [W] We use the lift Chennai plug-in, which we've been extremely happy with and the delete calls for else for a one of the plug-in and numbered PDP here and why we did is we
+00:16:39 [W] What if I'd the code of this plug-in to add additional logs and after a few tests, we tried the problem to this call this call here.
+00:16:47 [W] And what's weird is this is a call from the net linkerd very so a low-level netting library. Is that code from the list and I plug-in so we went to the netiq repo to look for Clues.
+00:17:02 [W] and we found this pull request where it actually says that this function specifically doesn't work for kennel for 20 and needed to be fixed and I really want to send to thank Daniel Bergman for finding the problem with Jessa Gates because
+00:17:18 [W] After updating the net think library and I'll see you know plug in everything started working perfectly. Okay again,
+00:17:26 [W] So as a summary of what happened here is well.
+00:17:30 [W] We got a good Packer to use the latest we do 1804 and at one point the latest going to change from candle for 15 25.4. And as with just thin we had an issue with can live for 20 and the reason
+00:17:46 [W] The behavior was so weird and it took us two days for things to break was it was a test cluster and this book only happened on per division. So you need to put to delete it to actually trigger it.
+00:17:59 [W] so key takeaways from this incident is we tend to consider nodes as abstract compute resources, but we need to remember that no doubt actually instances where you have a kernel distribution hardware and all these things can hell and also remember
+00:18:14 [W] But that error messages can be pretty misleading here. We have the logs in the kibbutz.
+00:18:19 [W] We're saying that the runtime was down when actually only sell parts of the runtime ways was down it was hard to diagnose.
+00:18:28 [W] We're not getting to the last story.
+00:18:31 [W] I want to share with you today.
+00:18:32 [W] And this one you're going to say it's very straightforward in terms of what happens. However, we learned quite a lot from it and I want to share that with you.
+00:18:43 [W] So the prime started with you the reporting connectivity issues to a cluster and when we checks API server, they were not doing very well.
+00:18:53 [W] So anyway, we're not doing very well because well they were restarting they couldn't reach at CD. So the next step was well, let's look at Ed CD.
+00:19:03 [W] And well as you can see from this graph here memory usage Etsy wasn't doing very well either it was even getting home killed, which is not a great thing for HD, right?
+00:19:14 [W] So what we know to stop the investigation is well, the cluster size is basically the same as it was a week before we haven't done any upgrades to control plane.
+00:19:26 [W] So it's very likely that something changed in the cluster and especially something that interacts with the API. Circleci.
+00:19:35 [W] So let's look at the number of requests via API several our serving and if we look at this graph here, we can see spikes of requests at the time of the incident and especially spike in list calls.
+00:19:47 [W] So we're now going to talk about least call because least calls are very expensive.
+00:19:54 [W] So to understand why the other expensive we need to understand how a pi server caching works.
+00:20:04 [W] So a pi server to make it very simple our big gashes in front of that City and when they start they list resources and they start watching this resources to update the cache.
+00:20:16 [W] So that's pretty simple, right and then when client want to access the API servers they can do get all these calls and what is very important here as you're going to see in the next few slides is when you get
+00:20:31 [W] So least a resource. Ideally you say which recent version you want because every single resource in kubenetes as a resource version and this allows you to get a consistent version.
+00:20:44 [W] I mean, which other apis are you connect to you to specify a critical resource version? You're going to get the same answer.
+00:20:50 [W] And also if you do an update you specify the resource version you want to update which prevent conflicts when two processes want to update the same resource, right? Because if the resource has changed your update called with will fail and you will get
+00:21:05 [W] Error that you've probably already seen that says resource version too old and then you have to retry.
+00:21:11 [W] And so if you do a get a list and set risk aversion to something you'll get this reaction from the cache of the API server.
+00:21:18 [W] There is a specific case where you said reservation to zero which will give you the latest version from the cache.
+00:21:26 [W] However
+00:21:28 [W] What about when you're not setting a resource version in that case?
+00:21:33 [W] it is ever completely bypass the cache and actually gets data directly from its CD.
+00:21:41 [W] and the reason it does that is because since units be saying anything you're getting the most consistent data you can get
+00:21:49 [W] and what's important is this is the behavior you you have when you use Cube CTL get that it's also the default Behavior you get when you use client go the default Library used to make a used to make a comment as clients.
+00:22:06 [W] It's going to be exactly the same.
+00:22:10 [W] So let's illustrate the difference.
+00:22:14 [W] So either we're saying a cute yel is only is never setting resource version.
+00:22:20 [W] So we have to use skill.
+00:22:21 [W] And in this example, I'm getting all the birds in the cluster in the first example and the setting a resource version and it takes more than four seconds. And in the second case when I'm selling resource version equals zero, it's much faster like all almost three times faster.
+00:22:38 [W] I did this test on a pretty large cluster which explained why it's taking so long, but also I'm using table view.
+00:22:45 [W] I'm not getting the full Json object just a summary version and I did that to minimize transfer time because on this cluster the full Jason was about one gigabyte.
+00:22:58 [W] Something that I want to point out is some time you want to get very specific resource and use level filters label selectors.
+00:23:05 [W] And in that case the the amount of resource you're going to get from the API several.
+00:23:10 [W] It's going to be very small a few parts. And in this example here.
+00:23:15 [W] I'm getting only pods from up a and in India in that case.
+00:23:20 [W] It's less than five Buds and you can see something interesting here. If I don't set response version, it's still taking
+00:23:28 [W] Two point six seconds.
+00:23:30 [W] Faster than before but not that much. However, if I said resource version to 0 it's extremely fast. And the reason for this is when you're not setting resource version all parts are still going to be retrieved from a CD.
+00:23:45 [W] And filtering will happen on the API server. Whereas when you say resource version.
+00:23:51 [W] The API server with Filter will filter locally from its cash. And of course this is going to be extremely fast.
+00:23:59 [W] If you if you've used a client go to build controllers, you've probably heard about informers and in formulas are a way to have clients that are if much more efficient in the way.
+00:24:13 [W] they talk to the API server because they maintain a cache of the resources they're interested in and they receive Advance when they challenge.
+00:24:23 [W] And they're optimized to to be very nice with the API server.
+00:24:30 [W] So what they do, when is when they start they do a list and set resource version 2 0 so the get data from the cache and then the salad watch based on the resource version that gets there are some edge cases and we connections which can trigger a list without resource version
+00:24:45 [W] Which is bad as we said before because then the call will make it to a CD.
+00:24:49 [W] But know that increment is 120. It should be much better because which we connection should avoid these very expensive holes.
+00:25:01 [W] So as a summary remember that least calls go to a city by default and can have a huge impact on your questor.
+00:25:07 [W] Even if you use label filter and only get a very small sets of birds on the transients and the main message is avoid least and used in formless.
+00:25:20 [W] Something that I wanted to point out too is when you use skip CTL gets you actually uses you actually use a list with rituals version not sets which is bad to visit CD and I believe that could scale could have an option that will that will
+00:25:35 [W] You to set the resolution to 0 so you get data from the cache.
+00:25:40 [W] So it would be much faster and make for a much better experience.
+00:25:44 [W] It would be much better for it CD and the control plane in general with a small trade off because you will have a small inconsistent window because the API server could be a bit behind it CD.
+00:25:59 [W] I really wanted to thank wojtek for his help getting this right.
+00:26:04 [W] I'm sure a few imprecisions remained that it helps the help a lot in.
+00:26:08 [W] Thanks again by attack.
+00:26:11 [W] Let's go back to the incidence.
+00:26:13 [W] So we know the problem comes from lisco.
+00:26:16 [W] The next step is to identify which application is making these calls.
+00:26:21 [W] So we're getting back to audit logs. And as I was saying before the logs are very convenient because they can tell you what happened.
+00:26:30 [W] And when and who did it, but they also contain information about when the request started anyway was finished so you can compute the query time and in big graph here.
+00:26:41 [W] we're showing the community query time police called by user and as you can see here, we have a single user that is responsible for more than
+00:26:51 [W] Today of query time over 20 minutes, which if you do the math is about 100 shred possessing least goals at any given time during this window.
+00:27:02 [W] Let's learn.
+00:27:05 [W] This is the same view aggregated over a week in a table form and you can see here that this specific user here is using about 50% of query time for it. Yes ever that's that's a lot.
+00:27:22 [W] So as you make as you may have seen on the previous slides the user responsible for this was called not group controller. So let's talk about not group controller.
+00:27:32 [W] It's an in-house controller, we built to allow him to create pools of nodes and where they can specify the instance type they want to use for instance and we've used it extensively for two years without any problem.
+00:27:47 [W] However, we had just deployed a recent upgrade to provide deletion protection and avoid deleting not groups that were running workloads.
+00:27:56 [W] And so what this feature was doing is check each, but we're still running and refused deletion a workloads. We're still running in there.
+00:28:10 [W] Technically this is implemented as an admission controller. And if you see an adult delete call the controller would list all the nodes based on labels.
+00:28:21 [W] Remember that even when we when you do that, even if the number of nodes you get is small yourself going to hit at CD and get all the nodes and what's important for the next step is that some groups are can be a bit big.
+00:28:36 [W] And then the next step is to list all the parts for these nodes.
+00:28:40 [W] But remember that getting all the parts for this nodes also means getting all the pots from exedy and filtering on the API server to make things worse.
+00:28:51 [W] All these calls were made in parallel.
+00:28:54 [W] that's a lot of calls making it directly to add CD.
+00:28:59 [W] And of course, this is what Brigade CD and and Trigger the incident.
+00:29:02 [W] So what we learned here is least calls are very dangerous because the volume of data can be extremely large and they will hit at CD most of the time and so I said it before but
+00:29:17 [W] Take it again. Because it's an important message using formulas whenever you can also audit logs are extremely useful.
+00:29:25 [W] Not only can that tell you who did what and when but they can also tell you which users are responsible for query time, which is very helpful when you're a pi server are overloaded because then you can know what is happening.
+00:29:43 [W] So in conclusion, I share this incident because I found that they were very good occasion to learn a lot about the inner workings of kubenetes. And that's something I wanted to share as a
+00:29:58 [W] Quick summary of what we learned today API cells extensions are extremely powerful that they can harm your cluster. So be very very careful in how you monitor them.
+00:30:10 [W] And we tend to forget that notes are not abstract resources, which is tempting, especially when you run on cloud, right you just create a VM it works.
+00:30:19 [W] But yeah you will you can have kind of issues and level real issues.
+00:30:24 [W] And especially for you running large clusters.
+00:30:27 [W] you probably need to understand our API server caching is working because it's very important and because it controls the performance of the cluster the extremely careful careful with how clients interact with the pi server
+00:30:42 [W] And avoid least calls.
+00:30:45 [W] I know I've said it a few times but it's important.
+00:30:49 [W] Where we done for today, if you're interesting in diving into kubenetes and managing large clusters.
+00:30:55 [W] We're hiring Dota 2 to reach out to me either by email or Twitter or Shield through the coolest flag.
+00:31:03 [W] flag. Thank you very much.
+00:31:13 [W] Thank you very much for listening and I hope you had a great time.
+00:31:17 [W] And so we had a few questions.
+00:31:21 [W] I'm going to try and answer a few of them.
+00:31:23 [W] The first one was why did we move to helm instead of Spinnaker? The main reason we did that was because this binocular integration with kubernative is very is working fine, but it's simple and
+00:31:38 [W] It's not integrated that much with the inner workings of kubernative and it was hard to make it work with many clusters.
+00:31:46 [W] And so we found that using Helm was was pretty good for us.
+00:31:52 [W] And another question I had was how long did you start to find the root cause of the cni-genie shoe.
+00:31:59 [W] Luckily not too long.
+00:32:02 [W] Mostly because we've been working very closely with the leaf team on the cni-genie.
+00:32:10 [W] So we know how it works pretty well, but it still took at least two days are very involved debugging.
+00:32:20 [W] And I also had a few questions regarding when I with buzzer slide, so I try to put them during the presentation.
+00:32:26 [W] I hope there are available right now.
+00:32:29 [W] Otherwise, I'll make sure to make them available as soon as possible.
+00:32:35 [W] And yes, I think I think that's it.
+00:32:37 [W] If you have any questions or comments don't hesitate to reach out and the cncf slack or on Twitter and it's starting to be a bit late in France.
+00:32:48 [W] so I might not stay very long tonight, but I'll answer tomorrow have questions. Once again.
+00:32:55 [W] Thank you very much.
+00:32:55 [W] Have a good day.

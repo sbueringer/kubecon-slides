@@ -1,0 +1,311 @@
+﻿Production CI/CD with CNBs: Tekton and Gitlab and CircleCI (plus), Oh My!: YLUG-6997 - events@cncf.io - Wednesday, November 18, 2020 3:02 PM - 43 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hi everyone. I'm David and I'm Natalie. Thanks so much for joining us.
+00:00:06 [W] We'll be discussing how you can use buildpacks right now near production ci/cd systems.
+00:00:29 [W] Hi everyone. I'm David and I'm Natalie. Thanks so much for joining us.
+00:00:36 [W] Will be discussing how you can use buildpacks right now in your production ci/cd systems.
+00:00:42 [W] We're going to start with a refresher on cloud native buildpacks defining them explaining their benefits and explaining some of the concepts in the CMB ecosystem.
+00:00:51 [W] Next. We're going to we're going to demo buildpacks in a few different contexts.
+00:00:57 [W] Some of which will be more interesting for developers.
+00:00:58 [W] While others will be more focused on devops interests. Lastly.
+00:01:03 [W] We'll conclude with some resources for learning more about Cloud native buildpacks.
+00:01:06 [W] You may be wondering who is this talk for? We hope to cover usage of buildpacks.
+00:01:12 [W] X that will be relevant for app developers and platform operators for asked about developers.
+00:01:18 [W] We hope to show how buildpacks can make your work easier and faster by reducing developer toil and building containers more efficiently for platform operators.
+00:01:27 [W] hope to show how buildpacks can enable more control and compliance within your organization and help with your security requirements.
+00:01:36 [W] We'll assume some knowledge of a cloud made of built backs and the pack CLI as a refresher will cover some key elements that will be relevant.
+00:01:49 [W] What are clouds knative buildpacks?
+00:01:52 [W] Cloud native buildpacks to put it simply transform your application source code and two-run double images without the help of dr. Files.
+00:01:59 [W] Why is that helpful?
+00:02:02 [W] So there are three main benefits.
+00:02:04 [W] We're going to talk about firstly it allows application developers to focus on what they're building and not on how to support it in production in death.
+00:02:13 [W] To talk about firstly it allows application developers to focus on what they're building and not on how to support it in production in that it also has the added benefit of building and packaging the application better and faster than they may have been able to do by
+00:02:28 [W] Precise control over what build inputs are permitted using the Builder concept that we're going to introduce in a few slides.
+00:02:35 [W] And third the abstraction of built applications as collection of distinct layers stitched together stitch together to be an application image can allow a system to precisely slips which at one layer for example an operating system layer from the image
+00:02:50 [W] Of the other layers of the image as well. See this can have dramatic consequences for large-scale reactions to operating system vulnerabilities.
+00:03:00 [W] What is a buildpacks?
+00:03:29 [W] committed
+00:03:31 [W] multiple buildpacks can also work together. For example, you may have a combination of node and npm buildpacks working on what application or Ruby and bumbler downloading the Ruby the rube URI binary and doing a bundle install this
+00:03:46 [W] Buildpacks and utilize variety of them and building separate parts of your application.
+00:03:48 [W] The cloud native buildpacks doesn't produce buildpacks rather. We Define a specification that is Then followed by a variety of different vendors at this point. The most well-known buildpacks are produced by Google Heroku and the vaquita project.
+00:04:05 [W] This brings us to the concept of Builders one of the key ways.
+00:04:08 [W] We distribute buildpacks buildpacks are packaged as container image layers together with the program called the life cycle in an image called the Builder that image contains as its base image a so-called build image, which is
+00:04:23 [W] build time to construct the runnable image
+00:04:17 [W] platform operators can choose which Builders are safe to use and can construct Builders as they'd like to precisely Define what sort of applications or language versions they want to support as well as to inject necessary environment variables or settings as the case
+00:04:32 [W] Asians or language versions they want to support as well as to inject necessary environment variables or settings as the case may be.
+00:04:34 [W] The life cycle which we just saw in the Builder is an executable that runs in several phases to transform application source code in tyrannical image.
+00:04:43 [W] Those phases are detect analyze our store build and Export detect run to each buildpacks detect executable and determines which group of buildpacks will participate in the built.
+00:04:56 [W] Annalise analyzes the build the application while restore is used to bring back data on previous builds from the cache. If it's relevant build runs, each buildpacks build executable while export produces a final app image and
+00:05:11 [W] A group of buildpacks will participate in the built.
+00:05:14 [W] Annalise analyzes the build the application while restore is used to bring back data previous builds from the cache. If it's relevant build runs, each buildpacks build executable file export produces a final app image and
+00:05:45 [W] The life cycle also has another executable called The Creator which excuse all the phases reducing some of the complexity from the program.
+00:05:53 [W] A platform runs the Builder together with application source code to produce the app image after developers.
+00:06:00 [W] Don't don't have to know how any of this works. They just push their coat.
+00:06:05 [W] The app image is a layered image application layers and build time dependencies are cached. So builds will be faster over cat. This makes crappy Developers.
+00:06:17 [W] Finally cnb's RCMP RSC and be construct that link together the Builder base image or the build image and the application base image, which is the Run image.
+00:06:28 [W] The build image is used when constructing the image while the Run image contains everything. The application image should need one running.
+00:06:35 [W] It can be helpful to have these be different build time dependencies can be left out of the application image to make it smaller and lower the attack surface.
+00:06:45 [W] Again, operators can decide which Stacks are safe to use.
+00:06:50 [W] I'm going to pass it over to Natalie now to actually download the use of sin buildpacks.
+00:06:58 [W] Thank you, David.
+00:06:59 [W] set up.
+00:07:05 [W] So now we will look at buildpacks in action.
+00:07:09 [W] By the c and d project it is a command line tool that can be run locally or as we'll see in automated systems pack requires a Docker Damon that it uses to bring up the containers in which the life cycle will run.
+00:07:24 [W] So just to illustrate what will see pack has access to a dr. Damon it brings up containers based on the Builder image and together with a source code produces the application image.
+00:07:35 [W] This image can then be saved to the docker Damon or it can be published to a registry such as Docker Hub. GGC are or your favorite Harbor registry?
+00:07:48 [W] There is an optimal optimization as David mentioned called The Creator the create binary which will run all of the lifecycle phases in a single container to make things faster.
+00:08:01 [W] So to get started with pack just visit the buildpacks dot IO website and choose your installation method of choice, you'll notice that pack is supported on Linux Mac OS and windows and as of recently pack also supports building
+00:08:16 [W] Mentioned called The Creator the create binary which will run all of the lifecycle phases in a single container to make things faster.
+00:08:16 [W] So to get started with pack just visit the buildpacks dot IO website and choose your installation method of choice, you'll notice that pack is supported on Linux Mac OS and windows and as of recently pack also supports building
+00:08:49 [W] Is for Windows containers?
+00:08:53 [W] So let's get started with our demonstration.
+00:09:07 [W] So I am using peck on a Mac as you can see we can run pack suggest Builders to get a list of builders.
+00:09:16 [W] That pack is aware of so you can see it's David mention Google Heroku and the keto project all have Builders available.
+00:09:24 [W] I'm going to go into my application directory.
+00:09:26 [W] You'll see that it is a Java app and let's build it.
+00:09:32 [W] I've given pack. Hello Pat because the name of the image that I will build and I've given it as the Builder.
+00:09:40 [W] the Google Builder
+00:09:48 [W] so let the build the Run.
+00:09:52 [W] looking at the logs we can see that we
+00:09:55 [W] Pulled the Google Builder down.
+00:09:58 [W] We're now running the different phases. So detect determined that Ford buildpacks will participate in this build analyze and restore are bringing back data from the cache that we will use and now we build the app.
+00:10:14 [W] You see the app is completed here.
+00:10:21 [W] Select the build a run.
+00:10:25 [W] looking at the logs we can see that we
+00:10:29 [W] have pulled the Google Builder down.
+00:10:31 [W] We're now running the different phases. So detect determine that Ford buildpacks will participate in this build analyze and restore are bringing back data from the cache that we will use and now we build the app.
+00:10:48 [W] You see the app is completed here.
+00:10:51 [W] We're exporting the application image in this case to the dr. Damon.
+00:10:55 [W] So that was pack.
+00:10:59 [W] You may be thinking at this point pack seems like a pretty good tool. We encourage you to download it and check it out.
+00:11:06 [W] But you may be wondering how you can use buildpacks in your automated system of choice.
+00:11:11 [W] So in the next part of the demonstration, we're going to show buildpacks in a few ci/cd.
+00:11:18 [W] see systems starting with gitlab
+00:11:22 [W] So just to give a high level overview typical ci/cd system might include the following phases some development testing building of an application image testing of the output
+00:11:37 [W] so just to give a high level overview typical ci/cd system might include the following phases some development testing building of an application image testing of the output
+00:11:52 [W] Action for our demonstrations.
+00:11:55 [W] We're going to focus on primarily on the buildpacks.
+00:11:59 [W] So let's talk about gitlab. It is the cloud knative buildpacks support is maintained by by gitlab.
+00:12:06 [W] It's used with their Auto devops tooling which uses kubernative and it runs pack under the hood.
+00:12:15 [W] To use cloudevents packs and gitlab, you'll want to configure Auto devops, which is its own process.
+00:12:22 [W] We've Linked In this presentation.
+00:12:24 [W] We've linked to the instructions you can see that will create a gitlab project and from within gitlab create a kubernative cluster where the app will be deployed.
+00:12:37 [W] And with that we just need to add a little bit of extra configuration to our source to tell gitlab that we want to use buildpacks.
+00:12:44 [W] So here in gitlab ciw mlperf.
+00:12:54 [W] And just to illustrate similarly to what we've seen previously gitlab is using pack with Docker. The only difference being that here pack itself is running in a container as well as stalker.
+00:13:10 [W] so, let's see gitlab and action my
+00:13:17 [W] Let's see gitlab in action.
+00:13:20 [W] So I'm going into my app can see that it's the same Java app from before if I open up one of the files and edit Yukon.
+00:13:36 [W] I can now push that change just to illustrate.
+00:13:40 [W] I'm going to push it to gitlab.com.
+00:13:44 [W] Made my commit.
+00:13:47 [W] Now I push it.
+00:13:50 [W] And let's go see commit triggering a new build.
+00:13:58 [W] So here I am in my Repository.
+00:14:02 [W] You can see let's go to our pipeline.
+00:14:09 [W] That push triggered a new build.
+00:14:13 [W] Which looks like it's hidden here, but here's the build getting triggered that's in progress.
+00:14:21 [W] So I'm going to show.
+00:14:27 [W] This is not the page I want.
+00:14:32 [W] Here's the pipeline.
+00:14:34 [W] Going to show the logs from a previous build.
+00:14:38 [W] Up, you can see we're running Docker and docker.
+00:14:36 [W] Here we're pulling in the Heroku buildpacks.
+00:14:38 [W] Those are used by default, but it's also configurable.
+00:14:45 [W] Now we're pulling in pack and here's the output that we should be familiar with. The detect phase is running looks like creepy buildpacks passed a tekton.
+00:15:14 [W] Let go down to the water.
+00:15:22 [W] And down to the bottom. You see we're done downloading the dependencies and now we are have a successful build.
+00:15:32 [W] The application image is being exported in this case to the local Docker Damon, and then it gets pushed up to get loves registry.
+00:15:45 [W] so
+00:15:47 [W] I am now going to hand it back to David who's gonna take us through the next part.
+00:15:52 [W] catch Oops, sorry
+00:15:49 [W] so we have it done.
+00:15:53 [W] I go down to the water.
+00:16:00 [W] And down to the bottom. You see we're done downloading the dependencies and now we are have a successful build.
+00:16:11 [W] The application image is being exported in this case to the local Docker Damon, and then it gets pushed up to get loves registry.
+00:16:23 [W] so
+00:16:25 [W] I'm now going to hand it back to David.
+00:16:28 [W] is going to take us through the next part.
+00:16:33 [W] Thanks for that. Natalie Circle CI is a continuous integration and delivery platform.
+00:16:38 [W] The CNB project maintains a integration called an orb which allows users to utilize pack inside their pipeline. It also takes advantage of caching to keep information from previous builds and speed up future builds.
+00:16:52 [W] You may already be using circleci. I to use the CMP integration. All you need to do is declare that you're using the buildpacks pack orb, and then utilize it in your workflow as mentioned caching is enabled by default to allow
+00:17:41 [W] Dinner's integration and delivery platform the CNB project maintains an integration called an orb which allows users to utilize pack inside their pipeline.
+00:17:51 [W] It also takes advantage of caching to keep information from previous builds and speed up future belts.
+00:17:58 [W] You may already be using circleci. I to use the CMP integration. All you need to do is declare that you're using the buildpacks pack orb, and then utilize it in your workflow as mentioned caching is enabled by default to allow for
+00:18:34 [W] You can also note that we're using the potato project buildpacks in this case.
+00:18:40 [W] Let's demo circles. Yeah.
+00:18:43 [W] I already have the the repo setup. Just going to Echo a change and I'm going to push it up.
+00:18:55 [W] We should be able to see fairly fast that circleci. I picked up the change and attempts to build it.
+00:19:01 [W] And in fact, it's running ready for the sake of time.
+00:19:04 [W] Let's look at a previous builds.
+00:19:10 [W] You can see that it's fun up. The container is necessary it downloaded pack and finally it ran a pack build something interesting, but you haven't yet seen before is that there is a concept called catching it ourselves you can see
+00:19:25 [W] And analyze and restore that it restores data from previous builds from the cash.
+00:19:38 [W] All the platforms that we've seen so far have used the pack CLI under the hood in order to construct the image another way platforms integrate with the CMP project is by directly executing the lifecycle phases, which can give a bit more control over specific usages.
+00:19:53 [W] The image another way platforms integrate with the CMP project is by directly executing the lifecycle phases which can give a bit more control over specific usages.
+00:20:02 [W] For example pack doesn't currently support cashing it against the registry while the life cycle does.
+00:20:10 [W] One ci/cd system that does directly execute the life cycle is tekton tekton. If you haven't heard of it is an open source ci/cd platform that runs on kubernative.
+00:20:21 [W] There are two tekton tasks maintained by the CMB project that use the life cycle directly and also take advantage of caching.
+00:20:30 [W] We'll introduce a number of contact that tekton uses in order to better understand the data.
+00:20:36 [W] First of all, each published action in tekton is called a task, which is itself composed of a series of steps tasks have inputs and outputs that they then pass to other tasks a group of tasks are associated together
+00:20:51 [W] number of contact that tekton uses in order to better understand the demo
+00:20:55 [W] first of all, each published action in tekton is called a task, which is itself composed of a series of steps tasks have inputs and outputs that they then pass to other tasks a group of tasks are associated together
+00:21:21 [W] pipeline
+00:21:23 [W] finally in order to run a pipeline or tasks and directly you create a pipeline run or task run object.
+00:21:31 [W] To make this a bit more Concrete in the example pipeline will be demoing. We've used to tasks get clone to clone the repository registered in Madbury and buildpacks to build and push the resulting image
+00:21:47 [W] Get Chloe to clone the repository registered in Madbury and buildpacks to build and push the resulting image.
+00:21:56 [W] Over here we can see successful pipeline runs which have pushed their which have pushed their changes. So the resulting image
+00:22:04 [W] as mentioned before there are two ways to utilize the lifecycle platforms can either run the five phases separately or use the Creator executable which act which orchestrates the phases in a more performant manner as such the CNB project maintains
+00:22:19 [W] Performant manner as such the CNP project maintains two different tests for tekton one buildpacks, which is shown here just four pairs of the pipeline and then uses a creator of binary.
+00:22:31 [W] This is intended to be used when you trust your Builders and is faster.
+00:22:36 [W] The other buildpacks phases uses the phases separately.
+00:22:40 [W] This is more secure since doesn't pass registry credentials the phases that don't require them in order to set it up.
+00:22:48 [W] We'll need to define a pipeline resource defining the image output a pipeline defining what tasks we intend to use the git clone and the buildpacks task and finally a build a pipeline run in order to execute that pipeline.
+00:23:03 [W] Just run Cube cuddle apply to create those resources.
+00:23:08 [W] Let's see it in action.
+00:23:11 [W] If we go over here, I'm going to apply a change.
+00:23:15 [W] If you go to our our status page, we can see that a run has been kicked off for the sake of time. Let's look at a previous run.
+00:23:23 [W] You can see that it successfully completed and if you look at the logs much the same.
+00:23:30 [W] We can see that it successfully restored the liar from cash.
+00:23:39 [W] So far we've seen three different ci/cd platforms that accomplished two of the three main buildpacks benefits.
+00:23:46 [W] The building but through the use of Builders.
+00:23:49 [W] We're going to examine one left platform Capac which takes which takes advantage of the CMP spec to allow for a so-called rebasing images from one flawed operating system base layer to another secure operating system operating
+00:24:04 [W] Judges from one flawed operating system base layer to another secure operating system operating system based light. Let me pass it over to Natalie now.
+00:24:04 [W] Thank you, David.
+00:24:05 [W] So now we're going to take a look at Capac which is an open source tool maintained by VMware which we both work for you may think that because K pack includes the word pack
+00:24:20 [W] Pack that Capac runs pack but it actually uses the lifecycle directly K-PAX supports building and rebasing your apps. So it will keep application images up to date when inputs change
+00:24:36 [W] Your apps so it will keep application images up to date when inputs change.
+00:24:41 [W] So if there's a new version of a buildpacks.
+00:25:01 [W] So to get started just download the latest release the animal from GitHub run Cube cuddle apply and you'll see a bunch of custom resources get created.
+00:25:14 [W] Wait for everything to become ready.
+00:25:17 [W] And now we're ready to create our resources.
+00:25:20 [W] So the Capac tutorial which will link to has some example configuration files to get started with you can see that many of the concepts were familiar with are being referenced here.
+00:25:33 [W] So we're using the Ubuntu bionic stack from the potato project pulling in Java and node as are buildpacks for saving to a custom builder.
+00:25:44 [W] And here's where we've configured our source code that we will build with the git repository and revision as well as the tag where we'd like the final image to end up just run Cube cuddle apply.
+00:25:59 [W] And now we're ready to see it in action.
+00:26:06 [W] So here I just want to show the image resource definition. Again, we can see that there's a specific get revision that we're building and let's update that definition to be something new.
+00:26:23 [W] here
+00:26:29 [W] just going to apply.
+00:26:33 [W] So one thing about Capac is that it is intended to be run in mashed with another ci/cd system. That would be sort of in charge of keeping the get revision up to date so you can imagine if you push your
+00:26:48 [W] Some other element of your ci/cd system will run tests against that commit and then provide it to Key pack.
+00:26:47 [W] So let's wash.
+00:26:52 [W] I can now see that a new Capac build was triggered because of that revision update.
+00:27:00 [W] Just wait for it to complete.
+00:27:13 [W] And it's finished.
+00:27:14 [W] So I will copy the Pod name.
+00:27:17 [W] You can take a look at the logs.
+00:27:29 [W] so now if we take a look at the lungs
+00:27:34 [W] we can see here were using the Keda buildpacks.
+00:27:37 [W] There are six buildpacks participating in the field.
+00:27:41 [W] We were able to restore some data from the cache.
+00:27:44 [W] Here is the build happening.
+00:27:49 [W] and now
+00:27:53 [W] we are exporting the final image and that should now be available in our registry.
+00:28:00 [W] AKP CLI to make it easier to get information about builds.
+00:27:59 [W] So here and and other resources here. I'm doing KP bol.com.
+00:28:10 [W] Image you can see that the bill was successful and it was triggered because of a new commit.
+00:28:16 [W] There's also additional information that can be useful like the Builder that was involved the Run image that it's used and any cold packs that are participating.
+00:28:40 [W] So that was a build with Capac, but we may also want to see what happens when build inputs need to change.
+00:28:46 [W] So for example, you could have a vulnerability in one of your application dependencies, which would require a rebuild.
+00:28:57 [W] or
+00:29:01 [W] You could have a vulnerability at the operating system level. So for example, one of the packages that's installed on the Run image could have a critical vulnerability this brings us to the concept of rebasing which.
+00:29:16 [W] Was taking the application image with the vulnerable run image layer.
+00:29:09 [W] Producing a new secure run image and then swapping that run image layer in to the application image without having to rebuild everything.
+00:29:21 [W] At this point you may be wondering how is it that the cloud native buildpacks project enables us to happen and the details of that are beyond the scope of our talk, but at the highest level it is the buildpacks
+00:29:37 [W] That defines for example where buildpacks are allowed to write to in the file system.
+00:29:26 [W] that is safe and also gives platforms knowledge about which buildpacks and stacks are safe to work together that allows for safe swapping of the Run image layer and to learn more about
+00:29:41 [W] Courage you to check out other buildpacks talks or take a look at the buildpacks specification, which is available online.
+00:29:45 [W] So, let's see rebasing in action with Capac.
+00:29:51 [W] Just going to describe my image again for the purpose of showing the stack.
+00:29:57 [W] That is the Boon to bionics back. Then we defined earlier and we called it base.
+00:30:03 [W] So if I describe that stack I can see that the Run image which is being used is the Cato buildpacks run image at this specific tag 0094 so I could
+00:30:18 [W] definition from
+00:30:20 [W] 944
+00:30:25 [W] which we can imagine has a vulnerability and swap in the line 5 which has now been patched.
+00:30:35 [W] So now if I apply that.
+00:30:41 [W] That configuration has taken hold and we can now watch for new pods.
+00:30:52 [W] And actually that happened very fast.
+00:30:54 [W] You can see that it was build a team.
+00:30:59 [W] Which is initialized and completed in about 10 seconds.
+00:31:07 [W] I were to pull the latest version of my application image.
+00:31:13 [W] The latest identifier would be different because the Run image has now been changed.
+00:31:26 [W] so in summary, we've now seen three of the benefits that we promised with Cloud native buildpacks giving application developers the ability to focus on development giving operators control over build in puts by
+00:31:41 [W] Shin of my application image
+00:31:38 [W] the latest identifier would be different because the Run image has now been changed.
+00:31:51 [W] so in summary, we've now seen three of the benefits that we promised with Cloud native buildpacks giving application developers the ability to focus on development giving operators control over build in puts
+00:32:26 [W] There's stacks and buildpacks are safe to use and enabling fast patching of operating system vulnerabilities through the rebase capability.
+00:32:37 [W] There is a large and growing ecosystem of platforms that use cloth knative buildpacks.
+00:32:43 [W] We hope that your favorite platform is among them. But if not, please come talk to us.
+00:32:50 [W] We love to hear from buildpacks users.
+00:32:52 [W] We love to get feedback and if there are new features that are going to be necessary to make Cloud native buildpacks a better solution.
+00:33:01 [W] We'd love to hear about it.
+00:33:04 [W] Here are some resources links to the documentation and demos that we used in our talk.
+00:33:14 [W] And find Us online at buildpacks.
+00:33:17 [W] Cri-o slack Twitter GitHub.
+00:33:20 [W] Thank you.
+00:33:43 [W] hear hear
+00:33:51 [W] Can you hear me David feel free to ask us?
+00:33:55 [W] Yes.
+00:34:13 [W] You're here.
+00:34:20 [W] Can you hear me David feel free to ask us?
+00:34:25 [W] Yes.
+00:34:32 [W] We've been trying to answer questions in the in the QA, but you can feel free to ask us specifically. There is a call out about s2i for Open champ. Neither of us know that although member of our team did expected
+00:34:51 [W] We've been trying to answer questions in the in the QA, but you can feel free to ask us specifically. There is a call out about s2i for open chef.
+00:35:00 [W] Neither of us know that although member of our team did expected a bit, but I believe that they're somewhat comparable. You can check out a difference in features on our buildpacks at I/O website.
+00:35:25 [W] Call me link to that comparison chart.
+00:35:28 [W] Is that on the website?
+00:35:31 [W] Sure.
+00:35:31 [W] Let me see if I can.
+00:35:43 [W] Yeah, it's here.
+00:35:55 [W] I'll put a
+00:35:57 [W] okay.
+00:36:22 [W] Run Works in with buildpacks Azure works with buildpacks as well as a whole bunch of other ci/cd or just as platforms. So yes, there are
+00:36:39 [W] In terms of support for buildpacks, so I know that buildpacks right now are tagged.
+00:36:45 [W] I don't know if there's a formal concept of LTS at the moment that hasn't been fully fleshed out yet.
+00:36:54 [W] I do know that lets say for haruko. They had extended support for a previous stack that they just deprecated and I believe that the current buildpacks should be supported for quite a few years the
+00:37:07 [W] Your project I think also will probably have some foam similar.
+00:37:29 [W] I went back it up.
+00:37:30 [W] So that's actually something we're working on at the moment.
+00:37:35 [W] We're looking into cashing those layers both remotely and and locally to speed up both local builds as well as from oh builds.
+00:37:47 [W] It's not going to be done immediately, but we're looking at by the next one or two releases.
+00:37:52 [W] Are you talking about caching to the registry there?
+00:37:55 [W] Yeah, add cash.
+00:38:00 [W] Someone else who asked about understanding in migrating to tekton.
+00:38:05 [W] We've found the tekton that Dev documentation through pretty good Natalie. I don't know.
+00:38:23 [W] Get it.
+00:38:33 [W] David
+00:38:40 [W] I don't know if it's just me.
+00:39:07 [W] All right.
+00:39:08 [W] I'm getting feedback that datastax in is unstable.
+00:39:12 [W] So I will do my best to answer any of the questions as they come in.
+00:39:21 [W] With respect to caching pack is currently using volume caching right for for build time dependencies the
+00:39:27 [W] Of can support caching dependencies in a volume or in the registry?
+00:39:29 [W] So that support will be like available in pack I think fairly soon but also as we mentioned enough in our talk the application image can be exported to a
+00:39:44 [W] But also as we mentioned enough in our talk the application image can be exported to a demon or a registry and in that case any application layers that need to be reused would come from the previous
+00:39:59 [W] Layers that need to be reused would come from the previous image.
+00:40:06 [W] So I can type that out if that's awful.
+00:40:15 [W] Sorry David, I jumped in to try to answer some questions, but I think you're cutting in and out.
+00:40:22 [W] Yes.
+00:40:25 [W] So when asked about choosing buildpacks vendors support to release a the vendors try and support different things.
+00:40:33 [W] So let's say I think the potato project tries giving very very broad support for a whole bunch of different specifications with Java whereas Heroku I don't believe it's focused on doing that.
+00:40:52 [W] So that that keep actresses S2 II don't really know.
+00:41:04 [W] When asked about when we expect exporting cashing to Registries to be available, I would hope within you know the next two months or so.
+00:41:16 [W] I think it's on the next milestone for pack, but then there's also fluid.
+00:41:23 [W] There's good question of comparing buildpacks to jib.
+00:41:27 [W] Buildpacks has the technology that can that is focusing around a whole bunch of more languages. Who is question about
+00:41:52 [W] Sorry, I just realized how should go ahead be created or maintained.
+00:41:58 [W] So base images should probably be certainly tagged and version. Do you want to make sure that you're not breaking forth?
+00:42:08 [W] Are there best practices about this?
+00:42:12 [W] I don't know of any specific ones.
+00:42:14 [W] think the different project.
+00:42:36 [W] Sorry, David. I think you cut out on that last one again.
+00:42:41 [W] I'll just mention someone asked about our gitlab project is private that may well be the case.
+00:42:48 [W] I can make it public shortly.
+00:42:50 [W] Also going to be hanging out on the cncf slack specifically. There's a channel 2 Cube consi ICD. You can feel free to ask us any questions there or
+00:43:30 [W] Anybody else have any questions?
+00:43:45 [W] All right, I think we'll move over to slap them.
+00:43:49 [W] Thank you all for coming.
+00:43:50 [W] I really appreciate it.

@@ -1,0 +1,332 @@
+﻿Into the Deep Waters of API Machinery: OCWE-8872 - events@cncf.io - Friday, November 20, 2020 3:11 PM - 41 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello, kubernative Community Welcome to our Capi Machinery deep dive session.
+00:00:05 [W] My name is Federico and Giovanni and I am the co-chair of Capi Machinery.
+00:00:10 [W] I want agenda today.
+00:00:12 [W] going to rename space termination and Daniel Smith from Google is going to walk us through it using his signature handmade presentation style or seven topic is going to be rest mappings and Stephen shemanski from
+00:00:27 [W] All the secrets on how it works and how to deal with special situations in our third topic David.
+00:00:19 [W] It's from Red Hat will explain for us the mysteries of garbage collection.
+00:00:22 [W] And how does it work in on the special cases? Finally.
+00:00:27 [W] I will give you a farewell with some quick info about the Sig and our videos.
+00:00:31 [W] So without any further delay, let's get to it and go to the Deep Waters of Capi machinery.
+00:00:43 [W] Hi everyone today.
+00:00:45 [W] I'd like to tell you a story.
+00:00:46 [W] stories called 6080 7 and Daniel Smith
+00:00:52 [W] Mike OTL the API Machinery Sig
+00:00:57 [W] we're working on kubernative since before was open source.
+00:01:02 [W] So a lava lamp on GitHub provisional a lava lamp on Twitter.
+00:01:08 [W] I work for Google software engineer.
+00:01:12 [W] I'm not speaking on behalf of Google other than the support my presence and open source.
+00:01:23 [W] I Robo Daniel drawing my slides today.
+00:01:26 [W] Turns out I can't draw and talk at the same time.
+00:01:29 [W] so we can do this in two steps.
+00:01:36 [W] The Story begins with a user
+00:01:38 [W] You won't be surprised that there's also a kubernative cluster in the story.
+00:01:43 [W] And every cluster needs an API server.
+00:01:54 [W] And I've concerned particular concern in our story today. Is that namespace draw in a big fat line?
+00:02:01 [W] Okay.
+00:02:08 [W] To give this name space some sort of name.
+00:02:12 [W] 20/20
+00:02:18 [W] because this user would like to delete this namespace.
+00:02:26 [W] Here's the action.
+00:02:28 [W] Winter says delete a pi server says sure that's the technical HTTP Response Code.
+00:02:35 [W] These are host to recreate a i our servers as no still exists.
+00:02:41 [W] There's a conflict.
+00:02:44 [W] API servers a villain
+00:02:47 [W] how can this happen to us?
+00:02:51 [W] Makes user sad and angry.
+00:02:56 [W] Could we do this to the user?
+00:02:57 [W] It objects and kubernative Zar deleted the same way.
+00:02:55 [W] So although we're talking about a name space right now.
+00:02:57 [W] There's some background information about completion might be useful as with many of much of what I'm saying.
+00:03:07 [W] This is a simplification.
+00:03:12 [W] Because there's more to it for some particular objects, but roughly speaking all kubernative objects have metadata and inside this metadata.
+00:03:20 [W] There's two field relevant to deletion. First one is deletion timestamp.
+00:03:26 [W] If that has a non empty value then the deletion process has started for that resource. And there's also a list of finalized errs, and the deletion is not final until all of those final users have been removed.
+00:03:42 [W] Slightly confusing because the literal name of the finalizer that we care about today is kubernative.
+00:03:48 [W] This is the finalizer that the that is removed when the namespace object is empty Okay, so until that is removed. The namespace is not deleted from the system.
+00:03:59 [W] I'm leaving out some details about these pieces have special places.
+00:04:04 [W] They keep their final answers with Lea speaking objects work like this.
+00:04:14 [W] So let's look at our scenario again.
+00:04:16 [W] Is finalized others have been removed.
+00:04:15 [W] Slightly confusing because the literal name of the finalizer that we care about today is kubernative.
+00:04:21 [W] This is the finalizer that the that is removed when the namespace object is empty Okay, so until that is removed. The namespace is not deleted from the system.
+00:04:32 [W] I'm leaving out some details about these spaces have special places.
+00:04:37 [W] They keep their final users with Lea speaking objects workloads this
+00:04:47 [W] so let's look at our scenario again.
+00:04:52 [W] Componentconfig Nettie is responsible for removing. This finalizer is in controller manager.
+00:04:57 [W] It's the namespace lifecycle controller.
+00:05:11 [W] It's job is to watch name spaces that have begun the deletion process and ensure that they are empty all the resources inside them have been deleted and then remove that finalizer.
+00:05:24 [W] These peace lifecycle controller is the villain.
+00:05:26 [W] To list the resources inside of a namespace you need to know which types of resources there are to be listed the process of figuring that out is called discovery.
+00:05:39 [W] And at this point you might be asking yourself How does Discovery work?
+00:05:47 [W] Well, I'm about to tell you all a pi server all API requests and kubernative have a URL path.
+00:05:55 [W] This is this identifies what exactly you're making a request about?
+00:05:58 [W] All right.
+00:05:59 [W] And again, I'm this is a simplification but for our purposes all API request start with the word apis and the next thing that comes is a group that API Group.
+00:06:12 [W] The next thing is a version and after that is the
+00:06:15 [W] resource
+00:06:16 [W] a group the next thing is a version and after that is the
+00:06:22 [W] resource
+00:06:26 [W] the resources the thing that goes in the URL path of the kind is the is the type right? You're gonna in a type system sense.
+00:06:35 [W] so if you make an API request and you just say apis, if you stop there, then you get a list of group versions that API server knows about
+00:06:46 [W] and if you list the group you get a list of versions that are inside that group.
+00:06:55 [W] List of versions and if you list a group and a version then API server will tell you which kinds are inside that group version.
+00:07:10 [W] And if you say more than that, then you're making an actual API requests.
+00:07:13 [W] Which will do you some good list objects or
+00:07:19 [W] just
+00:07:22 [W] something useful
+00:07:25 [W] So, how does the API server fulfill this?
+00:07:30 [W] Contract to do that we should talk a little bit about a pi server.
+00:07:35 [W] API server is actually 3 API servers in a trench coat.
+00:07:38 [W] The first one is the aggregator.
+00:07:40 [W] The second one is the built-ins and serves AWS and services that stuff and the last one is the extensions API server more commonly known as see your t's and if a request can't be served by the aggregator goes to the built-ins.
+00:07:53 [W] That one doesn't want it goes to the extensions.
+00:07:56 [W] 404 which I've conveniently drawn off the bottom of the screen for you.
+00:08:00 [W] Now, the aggregator may know what to do with the request and it may be for a external API server.
+00:08:12 [W] This means that that request must be proxied.
+00:08:15 [W] It is not served served from the same process as the kubernative Z Pi server.
+00:08:20 [W] The aggregator is the villain canonical examples the metrics a pi server.
+00:08:28 [W] Which kubenetes ships by default?
+00:08:30 [W] This means that there's various things that could go wrong.
+00:08:33 [W] Maybe your network is not working at least that link of your network or maybe the metrics API server is co-located with a process is hogging the node
+00:08:48 [W] Maybe it just has the wrong resource requirements.
+00:08:42 [W] in any case
+00:08:44 [W] the aggregator needs to get the kinds from the target API server, right only the group's inversions are registered with the system.
+00:08:52 [W] So if that network if that external API server can't be reached then there's no way for the aggregator to tell you which kinds are in the group version that you're asking about.
+00:09:07 [W] The metrics API server is the villain.
+00:09:11 [W] It's kind of unfortunate but it is also unavoidable because the extension API server is the only thing that knows what it serves as an aggregator cannot know that we very heavy-handed to to require
+00:09:26 [W] to risk that to pre-register that with the aggregator and also wouldn't help the problem because even if you know what kinds if you can't actually go out and list those things then you also can't confirm that they're deleted if the
+00:09:37 [W] Discover the the kinds that it should be deleting.
+00:09:33 [W] It is never certain that the name space is empty and if it's not certain that the name space is empty then it can't remove that finalizer.
+00:09:42 [W] So whose job is it to make sure that this thing is working. Anyway, I think it is the job of the system administrator the cluster administrator rather.
+00:09:53 [W] And I think the cluster administrator should be performing this job by using some monitoring.
+00:10:01 [W] Metrics API server is surd served by regular kubenetes pods. So it's should be possible to monitor it another way. You can monitor the overall health and like not just the specific metrics API server, but you just
+00:10:16 [W] Keep control API resources once in a while.
+00:10:15 [W] It does this discovery process and it'll tell you if some group is not working.
+00:10:20 [W] Then you can look at the API service object for that group and figure out what component is not happy.
+00:10:28 [W] So thank you for listening to my talk and watching Robo Daniel draw these if you think that we could do better encourage you to come help us improve our error messages or our design.
+00:10:44 [W] Thanks.
+00:10:47 [W] system administrators the villain
+00:10:53 [W] welcome to the second part of the Capi Machinery Deep dive today.
+00:10:58 [W] I want to talk about a concept which is pretty Central in kubernative, but it's not well known to many people and maybe if they use client go and build some non-trivial controllers. They have met but they say might have question marks around that seeing
+00:11:13 [W] Simply just say who cutter get pots in your terminal and get parts is a command which is generic. So generic means that it doesn't know anything about pots.
+00:11:18 [W] It has to work with any every resource that is available in the one who's a cluster and to make that happen.
+00:11:24 [W] It has to query is a discovery information of the kubeacademy server.
+00:11:28 [W] So he has to ask it what is important to do that. If you increase their ability to at least six, you will see what it does it currently Sledge API to get the versions of the DC. API is crevices API is to get a pi groups.
+00:11:40 [W] And separations and then it continues and queries like more than 30 API kublr version. So if your eye is naturally one it Ki slash Epsilon tensor T more and after doing that it has all the information to to find out what a pot is and it C is a pot is a
+00:11:55 [W] Goldwater POTUS and it sees a pot is a resource which shows up in the API slash we want so it's a legacy or API version V1 resource and for this information, it also knows that it's namespace.
+00:12:03 [W] So portworx namespace resource and from this information, it can construct the URL to actually lists pots in the system and it knows its name space.
+00:12:10 [W] So it adds the namespaces default default is cold ones that own them space. So it knows that you are just by discovering information how to get spots.
+00:12:17 [W] That's what it does. It attacks itself commentators.
+00:12:20 [W] They are kinds and resources kinds as a perk a singular Words, which you find in manifest usually and the resources. They are components of URLs.
+00:12:29 [W] So the coupe version and the resource name last information of the scope.
+00:12:35 [W] That's all I needed to build a URL and the mapping between those two worlds.
+00:12:39 [W] It's called as mapping and that's our topic today move over resources and kublr from kind to cause them fully qualified or complete if the group's a version and the name are provided if it's a
+00:12:50 [W] Is empty it's a vegan SQL kublr at four pots.
+00:12:53 [W] We have the same four kinds and we can also talk about partial resources of partial current. So in the first case the person is missing so abstract because I said it's a powerful kind be one replica sets lower case. It's a powerful Resource Group is missing
+00:13:08 [W] Those kind of Imagine admitting it's also partially so keptn cassettes blown has no group has no version and that's what we know everybody knows from to cuddle and usually do it on command line to kind of get replica sets.
+00:13:18 [W] It's a powerful resource and the last step is used to fill the missing information and to get a fully qualified resource, which then can be used to query the replica sets.
+00:13:27 [W] There's a syntax to cut the syntax to say, this is kubeedge so dot EPS tells you cutter cgroup has given you can even just use a prefix and this is completed by the rest members of God.
+00:13:37 [W] Today is completed to Epsilon 1 then of course, you can have complete Cooper from these sources dot you want or apps if you try this prefix matching if you have a very even if we fail it because it has bipartisan support that if you try dot V1 without a group to Qatar pausing doesn't work.
+00:13:52 [W] So it's also rejected everything. I talked about here works for singular and plural so you can give a singular word ci/cd graphql resource. It's completed to a complete purely Source where artist has used.
+00:14:05 [W] So we saw two cattle that we observe itself has some news
+00:14:08 [W] It's my power.
+00:14:09 [W] So there are some pce garbage collection related initial plug in here.
+00:14:12 [W] But the main consumer of those has methods especially Discovery based ones are the controllers controller manager horizontal put auto-scaling can work for all the resources that have scales up resource. So this is a polymorphic or generic use case.
+00:14:25 [W] Works for a singular and plural so you can give a single language here singular powerful resource. It's completed to a complete to our resource where artist has used.
+00:14:22 [W] So we saw to cuddle that we observe itself has some use of less mappers. So there are some PC garbage collection created a little plug in here.
+00:14:29 [W] But the main consumer of those Hazmat parsec specially Discovery based ones are the controllers controller manager horizontal put auto-scaling can work for the resources that have a scaled-up resource. So this is a polymorphic or
+00:14:41 [W] great use case.
+00:14:43 [W] That's why is my picture involved in poddisruptionbudgets is also involved and the garbage collectors may be the most interesting case here and there it will spend several slides talking about the garbage collector and this uses has mapping.
+00:14:55 [W] at the school who taught doesn't use the Snipping surprisingly, but it uses Discovery. So it's not that surprising because this company and has nothing are deeply connected quick. Look on zettaset painter facing go. There are three kinds the arrow functions here
+00:15:23 [W] 1/4 doesn't use less my being surprisingly but it uses Discovery so it's not that simple surprising because Discovery and has nothing are deeply connected quick look on zettaset interfacing go there are three kinds
+00:15:39 [W] White ones popular resources to compete resources fully qualified resources and the green ones take kinds complete.
+00:15:44 [W] So kind of kind of your muted complete new kinds and versions to rest mappings and as mappings if you look here what is amazing is that actually use resource to kind fully qualified and scope.
+00:15:54 [W] So basically the last one is kind to Resource and the green one is most interesting in the context of garbage collection because calculation uses a toner references are cool kinds and everything which we talked about here makes difference or has influence on
+00:16:07 [W] Garbage collection.
+00:16:09 [W] So take let's take a look on the yellow and the white ones where we can have partially input.
+00:16:12 [W] So powerful input is completed if we already pass complete information so fully qualified resources, of course, we get back fully cooperate fully qualified resource again, not surprising but especially here if you have balls we components and they're not empty.
+00:16:25 [W] There's no prefix matching.
+00:16:27 [W] if you have just a but you passed a version as well, you get never this prefix matching only works if the person is emitted so for the case where business omitted but who is complete
+00:16:37 [W] Obviously, it's it looks to its formation of kubernative and find zettaset CN this case and we won and we won we toward of the apps group. If you just have the a is a prefix matching which we which we already have seen happen. So apps we want replica set is found and absolutely 1 beta 1
+00:16:52 [W] Let's take a look on the yellow and the white ones where we can have partially input.
+00:16:54 [W] So powerful input is completed if we already passed complete information so fully qualified resources, of course, we get back fully cooperate fully qualified, which was again not surprising what especially here if you have all three components and they're not empty.
+00:17:07 [W] There's no prefix matching.
+00:17:09 [W] So if you have just a but you pass away from as well, you get never this prefix matching only works if the person is emitted. So therefore the case my vision is omitted, but who is complete obviously, it's a look
+00:17:20 [W] To its formation of new versions and find zettaset cncf case mu 1 and V 1 meter one of the apps group. If you just have the a is a prefix matching which we already have seen happen. So apps we want Happy cassette is found and absolutely 1 beta 1 that because that's the
+00:18:29 [W] Two looks at authentication k8s sio and probably some other groups was a but it's not like I said, those are not people overturned by the last Epi last one the group the group is missing it's filled in as expected and if group and prodyna missing that's
+00:18:52 [W] The command line then hoop and version our edit. The order of the results depends on the preferred group.
+00:18:59 [W] We have an order. I saw that in the discovery information already.
+00:19:02 [W] And other than that resource names are ordered alphabetically.
+00:19:05 [W] All right, so just copy and rest mappings are connected.
+00:19:09 [W] So let's take a quick look on Discover information on the / apis and point you get all API groups and Severance and separate versions on / apis apps you get basically the same but just for the Obscure group in those cases you don't
+00:19:22 [W] Get resources.
+00:19:23 [W] So if you want to know about resources, you have to go to one level deep Rai saheb's you want and then you get everything about oil resources in the case that we cassettes lowercase prove.
+00:19:33 [W] What is the name of the resource singular name?
+00:19:34 [W] It's empty.
+00:19:35 [W] So it was a Raspberry Pi will fill ins and lowercase kind the scope of this namespace.
+00:19:40 [W] we have to add a namespace to so you are kind of skeptical set up our case as we expected the verbs are given so we know what we can do with the resource short names are returned for to Cutters or areas on the command line and cut.
+00:19:52 [W] To go you so you can list all the resources and keptn cassettes are moms at all.
+00:19:57 [W] Right.
+00:19:57 [W] So keep in mind to get resources you have to exert column as well from this company info so you can use the discovery client and you can wrap it with a caching layer.
+00:20:07 [W] So there's a disk cache and memcache Discovery weapon caches for controllers because they are one long-running and the disk cache is used by to Qatar for example, and if you ever catched Discovery client, you can pass that to the Constructor for Discovery rest never educated at Napa as you expect.
+00:20:22 [W] Audiences on the command line and cut categories so you can list all the resources and keptn cassettes are Hmong that all right.
+00:20:29 [W] So keep in mind to get resources you have to assert column as well from this company info so you can use the discovery client and you can grab it was a caching layer.
+00:20:39 [W] So there's a disk cache and memcache Discovery weapon calf is for controllers because they are one long running. The disk cache is used by to Qatar for example, and if you ever catched discover your client you can pass that to the Constructor for Discovery and a sniper.
+00:20:52 [W] Our educator Nats memorize you expect implementing the interface.
+00:20:56 [W] We have soda just see there's a research methods on the rest my power so you can invalidate the cash manually, if you like this also happens when a typo and a type of means the catch is a cache Miss and to catch is invalidated. This means you get those 30
+00:21:21 [W] On the rest my power so we can investigate the cash manually. If you like this also happens when a title and a typo means the catch is a cache Miss and to capture some validated. This means you get those 30 plus discovering coils again and again,
+00:21:36 [W] Use case if you have a controller, there's a risk of what will being so keep this in mind. This might be important.
+00:21:42 [W] So we had to use what we saw that see what I want to highlight is that the controller manager calls.
+00:21:46 [W] He said every set is seconds and this is the way it gets to know about new resources.
+00:21:51 [W] So if you create a Cid in the cluster text macstadium seconds until garbage collection knows about the new ci/cd. We talked about that. We need this versions Discovery and point to get resources. The consequence is if you have a credit repair service in the
+00:22:06 [W] this whole year to to know about the educated resources if this breaks down for networking issues or because a gas of redeploys or something like that Discovery clients, and that's my possible and see is a resources and aggregated tikv one
+00:22:17 [W] At the discount rack we haven't ever with it whenever and so that's the power we have incomplete information and this might have consequences.
+00:22:21 [W] So keep this in mind and to discover your client is kind of grateful.
+00:22:25 [W] So it returns are was directly but it also gives you the partial information it was able to gather from the cluster. So always expect a non-null first result, even though the average whole to go to and cope with that whatever this means in your in your use case to discover u.s. Mapper is
+00:22:40 [W] Just continues was popular results and ignores errors, but obviously incomplete information might have consequences for your use case.
+00:22:44 [W] So think about your controller and where user has never tried to fail gracefully because you have to expect ever has to happen and stay consistent in a way which matches your use case.
+00:22:54 [W] So we saw knative space controller which blocks rather than doing stupid things. It blocks has the work.
+00:23:00 [W] Maybe this is much more important to stay consistent like that and continuing working gracefully garbage collection, David we talk about in a second. That's
+00:23:07 [W] Important to Cutter can just print a warning or something like that.
+00:23:10 [W] That's completely fine.
+00:23:11 [W] But depending on use cases Behavior must be different and with that I passed over to date.
+00:23:16 [W] Now, let's move on to garbage collection of kubernative API resources.
+00:23:22 [W] The first thing to consider is which binaries are involved and we have a cube a pi server, which does basic crud on the resource and tracks State like is the resource present.
+00:23:32 [W] has it been removed or does it have a deletion time stamp set but finalizes that prevent it from being removed and then we have the cube controller manager which runs a garbage collection garbage collector controller and it looks for resources with absent or missing owners
+00:23:47 [W] The first thing to consider is which binaries are involved and we have a cube a pi server, which does basic crud on the resource and tracks State like is the resource present.
+00:23:54 [W] has it been removed or does it have a deletion time stamp set but finalizes that prevent it from being removed and then we have the cube controller manager which runs a garbage collection garbage collector controller and it looks for resources with absent or missing owners
+00:24:28 [W] Takes action on them and we'll get to the particular actions later on in some examples.
+00:24:33 [W] to describe the relationship between the resources we have owner references on children children list their parents as an owner after you can have more than one and a namespaced child can only refer to parents in the same namespace
+00:24:48 [W] Or in cluster scope namespaces having the owner references on the child allows permissions to be listed on the child and not on the parent which makes it safer to express them via the API.
+00:25:02 [W] Looking at an owner reference.
+00:25:04 [W] Here's an example in a resource manifest that shows a single owner reference.
+00:25:10 [W] There is a section that refers to coordinates of where to find the parent in this case. We're looking for a config map named I3. You'll notice there is no namespace.
+00:25:21 [W] So this means that it has to be in the same namespace or cluster scoped.
+00:25:26 [W] We have a block on a deletion field.
+00:25:28 [W] that only does something with foreground deletion of parents.
+00:25:32 [W] It has no effect in the default case.
+00:25:34 [W] There is a controller field which doesn't actually affect GC Behavior at all.
+00:25:39 [W] It's used by higher order logic to control ownership of items.
+00:25:45 [W] And then there's a youíd the you and refers to the unit of the parent and is necessary to handle name reuse of parents if you rapidly delete and recreate parents,
+00:25:55 [W] I need to know if it's the same parent which case you need to be preserved or in a delete and recreate case. It's different and the owner f is now invalid and the resource needs to be collected.
+00:26:08 [W] See Behavior at all.
+00:26:09 [W] It's used by higher order logic to control ownership of items.
+00:26:15 [W] And then there's a youíd the you would refers to the you ID of the parent and is necessary to handle name reuse of parents. If you rapidly delete and recreate parents, we need to know if it's the same parent which case you need to be preserved.
+00:27:15 [W] So the mechanics of actual deletion, where is an option to delete in the background?
+00:27:20 [W] This is the default case.
+00:27:21 [W] It means that resources are removed immediately assume you have no final answers and the garbage collection controlled are finds child resources that have no additional owners in the background and deletes them.
+00:27:33 [W] is what happens when you run Cuban troll delete a particular config map.
+00:27:38 [W] So in this example, we are going to delete I3 the delete command is sends a propagation policy of background. The queue API server and I3 is immediately removed from Haiti on the garbage collection controller notices
+00:27:54 [W] Delete k3s because it no longer has a valid owner reference.
+00:27:58 [W] Then the garbage collection controller notices that O2 and O3 have no owner references and they get deleted in any order.
+00:28:07 [W] Another option for deletion is to Orphan it you might use this means that resources are going to be deleted but instead of cascading through garbage collection and deleting the children.
+00:28:18 [W] It'll simply remove the owner references the shoulder.
+00:28:21 [W] This is something you might do if you want to replace a parent for some reason like maybe there's an immutable field and you need to change what that immutable field is you have to delete and recreate but you don't want to Cascade through everything to do this. You would use a coupon.
+00:28:36 [W] The lead with a Cascade equals false and it would send a propagation policy or so if we work through the same example only this time we're going to delete I3 with an orphan policy. Then i'ii is marked for deletion deletion timestamp is set and
+00:28:51 [W] What that immutable field is you have to delete and recreate but you don't want to Cascade through everything to do this. You would do AQ control delete with a Cascade equals false and it would send a propagation policy orphan.
+00:28:57 [W] So if we work through the same example only this time we're going to delete I3 with an orphan policy then i'ii is marked for deletion deletion timestamp is set and an orphan finalizer is add to list the garbage collection controller notices this
+00:29:23 [W] That list the garbage collection controller notices. This finds the children and removes their owner references.
+00:29:32 [W] Once the owner reference is removed.
+00:29:35 [W] Then the orphaned finalizer is removed and I3 is deleted so you can see here we end up k3s.
+00:29:41 [W] The other owner references are still intact and now we can recreate I3 and relink it if wish.
+00:29:49 [W] Foreground deletion of the foreground is one of the more complicated ones and this is what block owner deletion is for. It allows for more control over the ordering in which resources are deleted.
+00:30:04 [W] Deletion of the foreground is one of the more complicated ones and this is what block owner deletion is for. It allows for more control over the ordering in which resources are deleted.
+00:30:16 [W] This means that we are able to
+00:30:21 [W] have parents wait for children to be removed before they themselves are removed.
+00:30:26 [W] It's important to note that this only works if the parent is deleted with foreground Elation, if it isn't then you're blocking or deletion doesn't actually do anything.
+00:30:35 [W] So it's more of a hint.
+00:30:39 [W] There's actually no command to trigger this. So instead we have an example of using a delete - - were all to send a propagation policy of foreground.
+00:30:50 [W] A pi server, so you can see here. We have our same example. We have owner references with block under deletion set for a couple of cases and we're going to walk this through first thing that happens is that I 3 is marked for deletion and foreground deletion
+00:31:06 [W] Foreground deletion is added to finalize the list the garbage collection controller notices this and goes to the next level and marks k3s same way.
+00:31:17 [W] But k3s cannot be removed from the API yet because there's a block owner deletion from O2 instead. We actually have to go and remove O2 and O3 first one, so to is removed
+00:31:32 [W] Possible to delete k3s K3 is removed. We can delete I three you can see here that the ordering is actually the reverse of the background deletion.
+00:31:42 [W] But remember, it's optional if you deleted by three with background deletion you want to get this order. So if you need to preserve your resource, you're going to want to set a finalizer.
+00:31:54 [W] So bugs we do have bugs.
+00:31:56 [W] One of them is with block under deletion. If you have two parents of a child, then it doesn't behave right. In fact, if you delete I3 in this case, I'll just skip through the pieces.
+00:32:12 [W] Mark relation and now we're at the point where k3s should not be deleted until O2 has been removed.
+00:32:15 [W] O2
+00:32:18 [W] Should not be removed early, but the garbage collection controller removes the owner reference from O2 to k3s.
+00:32:33 [W] We end up deleting I3 k3s OC 3 because the owner reference from o to no longer exists.
+00:32:41 [W] We don't currently have a PR to fix this book.
+00:32:45 [W] It is less than ideal. But I hit it again while creating this demo figured I'd mention it.
+00:32:51 [W] There's another case where clustered namespace references can cause deletion of resources with valid owners. So in this case,
+00:33:03 [W] We are closer scope resource and to which has just taken and owner ref against the namespace resource in your call. I said you should never do this.
+00:33:12 [W] It's not allowed the API doesn't prevent it and sometimes it appears to work because what will happen is I 3 exist in the cash in the garbage collector and n 2 dozen existence check with a you would and it matches I3.
+00:33:27 [W] Owner but on every restart the cute controller manager effectively has a race it race has to see whether it observes I3 before it observes and to if you lose the race and to is observed first, there's
+00:33:35 [W] There is no I3 at the cluster scope.
+00:33:23 [W] Remember there's no name space. So the closer scope resource can't depend on a namespace coat one that causes N2 to be deleted and that's probably okay because it has an invalid owner reference but k3s was deleted as well. Even though it was well formed because we saw the you it disappear.
+00:33:39 [W] This is a bug.
+00:33:40 [W] We have a PR to fix it.
+00:33:43 [W] There will be looking at doing in 120 in a related problem.
+00:33:48 [W] The same thing can happen cross name space where if you race and I3 exists before you seek a to then k 2 won't be deleted but if the race goes the other way the existence check fails
+00:34:03 [W] I'ii, a namespace one and so k 2 and K 3 are both deleted and one more common case of saying this and it's inside of a single name space where the kind is set incorrectly when this happens you end up with a deletion.
+00:34:16 [W] And it causes K2 and K3 in the namespace to be deleted. As I said, we have a PR fixing this in 120 and it will prevent the good owner references from having their resources removed.
+00:34:25 [W] Was a whirlwind tour through garbage collection, and if you want to ask more questions about it, and you don't get them in this session. You can find us in slack and then in the community meeting and mailing list got
+00:34:38 [W] Thus in slack and then in the community meeting and mailing list got links here.
+00:34:41 [W] All right.
+00:34:45 [W] Hello again.
+00:34:45 [W] I hope you enjoyed that worded like topics from our presenters personally.
+00:34:50 [W] I really did before and in this section. I wanted to remind you that we have regular Sig meetings every two weeks and twice a week.
+00:34:57 [W] We do our bag and pull request three ashes for 30 minutes.
+00:35:00 [W] It's a great way to get involved.
+00:35:02 [W] Join our mailing list to get the invites. We also have qbl Durand API expression working groups as part of our city and they have their own respective meetings.
+00:35:13 [W] Some months we are always in hours like channels.
+00:35:17 [W] Finally.
+00:35:19 [W] I will leave you this a slide with contact and material information in case you want to know more or do more with us in the name of the entire Sig. Thank you for attending our session and we wish you a good and enjoyable keptn, bye-bye.
+00:35:37 [W] Hey into some some questions.
+00:35:40 [W] Yeah, I think I do.
+00:35:42 [W] I want to go ahead and start with one from Laura.
+00:35:45 [W] She asks, why is it safer to attach permissions to the child versus the parent and this is in reference to owner references being on the child saying I depend on this parent over there and the reason it's safer to do
+00:36:01 [W] That direction is because if you had a parent that got to claim children, then if you were able to know the coordinates of a particular child, you would be able to delete any API object in the system and
+00:36:15 [W] One who doesn't have deletion permissions to start deleting objects by creating some resource pointing it and saying that's my child and deleting himself and by doing it on a child you're ensuring that the voice.
+00:36:23 [W] Or ensuring that the person doing the editing can already touch the object that might be deleted.
+00:36:30 [W] Cool, let's talk about some of this discovery information is cached.
+00:36:34 [W] Yeah, there's a there's a number of caches that the aggregator caches but it's the we need to make the distinction between the open API spec document and the like homegrown
+00:36:49 [W] Nation the open API spec document is quite large and it's a constructed offline in cash in aggregator and also Q control keeps its own cache, but I believe the believe nothing in the system
+00:37:05 [W] Because that is subject to change.
+00:37:02 [W] I guess they're both subject to change. But yeah for whatever reason.
+00:37:07 [W] Well actually I can provide just a little extension on that Cube control actually has a cache and it caches to your home directory inside of dot Q for the discovery information that Daniel was talking about about which kinds and
+00:37:22 [W] Test and we do that and refresh it every 10 minutes ago stale every 10 minutes and refreshes and we Refresh on Cache misses.
+00:37:29 [W] So if you say if you suddenly create a CRT in called a fiber and then you need to go get fibers Little Miss and we'll do a lookup the try to find it.
+00:37:39 [W] find it. But I was involved in the in the caching for the open API spec document and that even if it's in cash, we still ask a pi server if the Eid or whatever it is the
+00:37:51 [W] the e-tag. Yeah.
+00:37:54 [W] Thanks.
+00:37:54 [W] We asked if that's correct.
+00:37:56 [W] So so even if it's cash like if the if the thing gone has gone away like the cash won't help you there.
+00:38:06 [W] Let's see David you want I want to talk about Todd's question.
+00:38:10 [W] I've seen Solutions but a namespace fails to delete.
+00:38:12 [W] Let's just manually remove the finalizes what could possibly go wrong?
+00:38:15 [W] And you know, sometimes it's actually okay to do but it's not okay in the generic sense. So I don't recommend it as a solution.
+00:38:24 [W] There are some API servers that don't actually store any state.
+00:38:29 [W] They just provide views on top of existing state for instance.
+00:38:33 [W] In that kind of a case, if you know that the only thing missing is that sort of an API server.
+00:38:39 [W] It's safe to remove the finalizer. Most of the time people do not know that though.
+00:38:43 [W] There's other cases where it's safe where maybe you deleted an entire API server, and it's never going to come back and you remove the LCD back again, and that case is also safe, but generally speaking it's not safe to just remove a
+00:38:53 [W] Because you will end up with orphaned artifacts and when the namespace comes back and gets recreated.
+00:38:58 [W] Someone will be looking and saying where did this come from which is a wild bug to have if you're a cluster owner.
+00:39:05 [W] Yeah, the zombie or we like to call them Time Bomb time bombs. They leave behind.
+00:39:13 [W] Let's see.
+00:39:13 [W] What do we mean by Noisy Neighbor?
+00:39:15 [W] I think we answered that but briefly is just somebody else on the Node that's consuming resources.
+00:39:20 [W] Especially there's a number of resources that kubernative doesn't directly quota or you cgroup s' for so if you're using those I Ops is the one that bites people most often in my experience.
+00:39:38 [W] Ravi links to a another Discovery issue.
+00:39:42 [W] I think this one's pretty interesting because it is referring to running a mixed version cluster of API servers.
+00:39:51 [W] So someone you know, 117 and summon 118.
+00:39:55 [W] Yeah, kubernative Is Not Great to run in that set up for like long periods of time. It's not meant it's meant to be safe to do.
+00:40:05 [W] Rolling upgrade, but but I wouldn't run it for in that way for longer than it takes to do the upgrade specifically like, you know, all those different API groups are different URLs.
+00:40:18 [W] A pi server like those requests might go to different API servers and you get you get you know, you get the overall list from like say a new API server and then the individual in point from an old API server, which doesn't know about the resource and it gives you four.
+00:40:32 [W] Oh four.
+00:40:32 [W] Yeah. That's unfortunate.
+00:40:35 [W] I think we're actually we've made some progress on that.
+00:40:39 [W] We have a API server identity and a storage version tracking system. So in the I don't know how distant
+00:40:48 [W] But at some point in the future, like it's plausible that we could have a system where none of the API server server new version until all of them conserve it. So we're slowly getting to the point where that won't be an issue.
+00:41:04 [W] I think that might be all we've got time for Daniel.
+00:41:06 [W] I saw a couple other questions come in and they looked good, but you can probably find us in Sig API Machinery on slack to be able to talk about it in more depth.
+00:41:15 [W] Yep, and we'll be in the the cncf selection.
+00:41:19 [W] I'll for a few minutes to so thanks everyone.

@@ -1,0 +1,296 @@
+﻿Jaeger Intro: QZKS-5204 - events@cncf.io - Tuesday, August 18, 2020 12:27 PM - 47 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:02:45 [W] Hello and welcome to project introduction for jaeger.
+00:02:55 [W] My name is your escrow.
+00:02:59 [W] This month is the fifth anniversary of Jaeger starting at Uber from the first commute.
+00:03:03 [W] It's an August and so congrats to the project as far as the agenda.
+00:03:14 [W] So I will start with a brief introduction of white racing is an important part of the observability for your systems.
+00:03:18 [W] I will do short.
+00:03:20 [W] Live demo of Jaeger features will talk about Jaeger architecture will talk about sampling and I want to finish with discussion about the relationship between Jaeger and opentelemetry and how these two projects are collaborating to
+00:03:34 [W] Say a few words about myself.
+00:03:38 [W] I'm a software engineer at Uber. I started Jaeger as an internal project and then we donated it to Cloud native Foundation.
+00:03:49 [W] I'm also a co-founder of opentracing and opentelemetry projects which are the instrumentation projects for tracing and I also published a book last year about tracing and my experiences at Uber as well as experiences with a Jaeger and how
+00:04:00 [W] Deploy it in configuring things like that.
+00:04:04 [W] You can find my contact informations on my website with a Blog and another information.
+00:04:16 [W] So to start with with the source question of observability, why tracing is important in microservices, especially in microservices architectures and why it becomes popular today,
+00:04:26 [W] so modern systems have to deal with the very large scale and the traditional wisdom is that we cannot scale up our servers because there's a limit to how much any given server can process and so usually people say
+00:04:41 [W] And okay, we need to scale out and build the architecture in that way.
+00:04:47 [W] But what does scale-out actually mean the simplest approach to scale and out is that if you have a monolith service, you can just replicate it multiple times in many hosts and put a load balance in front of it and if that's the whole of your architecture
+00:04:59 [W] Then you have a pretty clear picture of how to debug these things.
+00:05:13 [W] What observability store is it because you could probably get away with just metrics for every single instance tagged with the instance name and then you can investigate problems with this architecture.
+00:05:17 [W] in reality, this is not how the systems are built today. And this is another type of scaling that we can talk about is it's scaling the systems in depth meaning that we don't have a single mother is we actually break magalix.
+00:05:29 [W] now listen to many many different pieces and many different layers and so any individual request that that heats architecture has to go so all these many layers so modern architectures are really deep systems if you look at any of them and
+00:05:44 [W] Deep systems present unique challenges in terms of durability if we look at this picture, which is just a screenshot of microservices layout the tubers few years ago.
+00:05:58 [W] So imagine that there is a request coming from the bomb mobile application that request might look like this when it hits the this architecture at it, it goes through a large number of services all participating together and in certain one single request
+00:06:11 [W] And we can look at it in a different way.
+00:06:17 [W] This is the actual representation of the real production request from from Uber.
+00:06:19 [W] Right might be an application start and we can see here.
+00:06:22 [W] There's like over a hundred remote procedure calls within the that execution 14 levels of depth. So why is that a problem for durability? Well, the problem is that now we have to answer questions about
+00:06:36 [W] What's wrong with the system given so many different nodes in the system that were the things can go wrong, right? And how do we start with that?
+00:06:46 [W] We approach to usually with?
+00:06:48 [W] Oh, we have some business metrics maybe number of trips in a particular City and suddenly that Matrix did and so we have an alert and was tried to investigate but then then what where do you go from that business metric saying something is wrong to worry in this massive architecture
+00:07:01 [W] A particular change happen that is causing this problem.
+00:07:10 [W] And this is where tracing really comes in because tracing allows us to look at individual requests in full depth and to end and if there are errors happen in they will be captured in the trace and so the conclusion here
+00:07:19 [W] is that this is white racing is important because in the modern deep systems, sometimes it's much more difficult to find where the problem is given the how distributed the system is rather than what is specifically wrong because once you
+00:07:35 [W] Down the problem.
+00:07:41 [W] There are a lot of variety of different tools that you can use to troubleshoot it within let's say a single instance of a service but even to get there is very challenging, especially if you start in from an alert on a business metric
+00:07:48 [W] I just want to give a brief kind of Crash Course into tracing. If you don't know how that works. The tracing is built on the concept of content creation.
+00:08:03 [W] Meaning that when the request comes to our architecture in this case.
+00:08:07 [W] Let's say service a at the top is the kind of Gateway service maybe or API service. And as soon as the request comes in we assign unique ID to that request. Let's call it the trace idea and we store it in the thing which we call a context or metadata and that mayadata.
+00:08:18 [W] the data is attached to every single other RPC call or request that the execution of this top-level request involves, right and so as service or a call service be we will pass that metadata in and so on and so on and what that does is
+00:08:33 [W] Basically that allows us to tag the a single execution across multiple services and then assemble this data on the backend into a coherent representation of the of the execution and this is kind of a typical representation of a trace in the
+00:08:48 [W] Chart where each service is represented by certain span of time where like from start to end of the operation within that service and then there is a hierarchical relationship between between services like a causality which
+00:09:03 [W] Being tracked by this metadata being propagated.
+00:09:06 [W] Now, let's look at the demo of Jaeger features.
+00:09:11 [W] So I have here a clone of Maine Jaeger a positive from GitHub jacket racial slurs Jaeger and there's a directory for examples with a single sample application called hot rod.
+00:09:25 [W] So in that application we can see there is a Docker compose file which loads so-called Jaeger all-in-one. This is a binary of single bol.com.
+00:09:37 [W] That combines all of the Jaeger components in just one executable so you can kind of easily run it and then there is another Docker image for the actual demo applications, right? So
+00:09:48 [W] let's started.
+00:09:53 [W] We can see in the logs.
+00:09:59 [W] There are two things.
+00:10:02 [W] So Jaeger is the the main Jaeger back and so it starts on this port 1 6 8 6. This is The Quay service, which also shows the front end the UI and then the demo application started a whole bunch of services the one
+00:10:14 [W] At 80 80 is the one that we actually want to look at.
+00:10:18 [W] So let's go there so we can see this is a kind of a mock rides on demand application where you have customers and you can click a button and get the car right?
+00:10:27 [W] So let's order a few cars and we can see here.
+00:10:30 [W] There's like license plate ETA of arrival then some tracking information for for debugging purposes and Anna latency and you can see that the latency kind of do more requests. We put in the higher latency because
+00:10:46 [W] Comes right? So like if I do another request that will be short.
+00:10:53 [W] But if I send many of them then we'll see that the latency keeps climbing right?
+00:10:56 [W] Let's look at how these requests looking Jaeger.
+00:10:59 [W] So we'll go to Local Host at this poor that I mentioned previously and we can see here in the services drop-down that Jaeger already detected all of our services in that multiplication.
+00:11:11 [W] Action, it also detected itself because Jaeger query itself is instrumented and so we can get traces from it.
+00:11:20 [W] So but we're interested in in the hot rod application. But before we jump into traces, would it be nice if we knew what the architecture of that application is because all we've seen so far as a front endured and so yoga has the system
+00:11:33 [W] Get extra tab for this there's two views one is not like useful for this case. But the dag you is good because it gives us very clear picture of what all the services that include it in this application how they connected.
+00:11:48 [W] This is a conundrum of requests that were executed during my run of the demo.
+00:11:55 [W] Let's go to see what what actual traces look like.
+00:11:57 [W] like. I so there's a few ways that you can search for traces one is we can just go and do blind search once we selected the servicemeshcon.
+00:12:02 [W] We can just see and find all of them right the other option. We can do search by specific values if they are captured in instrumentation. And in this case, the instrumentation records these license plates
+00:12:17 [W] Is the tag driver on the span of the of the service and so we can put it in a search query.
+00:12:24 [W] And we get just this one Trace right and if we go in that race, so let's let's just go through that view, which is kind of the main view of most racing systems at least for forgiving trays, right so here on we have a timeline.
+00:12:40 [W] So this is also known as a Gantt chart view in at the top. We have what we call a mini map. Its kind of the small presentation of the trace.
+00:12:53 [W] It's useful when you need to navigate very large traces because you can zoom in here and jump into
+00:12:58 [W] Various places but in this case almost all of the trades. Well actually half of it still fits on the on the screen. So the minimum of might be useful as well. Then on the left. We have all the services laid out in the heretical manner
+00:13:10 [W] and what how which service called which are the service right so we can if we collapse everything and then open only one level we will see that actually One More Level we can see
+00:13:25 [W] Sure that the front end service called the customer than it called the route service multiple times and also called the driver service here. Right? So which is what we see in in in architecture diagram and
+00:13:40 [W] And basically every every bar here represents a single span within the service you can see that let's say if we pick a front and there's more than one span here, even though logically there's only one separation because the way the trace instrumentation has done it.
+00:13:55 [W] Great the Spire not only for every incoming requests but also for every outgoing requests. So this HTTP get dispatch. That was the entry point into the front and service. But then when it made the call another HTTP call to the
+00:14:10 [W] To the customer service there was another child spends so-called clients been created there and if we click on any span we can get additional details. So let's look at the at the roots pan.
+00:14:25 [W] The one thing that we haven't spans are things called Tags tags are just some metadata that you can attach to the spans and it gets recorded and sent into in the background to the yes racing back and so we can see various useful things specifically
+00:14:36 [W] Like the exact URL you don't want to put the aerial in the span name because that will make it very high cardinality and difficulty aggregate but in the tags, you can put any kind of Cardiology and this is just I think nonsense for the UI cash busting.
+00:14:52 [W] Then another interesting thing here is span kind which says this is the service pan, right?
+00:15:03 [W] So if we look at the next one, as I said, this is the outgoing outgoing call or sorry. This one doesn't have this this one.
+00:15:14 [W] It will have a span kind of client. So which says this is the the call I'm making out of the process to to the next survey and we can see that URL has its heat in the customer service.
+00:15:21 [W] Going back to the top span. Another thing that we can see here is that
+00:15:26 [W] The look section, right?
+00:15:38 [W] So in in the output here, we can see that there is a as I was indicating this request.
+00:15:40 [W] There's a bunch of logs written to the standard out.
+00:15:41 [W] Right and this is normal.
+00:15:46 [W] you can fight them and you some Central look aggregator aggregator, but they kind of very difficult to use because again, if there are multiple concurrent requests you get a single jumble of of this loglines mixed together, whereas
+00:15:56 [W] He's here these logs belong just to a single request. Right and this the way they get into the trace is that if you look at the implementation of hot rod application that has a special wrapper for the logger. So that logger not only looks just and that out but also writes to the
+00:16:11 [W] And that allows you to kind of get the exact same information but like filtered out from the from the rest of the noise that you can see in the logs.
+00:16:25 [W] So this is a very powerful feature of tracing that allows you to investigate problems within like very specific execution of your of your total Trace.
+00:16:36 [W] Now, let's expand everything again and look at what what the trace can also tell us. So one thing that's immediately obvious. Is that there is this -
+00:16:42 [W] SQL select which takes the majority of x 2/3 of the total time of this request, right?
+00:16:53 [W] So if we were investigating the latency problem than this is a clearly the past where we would look for for why this this to particular places is very slow and it also has some interesting logs.
+00:17:02 [W] not going to go into into this Matthew much but it says waiting for log behind three transaction. So it's probably not the actual query that was taking so long, but the separation was simply stuck in India service, right? So
+00:17:17 [W] Might be some resource pool contention here.
+00:17:21 [W] The other thing we can see in the traces that these multiple calls from the driver to ready service.
+00:17:25 [W] Some of them failed as can be indicated by this red exclamation point and the way that that is detected is that if we look at the tags, you will see error equals true, right? So again, this is instrumentation setting that up. You can always do it for your own
+00:17:36 [W] Nations how you see fit Jaeger simply just displays has this errors have the ability to do a bubble up the tree. So if I start collapsing I think then we can see here that the driver is shown with an
+00:17:51 [W] Was no specific are in the driver.
+00:18:05 [W] But then if you expanded then it's actually below right. So sometimes it's useful when you look in the very top of the trace to know if there are any errors and then you can drill down into where the exactly the happened and finally another thing that we can easily tell
+00:18:09 [W] Then you can drill down into where the exactly they happened. And finally another thing that we can easily tell from the trace in terms of like analyzing performance of the applications that this calls to radius seem to be happening all in sort of a
+00:18:17 [W] one of the applications of this course to radius seem to be happening all in sort of a staircase pattern right one after another so that would clearly be an indication of something that potentially can be improved because if we know the business logic of
+00:18:26 [W] To be an indication of something that potentially can be improved because if we know the business logic of the application here, it looks like it's getting like driver informations four different drivers.
+00:18:35 [W] And so why couldn't the task register for that in parallel or in a single bulk request, right?
+00:18:36 [W] So that would have saved this this much time basically by doing this all in one and finally the last segment where the front implication calls into the route service asking what is the closest route for the driver to get to us so that we can compute the ATA then we
+00:18:53 [W] See here that this execution is not as bad because there are some concurrent requests going on but there is no more than three concurrent requests for some reason, right?
+00:19:00 [W] So take this top one two three, and then once as soon as one stops, then the Dead one start. So this is again an indication of some sort of a resource pool contention. This is like executor pool that's limited by 3 and you cannot execute more than
+00:19:15 [W] Up 1 2 3 and then once as soon as one stops, then the Dead one start.
+00:19:17 [W] So this is again an indication of some sort of a resource pool contention.
+00:19:17 [W] This is like executor pool that's limited by 3 and you cannot execute more than and so if you run multiple concurrent requests and they all going to be blogging on this thing, but in this case, we don't see it because the contention the main contentions really isn't my SQL span.
+00:19:25 [W] If I go back to the search screen, the one thing I didn't talk about it is is kind of what you get on the search screen, right? So we you can also search for Traces by other attribute specifically by duration, right which could be very useful because if you are
+00:19:41 [W] You get on the search screen so you can also search for Traces by other attribute specifically by duration, right which could be very useful because if you are capturing a lot of traces in the system, some of them are maybe very short and quick and you are not
+00:19:46 [W] Traces in the system some of them are maybe very short and quick and you are not really interested in investigating them. You really want to look at what you P99 latency traces and presumably you have some Metric who says, oh your P90 light density is like two seconds right and you can put a
+00:19:56 [W] In latency traces and presumably you have some Metric who says oh your P90 identity is like two seconds, right? And you can put a query saying can you show me at races which are longer than 1.5 seconds, right?
+00:20:04 [W] And so then we only have one Trace here in this case if I make it maybe like one second I get a few more right so that allows you to narrow down the search and then investigate the what the differences are
+00:20:16 [W] Do what the differences are in this traces, but sometimes looking at one single trace doesn't necessarily reveal all the problems that might be happening in terms of performance and typically when you use normal
+00:20:29 [W] And tools like memory allocations, you would take a snapshot before and after and then you compare those snapshots, right?
+00:20:38 [W] And so Jaeger also has this ability to do the comparison.
+00:20:40 [W] You can select two traces and then click compare and what it does is it combines them into into the graph representation and uses green and red color coding to educate where there are missing or extra nodes in this case because there's only one
+00:20:53 [W] What it does is it combines them into into the graph representation and uses green on the red color coding to educate where there are missing or extra nodes in this case because there's only one extra node. So the picture is not that interesting, but if we had a very
+00:20:57 [W] The picture is not that interesting. But if we had a very large trays then that picture got a lot more interesting and I can show you later in the slides example from real production traces and finally the last piece I want to show here is
+00:21:09 [W] We looked at the system architecture before this one right?
+00:21:20 [W] There is another view that Jaeger has which is called dependency graph.
+00:21:21 [W] It's built from the search results.
+00:21:23 [W] Let me remove this duration so that I can get more traces.
+00:21:27 [W] traces. So 12 traces and then dip Japan is a graph Builds an execution like a rigid present representation of that of those traces. However, it looks very similar to the system architecture, but there is a
+00:21:42 [W] A second difference in that this this graph is transitive.
+00:21:49 [W] So when you see an error going through the like front end service to driver and then to radius we know that there is actually a path in some of the traces that goes through these two Services whereas in a system architecture
+00:21:58 [W] It's guaranteed. So just because there is a kind of an air from front end to customer doesn't mean that there is any request from Front End which will reach the MySQL right? Because this graph is based on just a pair wise connections between services.
+00:22:14 [W] And so why is it important is because sometimes sorry you need to search again when you investigate in like dependence of the services you not only want to see water my immediate dependencies under and the
+00:22:28 [W] One that like look for deeper dependencies, but only those which actually matter because if there is a dependence of Route service, let's say it's doing some background caching and hit some some storage here which never affect any of the front and request then we don't throw it here because it does not come up
+00:22:43 [W] and another feature of this graph is that it's not going to show you the whole architecture but only pass going through the focal service, which is why it's in pink here so we can refocus this view to another service and then it will become an even smaller for example in driver
+00:23:00 [W] Pass that go through driver and also through the customer service so they are not going to be shown here.
+00:23:15 [W] And finally this graph is also can show you a duration level view not just a service level view, right?
+00:23:20 [W] so we can see here that there are actually two different operations from the radio that have been cold and so they can you can switch to this in the layout view you can you can change the graph to show you different information. So this graph we built it as a sort of a platform to
+00:23:32 [W] to to do more stuff with it specifically overlay and real-time information.
+00:23:36 [W] Like what's your current latency or error rates on these graphs right now?
+00:23:43 [W] It's not hooked up in any way but this is kind of the future direction that we're going with so I think this this is all I wanted to show you in the demo.
+00:23:53 [W] So and then I will switch to my slide deck.
+00:23:54 [W] And I will start with this.
+00:23:57 [W] Sorry with this view that I mentioned overproduction trays where you compare it to traces and we can see here that because this this these two traces are much larger.
+00:24:13 [W] There are also they have a lot more interesting differences, right?
+00:24:18 [W] This is all I wanted to show you in the demo.
+00:24:31 [W] So and then I will switch to my slide deck.
+00:24:31 [W] And I'll start with this.
+00:24:31 [W] sorry with this view that I mentioned overproduction trays where you compare it to traces and we can see here that because this this these two traces are much larger.
+00:24:33 [W] There are also they have a lot more interesting differences, right?
+00:24:35 [W] And so at the red at the bottom shows that a whole number of calls did not happen in the round right hand side trace and so for example if we look at the duration
+00:24:36 [W] Left on was two point seven seconds.
+00:24:40 [W] The right one is 1.4 and so well because this whole section is missing that kind of explains why it was faster, but it also potentially there is an error there, right?
+00:24:41 [W] And so yeah, I will skip this detail do there's another way to look at this comparison of the Tracer. So this comparison is currently structural.
+00:24:50 [W] just compare and do the notes existing one versus another graph right, but we also may look sometimes at the the latency differences within a chin.
+00:24:58 [W] visual span, right and so the latency difference is is kind of gives you a very different picture but also
+00:25:02 [W] Drives your site immediately to the problems where you want to investigate right?
+00:25:17 [W] So here we can see we using like a heat map color coding for for like the darker red the darker the red the more latency differences in is within these notes and then the quite notes means the some of the notes were not even present in so in the right hand side
+00:25:23 [W] Loodse exist in one versus another graph, right but we also may look sometimes at the latency differences within each individual span. Right? And so the latency difference is is kind of gives you a very different picture but also
+00:25:25 [W] A means is like there are no difference and so we can see for example that kind of the overall latency difference came into in this path, right?
+00:25:35 [W] So it got lighter lighter lighter, but this is kind of one of the suspects pans that you might want to drill down and in and look at what was happening there.
+00:25:47 [W] you Mouse over this these nodes that actually shows you how much extra time was spent in this specific span and how what the percentage of time over all of the trace was wasted there.
+00:25:56 [W] So, I believe this this view is actually still not in the main branch.
+00:26:08 [W] It's like in the pull request unfortunately, so you can probably try it right away. But so in conclusion, you can use tracing tool to monitor transactions in your distributed architecture and see where the requester
+00:26:13 [W] And what happens in every step of the way right? We can also do root cause analysis by looking at the individual details, like what tags exist and expand like maybe SQL query or URL or some errors where the happenings and we can drill down into
+00:26:29 [W] We can also look at various patterns of how the timeline time layout of the trace look and so we can detect immediately patterns.
+00:26:40 [W] Like what's the longest critical path?
+00:26:44 [W] What's the staircase pattern why it's happening sequentially and things like that these visualizations make it very easy to troubleshoot.
+00:26:55 [W] And finally we can do very service dependency analysis on this Traces by using this system graph and the transitive dependency graph. And as I mentioned all of that is based on the I distributed context propagation, which is
+00:27:00 [W] Guided by Jaeger sdks, and so now let's talk about Jaeger architecture and overall Jaeger project. So Jaeger as a platform consists of these four components, it has a number
+00:27:15 [W] Libraries also called sdks or tracers in different languages.
+00:27:20 [W] You can see it on the left.
+00:27:22 [W] They all Implement opentracing API.
+00:27:30 [W] And so those are the things that you put inside your application or your side the framework that using within the application, right and they collect data and they send it out to the Jaeger back end and that's the the middle piece here Trace collection back end which includes storageos.
+00:27:37 [W] Some pre-processing some potential aggregations and things like that and back and also he is into the data mining platform where you can run big job analysis Big Data analysis, like fling jobs for real-time streaming or spark and create
+00:27:53 [W] Views of your traces for example the system graph in the demo.
+00:28:03 [W] It was like all in memory, but you can deploy it in such a way that it will actually compute from from large amount of traces and give you the this relations. And finally the front end is embedded in the Jaeger queries. I mentioned and provides you different views of the traces.
+00:28:14 [W] And finally, the front end is embedded in the Jaeger queries. I mentioned and provides you different views of the traces.
+00:28:21 [W] One thing that is worth mentioning is that Jaeger project by itself does not provide instrumentation, right?
+00:28:25 [W] So if you have no instrumentation application, you're not going to get raises and we don't have Auto instrumentation agents either and this was a conscious decision because those aspects of of distributed tracing that I take
+00:28:39 [W] take care of by project like opentracing and opentelemetry and I'll later speak about what that means.
+00:28:45 [W] And so you need to get instrumentation somehow so that you can start exporting data and Jaeger deals with collecting that data and presenting analyzing it so as far as history, so by the way Jaeger means Hunter and
+00:28:57 [W] and so you need to get instrumentation somehow so that you can start exporting data and Jaeger deals with collecting that data and presenting analyzing it so as far as history, so by the way Jaeger means Hunter and
+00:28:59 [W] Let's please with Jagger.
+00:29:00 [W] That's not the official name.
+00:29:03 [W] It was inspired by the upper from Google and and open Zipkin as I mentioned.
+00:29:10 [W] We created the toolbar and then donated to Cloud native foundation. And now it's a top-level graduated project at Cloud native foundation.
+00:29:21 [W] So how Jaeger fits in in your architecture is this is the slide tries to explain that. So let's say you have two Services A and B, right as I mentioned you need to have
+00:29:28 [W] Some form of instrumentation in those services and there are various options you have you you can have opentracing instrumentation with lots of libraries are supported by opentracing that you can just plug in and you don't have to do much in your code.
+00:29:41 [W] really just initialize some things and and then we also include a Jaeger SDK which simply implements that opentracing binding so that when instrumentation captures the data, it just gives a into the
+00:29:56 [W] Able to send unit we a go back and write.
+00:30:07 [W] However, there are two data paths that you can see here on the screen the to the top one in a solid line is so-called in band data, which is when service a makes a request to sirius B, it includes a certain method data about the trace.
+00:30:14 [W] Request that's very small piece of data, like usually Trace iot span ID and sampling flag and there are different formats that are supported.
+00:30:24 [W] So Jaeger has its own native format.
+00:30:28 [W] that was originally developed at Uber but there is also now a w3c standard format called Trace context that you can also configure Jaeger sdks to use to communicate with in services. And we also support zip can be three format, which is another alternative of that.
+00:30:39 [W] so that's how the trace information gets into the service bill, which it reads that metadata and then
+00:30:49 [W] it's again tracing data to send it out of band.
+00:30:53 [W] And so the trace data that goes to the Jaeger back and is really is sent in the background by background threads and it does not like happen on the critical path of the application where this part happens the top part on on the critical path, right?
+00:31:03 [W] It's part of your request execution flow. And as I mentioned the you don't actually have to have necessarily Jaeger tracers in your service because there is other ways you can instrument you can instrumented with Zipkin like a brave.
+00:31:18 [W] Our library or you can instrument with various opentelemetry sdks.
+00:31:21 [W] they all kind of support Jaeger as a data format except that if it's leaking down Jaeger itself supports you can format but Jaeger beckoned can combine all the data and present you in for a form of traces.
+00:31:34 [W] request execution flow and as I mentioned the you don't actually have to have necessarily Jaeger tracers in your service because there is other ways you can instrument you can instrumented with Zipkin like a brave sir library, or you can instrument with various opentelemetry
+00:31:45 [W] Women that we recommend is that you run Jaeger agent, which is a small process as a host agent so that you don't have to like Grandma any of them on one host.
+00:31:58 [W] Although if you do want you can run it as a sidecar in the classic like poddisruptionbudgets.
+00:32:14 [W] Some Discovery may be like UNS Sergey. Nsmcon.
+00:32:44 [W] Asians and say them to the database you can also have spark of linkerd jobs running off of the database and then Jaeger query visualizes that thing and the last piece which is shown in the red here is a control flow.
+00:33:00 [W] This is something that we've built from the beginning and to Jaeger architecture, which I'll speak to when going to talk about sampling it allows you to push configuration back into the Jaeger sdks to affect how the sampling is done in the application.
+00:33:12 [W] Architecture that we initially around a to war and later on we switch to two slightly different architecture where after Jaeger collector. We introduced Kafka before a component which right Spence into storage, right?
+00:33:28 [W] So the Jaeger collected got split into collector and ingesting an indexer. And the reason we did that is because when you sometimes have a traffic spikes or some application is deployed with like a sampling of hundred percent. It's very easy.
+00:33:45 [W] To send too much data that Jaeger collector simply not able to say fast enough into the database because database have like a throughput limits and whereas Kafka is usually a more elastic storage you can think of it.
+00:33:58 [W] That can accommodate a huge traffic spikes. And so this is one reason we introduced it. So like we don't lose data when there is a traffic Spike.
+00:34:11 [W] We just write more to Kafka and then we experience a certain ingestion delay all the act as a result because it takes a bit more time to save it to the database.
+00:34:19 [W] And so the traces are not immediately available in a to the query but in other series reason why we introduced calf is because it allows us to start building fling jobs to do aggregations like the dependency graphs.
+00:34:32 [W] In real time rather than Runyan spok job, which has to read the whole database and and like this is a doing it in real time as much more interactive and you got data faster into into a system and it reacts faster.
+00:34:43 [W] So this is what we currently running at Uber and again, you don't have to use Kafka you can go directly to the database.
+00:34:50 [W] It's really depends on what you want to get from this and the technology stack to mention for jaeger is its back and is all written in go we support plug.
+00:35:02 [W] Storage, there are two ways.
+00:35:07 [W] There is a several back ends, which are natively supported directly by the binaries that we distribute specific Cassandra elastic search Badger, which is a sort of single notes storageos disc and also is there is like a toy in
+00:35:15 [W] Implementation that is used by all in one binary.
+00:35:24 [W] However, there is also another pluggable solution called grpc plugins where you can Implement any kind of storage back-end communicating over grpc with the Jaeger back and with the Jaeger collector and that allows sort of
+00:35:34 [W] You to extend the capabilities to other storage engines without kind of bringing all of that maintenance overhead and to Jaeger main Jaeger repository.
+00:35:47 [W] The front end is built in JavaScript and react is pretty standard instrumentation libraries or like sdks are all implemented opentracing and we integrated with various cuff kind of a chief link Frameworks and
+00:36:00 [W] various like Afghan Apache Flink Frameworks, and as I mentioned zipping compatibility involves two things we can Jaeger clients understand is epyon headers format on the wire and it also
+00:36:11 [W] Understand is it qian headers format on the wire and it also zip can collect three Jaeger collector can also receive data from Zipkin in various format the defensive board.
+00:36:21 [W] It can even read from Kafka like in the in the Zipkin three format for example. Now as I promised let's talk about quickly about sampling. So first of all, why do we sample right?
+00:36:30 [W] Why why it's even a topic and the problem is that Trace tracing information is very very rich you
+00:36:38 [W] imagine that as I explained in the demo for every RPC call. You have two spans on the client and on the server.
+00:36:48 [W] So each each span can have all kinds of tags and like attributed with URLs. It can have logs.
+00:36:56 [W] So this pretty bulky objects that we have to ship and that happens to every single RPC request or actually hundreds of the RPC request, right?
+00:36:58 [W] So the volume of data accumulates pretty fast. And so if you service this doing like, I don't know ten ten thousand rtc's
+00:37:08 [W] Imagine how much data you can accumulate per second.
+00:37:13 [W] So storing all of that can incur pretty large storage costs.
+00:37:21 [W] That's one reason for sampling. But another reason is that just collecting all this data from the application also has an impact on the performance of your application.
+00:37:24 [W] So you may introduce latency because you wasted CPU Cycles on processing all this data and so sampling is usually the technique to deal with that overhead and with the large storage cost to avoid them. So there are two types of sampling.
+00:37:36 [W] So if your service this doing like I don't know ten ten thousand RTC is imagine how much data you can accumulate per second so storing all of that can incur pretty large storage costs.
+00:37:42 [W] That's one reason for sampling. But another reason is that just collecting all this data from the application also has an impact on the performance of your application. So you may introduce latency because you wasted CPU Cycles on processing all this data and so sampling is
+00:37:44 [W] Something decision is made at the very beginning when the trace is just starting.
+00:37:50 [W] So when you create a new random Trace idea, we flip a coin and saying okay, we're going to sample it or not.
+00:38:00 [W] And once we make that decision that decision is fixed for the life of the trays and it's propagated as part of the trace context so that every other service which participates in that race it will use the same decision so that you don't get like a partial Trace is somewhere here and
+00:38:05 [W] Because that is pretty cheap way of doing the sampling. It has very minimal performance overhead, especially when the trace is not sampled. All your instrumentation is really if I could, you know of you get variate orchid and
+00:38:21 [W] Default mode that supported by Jaeger ZK the downside of upfront sampling is that your 99% of your requests in the system are going to be normal and not particularly interesting right?
+00:38:34 [W] You really want to look at outliers in terms of latency may be errors and those happen much more rarely and as a result if you also in a like let's say they happened one in a thousand times and plus you also have a sampling rate and won a thousand then
+00:38:48 [W] An outlier or anomaly is one in a million.
+00:38:57 [W] So that's kind of a bad thing about had by sampling and unfortunately, there's not much that can be improved about it because it simply doesn't know anything about what will happen to the trace when it makes the sampling decision.
+00:39:05 [W] It's like done at the beginning. And so the way the head by sampling is done in Jaeger is that each SDK can be configured with different samples. You can say use probabilistic sample like a coin flip was a certain traits or you can use rate.
+00:39:22 [W] It and saying like this many per second, but the interesting part is that is that all sdks support so called remote sampling. Where as I mentioned in the architecture diagram. The configuration actually comes from the back end and that's very powerful because
+00:39:34 [W] Very many services in the architecture many different teams running those Services those teams don't necessarily know.
+00:39:43 [W] What kind of sampling is good for for that system.
+00:39:50 [W] They also don't know when the traffic patterns changes and how do you need to reconfigure the sampler redeployed application?
+00:39:56 [W] Whereas when the configuration comes from the from the center location, you can do all of that in a much more intelligent way at minimum you you give control to the sampling to the scene the transit racing infrastructure so that they have sort of like levers in terms of how much traffic
+00:40:05 [W] they want to ingest and but you can also make something more intelligent like adaptive sampling which calculates things on a sort of a control Loop and reacts to traffic spikes.
+00:40:18 [W] This is what we use a tuber.
+00:40:29 [W] And the one thing is also interesting is the configuration can be done per service and turn and point. So it's very often the case that a given service may have multiple endpoints with very different rates of queries to them or
+00:40:33 [W] Sample everything at let's say 1 percent if the difference if you have multiple like orders of magnitude in in the QPS of the end point, so this configuration allows you to do at the individual level. And so you can read the documentation of how to configure it
+00:40:49 [W] Individual level and so you can read the documentation of how to configure it. Now. Let's talk about tail based sampling.
+00:40:54 [W] So tale by sampling is is a different completely different mode where the sampling decision is made at the end of the trace and because of that it can be much more intelligent.
+00:41:03 [W] We can look at the latencies. We can look at the errors or some logs.
+00:41:03 [W] whatever anything that looks interesting the trays we can we can affect how we sample those traces in an interesting ways, right? However that
+00:41:16 [W] Requires that all these traces still need to be stored somewhere because like traces are distributed.
+00:41:26 [W] You have all the spans crime and from all these different applications. You kind of need to assemble them all in one place first and you don't want to store them on disk during that assembly time because then you would defeat the purpose of sampling. We want not to hit the disk because it's very expensive.
+00:41:36 [W] Means you have to allocate a lot of memory to store all these traces until they're done and you can make a sampling decision.
+00:41:45 [W] Fortunately, they all short usually traces like last no more than a second.
+00:41:48 [W] So most of them can be expired from memory very quickly.
+00:41:52 [W] So it doesn't necessarily introduce a lot of memory overhead, but there are some like architectural things you need to do to support that and another another kind of downside of tale by sampling is that because we need to collect all the data from
+00:42:03 [W] From all this every single request that means that it has the maximum performance overhead on your application, right?
+00:42:14 [W] And so it's a trade-off whether you want to afford that and maybe increase in latency.
+00:42:18 [W] You can sometimes combined the tail based and head by sampling.
+00:42:28 [W] So let's say instead of something one in a thousand you say well, let's sample 1 and 10, but then do like for every chance we kind of do the tail by something. So that allows you to control the costs and performance overhead.
+00:42:33 [W] So how sampling tail based sampling works in the Jaeger?
+00:42:42 [W] So there's nothing that needs to be done on the Jaeger SDK is because you simply configure them with either hundred percent or like a fixed percentage where they what the magic happens is really in on the back end.
+00:42:50 [W] But Jaeger components elves don't support tale by sampling, but we now release new components called opentelemetry collectors. Those are Jaeger binaries specifically built with from The opentelemetry Collector.
+00:43:01 [W] Just support, they'll buy something and you can configure those collectors with very sampling rules by like latency or certain tags like are tags.
+00:43:11 [W] Unfortunately at this point opentelemetry collector only supports a single node mode, which means if you can fit all your traces in one node memory then you okay, but if you need kind of a scaled out solution, then
+00:43:24 [W] Not currently available, but there is work already happening and there's a blog post by Griffin how they did it.
+00:43:33 [W] So it will it will be available in the near future and finally to close this I mentioned that I want to talk about opentelemetry.
+00:43:44 [W] So opentelemetry is a new project in in cncf which is a it. It's a descendant of open tracing and open sensors the district projects merge, and it deals with again establish a unified instrumentation framework.
+00:43:53 [W] Framework so that you can reuse the instrumentation multiple applications, right?
+00:44:03 [W] It does not deal with back-end collection of traces except for the collector which is kind of an intermediate piece.
+00:44:13 [W] So to truly straight that let's say we're dealing normally with jaeger and opentracing this is how Jaeger historically evolved and so you have application your application at the top.
+00:44:18 [W] There's like three types of applications that typically you can be instrumented for tracing. Some of them are explicitly instrument directly in your code. You can start spend on right where
+00:44:24 [W] Metadata into it or more often during the middle box here where you use summer PC framework which comes with the where for tracing or there's another option where you can sometimes there are in certain languages.
+00:44:39 [W] There are ought instrumentation facilities where you can just attach a library to your binary and then you will magically get traces like in opentracing it's available for example in Python and in Java and then all these instrumentations, they talked through opentracing API, which as I mentioned
+00:44:52 [W] Since calls back into the Jaeger SDK and then Jaeger is the case ends the data back to the Jaeger back and read so it's very kind of all clear here.
+00:45:01 [W] So now what happens with opentelemetry.
+00:45:05 [W] So opentelemetry presents a different slightly different apis in opentracing.
+00:45:09 [W] it's conceptually still very similar traces and spend and everything but the method names are slightly different. So but you can just use a different types of instrumentations for opentelemetry and then you don't have to have or run Jaeger SDK. You can
+00:45:21 [W] Around standard opentelemetry SDK, which is included in the project and all languages. Right and then that SDK has the ability to export data directly in a Jaeger format. So you can still have Jaeger agent to Jaeger collector except in Jaeger data spans,
+00:45:36 [W] but you can also alternatively run opentelemetry collector directly which and then export data in the opentelemetry format, which is kind of a standardized way now to represent traces and Jaeger is gradually migrate into that and then
+00:45:51 [W] opentelemetry collector will still be able to forward data to G back and in the format and so as I mentioned Jaeger components now exists that extent opentelemetry because collector in opentelemetry is written on
+00:46:07 [W] We can just use it as a library.
+00:46:11 [W] So we built our own versions of those binaries which have the same capabilities as opentelemetry Upstream collectors, but with additional Jaeger extensions, which are kind of specific to Jaeger. For example, we can plug in directly our storage
+00:46:23 [W] Nations into a collector so that you don't have to run like multiple services to to push the data through and we also converting Jaeger implementations for storage now to work directly with opentelemetry data model,
+00:46:38 [W] Which is slightly richer than opentracing because it will kind of providers better compatibility and path forward.
+00:46:46 [W] And so we're trying to kind of reuse all the good things that opentelemetry is building so that we can reduce the effort. We need to maintain for example, all the Jaegers decays which was pretty expensive work in the past. So if you want to learn more about
+00:47:01 [W] Jaeger you can you can attend a deep dive which will happen on the next day.

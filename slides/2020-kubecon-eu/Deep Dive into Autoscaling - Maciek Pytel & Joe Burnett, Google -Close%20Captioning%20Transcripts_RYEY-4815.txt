@@ -1,0 +1,237 @@
+﻿Deep Dive into Autoscaling: RYEY-4815 - events@cncf.io - Thursday, August 20, 2020 7:44 AM - 40 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:19 [W] Hello, welcome to the Sig auto-scaling deep dive.
+00:00:29 [W] My name is Joseph brunette, and I'm here with my check Patel.
+00:00:33 [W] We're going to be going into some auto-scaling topics a little bit deeper than the introduction so will be sort of assuming that you know a little bit about kubernative Auto scaling and that maybe
+00:00:46 [W] Big intro so here is our agenda.
+00:00:52 [W] I'm going to talk a little bit about workloads scaling that is increasing and decreasing the number of PODS and cluster and my check is going to follow up with a little bit about a cluster Auto scaling which is increasing and decreasing the number of nodes on which
+00:01:09 [W] And in particular I'd like to highlight some new features in HPA coming in kubernative 118, which are called scale controls.
+00:01:24 [W] And I think that it would be also helpful to go over a little bit about custom metrics in the HPA and the HPA life cycle so you can kind of understand how scale controls work.
+00:01:33 [W] Okay, so
+00:01:37 [W] let's talk a little bit about the recommendation life cycle.
+00:01:43 [W] So HPA like every other object in kubernative is something stored in at CD and when you want want to scale deployment or another scale sub resource, horizontally you declare your intent in
+00:01:56 [W] In Spec and the HPA controller tries to reconcile to that intent.
+00:02:04 [W] So the first step in that reconciliation is to get the HPA object.
+00:02:08 [W] The next thing is to get the target of the HPA, which is in this case a deployment or anything that implements the scale sub resource.
+00:02:20 [W] So the controller will get the current scale then it will look at the metrics that you've defined for this HPA and it will load them from the metric server and put those two together and
+00:02:33 [W] the new scale should be
+00:02:35 [W] so it'll come up with some recommendation. For example, if you've decided that you want your application to run on average at 50% CPU utilization.
+00:02:51 [W] The HPA controller will get the current number of PODS.
+00:02:52 [W] Maybe it's 10 it will get the current CPU utilization from the metrics. Maybe CPU utilization is 75% and it will decide.
+00:03:03 [W] Okay. Actually, you need more pods to bring that down to the Target.
+00:03:07 [W] It will give you five additional pods.
+00:03:10 [W] Then after its calculated the new desired state for each metric.
+00:03:15 [W] It will limit and stabilize the maximum recommendation.
+00:03:28 [W] So limiting is like not going above the specified maximum not going below. The specified minimum stabilization is a part of the algorithm that waits for 5 minutes before you scale down
+00:03:37 [W] We select keeps a window of recommendations for five minutes and chooses the maximum recommendation over that time this prevents flapping and scale down stabilization allows you to scale up quickly in response to
+00:03:53 [W] I would but sort of come down gracefully without flapping.
+00:03:59 [W] So the finally when the HP a recommender has a has a scale you will turn around and set that back onto the scale sub resource and then wait for 15 seconds before repeating the process
+00:04:16 [W] Object every 15 seconds using this reconciliation moop checking the current state of the world making an adjustment checking to see if it needs to make subsequent changes.
+00:04:28 [W] So there's a feedback loop.
+00:04:29 [W] So HPA has two versions available.
+00:04:34 [W] There's V 1 and V 2 V 2 is currently in beta 2 you can get them from the command line with these commands here.
+00:04:42 [W] Just this is normal kubernative stuff.
+00:04:43 [W] You just have to qualify me to don't look too closely at this.
+00:04:50 [W] So just wanted to show you the shape and I'm going to go through each one of these sections one at a time.
+00:04:56 [W] on the left hand side, you can see scale Target.
+00:05:00 [W] And V 1 and it has the same thing in V2, which is pretty simple just points to some kubernative object.
+00:05:11 [W] The second part of the spec is the metrics.
+00:05:17 [W] So in in V1 H, PA, there's just one top level Target, which is CPU utilization percentage, but in HP av2, you can provide more than one
+00:05:26 [W] That metrics on the right hand side is a list and this is what CPU utilization looks like for the new V2 metrics. So
+00:05:40 [W] after you have after the HP has gotten your current scale.
+00:05:48 [W] It's going to go through each one of these metrics retrieving it from the server and it writes the current levels to the status so that you can see in the status of the HPA object how the the controller is doing
+00:06:02 [W] The server and it writes the current levels to the status so that you can see in the status of the HPA object how the controller is doing towards reconciliation.
+00:06:05 [W] This is nice for observability and just to make sure that it's doing what you expect to.
+00:06:08 [W] So I mentioned that HPA V2 can have multiple metrics.
+00:06:19 [W] So the other kind of metrics that you can add in there to that list are called custom and external metrics.
+00:06:22 [W] custom metrics are anything that's inside of the kubernative ecosystem. So this is pods or deployments Ingress.
+00:06:28 [W] whatever there's two kinds of custom metrics one. Custom metric is a pod metric and in so the HPA will expect to find one of these for each
+00:06:39 [W] Pod in the deployment and then it will average them for an object metric HP will expect to find just a single value.
+00:06:50 [W] So for example Ingress could have QPS associated with it external metrics are things that are outside of kubernative could be some Pub sub Q or something just simply on, you know entirely external so
+00:07:02 [W] These for each pod in the deployment and then it will average them for an object metric HP will expect to find just a single value.
+00:07:04 [W] So for example Ingress could have QPS associated with it external metrics are things that are outside of kubernative could be some Pub sub Q or something just simply on, you know entirely external so
+00:07:05 [W] arbitrary
+00:07:05 [W] I want to take a moment and talk a little bit about how custom metrics are wired into the system because this is something that's important to know if you're going to set up the HPA on custom metrics.
+00:07:21 [W] So the API server has a mechanism by which it can delegate calls to some objects to other API servers so you can see there that the main API server has.
+00:07:34 [W] Calls to some objects to other API servers so you can see there that the main API server has that CD storing things like hpa's deployments pods
+00:07:39 [W] CD storing things like hpa's deployments parsec cetera, but when it gets a request for metrics, it routes it to a different server.
+00:07:47 [W] There's a metric server that is part of the normal kubernative distribution, which provides memory and CPU and that's runs typically in the user space of the cluster the access pattern for a database like that
+00:07:58 [W] This is one of the reasons why it's a different implementation of the time series data base.
+00:08:05 [W] Not just a key Value Store.
+00:08:14 [W] There's another server that is in this routing path as well, which is the custom or external metrics adapter.
+00:08:15 [W] So there is no default implementation for custom metrics in kubernative.
+00:08:22 [W] This is something that you provide as either a cloud provider or you can install Prometheus in your cluster. So for example, if you have a Prometheus instance that has the metrics that you
+00:08:29 [W] want for custom and external metrics you install an adapter that will take those get requests to the API server objects and translate it into a back-end query for the data source that you have.
+00:08:44 [W] This is where the data comes from when HPA retrieves it so moving on to sort of through the life cycle here.
+00:08:53 [W] You can see that calculating the state is is kind of the core value of this of the HPA.
+00:09:05 [W] This is the part that's going to reconcile you the number two to try to achieve your target. So the current utilization is first achieved by the averaging that all the pods are just taking the single.
+00:09:16 [W] All value and then it's going to be divided by the targets.
+00:09:21 [W] So say if you want 50% and you get 75 you end up with the one and a half times what you should have in terms of utilization.
+00:09:34 [W] So you multiply that by the current scale and that gives you the new number of PODS that you should have and then the next phase is stabilization, which I already mentioned before keeps a five-minute window now
+00:09:43 [W] Is actually going to be configurable with scale controls, which is something I'm going to get into in just a minute.
+00:09:49 [W] So there are a few so these are so the scale controls are a new field top level field in the V2 API inside of the behavior field is two structures.
+00:10:06 [W] They're identical one is called scale up one is called scale down and each of these has the stabilization as well as relative and absolute policy that can be applied in term for limiting the rate.
+00:10:19 [W] There's a couple of defaults that were already part of HPA which have become defaults for the scale controls one is that there's a flag on controller manager that sets the
+00:10:34 [W] Session window which is by default five minutes.
+00:10:41 [W] So this is the default for scale controls as well on this is as you can see here inside the scale down structure.
+00:10:50 [W] There was also a couple of defaults that were hard coded into the controller itself one was that it's okay for you to go from one pod four pods because this allows you to get off the ground a little bit faster for scale
+00:11:00 [W] In order to in order to scale up for something like CPU, you need to sort of scale up see additional usage scale up again see additional usage. So this was sort of just a small optimization and
+00:11:16 [W] Limit in the controller which said that you can only scale up by 2x each time each reconciliation.
+00:11:27 [W] So these become defaults in the scale controls, but you can change them.
+00:11:37 [W] So for example, if you want to if you want to come down slowly, if you sort of respect your traffic to maybe come back you can limit the rate at which you scale down if you want to maybe have a shorter
+00:11:42 [W] No to come off of a spike more quickly or a longer one.
+00:11:47 [W] You can set that it's actually also possible to set a scale up stabilization window.
+00:11:53 [W] Which is sounds kind of counterintuitive at first, but it could be useful for a batch workloads.
+00:12:23 [W] Station window could be used for for scallop.
+00:12:32 [W] So explore the documentation that kind of a cool feature that says there in 118 and the there's a lot more details about what they mean in the actual like golang docks.
+00:12:43 [W] docks. So I recommend you go take a look at it. Again. That's in the v 2 Beta 2 Hp a structure. So a big thanks to
+00:12:54 [W] Ivan and our June for writing the cap and doing the implementation and pushing this through for quite some time.
+00:13:08 [W] Thank you.
+00:13:14 [W] One last thing about the V2 API. I'd like to mention before I close the workloads section is that there's also conditions which are added to the V2 API and Status so
+00:13:31 [W] Our a pattern that the newer pattern newer than V1 H PA, which just gives you some insight into how the reconciling controller is doing towards
+00:13:47 [W] Our state and if it's not in the desired State why not?
+00:13:57 [W] So it's kind of a structured way to sort of get some insight and observability and there's three sort of types that are worth noting scaling active able to scale and scaling limited.
+00:14:08 [W] So I'd like to talk for a moment about what each of those means scaling actives means that you have provided metrics that exist. They can be retrieved so
+00:14:19 [W] Oh, it's possible to sort of know where we're at in terms of the metrics that you provided.
+00:14:33 [W] So if able to see if scaling active is true, that's that's a good thing able to scale means that the scale Target wrath is able to be retrieved and updated so that also should be true. And if it's not then it'll be a message there
+00:14:39 [W] Specifically what went wrong scaling limited is a little bit more of a just informative. It's not necessarily a problem if your scale limited because usually you're limited because of some policy limit or a stabilization that
+00:14:55 [W] And put in effect for a reason. So this is just for you to know that the raw desired number of replicas is is being constrained in some way either upwards or downwards and this should also tell you why
+00:15:12 [W] Get some insight into how its operating.
+00:15:17 [W] So all these extra fields and V2 are backwards compatible.
+00:15:29 [W] So you can actually retrieve any of these HPA objects as a V1 or V2 and it's done losslessly by serializing all the new and unknown Fields into annotations.
+00:15:37 [W] So it's possible to interact with V2 HPA object as a V1 with a read-modify-write.
+00:15:42 [W] loop as long as you only modify the spec fields for that particular version, so
+00:15:47 [W] Just in case you're wondering where these things go and when you just say Cube control get HPA most of the most of the interesting stuff is an annotation. So it's worth pulling down the V2 object.
+00:15:58 [W] So that's sort of a summary of scale controls and V HPV to and some custom metrics.
+00:16:08 [W] So at this point, I think I'll hand it off to my check who's going to talk about the cluster autoscaler.
+00:16:12 [W] Thanks, Joe.
+00:16:19 [W] And so yeah, let's talk about class Telco scale. And what I'd like to do is take you to an example scale-up scenario and we'll go through it step by step exploding class Telco scale illogic to see
+00:16:30 [W] X its ultimate auto-scaling decision, but before we get there, I'd like to do a quick intro / reminder.
+00:16:40 [W] I just quickly covering what class Telco scale is and what it does.
+00:16:50 [W] does. So as job already said that job of class Telco scalar is to provide notes add and delete nodes based on the needs of the pots in your cluster.
+00:16:57 [W] and more specifically its job really is to make sure that every pot in the cluster can be scheduled and to that end class Telco scalar takes into account all the same things that kubernative schedule looks at
+00:17:13 [W] Things like notes sighs knows allocatable and pot a resource requests and but also things like pots not selectors. No definite. He's
+00:17:29 [W] bolts any sort of storage belated requirements and so on basically anything that can go into kubernative scheduling what it doesn't look at is Matrix because kubernative scheduling doesn't
+00:17:45 [W] To account actual CPU usage and memory utilization of the VMS.
+00:17:56 [W] So neither discussed outer scale for that part you need well close out of scaling. And before we proceed there is one more concept that we're going to need and that is a node group and that group is basically a set
+00:18:06 [W] Before we proceed there is one more concept that we're going to need and that is a node group and not group is basically a set of identical notes.
+00:18:10 [W] Ella sizable set of output identical notes.
+00:18:20 [W] So whenever class status Keda wants to scale up what it really does is it resizes a particular node group adding some number of nodes to it?
+00:18:24 [W] And the actual implementation of node group is going to be different on each provider.
+00:18:27 [W] So let's quickly look at architecture of cluster of the scalar.
+00:18:36 [W] So class Telco scalar is a pot that hands in your cluster.
+00:18:38 [W] I don't notes on the master VM and its really made of three main parts.
+00:18:45 [W] That is the cluster of the scalar Logic the color logic of autoscaler that sort of does the whole the whole of the scaling logic but there are two important parts that are also deaf.
+00:18:57 [W] So first of all, there is the embedded schedule code.
+00:18:57 [W] Enough of them to make sure that class Telco scalar respects all the constraints of scheduling and it actually has the same logic as the scheduler.
+00:19:11 [W] What we do is we just import the scheduler code and use it to then sort of hypothetical scenarios to explore what would happen if a node was added to the cluster it would that
+00:19:21 [W] The posts that are currently pending get scheduled but what would happen if some note was removed from the cluster would all parts are earning.
+00:19:34 [W] they'll be able to schedule and some other notes and instead of replicating all the schedule schedule logic. Now, the scalar we just Impulse Scheduler code and asking those questions and the other the other
+00:19:47 [W] Is the cloud provider module it's basically a rich client to a given cloudbees wider.
+00:19:57 [W] So something like AWS ogc usual or something more abstract like crust API and this is what class Telco scanner uses to actuate is decisions whenever class Telco scary wants to scale up its really all it does is
+00:20:10 [W] the API and this is what class Telco scanner uses to actuates is decisions whenever class Telco scary wants to scale up Italy all it does is request a VM from the cloud provider and then it doesn't it is
+00:20:16 [W] VM from the cloud provider and then it doesn't it is actually involved in the process of that VM standing up or registering kubernative.
+00:20:25 [W] Only thing he does is it make a request to cloudevents?
+00:20:30 [W] Like I think with that background with ready to dive into the an example scale up.
+00:20:34 [W] So what I have here is basically a sort of hypothetical scenario and there is a cluster with three node groups. So as you can see there is a no-go.
+00:20:41 [W] Up with large notes that have a label a and also not group of equally large nodes with label B and finally affect the node group of smaller nodes and this dimensions of
+00:20:56 [W] Be a some sort of abstract representation of resources available on those notes.
+00:21:12 [W] So for example, you can think of it as a may be vertical size of the node would be how many colors it has and then the horizontal size would be how much memory that is and similarly there are a bunch of pots which also have size which would be the same with the to that would be
+00:21:17 [W] Requests and as you can see some of the polyps also have a note selector. So this is to illustrate like other type of constraint that's not resource related, but it's also respected by class Telco scalar.
+00:21:33 [W] So in this case some of those spots can only run on notes with label a which means basically notes from the first node group.
+00:21:39 [W] So let's start with the hypothetical scenario.
+00:21:48 [W] We're starting with a bunch of empty notes and the bunch of pending pods.
+00:21:57 [W] So obviously the first thing that's going to happen if schedule I will jump in and schedule as many pots as it can on existing nodes.
+00:22:00 [W] So this is basically what we can see in these slides all the parts that can fit on the notes are already dead and the knows that pretty much full but there are still some pots that
+00:22:11 [W] Maine so what will happen if those is the scheduler will say that it cannot schedule them because there is not enough resources available in the cluster and it will mark them as unschedulable more specifically it will
+00:22:24 [W] addition on those spots and that is the signal signal forecast Telco scalable to jump in it basically looks for those unschedulable ports and tries to help them and the way it does it is
+00:22:40 [W] All this those hypothetical scenarios. So the first thing I was scale could do is think okay what would happen if there was one more of those label a node? Basically what will happen? If not first. Notebook had two nodes instead of
+00:22:55 [W] To create an in-memory fake representation of a nodes.
+00:23:03 [W] It doesn't correspond to any real VM or anything like that yet.
+00:23:04 [W] It's just an in-memory object and it would ask schedule.
+00:23:08 [W] Okay, what would happen now? If you had this external load, so in this case the schedule I would be able to schedule some of those pending thoughts on this new node, but not all of them.
+00:23:19 [W] I did one note is not enough to feed all of those pending thoughts. So christakis Keller will just continue to do the same. It will add one more.
+00:23:28 [W] Or identical node. So basically explode. Okay, so what would happen if I resize this node group from 1 to 3. And once again, it will ask schedule it and the schedule I would put more parts on this new node. And basically we
+00:23:41 [W] It will add one more identical node. So basically explode. Okay, so what would happen if I resize this node group from 1 to 3. And once again, it would ask schedule and the schedule I would put more pots on this new node,
+00:23:42 [W] All the parts that are pending could now be scheduled if tomb of notes were added to the first node.
+00:23:52 [W] So that is what we call expansion option. That's basically one action available to cast out a scalar which will help depending pots.
+00:24:05 [W] But of course, there are other possibilities there that other node globes that other combinations of notes that could be added salt crust autoscaler will do at this point is it will just remember this particular expansion option.
+00:24:13 [W] And it will force it to evaluate other scenarios.
+00:24:18 [W] So let's let's try that and I'm just going to go more quickly to a tight now.
+00:24:26 [W] So if we do very similar logic when we add notes for as long as we can put more of the pending pots on them and we do this process for the second node group. We can see that we could add three more of those small nodes and that would help.
+00:24:38 [W] Of those spending thoughts.
+00:24:44 [W] However, no there is no way we can help the large pending posed by adding small nodes just because each individual poddisruptionbudgets.
+00:25:08 [W] And that will help those small pots and we can proceed to the next simulation and explode what would happen. If you want to resize the fence node group and the end of this result here is
+00:25:23 [W] And that will help all the parts except the one with the node selected a there is actually enough resources on those two nodes to run all the pots, but we cannot schedule one of them because of the node selected constraint. So that illustrates that class Telco
+00:25:39 [W] Taking this sort of constraints into account.
+00:25:43 [W] So this is basically how the exploration of values scenarios would look like in class elotl scalar note that all the options with considering is always resizing one node Group by
+00:25:59 [W] Notes and it's always the largest amount of notes that actually helps any help spot side.
+00:26:15 [W] So we're not going to consider an option where we would resize let's say that felt not good by just one node because I think one more note still help spot. So we will just greedily basically be in fact until
+00:26:22 [W] Those doesn't help any more pots and cross out. The scale is also not considering mixed scale-up sits always considering criticizing just one node group.
+00:26:37 [W] So after all the simulations are done with Lily left with three of those expansion options that we discussed earlier and cast Telco scale is going to use something we call expanded to choose one of those options expand
+00:26:46 [W] Stick that takes all the available expansion options. Basically how many nodes are needed to help what set of pots and it just evaluate them to choose the best one.
+00:27:02 [W] There are multiple different expanders.
+00:27:05 [W] There is a random expander with just chooses a random option.
+00:27:06 [W] I don't really recommend that one but there are other like leastways like the the one that tries to have the list unused resources. There is a pricing expanded available for some platforms which tries to
+00:27:17 [W] Choose the cheapest in terms of dollar cost like the cheapest option terms of dollars and there is also a priority expanded where you can basically the user specifies a list of preference
+00:27:32 [W] Phillips and cast out the scale will try to choose whichever one is the most Vivid that's particularly useful when you have some sort of much cheaper instances, like maybe spot all planned people instances all you can Implement your own
+00:27:47 [W] A simple goal line interface and it's not very hard to implement one. And the one remaining question is okay some of those expansion options only help some of the pending pots.
+00:28:02 [W] What about the other pots and the answer is after doing the first scale up if any parts remain pending class Telco scalar.
+00:28:09 [W] will run another iteration and do the whole simulation again and pick some other scale up and it will continue doing so until it helps all the pending poddisruptionbudgets.
+00:28:18 [W] It's so that's a very quick overview of how scale-up Works in class Telco scalar.
+00:28:27 [W] And before I end this talk, I'd like to quickly talk about our CO2 scaling group.
+00:28:34 [W] We have meetings every Monday at 4:00 p.m.
+00:28:36 [W] Central European Time, and they have a non zoom and everyone is of course, welcome to attend this and ask any questions discuss any suggestions and so on. We also have a our own channel on kubernative Slack
+00:28:48 [W] Well, I think it's quite active.
+00:28:52 [W] So if you have any problems, I think that's a good place to either ask for help or just engage us discussing features and so on and finally most of our code is in our own GitHub repository, and that's it
+00:29:05 [W] Great, this is Joseph brunettes here.
+00:29:29 [W] I'll take some questions about workloads of scaling about HPA and then I'll hand it over to my check for a few cluster auto-scaling questions.
+00:29:40 [W] So one question I got was Will scale up and down values override the values that like globally zettabytes.
+00:29:46 [W] lovely, like the horizontal pot out of scalar down stabilization flag will global values affect scale up and down if all you define of the scale values in your HP a yam will file so when you create
+00:30:01 [W] Will scale up and down values override the values that like globally set globally like the horizontal pot out of scalar down stabilization slag will global values affect scale up and down if all you define of the scale values
+00:30:03 [W] it is given default scale down stabilization and scale up policies which match the hard-coded defaults which were previous
+00:30:17 [W] Defaults come from that flag and the where the hard-coded where so if you start a controller manager for 118 and you set the flag corazón de pot out of scaling downscaled stabilization equals 10 minutes, and you
+00:30:33 [W] A and you load it and you get it back and you look at the value for Behavior scale down stabilization window seconds.
+00:30:46 [W] It will be 600 seconds.
+00:30:55 [W] So that just affects the default. So all the same behavior is is preserved for when you don't set the behaviors.
+00:31:01 [W] you do set it if you add a behavior and say didn't please so, you know use five minutes it will override the
+00:31:04 [W] alt which comes from their flag likewise for the AL up limits which are 2X or minimum of four.
+00:31:14 [W] I've got answers that question.
+00:31:18 [W] Let's see if there's any other HPA questions here.
+00:31:21 [W] Looks like those two of them are first after autoscaler question. So at this point, I'll hand it over to you my check.
+00:31:31 [W] Thanks, Joe.
+00:31:34 [W] So God said if you'll make us that the scale questions I want that has shown a few times is if class Delta scale can be used on p.m.
+00:31:48 [W] So Angela or class Telco scalability does is make a decision to add a new node, but it needs something that can actually create a VM. So you need some sort of private
+00:31:59 [W] Looks like they're still in my first question autoscaler question. So at this point, I'll hand it over to you my check.
+00:32:01 [W] Thanks, Joe.
+00:32:01 [W] So God said if you'll make us doubt the schedule questions, I want that has shown a few times is if class Delta scale can be used on Prem.
+00:32:04 [W] So Angela or class Telco scalability does is make a decision to add a new node, but it needs something that can actually create a VM. So you need some sort of private
+00:32:05 [W] And currently the supported ones is using openstack Magnum and cluster API.
+00:32:09 [W] I think both of those could be potentially used on them.
+00:32:17 [W] So there is a way to do it. If you if you have some underlying system that can add and remove nodes but cast out the scanner cannot do it by itself.
+00:32:21 [W] Mmm, okay.
+00:32:25 [W] So another question is why does the schedule and need the fake representation if we add a new node and why cannot it explicitly be calculated how many nodes we need for the workloads?
+00:32:39 [W] So this is because there are multiple different requirements. I tried to illustrate that by using an old selecting example.
+00:32:47 [W] but there is all sorts of different things with not selectors no definite this and so on that I mentioned so crusty outer skeleton would need to know about all of this and basically they Implement all of the scheduling ecology and
+00:33:02 [W] Workloads, so this is because there are multiple different requirements.
+00:33:03 [W] I tried to illustrate that by using an old selecting example, but there is all sorts of different things with not selectors not affinities and so on that I mentioned so crusty outer skeleton would need to know about all of this and basically
+00:33:04 [W] We would be forever chasing schedule and there will be quite a large least that will sort of disagree leading to potential errors, which is why we try to just use schedule and code instead to just make sure it's
+00:33:18 [W] Logic and that it's consistent and okay.
+00:33:32 [W] So another question is how not sector get the value of new added note. So as I mentioned not group is expected to be a set of identical notes.
+00:33:38 [W] So basically when you have a note already in a given node Group Grass Tufts Keller will just copy it and assume then you know, it will be identical and that includes things like labels basically everything that is also scale from zero logic.
+00:33:50 [W] So for example vitess and this is provided specific. It takes to somehow guess have a no-good look like as accurately as possible including labels ideally.
+00:34:02 [W] So for example on gcp this is done by passing instance template, but other providers they have different implementations and okay.
+00:34:12 [W] Another question is are there any plans to open up crust of the scaleless other Frameworks can trigger a scaling actions?
+00:34:26 [W] So this is quite complex that the problem here is that class laughter scattered doesn't necessarily have much of a notion of an action.
+00:34:33 [W] It's really just sort of leak on signing cluster. So there is always enough space to schedule all pots and it's actually starting the it's basically simulating scheduling from scratch every Loop.
+00:34:44 [W] And then those nodes have no longer need it. It wouldn't remember that it added them and it would go and delete those notes.
+00:34:57 [W] However, there are quite a few like system. So in Home Solutions that did values people use and the general idea is at scale up can be triggered by creating.
+00:35:11 [W] Low priority pots. So those posts are basically enough that they just empowerus image of otherwise do nothing and they have a low scheduling priority. So this is enough to take a class turbo scatter scale up,
+00:35:26 [W] If a pot with a higher priority will be created at the airport. Those spots will be evicted by scheduler to make space for that other pot and that should be faster than adding a new node
+00:35:43 [W] Other pot and that should be faster than adding a new node. Think we've run out of time, but there is slack Channel where we will continue answering the questions.
+00:35:52 [W] A channel where we will continue answering the questions.
+00:35:53 [W] So, thank you.

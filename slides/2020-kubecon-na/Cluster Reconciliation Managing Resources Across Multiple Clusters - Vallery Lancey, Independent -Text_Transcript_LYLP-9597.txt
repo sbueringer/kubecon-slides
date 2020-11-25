@@ -1,0 +1,274 @@
+﻿Cluster Reconciliation: Managing Resources Across Multiple Clusters: LYLP-9597 - events@cncf.io - Friday, November 20, 2020 5:07 PM - 40 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:00 [W] Hello everyone.
+00:00:01 [W] Welcome to coupon welcome to my office and welcome to my talk on Gloucester reconciliation and how to manage multiple clusters.
+00:00:09 [W] My name is Valerie Lancey.
+00:00:12 [W] Tending and I have been tilting at the problem of how to handle multiple clusters for most of that time starting from very early into my experience with kubernetes aside from all the problems that come with
+00:00:27 [W] Well clusters for most of that time starting from very early into my experience with kubernetes aside from all the problems that come with trying to you know, Jama stateful app.
+00:00:12 [W] That was always meant to run one single VM forever into a cluster.
+00:00:15 [W] I quickly encountered a lot of problems with how to run, you know, a redundant Judas turbid system increment has effectively and there's been some Evolution that I'll talk about but it's still something that's already spoke and there's a lot of way to go.
+00:00:33 [W] So first off I want to talk about why we want to use multi coaster at all who has roughly four reasons that I usually kind of see identified first. One is regional points of presence kubernative clusters don't spend
+00:00:48 [W] To build system incorporates effectively and there's been some Evolution that I'll talk about but it's still something that's already spoke. And there's a lot of way to go.
+00:01:00 [W] So first off I want to talk about why we want to use multi coaster at all.
+00:01:05 [W] It was roughly four reasons that I usually kind of see identified. First. One is regional points of presence kubernative clusters. Don't spend multiple regions or data centers very well
+00:01:57 [W] Multiple regions or data centers very well.
+00:02:02 [W] There's an expectation is very low latency between the components.
+00:02:04 [W] There's a huge amount of internal traffic between components and they don't exactly partition. Well, so if you are running your app and multiple places each place should be a cluster.
+00:02:16 [W] You will often want cluster-level redundancy clusters can fail in many many interesting ways.
+00:02:24 [W] You can deploy something cluster wide that fails you can take down the cluster control plane. You can take down some key Automation and this especially goes if you are running your own control plane if you're
+00:02:39 [W] If you're running your own control plane, please I'm begging you run redundant clusters. You do not want to be fixing that live.
+00:02:49 [W] Next one also a big plea for I guess cases where you have sufficiently petabyte-scale clothes is for a cluster level security isolation.
+00:02:59 [W] There are many many ways between past see bees and just common misconfigurations and attack surfaces that someone can take a fairly inconspicuous level of access to the cluster and wind up
+00:03:14 [W] Past see bees and just common misconfigurations and attack surfaces that someone can take a fairly inconspicuous level of access to the cluster and wind up managing, too.
+00:03:22 [W] Exfiltrate substantial amounts of data from workloads or take over the cluster all together in particular in cold water and Tim Al Clara have had some fantastic prior could con talks about some of the ways that
+00:03:37 [W] About some of the ways that things can be misconfigured or exploited.
+00:03:41 [W] And the last one is it's common in large setups to have blue green cluster upgrades potentially having clusters that you specifically spin up and replace instead of trying to upgrade everything in place
+00:03:56 [W] As well with like having cluster redundancy versus we'll do it live.
+00:04:02 [W] So what kind of things do we actually put in a cluster?
+00:04:04 [W] We have things that would kind of consider to be the core cluster set up stuff like the admin are back the basic monitoring stackrox.
+00:04:32 [W] Something to run spark and then most importantly we have the applications things that actually, you know, make our business money and are the reason that we are actually here doing this. We also need to play that this
+00:04:45 [W] so
+00:04:47 [W] I can sometimes be a detractor of how the cloud knative world turns into a lot of very fancy technology and checklists and you'll hear me call back to that a few times, but I want to explicitly call it what problems that we are considering in scope and what problems
+00:05:02 [W] In terms of building a cluster of reconciliation system.
+00:05:05 [W] So we want to deploy common resources to multiple clusters.
+00:05:09 [W] We want to Loosely couple the Clusters and those resource definitions.
+00:05:14 [W] We want to clearly map the relationship between those resources and those clusters and we want people to garbage collect deployed resources. That should no longer be deployed there.
+00:05:30 [W] So what does failure to build it? He's a multi classic system look like.
+00:05:37 [W] well
+00:05:42 [W] So what does failure to build?
+00:05:46 [W] a working Multicultural system look like
+00:05:53 [W] What does failure to build a good multiplexer system look like you can easily wind up with a dependency tangle between resources and versions anything that is consuming the kubenetes API can become very tricky to version and there is a
+00:06:08 [W] So what does failure to build?
+00:06:02 [W] a working multi-class a system look like
+00:06:09 [W] what does failure to build a good multiplexer system look like you can easily wind up with a dependency tangle between resources and versions anything that is consuming the kubenetes API can become very tricky to version and there is a
+00:06:43 [W] in effect for then components that consume components
+00:06:48 [W] you also need to be aware of any dependencies that are required in your application because you typically will want to have a certain amount of locality between actual services that you're running making sure that you are not like having a
+00:07:03 [W] You typically will want to have a certain amount of locality between actual services that you're running making sure that you are not like having a golden path workflow that goes between different data centers and making sure you have data locality for services that need to consume that data.
+00:07:16 [W] You could easily end up with orphan resources on clusters.
+00:07:20 [W] So this would be like a decommission service or an experiment or something that is running in a place that it shouldn't because we don't tend to be to playing anymore, but we're not cleaning it up.
+00:07:29 [W] You might wind up with wonky workloads and cluster mapping.
+00:07:32 [W] We have a cluster that's been around forever and you know, everything's on it.
+00:07:35 [W] might spin up a new cluster that's cheaper and or in a better location or something. It was just not much stuff on its people haven't, you know adopted it yet and all these things going to be very hard to do.
+00:07:46 [W] Got a new clusters.
+00:07:47 [W] So if you have that really nasty dependency chain, and you have to kind of figure out how to find angle everything to the cluster.
+00:07:54 [W] It can be difficult to just deploy somewhere new if you're a random application.
+00:08:01 [W] So in order to talk about specifically why some of the challenges are surprisingly hard to do. Well, I want to talk about what deploying something actually means and a lot of the logistics of the kubernative API itself.
+00:08:15 [W] So forgive me if this is overly basic, but I don't want to assume anyone's level of knowledge walking into this talk.
+00:08:21 [W] I want to briefly cover how the current is API itself works.
+00:08:26 [W] So Kuma is API has an object model tiny bit analogous to like Linux has everything is a file model.
+00:08:33 [W] an application
+00:08:37 [W] So in order to talk about specifically why some of these challenges are surprisingly hard to do. Well, I want to talk about what deploying something actually means and a lot of the logistics of the kubernative API itself.
+00:08:51 [W] So forgive me if this is overly basic, but I don't want to assume anyone's level of knowledge walking into this talk.
+00:08:57 [W] I want to briefly cover how the current is API itself works.
+00:09:01 [W] So kubernative VI has an object model tiny bit analogous to like Linux is everything is a file model.
+00:09:08 [W] So everything is represented with a group of version and a kind which identifies it as like a deployment is a particular object in the apps V1 API.
+00:09:21 [W] So we see that represented in like the animal representation of a thing.
+00:09:26 [W] And every single object also has an identifier. So it's how we tell a resource like a deployment apart. We know that one particular departments different from another because it has a unique name namespace pair. Every resource has
+00:09:44 [W] It's like a deployment is a particular object in the apps V1 API.
+00:09:49 [W] So we see that represented in like the yellow representation of a thing.
+00:09:54 [W] And every single object also has an identifier. So it's how we tell a resource like a deployment apart. We know that one particular departments different from another because it has a unique name names base pair every resource has
+00:10:10 [W] Space has a namespace.
+00:10:11 [W] So most things exist in a namespace like, you know pods deployments etcetera some things like nodes or cluster will bindings don't exist in a namespace. They have known as base field.
+00:10:23 [W] And kubernative itself is a rest issue HTTP API, we often don't see that because we're busy dealing with like a typed client or could see TL or something. But this all forms together to create like a fairly long API
+00:10:38 [W] any individual object with
+00:10:40 [W] granite is supports a bunch of different verbs.
+00:10:43 [W] I'll point out the ones that are relevant to making changes to things.
+00:10:48 [W] We have create. We have update the work like you'd expect with a rest crud API either create a new thing doesn't already exist or place an object wholesale with a new state update has a version check which is quite helpful.
+00:11:04 [W] Version in the metadata of any existing object.
+00:11:01 [W] So if you fetch an object change it in memory and then go to reapply it.
+00:11:09 [W] The current is AP. I will warn you if there's a version conflict other words if you fetched and changed a different version than it's in memory right now.
+00:11:17 [W] There's a patch operator which lets you have custom semantics to say like I only want to update the specific field and I don't want to worry about a touch anything else.
+00:11:29 [W] And then there is deleting which removes the object from the customer.
+00:11:34 [W] It's worth noting the something called finalizer Zahn objects. It's a list of
+00:11:41 [W] Individual things that must be all removed before the object is able to be deleted. So if you have some kind of clean-up operation that's acquired before an object can be deleted say like making sure that you know a pod is actually distracted
+00:11:56 [W] You're like some would balance. Our infrastructure is torn down from an Ingress.
+00:11:57 [W] You have a finalizer on the object which then whatever machine response with that tear down removes the finalizer. Once it's done once all finalized this argon the delete happens.
+00:12:07 [W] So this is also why usually shouldn't Force delete because if your fourth leading it's because there's a finalizer trying to do some cleanup and it's not making progress if you delete the progress never happens,
+00:12:21 [W] There's also the service I'd apply API. This was ruled out very roughly a year ago.
+00:12:27 [W] I am not as familiar with it, but it provides the coop see tail apply a type Behavior as an actual API in kubenetes as opposed to pour some people to use groups ETL apply the CLI tool so
+00:12:43 [W] Adds a bunch of metadata giving ownership to specific fields in an object. If you change a field then you're considered an owner. So like individual controllers or coops detail itself are examples of owners.
+00:12:50 [W] And when you want to specify a change only the fields that you own or taken into account, so if you own a field and you don't specify it in your new desired version, then it will be removed if there are fields that you do not own.
+00:13:04 [W] They're not in your desired version then they're they're ignored. The existing version is kept.
+00:13:12 [W] Understandably this can lead to a pi conflicts when you want to change something that you don't own. There are three different ways that you can handle this one is to reapply with a the fields that are conflicting in other words give up on trying to make that specific part of the
+00:13:27 [W] The next one is a no op in terms of the actual State.
+00:13:25 [W] It's to change the field value that you're trying to apply to the existing one.
+00:13:31 [W] So this doesn't change the state that data is in but you become a shared owner of that field which then means in future apply attempts. You would be able to apply it without any conflict and the last one is doing a for Supply.
+00:13:45 [W] You become the sole owner of that field and you updated.
+00:13:52 [W] So there are many gotchas when it comes to the mechanics of trying to deploy or updates linkerd minutes.
+00:13:59 [W] I'm going to go through a couple specific cases and then kind of talked about how the number of kind of intent issues can rise drastically when you don't know what kinds of objects and intent you're dealing with.
+00:14:16 [W] So for the sake of Simplicity when I'm going to talk about a service and kubenetes, I'm going to say it's a deployment.
+00:14:21 [W] It's a service object and we know it's about confusing name and an Ingress.
+00:14:26 [W] Maybe that is like config Maps Secrets or something, but we're just talking about like a deployment its way to get traffic and the accoutrement with that.
+00:14:36 [W] And what kinds of objects and intent you're dealing with?
+00:14:34 [W] So for the sake of Simplicity when I'm going to talk about a service and kubenetes, I'm going to say it's a deployment.
+00:14:39 [W] It's a service object and we know it's about confusing name and an Ingress.
+00:14:44 [W] Maybe that is like config Maps Secrets or something, but we're just talking about like a deployment its way to get traffic and the accoutrement with that.
+00:14:55 [W] So I'm going to show you a couple examples of Steel that we're trying to apply and states in the cluster state that we're trying to apply is on the left the cost of stay at going to show on the right.
+00:15:05 [W] So here on the left.
+00:15:07 [W] wanted to play, you know, like the archetypical nginx example.
+00:15:13 [W] so say we've actually now we've deployed that and we want to
+00:15:19 [W] patch in a specific image change for our deployment think I have the version slightly mixed-up here.
+00:15:27 [W] But if we were only specifying a subset of the fields in the version that we're trying to apply what we will likely accidentally do.
+00:15:38 [W] say if we're just doing an update is we will wipe out a bunch of fields that we
+00:15:46 [W] wanted to keep so
+00:15:50 [W] when we update the individual nginx containerd struct if we only specify some fields in it everything else in that just goes away.
+00:16:01 [W] So suddenly we have no port on our nginx and it will understandably probably cause some things to fail.
+00:16:10 [W] Suppose we want to change the name instead of calling it nginx for whatever reason we want to call it web server.
+00:16:15 [W] So we change the name in our display system.
+00:16:17 [W] We'd apply and now we have two objects and this happens because we've changed the primary key of our object.
+00:16:27 [W] When we update the individual nginx containerd struct if we only specify some fields in it everything else in that just goes away.
+00:16:37 [W] So suddenly, we have no port on our nginx and it will understandably probably cause some things to fail.
+00:16:47 [W] Suppose we want to change the name instead of calling it nginx for whatever reason we want to call it web server.
+00:16:52 [W] So we change the name in our display system would apply and now we have two objects and this happens because we've changed the primary key of our object.
+00:17:02 [W] There's no garbage collection with like any kind of naive cripsy telepresence o9. We have to maybe this is going to just run some extra resources that we shouldn't be running is also kind of attack surface implications and leaving an old thing.
+00:17:17 [W] And forever this could cause really really wacky Behavior say if this is like a thing that's pulling jobs out of a cube because then you have, you know, ancient software doing whatever and taking away a real work.
+00:17:30 [W] So there's lots of really weird ways that this can eat up resources or fail and this is a common thing. I see when I'm looking at kind of an under manage Duster.
+00:17:41 [W] Another problem we can have is trying to figure out if we should remove a field or not.
+00:17:47 [W] So we have our service definition of the left on the left.
+00:17:52 [W] We're trying to create a cluster IP service to our demo and we don't specify a cluster IP because that's normally something that's created automatically grabbing like whatever sets of the load balancer typically could proxy
+00:18:08 [W] To our demo and we don't specify a cluster IP because that's normally something that's created automatically grabbing like whatever sets of the load balancer typically could proxy grabs.
+00:18:20 [W] I don't think it's a good proxy, but we grab an IP out of our cluster IP space and
+00:18:27 [W] we put that in the cluster state.
+00:18:31 [W] However, we know have a field that is different.
+00:18:34 [W] It is empty in our third state. It is present in our current state and in naive reconcile tool might want to replace that offhand.
+00:18:43 [W] I actually don't remember if the behavior is to
+00:18:49 [W] Allow that allow that field to be removed and wind up generating new IP or if it's an immutable field, but either way it's not a thing that we want our tool to try.
+00:19:01 [W] But it's a thing that a native approach would try and the kind of CounterPoint to this if we just left Fields is we could easily wind up with drift of you know automation or people either innocently or maliciously
+00:19:16 [W] Things into our production copies and as not noticing or at least not ever moving those fields if we also don't have you know, a tombstone more garbage collection method for specific fields.
+00:19:28 [W] We take a field out of our definition and then apply we might have kind of a similar problem to you know, if the two nginx copies thing where we don't know that was supposed to clean up our own field. So it's just remaining there forever, even though it's not in our
+00:19:42 [W] definition
+00:19:45 [W] so to kind of summarize and bring up another couple use cases will often a lot of update methods will leave Fields untouched.
+00:19:54 [W] It's also easy to try to update fields that you don't want to update such as fields that are managed by other automation things that are upset by the cluster.
+00:20:03 [W] There are a number of fields on resources that are defaulted on admission, which means that when you create a resource
+00:20:13 [W] There are fields that go from being unset to being explicitly set to some default.
+00:20:17 [W] So you might kind of wind up in a reconcile Loop. If you're just trying to always change something when you see it's changed because there will always be that set of missing fields in your intent that semantically translate onto what's in the cluster,
+00:20:33 [W] Um will often a lot of update methods will leave feels untouched.
+00:20:26 [W] It's also easy to try to update fields that you don't want to update such as fields that are managed by other automation things that are upset by the cluster.
+00:20:35 [W] There are a number of fields on resources that are defaulted on admission, which means that when you create a resource
+00:20:45 [W] There are fields that go from being unset to being explicitly set to some default.
+00:20:49 [W] So you might kind of wind up in a reconcile Loop. If you're just trying to always change something when you see it's changed because there will always be that set of missing fields in your intent that semantically translate onto what's in the cluster,
+00:22:02 [W] Not like a literal deep copy match.
+00:22:05 [W] And there's also a couple kind of weird gotchu specific Fields, like some fields are immutable some of the fields in service.
+00:22:13 [W] I believe are immutable and secrets is a common case.
+00:22:16 [W] You can't switch between data and binary data formats in a secret this exposes a
+00:22:24 [W] Kind of unpleasant problem called break before make when you have a singular identified object that is immutable and you want to make a change to it. You basically have to delete it and recreate
+00:22:39 [W] There are many many things that can go wrong with that such as if the create fails in some way or the delete hangs.
+00:22:47 [W] you're kind of stuck with no resource if there's any cascading effects that can be very bad.
+00:22:52 [W] It was just a slow process compared to you know, whatever is running that can be very bad. It's a problem that can come up a lot in infrastructure Automation and usually comes from kind of poor API designs and then trying to do
+00:23:06 [W] generic actions on top of that
+00:23:11 [W] So let's talk about the journey to having a multi cluster system.
+00:23:17 [W] I'm going to try to break this down things that I've seen into three General models, but there's a general Trend as the number of services and the number of clusters at a company increases
+00:23:32 [W] From tight coupling to looser coupling between those workloads and the infrastructure details and there's a trend from being very many. We managed to being much more automatically managed and focusing more on the user's intent
+00:23:46 [W] Under the goal of building this kind of stuff is to reduce uncertainty and toil the goal is not to build a beautiful machine that you know Works magically and it's all cool.
+00:23:48 [W] The beautiful system is one that works well enough, so be sure about the problems that you need to solve and how expensive Ops work is to avoid sinking, you know weeks or months.
+00:24:03 [W] development work to solve pretty marginal burdens
+00:24:08 [W] so our first model its kind of the starting place is having hard coded Costas we explicitly have some kind of Play Con fig that says this workloads cluster maybe this is like a Jenkins pipeline where each stage specifically like music when Coop
+00:24:23 [W] Apply to something we wind up with a fair bit of duplication as we have an increasing number of services because we have to specify in each one how they map out.
+00:24:32 [W] We have a configuration bag as the cluster topology changes, you know, as we add a new cluster. We have to opt new Services into it if we shall things around we have to
+00:24:44 [W] Change what workloads point to where if we remove a cluster, we probably have to update all this to play pipelines or we break them.
+00:24:51 [W] So it's it's super easy to start with but it definitely doesn't scale with the organization.
+00:24:57 [W] Well, you start to experience more and more friction.
+00:25:00 [W] So once you experience that friction kind of logical ways, a lot of people alleviate that is with creating clustered in groups, so
+00:25:13 [W] instead of explicitly targeting
+00:25:16 [W] individual named clusters with a workloads
+00:25:28 [W] So like production or you know this app or staging or production u.s.
+00:25:33 [W] Something of that sort or like production GPU that describes the capabilities are attributes the cluster that we care about but human has to create that group map it all out.
+00:25:46 [W] Target, and we don't necessarily get
+00:25:49 [W] we don't necessarily get any choice in this matter.
+00:25:54 [W] When it comes to anything anything beyond that mapping so a common case is I want to run on some clusters.
+00:26:02 [W] I don't care which ones like if I have just some fairly ephemeral batch workloads the kind of common way to do this is you more or less designate batch clusters or explicitly pick a random cluster.
+00:26:13 [W] Look it doesn't realistic need to be uswest one a it's just someone hard-coded that ink so they don't want to play it to the whole Fleet.
+00:26:22 [W] So this can work.
+00:26:24 [W] Well when you have a moderate amount of stuff, but the kind of number arbitrary choices made or just the sheer amount of mapping to describe different workloads with different requirements starts to become unwieldy.
+00:26:40 [W] So the evolution from that witch.
+00:26:44 [W] For my understanding is not something that is many kubenetes users are doing is to start to treat workloads in Coronet. He's kind of like we treat pods so
+00:26:59 [W] We specify in this model the constraints on a workloads.
+00:27:17 [W] Choice what what that's going to be.
+00:27:19 [W] So to summarize this we really start to capture the intent of someone who can figure this workloads without directly coupling things together.
+00:27:30 [W] So let's look more a model of this.
+00:27:35 [W] We want to be able to treat a workload a lot like we treat a workloads within a cluster now.
+00:27:42 [W] So let's look at how we want to schedule workloads across clusters.
+00:27:47 [W] This is a very kind of vague architecture here because this is something that most of it does not exist in any open source form that I know of today.
+00:27:59 [W] We have a bunch of individual coasters.
+00:28:02 [W] We have some kind of cost of reconciliation tool that is able to fetch the desired state for that cluster.
+00:28:08 [W] Be able to treat a workloads.
+00:28:18 [W] We have a bunch of individual clusters.
+00:28:21 [W] We have some kind of cost of reconciliation tool that is able to fetch the desired state for that cluster.
+00:28:28 [W] So everything it should be in that cluster from the administer backed all the services in it and what the definitions of all those Services it's able to fetch that from some API and it's able to push any changes from the API such as you know
+00:29:03 [W] Able to fetch that from some EPI and it's able to push any changes from the API such as you know image updates or configuration updates into the cluster as well as reconcile and fix anything in the cost of that deviates
+00:29:19 [W] Something changing it from the intended state.
+00:29:23 [W] We have a top level workloads area that represents, you know, like application Foo globally than is materialized into those individual clusters.
+00:29:33 [W] And what does that decision is a cluster scheduler? So I submit something the workload a pi and say hey, I just need one cluster that runs this database because I need to run a batch job.
+00:29:46 [W] And so the closer the scheduler goes, okay, you need to finity with x-axis scheduled here. I'm going to schedule you here.
+00:29:56 [W] And in order to have that knowledge, we also need to Cluster registry something that is aware of all customers that we have in the fleet is aware of the various, you know, tags and meta data that make up these attributes is aware of their current status.
+00:30:08 [W] So making sure the cost is online potentially being able to factor in things like, you know, cost and capacity and these decisions as well as being able to easily manage credentials so that we can authenticate back and forth with arbitrarily arbitrary
+00:30:24 [W] If you want to learn a little bit more about this model because I'm only describing it briefly here.
+00:30:27 [W] I wrote a blog post that makes someone Genesee described as a white paper at one point, but it's what a 10-minute read into kind of the idea of this kind of model more about what the API could look like and why I think it makes sense.
+00:30:41 [W] This is something that someone in Sig multi cluster saw and because of that we've stirred prototyping a little bit of this material.
+00:30:51 [W] So the cost your inventory API I mentioned is the part where it's the concrete view of you know, I am cluster u.s. East one.
+00:30:59 [W] These are the things I should have in it.
+00:31:00 [W] It's pretty much, you know, a precise definition of a million lines of yeah mole or something of the sort.
+00:31:06 [W] There's no heart level ambiguity.
+00:31:09 [W] It's just a dump of the state.
+00:31:13 [W] There's the cluster reconciler which is responsible for doing the sinking.
+00:31:17 [W] So anything that is in that cluster inventory that is missing create it if anything has a differing State then make the update and anything was previously managed by
+00:31:32 [W] So the cost your inventory API and mentioned is the part where it's the concrete view of you know, I am cluster u.s. East one.
+00:31:32 [W] These are the things I should have in it hits pretty much, you know, a precise definition of a million lines of yeah mole or something of the sort.
+00:31:40 [W] There's no high-level ambiguity. It's just a dump of the state.
+00:31:47 [W] There's the cluster reconciler which is responsible for doing the sinking.
+00:31:51 [W] So anything that is in that cluster inventory that is missing create it if anything has a differing State then make the update and anything was previously managed by
+00:33:15 [W] Tory API and is no longer in the API should get deleted. So garbage collect anything that should no longer be deployed that can be surprisingly effective for doing cleanup
+00:33:30 [W] surprisingly effective for doing cleanup one of the ambiguities currently in our prototype of this is how was it handle updates because as I mentioned in like the API Logistics portion of
+00:33:45 [W] In like the API Logistics portion of this talk and there are many ways where it's hard to capture the intention of the user into what operations to do.
+00:33:57 [W] Currently one thing I've considered is trying to add some kind of basically metadata to indicate your intention with specific Keys. Like if you see this key in the cluster don't change it.
+00:34:09 [W] This is an area where building custom tooling for the stack that you're running especially if you have more of a platform as a service versus kubenetes as a service internally can be very valuable because in
+00:34:24 [W] Any set of objects is a finite number of gotchas around doing updates with the state things like, you know, the cluster IP.
+00:34:34 [W] If you're able to build tooling explicitly around those you'll probably have an easier time than trying to build a tool that solves every single use case.
+00:34:43 [W] It's challenging to build an open source tool because you basically have to accommodate with some reasonable wiggle room everyone out there doing everything.
+00:34:53 [W] So for example stuff like seared. He's you have to either say you're on your own if you had an edge case or you have to give the user a way to kind of specify that.
+00:35:04 [W] Tension if you know something is supposed to be right once or whatever.
+00:35:11 [W] And as I said, we're prototyping some of the stuff now, it's fairly early stages of prototyping.
+00:35:18 [W] we're doing specifically a minimal version of the inventory API just enough of something that we can reasonably do a Reconciliation process and figuring out the mechanics how the reconciler should work and it's one of those things where it's it's easy to do something.
+00:35:33 [W] It's hard to necessarily do what you want and this is an area where the Sig and I personally would really really appreciate some feedback as the exact use cases and problems that you have.
+00:35:40 [W] So there is also a cost of registry.
+00:35:42 [W] That part is not vaporware.
+00:35:44 [W] However, it has a somewhat uncertain feature.
+00:35:47 [W] I forget the exact fate that was decided upon because it's not super well maintained and as far as we're aware, it's not extremely well adopted but it's something that you're able to kind of insert all your clusters so
+00:36:02 [W] get credentials for them and put status for them in a central place
+00:35:56 [W] and this is something that would require for a collective scheduling system because again you needed like the inventory available of what clusters are at your disposal and the metadata about them that you need to make a decision
+00:36:09 [W] and this is a point where like we get into full conjecture land and this is something that the original blog post about this idea covers in more detail but for our workload API there's extreme ambiguity as to how you define a workloads
+00:36:25 [W] And how you deal with the one to many mapping that happens when you materialized multiple clusters?
+00:36:26 [W] So how do you gracefully role that version out when I have service X how do I you know, not deploy a everywhere because no no change should ever go everywhere all at once.
+00:36:38 [W] So how do you roll it between clusters how Emanuel is that?
+00:36:41 [W] How Autumn it is that? How does it work?
+00:36:43 [W] How do you deal with templating if you want or need to have specific fields in your configuration?
+00:36:49 [W] In the you're like gamble or whatever changed between the primary version and the version for any given cluster.
+00:36:55 [W] What kind of scheduling options do you have and how sticky is that cluster scheduling like what should happen if you delete a Custer and no longer satisfy scheduling constraints of something like if you go from having three replicas or
+00:37:10 [W] primary version and the version for any given cluster what kind of scheduling options do you have and how sticky is that cluster scheduling like what should happen if you delete a cluster and no longer satisfy scheduling constraints is something like if you go
+00:37:33 [W] Because to having to Cluster replicas of a thing, do you spin it up somewhere else? Do you make like the state and the load balancer follow that around you make a human intervene?
+00:37:43 [W] It was a very very long tail as to how to do that and it winds up being very domain-specific.
+00:37:49 [W] There's a couple people in the community who definitely inspired a lot of the way that I've thought about this in particular.
+00:37:57 [W] I want to call it Paul Maury.
+00:37:58 [W] Sig multi cluster who strongly advised that we start prototyping from the bottom up.
+00:38:03 [W] up being like the reconciler up rather than starting from the top down with the schedule and workloads API because there are many many ways to do this and there's many tools that try to do vaguely similar things
+00:38:19 [W] Become very opinionated.
+00:38:20 [W] So what we're trying to do on the open source side is figure out the building blocks that we can give you so that you provide the very opinionated parts that are specific to how you run
+00:38:35 [W] I can give you so that you provide the very opinionated parts that are specific to how you run apps and how your infrastructure works for Less cost than it would take to build. The one size doesn't quite fit anybody component.
+00:38:46 [W] So thank you very much for attending.
+00:38:48 [W] This is not specifically a talk about Apple systems, but I work at Apple.
+00:38:53 [W] I really really like the people who I work with.
+00:38:56 [W] So if you want to work with me and people who I really look up to you, please reach out or stop by the Apple Booth to learn more.
+00:39:02 [W] We're looking for a lot of kubernative people right now.
+00:39:06 [W] Now I should be able to take questions.
+00:39:08 [W] You will be speaking to a future version of me who's hopefully slightly wiser.
+00:39:15 [W] Thank you for joining.
+00:39:20 [W] Everyone super quick correction, I believe I said that for still you bypass Fine Arts is I was wrong about that.
+00:39:27 [W] Probably the most relevant question I was asked is is this similar Federation and how it is this overlap with what we're trying to achieve Federation bypasses the scheduling problem somewhat, at least last I was worried Federation.
+00:39:42 [W] Creative its stock around propagating resources from a top level definitions to the bottom this differs in two ways.
+00:39:50 [W] One is more building block oriented.
+00:39:52 [W] So it's a lighter by in if you want to build your own customization as well as the highest levels of it are very aspirational.
+00:40:00 [W] Shall we say in being able to give very high level intent versus mechanical more mechanical kubenetes configuration?

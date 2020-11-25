@@ -1,0 +1,262 @@
+﻿When the Tekton Cat Misbehaves – Pitfalls, Mistakes, and Lessons Learned: OTWA-8837 - events@cncf.io - Wednesday, August 19, 2020 6:58 AM - 51 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:01:52 [W] Hello, my name is Mark. That's all. I'm a software engineer with IBM.
+00:01:57 [W] Welcome to the recording of my talk when the tekton Caps misbehaves pitfalls mistakes and Lessons Learned.
+00:02:00 [W] So what's this about?
+00:02:03 [W] Let's next go on.
+00:02:06 [W] Okay.
+00:02:07 [W] So what am I going to be talking about only have to give a quick introduction of what tekton is for those of you that have wandered in and not used it before and then we'll talk about a number of ways in which
+00:02:20 [W] Tekton can't go wrong. Now. This is very rarely at runtime, which you got it all set up, but there's always when you first get hold of tekton. If you're downloading it you're trying to use it.
+00:02:33 [W] You're trying to test it.
+00:02:34 [W] It's got a few wrinkles and that's going to be one of the things that we were talking about ways that it just can can misbehave on you.
+00:02:41 [W] when I first put the abstract for this talking back at the end of the year the end of last year tekton was still in Alpha now since then it's progressives put out multiple Peter releases now and it's continued to
+00:02:57 [W] Change and improve so several of the ways in which tekton used to lead you down strange paths or misbehave on you will say not possible anymore, but much harder to get to because the
+00:03:13 [W] Z 1 beta so only two kind of splitting up you can still do these things to you.
+00:03:25 [W] These things are much harder to see anymore because because of the changes that were made in beta and then finally we'll have a look at okay tekton system built out of custom resources.
+00:03:34 [W] How does that help it and what are some of the
+00:03:37 [W] impacts or Consequences of its Cloud native kubernative design
+00:03:44 [W] Okay, so tekton it's an open source project part of the CD Foundation out there on GitHub tekton.
+00:03:57 [W] therefore you can get to the website.
+00:03:58 [W] It's primarily for Building ci/cd Systems.
+00:04:06 [W] That's what is most useful for.
+00:04:07 [W] Essentially though, it runs commands in containers in an orchestrated order.
+00:04:13 [W] So the images that you're building things you can build yourself and your where you run. It doesn't affect where it where it deploys to obviously.
+00:04:27 [W] It's got an increasingly Rich catalog of pre-built tasks. And that's only become more true as we as we've gone through this year.
+00:04:38 [W] Okay. So tekton is an open source project part of the CD Foundation out there on GitHub tekton.
+00:04:44 [W] Dev where you can get to the the website.
+00:04:45 [W] It's primarily for Building ci/cd Systems.
+00:04:45 [W] That's what is most useful for.
+00:04:45 [W] Essentially though, it runs commands in containers in an orchestrated order.
+00:04:46 [W] So the images that you're building things you can build yourself and your way you run. It doesn't affect where it where it deploys to obviously.
+00:04:47 [W] It's got an increasingly Rich catalog of pre-built tasks. And that's only become more true as we as we've gone through this year.
+00:04:51 [W] it's got lots of primitive building blocks for doing all kinds of useful and common tasks that you want to automate particularly in a ci/cd space.
+00:04:52 [W] But it's a proper open source project govern through the CD Foundation very welcoming of new people regular web and conference calls both in the EU and an American time zones.
+00:05:02 [W] So do check out the website turn up and then get involved if it interesting.
+00:05:06 [W] Okay. So here's a typical sort of thing. What might you want to do with the tekton pipeline.
+00:05:14 [W] Well in any kind of ci/cd system here we show we've got a set of surpass what we want to do and doing unit testing Building images running code coverage.
+00:05:29 [W] This is really showing that it's not just a linear flow. But an a cyclic cyclic basically directed graph I think is the right term essentially a set of tasks that run in an order where some may need to finish before others.
+00:05:39 [W] I need to run some can run in parallel summer going to be sequential.
+00:05:43 [W] So building blocks the most basic idea in tekton is this idea of eight a step which is essentially one or more commands to be run inside particular image that gets mapped to a single container at runtime.
+00:05:59 [W] - ci/cd space
+00:06:13 [W] but it's a proper open source project governed through the CD Foundation very welcoming of new people regular web and conference calls both in the EU and an American time zones.
+00:06:15 [W] So do check out the website turn up and then get involved if it interests you.
+00:06:15 [W] Okay. So here's a typical sort of thing. What might you want to do with the tekton pipeline.
+00:06:16 [W] Well in any kind of ci/cd system here we show we've got a set of surpass that we want to do ending unit testing Building images running code coverage.
+00:06:19 [W] This is really showing that it's not just a linear flow.
+00:06:20 [W] But an a cyclic cyclic basically directed graph I think is the right term essentially a set of tasks that run in an order where some may need to finish before others.
+00:06:23 [W] I need to run some can run in parallel.
+00:06:28 [W] summer going to be sequential.
+00:06:28 [W] So building blocks the most basic idea in tekton is this idea of eight a step which is essentially one or more commands to be run inside a particular image that gets mapped to a single container at runtime.
+00:06:30 [W] So the first custom resource that tekton introduces is that of a task, which is a sequence of steps that are going to run in a sequential order and our task is the thing that gets put in there the catalog and so
+00:06:32 [W] into one pod one task
+00:06:34 [W] then the pipeline is what sequences the set of tasks that we have to run. So it's going to be an ordered list of tasks with the conditions about when they run and how
+00:06:52 [W] With binding in other other resources and configuration practice.
+00:06:57 [W] In order to make something happen in tekton. You create a pipeline run so you can think of a pipeline as a class and a pipeline Runners and instance.
+00:07:12 [W] It's a single build a single running instance of a pipeline.
+00:07:19 [W] You can kick them off manually.
+00:07:22 [W] Typically these things are going to be running. Dynamically from from web hooks or driven by other events or triggers and tekton a day a triggers sub-project.
+00:07:31 [W] Specifically deals with okay what might have happened what events might have happened that you want to use in order to generate pipeline runs and create templated instances of them.
+00:07:43 [W] So this diagram I show we have these static instances. If you like of steps tasks and pipelines by creating a pipeline run at runtime with spinning up pods
+00:08:01 [W] This that's how the pipeline's look at runtime now, we're going to want to share a workspace a file system between tasks and so it's very common to use a persistent volume
+00:08:16 [W] I took to provide essentially a shared file system across those tasks.
+00:08:23 [W] Okay, so you just picked up tekton you downloaded it.
+00:08:31 [W] What are some of the things that can go wrong?
+00:08:32 [W] And what does that look like?
+00:08:33 [W] There's several.
+00:08:34 [W] I'm going to touch on once to do with the availability of dynamic provisioning in your cluster.
+00:08:40 [W] And then you might have too many secrets.
+00:08:41 [W] You are too few secrets and particularly in the Alpha version. So tekton there was some issues with copying data between steps and Oddities in how pull requests would be handled, but they would be to Shield you from these so I'm going to tie.
+00:08:55 [W] Shown them but not going to quite so much detail about how you can see them going wrong because you shouldn't see those so much anymore.
+00:09:03 [W] All right. So in the previous slide we talked about how pods can share is persistent volumes and that's a common assumption.
+00:09:15 [W] In the in the old days if you use tekton before it went into beta there were ways in which these persistent volumes could be created implicitly for you. And so you may not be kind of warned that persisted volume claims would be created.
+00:09:31 [W] I must first class of problem that you can run into.
+00:09:39 [W] So for example, let's create a single task doesn't do very much.
+00:09:43 [W] Because that's frequently the first thing you do in a Tom pipeline.
+00:09:52 [W] Now as soon as we want to pass that git repository on to the next pipeline next task in the pipeline this thing hangs up for it.
+00:10:04 [W] CTL get pods.
+00:10:13 [W] We see everything stuck in pending and right down at the bottom of the description about the Pod do a K-Cup pods concealed get possibly see it has these Unbound
+00:10:25 [W] Times and so everything's hanging up.
+00:10:28 [W] And finally if we pick through the animal in that description part, we see that Yep. This pipeline run here is mentioned.
+00:10:43 [W] It's trying to mount some persistent volume.
+00:10:44 [W] that isn't happening and and that's because because we said that there were multiple tasks in the pipeline.
+00:10:55 [W] We provided an output from the from the get resource. It implicitly went to Crest a persistent volume Clement.
+00:11:00 [W] So if we run that in a kubernative system without a default Dynamic provisioner the whole thing, can I go?
+00:11:06 [W] now in beta it's less easy to run into that problem because the beta version of tekton introduces this idea of work spaces which are an analog of a a shared file system and
+00:11:23 [W] Workspaces need a volume claim template you need to say is what it is what those needs are volume.
+00:11:38 [W] volume. So the fact of having to specify a volume think another you or remind you that oh, yeah, I need dynamic provisioning in my cluster. Otherwise, this thing isn't going to work.
+00:11:40 [W] Okay, so having got past that your pipelines are up and running but the next thing that we tend to run into his problems with credentials.
+00:11:55 [W] So what let's let's do something what we're going to do will clone a repo do a Docker build Docker push.
+00:11:59 [W] See what happens.
+00:12:02 [W] So we doing a Docker build in this case. I'm using Builder you might use canonical there are several other ways of building images on kubernative clusters.
+00:12:10 [W] Everything looks good until it. Doesn't we try to push this out to Docker Hub?
+00:12:17 [W] And I will throw ization authentication is required and everything falls apart.
+00:12:19 [W] So how could engines working tekton?
+00:12:24 [W] we've got three things pipeline run the running instance.
+00:12:27 [W] The references are service account.
+00:12:38 [W] And the way tekton works is that the service accounts that you use to run your associate to run your pipelines need to say which Secrets they're going to pick up.
+00:12:42 [W] Your pipeline runs and it's these annotations here that say what these secrets are for.
+00:13:04 [W] So this is a Docker secret we have this Docker annotation on if it was a GitHub secret whatever get secret here instead of gitlab.
+00:13:10 [W] Okay. So having created the secrets we then when we talk about patching service accounts because you may well use it.
+00:13:21 [W] Oops ETL patch to add a tell so all right fine if we apply this darker secret and Patch it onto the service account, which is adding this extra line on the service account to say that the secret is now in use.
+00:13:32 [W] oops
+00:13:34 [W] Sorry.
+00:13:37 [W] I'm so sorry about that.
+00:13:47 [W] Okay, so having run the patch on the service account rerun the pipeline then life is good and the image gets pushed.
+00:13:50 [W] Okay?
+00:13:56 [W] So what we need more than one credential what if now I need one for GitHub my views on another one forget how I need another one for gitlab.
+00:14:04 [W] Let's add a second if we had a second doctor secret.
+00:14:07 [W] Maybe I've got multiple people that want to talk to Docker Hub. So we patch a second secret on start up high.
+00:14:11 [W] Line up and then immediately fails. So what's going on there?
+00:14:15 [W] Can I pulse we see that they're in this in it are estate. If we describe our pods we can we get this hint that a credential initializer init container has fallen apart was died.
+00:14:38 [W] So tekton has a command line interface with comes with it called TK n and T. KN is your friend. If we do a tkn logs to get the logs of the pipeline and say we want all the containers listed finally we get this clue
+00:14:54 [W] Invalid value Docker to multiple entries for URL.
+00:15:04 [W] This is the thing you can't have multiple credentials for a single external resource.
+00:15:12 [W] Now, we could also got that out of the coop CTL but it gives you tou need to specify the name of the inner container that you're particularly interested. If you just say all containers, you won't get anything. So tkn is your friend if you're working the tekton pipeline.
+00:15:24 [W] oops
+00:15:26 [W] So, what does that tell us?
+00:15:30 [W] Well, the consequences of this are that if I need to have multiple credentials for a single a single repository
+00:15:44 [W] Docker Hub, you essentially need to patch them on two different service accounts. And so you need to choose the service account as got the credentials on that you want.
+00:15:55 [W] The alternative is that you simply don't do that and you end up with using functional identities rather than those pretending to be particular users.
+00:16:05 [W] All right. So let's add Dynamic provisioning typically need that to be enabled.
+00:16:15 [W] We need to patch a sequence on to service accounts and this idea that if for us a whole of GitHub
+00:16:22 [W] You can have any one credentialing to one service account.
+00:16:26 [W] So tekton typically does as somebody it tends to run on behalf of somebody so you tend up jet creating an identity keptn water use the dealing with all the repositories that you're interested in for a particular service account.
+00:16:40 [W] That sort of consequence of the way that that secret handling works.
+00:16:46 [W] And we've shown that the tkn command line both for starting pipelines following their logs looking at their logs.
+00:16:56 [W] It's particularly helpful.
+00:16:58 [W] It's quicker to get information out using the TK n then what you can dig out with Coupe CTR. So it's very useful command line and one that's well worth using with total.
+00:17:09 [W] Okay, so briefly I want to touch on some of the good things that have happened in V 1 b 2 1 when tekton came out I had this idea of pipeline resources things that were abstractions for external.
+00:17:25 [W] With title. Okay. So briefly I want to touch on some of the good things that have happened in V 1 b 2 1 when tekton came out I had this idea of pipeline resources
+00:17:26 [W] An object's it has ones that get poor requests images that you might build clusters.
+00:17:35 [W] You might deploy to storage systems cloudevents.
+00:17:40 [W] These things haven't been ported to Beta they're all still Alpha level and there's a good link here that talks about why those things haven't been brought forward essentially they each have different requirements
+00:17:50 [W] Side effects as not a lot of consistency each thing makes sense in itself.
+00:18:00 [W] But as a set of pipeline resources, then neither complete nor intuitive to understand and so what they've done instead by me is to create a set of tasks in the task library that you can use instead
+00:18:11 [W] Klein resources and the tasks are really the way to go. If you're used to using pipeline resources, I would advise you move to using tasks instead from the task Library.
+00:18:26 [W] They are all of them.
+00:18:28 [W] excellent Replacements and it reduces the number of different types of thing. You have to think about in the old days.
+00:18:38 [W] This used to have to copy between resources.
+00:18:41 [W] we would use these pipeline resources and each individual task would have to say
+00:18:42 [W] a right now copy everything I've done in to my output pipeline resource that the next thing in the chain pick it up.
+00:18:52 [W] This had a lot of sort of boilerplate and execution time to your tasks.
+00:18:57 [W] You don't need to do that anymore because workspace is make that problem go away.
+00:19:05 [W] ye.
+00:19:06 [W] Not that spicy.
+00:19:08 [W] Yeah workspaces behave in a much more sensible way.
+00:19:11 [W] They just looked like a shared file system.
+00:19:14 [W] You don't need to do that copying.
+00:19:21 [W] So B1 B2 one has really reduced a lot of misbehavior that we were that we saw in the earlier versions and tekton similarly older pipeline pull request pipeline resource made it easy to over write comments you
+00:19:29 [W] Comments and just destroy ones that you've made previously they were tricky to update the status of as much more consistent set of tasks for those as well.
+00:19:41 [W] Finally that old get pipeline resource with implicitly create the system volumes.
+00:19:49 [W] You have to explicitly copy the results that you've done with it.
+00:19:55 [W] And because this is an important point because it ran in it container. You couldn't Mount additional secrets in I worked with a customer and it's done.
+00:20:02 [W] Weeks ago that we're trying to use self-signed certificates on their kubernative cluster and the tekton get pipeline resource wasn't happy with that. Now as solution for them was to move forward to beat her so that they could use to get
+00:20:15 [W] You get tasks and those would allow them to Mountain their particular cluster certificates into those tasks because they're much more configurable.
+00:20:30 [W] There's really no way of configuring in it containers with additional Mount points in tekton.
+00:20:35 [W] as well as being more consistent, they're actually more functional in many ways than the old set of pipeline resources.
+00:20:40 [W] Tekton catalog.
+00:20:45 [W] It's an ever-growing resource. There's lots of good things in there.
+00:20:48 [W] They're always again taking contributions from people who want to be interested in that do have a look at that.
+00:20:54 [W] Lots of good stuff to pick up.
+00:20:55 [W] I'm sorry, we don't okay.
+00:21:03 [W] So tekton was built out a custom resources know a lot of good reasons for doing that a lot of benefits from it. If you know anything about working with kubernative they behave in the way that you would expect them to do all the skills that you've got of
+00:21:13 [W] You've been General role based Access Control Coop CTL those things just behave very intuitively for you.
+00:21:24 [W] There are some Oddities particular own pipeline runs. If you want to see the logs of a pipeline run.
+00:21:32 [W] Those are in the pipeline Runners.
+00:21:34 [W] So you need to get the logs out of them. So you end up with these resources left lying around after you finished.
+00:21:41 [W] And similarly if you delete that pipeline run resource, then you've lost your logs frequently.
+00:21:55 [W] You may want to persist the logs of your build for much longer than the metadata about it you how many containers what was mounted in what the the kubernetes description of it?
+00:22:00 [W] And that's something I touch on.
+00:22:03 [W] In the next in the next point, I'll come back to that.
+00:22:08 [W] The other thing that we see is.
+00:22:09 [W] In a traditional build system like Jenkins or Travis.
+00:22:19 [W] It's common to have your build logic in the look in the repository itself, but we saw the first thing that we often do in a tekton pipeline is clone the git repository using a custom resource pipeline run that all
+00:22:30 [W] so if you want to have your build logic in your get resource you end up with this problem of double cloning and you have to clone it once to get the descriptions of the custom resources that you want to apply so that you can now get clone and use it
+00:22:47 [W] This point the tekton isn't in a way Travis or Jenkins.
+00:22:53 [W] There is some assembly required.
+00:22:55 [W] And if you want to hook it up to the web hooks it lets you do that and the tekton triggers supported but web hooks under first class Concept in tekton.
+00:23:10 [W] You need to write your own triggers to glue into the web hooks that you want to send in.
+00:23:17 [W] A tekton pipeline can be a load more yellow than somebody if you're used to Traverse, you might end up with four or five lines of Travis description the could turn into a lot more a lot more.
+00:23:31 [W] Yeah more for a tekton pipeline and that leads to this point that what tekton really is very good at is a cloud native microservice Factory IE. If I have a lot of repositories who's build is functionally identical
+00:23:45 [W] times of Travis description the could turn into a lot more a lot more llamo for a tekton pipeline and that leads to this point that what tekton really is very good at is a cloud native microservices Factory
+00:23:47 [W] The same I want to do git clone Docker build Docker tag Docker push.
+00:23:50 [W] That's it roll two runs a set of tests in a similar way. Then I can have fewer pipelines than repositories. And that's the sweet spot for tekton.
+00:24:01 [W] really is I want to build a lot of things in the same way.
+00:24:09 [W] way. If you have many repositories that all want to contain their own logic, then you need to do that extra work of cloning them first getting their pipelines instantiated nearby plans and then working out how to trigger those things.
+00:24:19 [W] And that's that's more or less more assembly required and you're kind of out of tekton is comfort zone.
+00:24:27 [W] Okay, so I've covered what tekton is some of the gotchas that you'll see if you just download it and start trying to get the hang of how to use it.
+00:24:41 [W] We've looked at how its evolved this year and how it's really emphasizing tasks D emphasizing pipeline resources is consolidating or fewer Concepts and it's growing library of tasks
+00:24:53 [W] The exciting to changes in tekton are and where the growth is and where I would encourage you to focus your attention if you're picking up and using it and again be aware that tekton isn't an off the shelf.
+00:25:09 [W] Shocked it's a set of piece parts that you can use for building Cloud native ci/cd systems and that if you're looking to build particularly a lot of microservices in exactly the same way then yes.
+00:25:25 [W] Tom might be what you're looking for this point if it wasn't just a recording I'd be stopping and taking questions.
+00:25:37 [W] So thank you very much for coming.
+00:25:39 [W] I hope you found this useful. Have a great day.
+00:25:43 [W] Hello.
+00:26:29 [W] Okay, so hopefully that's something I have to do. You still have it?
+00:26:31 [W] so I told about it the end what tekton is best at and it is that Microsoft is Factory it is that idea of building a lot of repositories that have functionally the same build Logic for them
+00:26:46 [W] Whatever microservice Factory is what we've seen tekton be the most used for and it again if you've got in Jenkins Jenkins like world if you have every single one of your repositories is
+00:27:02 [W] And you're using Jenkins today and you're happy, then it's kind of moves on to terrans question about well, should we consider migrating our pipelines to tekton?
+00:27:17 [W] turn says we currently use Jenkins with a kubernative plugin. So it initiates a new pod for every pull request.
+00:27:23 [W] Also were afraid we may not get that much flexibility with tekton.
+00:27:28 [W] Now Jenkins is a really mature product.
+00:27:33 [W] It's been around for a decade and it has a vast ecosystem of tasks and plugins and we all know Jenkins can do huge amount of things.
+00:27:46 [W] I've pointed out tekton has a library of tasks. But clearly it's nowhere near probably will never be anywhere near so enormous scope that the jankins has
+00:27:54 [W] No, thanks kubenetes plugin as turn set is really good.
+00:28:00 [W] It does scale properly with kubernetes.
+00:28:04 [W] It starts individual jobs.
+00:28:08 [W] jobs. What?
+00:28:10 [W] When we've talked to people that use Jenkins, it's often that the longer you use Jenkins for the more you start seeing the problems with it the tend to be around plug-in conflicts.
+00:28:26 [W] are ones that Jenkins build tend to turn into over longer periods of time and
+00:28:41 [W] so
+00:28:43 [W] If you want to keep your build simple and know that just because you built it yesterday you want to be able to build it again. Tomorrow tekton is a much cleaner design.
+00:28:59 [W] The serverless Divine if you like and you don't see that kind of plug-in creep that that you can see with tekton.
+00:29:11 [W] That's certainly true.
+00:29:16 [W] However, if you're using Jenkins and what you've got works and it isn't broken, why would you consider moving to tekton or anything else?
+00:29:21 [W] You'd have to be saying?
+00:29:25 [W] No, we really are suffering from the plug-in conflicts or there's some other pain or reason for why you were
+00:29:30 [W] not changing a build system.
+00:29:34 [W] Yeah, it's always the case Engineers like we like to build things but working on your build isn't necessarily going to make you any more productive or deliver business value without good reasons for changing.
+00:29:44 [W] I've only other questions.
+00:29:48 [W] All right.
+00:30:08 [W] Well, if no, oh if I miss all my goodness me, I've missed two pages of questions.
+00:30:09 [W] I feel terrible.
+00:30:13 [W] Are there pre-built images for tekton in the tekton operator?
+00:30:13 [W] Yes, absolutely lack of groovy support lack of a polished ecosystem.
+00:30:24 [W] Well certainly work on the ecosystem is where a lot of activity on tekton is certainly graphql.
+00:30:27 [W] Yeah, true.
+00:30:39 [W] Tekton doesn't have a DSL and I don't think it's going to have one you you're writing tasks in whatever language is you want to write your tasks in does many millions of jobs impact kubernative server or are there ways to Archive builds.
+00:30:49 [W] Different companies that use tekton in their bills will do that a logging in archiving for you.
+00:30:58 [W] I know firsthand the IBM's tekton based buildpacks line in our public Cloud.
+00:31:04 [W] Yes, we do that work of archiving those logs for you.
+00:31:08 [W] So they do persist beyond the duration of your pipeline runs, but if you're building your own tekton basis and that's a problem that's left for you to solve.
+00:31:19 [W] So you need to most people you want to get a tekton base build from somebody rather.
+00:31:20 [W] Build your own yourselves.
+00:31:24 [W] Can you use an existing Potter on tasks know every task starts in its own pod?
+00:31:32 [W] Jenkins exit uses it under the covers.
+00:31:39 [W] I'm not an expert in it has been some time since I've used drinking Zach's Jenkins X has a lot of opinions and you will accept all of its opinions or none of them.
+00:31:47 [W] So you need to look very carefully at Jenkins X if you agree with it in every particular
+00:31:50 [W] then it's going to give you a lot of value if you disagree with it anywhere you need to move on.
+00:31:57 [W] Toolkit for pipelines or is it going to be possible to convert between different pipelines Services when they cou back door not Jack? I don't really understand that question very well.
+00:32:14 [W] Really tekton runs on kubernative only it's very very kubernative.
+00:32:23 [W] I don't I don't have an opossum properly of address that slide appears the flood should be up ping the ping me on slack if you need a copy of the slides and you can't get done.
+00:32:39 [W] How would you debug a pipeline in case it fails the so often if your pipeline is going really badly wrong you end up putting great big long sleeps in your code. And you Coop see TLX akin to the pods and dig around
+00:32:51 [W] going on however that said normally
+00:32:57 [W] You're simply running commands in in pods that you can run on your local laptop and nine times out of ten if those commands work on your local laptop, it should work in tekton in in Kudo pods
+00:33:14 [W] You but things only to go wrong. Once you put them into tekton containerd into pods and run them on tekton, but it does happen and yeah flip and she'll in is very frequently the case if the logs aren't giving you what you need
+00:33:30 [W] Work. Well, alongside Pro.
+00:33:36 [W] We do use both tekton and Pro in the tekton project. We use Pro to produce a lot of the approval processes checking sign-offs checking the everything that has been checking cla's and things like that
+00:33:49 [W] Then we use a tekton in particularly in the relief side of things now individual builds. I think prior was even running themselves.
+00:34:03 [W] I think they overlap a bit you can use them both together, but there is some areas where you could use either prior is clearly much more complicated much richer,
+00:34:16 [W] Areas, where you could use either Prime is clearly much more complicated much richer but a vast project compared to what tekton this tekton is very very focused on what it
+00:34:22 [W] Vast project compared to what tekton this tekton is very very focused on what it does cryo compromise much more powerful much more complicated.
+00:34:32 [W] Yes, they can work together, but some work is required on your behalf to make them work together.
+00:34:36 [W] Okay.
+00:34:39 [W] I've gone two minutes over again.
+00:34:42 [W] I'll be on slack duping me there if you got follow-up questions.
+00:34:46 [W] Thank you all for coming.
+00:34:48 [W] I hope that was useful and have a great conference.
+00:34:51 [W] Thank you very much.

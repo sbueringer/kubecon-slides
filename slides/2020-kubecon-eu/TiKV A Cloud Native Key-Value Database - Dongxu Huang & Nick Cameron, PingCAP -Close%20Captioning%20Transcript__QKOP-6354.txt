@@ -1,0 +1,226 @@
+﻿TiKV: A Cloud Native Key-Value Database: QKOP-6354 - events@cncf.io - Wednesday, August 19, 2020 6:53 AM - 58 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:16 [W] Hello, this is Tony.
+00:00:20 [W] Hello, this is Tom Shoe today Nick and I will give give a brief introduction of tikv, which is climate eyvallah database, you know, tikv is a cncf project and now
+00:06:27 [W] F project and now it is incubating level project but tikv right now is on the graduation process. So maybe next month
+00:06:41 [W] You become The Graduate had project.
+00:06:46 [W] Okay, this is me, and I'm the co-founder and CTO of pink hat pin cap is the company behind IDP and the tikv.
+00:06:57 [W] It is a database company and I am a database gig I use a lot of databases and I also worked as a distributed system engineer for like ten years,
+00:07:10 [W] We use rust Angola lat, you know tikv is built by, you know, build in Rust and the tiny B, which is the second layer of on top of tikv. It is
+00:07:26 [W] Layer of on top of tikv. It is using Gola. So this is my Twitter and this is my email. If you have any following questions, just feel free to reach out to me.
+00:07:37 [W] I'm Nick Cameron.
+00:07:39 [W] I'll be giving the second part of this talk.
+00:07:46 [W] I'm a senior engineer at pink cap where I work mostly on tikv.
+00:07:49 [W] I'm also a member of the rust courting.
+00:07:52 [W] You can find me on Twitter, Nick.
+00:07:52 [W] The score underscore Cameron or GitHub and many other places on the Internet is an RC. Okay.
+00:08:05 [W] Today's talk will be divided into two parts first.
+00:08:08 [W] I will give a brief background of background in the introduction of tikv project and share some stories and a little bit of history of this project to explain why we are doing this
+00:08:22 [W] Than half an egg will share some technical details benchmarks and the roadmap of tikv.
+00:08:32 [W] Okay A little bit of History, you know, I just mentioned that pink AB is the company behind High TV M tikv before I found that pink cap.
+00:08:46 [W] I I was in the big internet company in China and at that time I was in charge of our
+00:08:52 [W] internal MySQL cluster, you know at the time our business was growing so fast and and the amount of data was getting bigger and bigger of course, so my job
+00:09:07 [W] To Richard our MySQL or the time to no skill out the the cluster, but believe me it is not funny at all.
+00:09:21 [W] At the time I still remember I read the spam spanner paper around the beginning of 2015 that paper described implementation of a Distributive transactional database.
+00:09:37 [W] She is widely used in cycle go and also I read another paper called goal f 1 which was the Seeker layer on top of spanner at that time span is more like a nosql database.
+00:09:53 [W] So this paper said spanner + F1 replace their MySQL cluster behind Google ads.
+00:10:01 [W] And so we were so exciting about that.
+00:10:13 [W] So we we decide my colleague and I decide to start a start-up to to do an open source implementation of spanner + F1 and with the MySQL popcorn and
+00:10:19 [W] My sitcom, you know at that time we don't have such database in open source community.
+00:10:26 [W] Here is a screenshot of those two in court papers that I sink.
+00:10:34 [W] You know, that that these two papers describe the beginning of you know, so cord cloudbees.
+00:10:40 [W] Okay, you know this is a very ambitious project for a small start-up at the time. We just have three engineer's including us and so we should should be focused on something right
+00:10:57 [W] is the second layer which is the f 1 part the reason is that we think that the secret lair is closer to the application layer closer to the to the developers
+00:11:13 [W] A better, you know a better expresses our ideas in the early days and more importantly I said, I just mentioned that tidy be specs my scalp article. We decide to
+00:11:29 [W] Take my scalpel Telco.
+00:11:32 [W] So for the Quality quality purpose, we want to use reuse the test cases from I Seco and MySQL Community.
+00:11:45 [W] For example, we can borrow some test cases from what the Press because what the Press is using by cos its stocks storage engines. So in the test case of
+00:11:56 [W] the press it should be something, you know a Seco some test cases related to to the MySQL so we can reuse this this test cases to test our secret lair and
+00:12:12 [W] Then we after a few miles. We open sourced. The first version of Tidy bees secret lair. It is true that many people in the community were really really interested in our project, but they soon
+00:12:27 [W] Covered a very serious problem, you know, we clean our self is a tiny bees distributed database, but in 2016, we only have a single
+00:12:43 [W] So that means we don't actually store any data because we don't have a storage engine right as you can see f 1 is on the left and we are on the right the even though f 1 is just
+00:12:58 [W] Adding single layer, but the data is stored in cycle goes Banner, right?
+00:13:05 [W] But at the time we don't have our own spanner.
+00:13:15 [W] So in order to make tidy be more like a database we decide to use hbase as our storage engine at that time.
+00:13:20 [W] However, we know that HP is doesn't support the crossroads Crossroads transactions or estate transaction a CID semantics, right? But
+00:13:28 [W] but span a can so we implemented the two-phase commit on hbase using its coprocessor broken, isn't it is provided by hbase So This Is Us in
+00:13:42 [W] 2016 and that makes tidy be you know, look like a distributed database making sense, right?
+00:13:52 [W] But there's another problem which is very very serious, but it's really hard to solve. It is the performance problem, you know, even for a single right request.
+00:14:07 [W] It has to go around the MySQL client to tidy bit thicker layer SQL parser SQL Optimizer and goes through the hbase co-processor to
+00:14:19 [W] the two phase commit protocol and the request go to the hbase hbase part to the region master and then the data is written to to the hdfs data node
+00:14:33 [W] And the performance is really really bad. And to be honest, you know maintain a Hadoop stack is really painful is I think it is even more painful than
+00:14:49 [W] Maintaining the MySQL cluster. So by the end of 2016 we decided to build our own spanner.
+00:15:03 [W] We want to build our own distributed key-value layer for tidy be so this is some design requirements or design goals for this such project and
+00:15:14 [W] Beginning first this key value database key value leadership skill out should have the scalability, right?
+00:15:29 [W] It should be skewered like other nosql systems like, you know hbase like Sandra second. The performance is, you know performance matter matters.
+00:15:39 [W] Yeah. I will not explain more about this is very straightforward, right?
+00:15:44 [W] Third is should have a building Crossroad transaction support right because you know, this is spanner have the transaction. It is the biggest selling point of the assistant, right?
+00:16:00 [W] And and next it is, you know, mm. It was 2016.
+00:16:15 [W] We have some more than data replication particles like raft like paxos like multipack sauce.
+00:16:24 [W] So we decide to use some more than data replication particle like just like raft.
+00:16:29 [W] Okay, and the last but not least we want this system have less dependencies compares to the hbase or the Hadoop stack.
+00:16:44 [W] So and then it is it is a little bit related to the performance the person performance perspective and
+00:16:58 [W] We found that such a system. If we have this list, we have built such a system.
+00:17:10 [W] This system has the potential to be the building block for other these distribute assistance.
+00:17:17 [W] So imagine that you are making the neither distributed file system.
+00:17:26 [W] For example, if you want to build a new hdfs, you may need, you know mental.
+00:17:28 [W] stop right, not just like hdfs name node you want wanted to to be you know, the scalp scalable skill out method method method data store,
+00:17:43 [W] That you maybe you know concerned that the mayadata story is becoming the public.
+00:17:57 [W] So if there is a scalable and light weight distributed key-value store, which also supported chance action that will be greatly reduced the complexity
+00:18:03 [W] Of building your new hdfs, right building such assistance.
+00:18:14 [W] So we're tikv causing.
+00:18:17 [W] I think this is the purpose why we do this.
+00:18:18 [W] okay, um, we choose rust not Java to to to build tikv and we use rocks TBS the the
+00:18:34 [W] the local storage engine for the for the need of performance and we implemented the building two phase commit protocol inside this system, but we also provide
+00:18:48 [W] the atomic key value API semantics for the performance poppers and we choose to use roughed to for the data replication
+00:19:04 [W] Our that the house is in is not the single rough group.
+00:19:13 [W] It is about erupt architecture just like the Cockroach DB and this project it is not like at cdse.
+00:19:21 [W] It is a single draft group but tikv.
+00:19:26 [W] It is automatically scale our assistant and it is a multi roughly architecture and the sex to the multi roughly architecture.
+00:19:32 [W] We don't need another distributed file system.
+00:19:33 [W] And yeah, it is we don't need hdfs for the for the scalability, right?
+00:19:42 [W] so it is us about one years to finish the first version of tikv, and we open source date and then we donated to to the cncf and here is my twitch
+00:19:58 [W] Have today we done the time tikv enter the sandbox.
+00:20:05 [W] Yeah, this is a little bit of history of tikv and the background and next. I will hand over to Nick to give a brief introduction of technical details.
+00:20:21 [W] Thank you.
+00:20:24 [W] Great.
+00:20:24 [W] Thanks Ed.
+00:20:25 [W] So I'm going to start by talking about the high level design of tikv.
+00:20:35 [W] tikv is a distributed transactional key Value Store going to spend the next few slides digging into the distributed and the transactional part of that key Value Store means that
+00:20:46 [W] It's just stalls keys and values. It does not.
+00:20:55 [W] It's not a relational database. It doesn't offer an SQL type interface.
+00:21:00 [W] You could call this a nosql database, but typically nice ql databases don't offer transactions and the consistency properties that tikv does
+00:21:12 [W] so tikv cluster looks like this the tikv notes there in the bottom, right? You can have as many of them as you like three is the usual minimum to the left.
+00:21:30 [W] We have the tikv client and this case we're using tidy be which is an SQL layer which consists on top of tikv and on the top right? We have placement
+00:21:45 [W] Five and nodes and these have two jobs one is to supply monotonic and unique timestamps to the clients for use in transactions. And the other is to manage the tikv notes.
+00:21:59 [W] Data and tikv is sharded into contiguous ranges, which we call Regions.
+00:22:11 [W] These regions are replicated across multiple nodes and PD can manage these regions. So regions can be merged or split or moved our
+00:22:22 [W] So that trafficked each node can be kept roughly similar piece. If if a node goes down like a vegan recover by regenerating the lost data from the other
+00:22:37 [W] replicas in each region and putting that data onto other nodes
+00:22:43 [W] So I've described so far what a tikv cluster looks like next.
+00:22:54 [W] Let's have a look at the what tikv internal implementation looks like so it has a very strongly layered architecture the bottom of the of the stack. We have a low level
+00:23:07 [W] local key-value store for which we use rocks TB
+00:23:12 [W] and this is the way that we persist data to disk.
+00:23:18 [W] On top of that. We have the raft layer where we have an implementation of the raft consensus protocol.
+00:23:29 [W] and this layer presents an abstraction of the the three replicas of of any piece of data, so that it looks like we're just dealing with a single mode from
+00:23:45 [W] from above this layer
+00:23:46 [W] now that the top of the stack.
+00:23:50 [W] We've got our transaction implementation which is a multiversion concurrency control system. And on top of that the the transactions API, which is how the server and the client
+00:24:07 [W] Yuna Kate
+00:24:08 [W] Off to the right. We've got the coprocessor which is not really doesn't really fit into that layered architecture so much but as a piece of software, which
+00:24:25 [W] which takes intermediate representation of some probably SQL query fragment and executes that close to the data itself for the
+00:24:39 [W] performance
+00:24:41 [W] So tikv is transactional in terms of the the acid prank down. All our transactions are Atomic and durable and we offer the snapshot isolation
+00:24:59 [W] distance he property snapshot isolation means that you will never read uncommitted data and you will never lose a committed update and if you read the same key multiple times in the same transaction,
+00:25:14 [W] You'll always get back the same value.
+00:25:18 [W] Take over. The transactions are also linearizable.
+00:25:20 [W] In terms of implementation. Our transactions are a two-phase commit protocol and that's based on the percolator algorithm from Google.
+00:25:37 [W] And as I said before we Implement that internally using a multiversion concurrency control scheme.
+00:25:43 [W] Which means that rather than saving a single value for each key.
+00:25:53 [W] We save a history of values for each key.
+00:25:57 [W] And so when you went a tramp when you run a transaction at Sea is a snapshot of the data a consistent snapshot of the data at a particular point in the history of each key.
+00:26:06 [W] That's a very brief introduction to the design of tikv.
+00:26:21 [W] And I just want to talk about a few of the properties that are important tikv.
+00:26:26 [W] So the the database is usually a really fundamental piece of the software.
+00:26:31 [W] And so, you know, you really cannot afford to have the kind of errors in a database that would lead to you losing data.
+00:26:43 [W] Reliability of tikv is extremely important.
+00:26:45 [W] So we run a regression and performance tests these range from Tiny unit tests up to long-running multi-day test, which was run with
+00:26:59 [W] Real world data, and I was as close to a real world situation as we can simulate.
+00:27:04 [W] if you're familiar with the Japs mm organization, they they test databases and other distributed systems for various consistency claims, and we run a range of the open source
+00:27:20 [W] Jepson tools on our own infrastructure to ensure that we deliver on the promise that transaction promises that we have made.
+00:27:32 [W] We do chaosmesh engineering style testing using a tool called chaosmesh, which has just been accepted into the cncf sandbox, which is a great and that allows us to simulate.
+00:27:48 [W] Lights nodes going down or network links slowing down or disappearing and so forth.
+00:27:59 [W] And finally we model all the the key algorithms.
+00:28:05 [W] We use Intel a plus to get as close as we can to a formal proof of correctness for those algorithms.
+00:28:08 [W] So as well as reliability everyone looks for performance in a database. So I just want to present some benchmarking that we did the the end of last year. We used the
+00:28:25 [W] CSP Benchmark suite and we compared tidy be with spanner from Google and we perform the Benchmark in the cloud and the way that Google
+00:28:38 [W] Offer spanner means that we can't use exactly the same Hardware.
+00:28:45 [W] So instead we paid pretty much the same amount of money for the two setups.
+00:28:50 [W] And here are some charts of the results of that benchmarking.
+00:29:03 [W] The top row is throughput where bigger is better. The bottom row is latency where smaller is better and spanner is in Blue on the left and tidy bees on in green on the right.
+00:29:11 [W] So just to the glance you can see the that tidy be has uniformly better throughput than spanner significantly so on.
+00:29:21 [W] as cases
+00:29:22 [W] in terms of latency reads and tidy be a better but rights are a bit worse and we've got some work going on at the moment to the transaction system, which hopefully will be in version 5
+00:29:37 [W] I've which should make our rights much faster than they are today version for tikv was released in June this year and we're planning to release version 5 early in 2021.
+00:29:52 [W] There's a bunch of really exciting things planned.
+00:30:00 [W] So I want to go over a few of those in the I mentioned earlier in the talk how we use rocks DB has ordered local key value store.
+00:30:09 [W] So one of the things we're working on is allowing you to bring your own key value store and use whichever one you like so you can choose the performance characteristics and other properties that you want.
+00:30:18 [W] Another major change, I talked about transactions in tikv. But an API between the server and client.
+00:30:31 [W] There's another API which lets you just deal with raw bytes with a simple get set kind of interface rather than the the transactional API and we're adding a third API which
+00:30:43 [W] It's Emmanuel control over the multiversion concurrency.
+00:30:48 [W] We're looking to improve stability, especially under very large scale workloads.
+00:31:01 [W] We're looking we're implementing latency based flow control.
+00:31:02 [W] We're implementing auto-scaling and we're looking to smooth out some of the latency jet servers you can observe with with some workloads at the moment.
+00:31:14 [W] We're also looking always to improve performance and for version 5 we're particularly looking at more constrained environments to operate them rather than the
+00:31:32 [W] National super high powered database server.
+00:31:40 [W] So we're looking at optimizations using slower hard disks starting with satyr ssds.
+00:31:51 [W] We're looking at operating using less memory and we're also implementing joint consensus in raft, which should improve performance especially for gra placated clusters.
+00:32:00 [W] In this final section, I want to talk about tikv has Community because tikv is an open source project and it just wouldn't be where it is today without its Community our core Repository
+00:32:17 [W] Tree has over a hundred contributors and that Community is active and growing using tikv filing bug reports and writing code.
+00:32:29 [W] As part of that work to grow the community we've recently formed some special interest groups around the the key components that I talked about earlier the engine group works on the the
+00:32:45 [W] Level single mode storage such as using rocks DB and the raft transactions and coprocessor groups work in their respective areas.
+00:32:56 [W] These are not just groups for developers, but for anybody who's interested in the the kind of things I've been talking about. So if that's you please come and join us we develop on
+00:33:13 [W] GitHub and we chat on slack in the tikv WG which you can find by following either the QR codes or the URL on this page page.
+00:33:27 [W] I'm an RC in both places.
+00:33:33 [W] So please come say hi and let me know if there's anything I can do to help you get involved.
+00:33:34 [W] All right.
+00:33:37 [W] That's all we've got for today.
+00:33:41 [W] Thank you for listening. And I hope you enjoyed it and the online format. We're looking forward to answering your questions live when this talk is broadcast later this month. Cheers.
+00:33:50 [W] Hey, we've only got one question.
+00:34:00 [W] So please send us the more questions, please Perfect. First question we have is about where we can get for the fashion publication.
+00:34:11 [W] publication. I'm not sure what that mean the slides which are available on scared or recording which I think will be made available.
+00:34:20 [W] On the mound and the splits the conference platform if we handed it happens.
+00:34:28 [W] So we don't have any other questions.
+00:34:36 [W] Please ask away if you have any.
+00:34:38 [W] Oh good timing.
+00:34:40 [W] Question. So the question is did you succeed in reducing the operational burden of H based at that's for you?
+00:34:49 [W] I think.
+00:34:51 [W] Thanks. So the sure you can.
+00:35:02 [W] yeah, we can hear you at.
+00:35:06 [W] this point.
+00:35:15 [W] Did we succeed in reducing the operational burden of H based?
+00:35:21 [W] Yeah, we you know, we are not going to reduce the maintenance part and of which basically it shows to we provide the housing from ground up I think from type every side.
+00:35:40 [W] They didn't caused a like burden.
+00:35:46 [W] For example, you don't take every doesn't rely on another disqualify system. So naturally we will have the less favored obviously Network around chip compares to a space. So that means we we
+00:35:57 [W] Better performance compares to reach base. That's that's point one pontoon is, you know deploying Hadoop or hbase in is really hard.
+00:36:12 [W] We don't have confirmation tools.
+00:36:16 [W] don't have you know, we only have some screams to White provided by Hadoop project but you know in probably be and the tikv project we have how to magically
+00:36:27 [W] Automation deploy tools for some Department rolling upgrade.
+00:36:40 [W] So I think from the the deployment and maintenance perspective idb and type in we did way better job than his face
+00:36:50 [W] So we have a better performance and we have a measure making things experience.
+00:37:03 [W] So I think we we do that.
+00:37:03 [W] that. Yeah.
+00:37:04 [W] Thanks.
+00:37:08 [W] I've got a another question actually another two questions for you.
+00:37:18 [W] One is what's the largest production plus the that we've deployed with tikv and tidy be and was it on bare metal or on kubernative?
+00:37:26 [W] Okay, I would say the biggest thing production deployment of Heidi be is is is like is incapable to who is very large internet company in China
+00:37:44 [W] You can consider it a gesture Cara in China now using like 400 nose for the single tiny clusters. And I think that the tikv
+00:37:59 [W] Itself is more than three hundred and fifteen. I think it's just super huge cluster.
+00:38:09 [W] Yeah, and this database toward more than 2 trillion Euros in these clusters. So it is really big and it is bare metal.
+00:38:21 [W] another the biggest thing we cluster deployed on kubenetes is
+00:38:28 [W] it's like I can I cannot recall the account number but I'm sure it is more than $200 for the single plastic and also Target provides Keda be
+00:38:43 [W] To which is you can't it is an operator project. So you can deploy the easily deploy going the cluster within communities and we have you know, many real world that reduces wincing
+00:38:59 [W] You have the probably be on kubernative.
+00:39:03 [W] So yeah, it is fantastic.
+00:39:06 [W] Thanks, okay.
+00:39:16 [W] So there is a question that I can answer which is 2pi quickly understand my SQL query and tikv does not tikv is just a key value.
+00:39:22 [W] Of course one.
+00:39:30 [W] Try TV is a separate little software which is layered on top of tikv. And which does understand nice. Well, where is
+00:39:34 [W] I would say you know, how can we have to use I would say tikv.
+00:39:50 [W] We also support the mechanics and recalled Compass desert. So that means because you know tikv is designed for the for the for the second layer. So the my SQL part can push down some Computing logic down through the
+00:40:02 [W] You buy a new layer.
+00:40:07 [W] So I think it is not only a key value database but also you can push down some customized Computing logic like SQL filter or predicate predicate push down,
+00:40:18 [W] Without regards to go to the Cavalli name.
+00:40:23 [W] And another question is what options does tikv provide for backup and what is backup/restore performance like especially for these large production deployment.
+00:40:42 [W] Thank you. You are me I can you can answer this we have yeah, we have a open source project for br.
+00:41:04 [W] Be our backup. And restore we are these this project is that distributed backup and restore tool for for like a week?
+00:41:18 [W] I think it is this Newport. All the speed of these two is related to your cluster size. It is it is executed
+00:41:32 [W] The back cover is not empowerus.
+00:41:34 [W] So this new poem I see is 150 megabytes per second for the signal tekton the instance you can you can see the details on
+00:41:49 [W] The our project team Kappa / GG. Oh, sorry. Sorry.
+00:41:59 [W] Sorry, we have to wrap up we're out of time.
+00:42:10 [W] So I just wanted to thank the audience for watching and for your questions and we'll continue to answer the remaining questions and maybe talk some more about that on flat in the

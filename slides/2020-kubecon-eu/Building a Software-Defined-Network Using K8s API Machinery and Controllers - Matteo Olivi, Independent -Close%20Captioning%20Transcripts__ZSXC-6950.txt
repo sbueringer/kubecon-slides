@@ -1,0 +1,240 @@
+﻿Building a Software-Defined-Network Using K8s API Machinery and Controllers: ZSXC-6950 - events@cncf.io - Thursday, August 20, 2020 7:44 AM - 40 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:19 [W] Hello everyone and welcome to building a software defined network using kubernative.
+00:00:27 [W] 8K Machinery controllers.
+00:00:32 [W] My name is Mateo leaving and I'm a recent Computer Engineering Masters graduate from the University of Bologna.
+00:00:38 [W] This talk is about a project. I worked on while I was an intern at IBM jointly with my background supervisor. My express my ex Pride sir. The project is on GitHub and we hope to contribute it soon to the kubernative examples of people.
+00:00:48 [W] let's begin by answering the fundamental question, which is why even
+00:00:50 [W] Building a Nats the end using kubernative 8K machinery and controller pattern and the answer is that we wanted to test and demonstrate that those are General enough and good building blocks.
+00:01:01 [W] not just for kubernative, but for other Cloud control planes as well. And so we build costs or kubernative open V switch sdn kubernative because it's built with kubernative fa machinery and controller pattern as the end because it manages vxlan virtual networks and
+00:01:15 [W] Is the data plane of the vehicle networks is built by configuring openebs, which with virtual switches as a warning cost is not for production and it only runs on Linux.
+00:01:26 [W] So it's only a proof of concept.
+00:01:29 [W] So let's set the agenda before we move forward.
+00:01:33 [W] We're going to begin with a short background on vxlan and the kubernative controller pattern and then we're going to dive into the API of costs into its architecture. And finally we're going to discuss some technical problems that we had to solve and that we believe have a relevance Beyond
+00:01:44 [W] our proof of concept SDM so vxlan the x 9 is a protocol for overlaying virtualized ethernet networks on top of an underlay of Ip networks and it provides isolation between different virtual networks as well as
+00:02:00 [W] Lucien to resources within the same vehicle network of being located within the same physical Network, even though that's not true and he achieves this by a vxlan encapsulation.
+00:02:15 [W] So what happens if to communicating parties exchange data and are within the same virtual network is that the packets or ethernet frames that they exchange we make use of their virtual addresses, but those have no meaning on the underlying Network. And so what
+00:02:25 [W] Ben's that transparency their traffic is intercepted and encapsulated into VX and packets that will be routed over the underlay Network and that will make use of the IP addresses in use on the underlying Network rather than a vehicle months and the problem that
+00:02:39 [W] Is that of dynamically configuring vxlan overlay Networks?
+00:02:44 [W] So next introductory topic the kubernative controller pattern in kubernative.
+00:02:58 [W] We have a PA objects and API objects have two sections the spec that describes the desired state of the APA object and the status which is a report on The observed State and the kubernative control plane consists of a series of control loops that
+00:03:04 [W] or controllers as they're called that constantly listen for notifications on API objects and react to them by a synchronous by a synchronously processing the APA objects and processing typically begins by reading the desired state of the API object modifying the
+00:03:18 [W] Eight of the real world to drive it towards the desired State and then by writing back the new state of the real world into the status of the APA object and these controllers are not built from scratch. But by using standard building blocks collectively known as a pi
+00:03:33 [W] And by following a more or less standard design pattern known as the kubernative controller pattern and I really important building block is the Informer and informers and abstraction to receive notifications on all our subset of API objects of a certain type from
+00:03:49 [W] okay servers and it also maintains a local cache with the most recent version of each API object for which a notification was received and reception of one such notification triggers execution of what's called a notification Handler,
+00:04:04 [W] which are notification was received and reception of one such notification triggers execution of what's called a notification Handler, which is a small function that typically puts a reference to the API object identification is about in a work
+00:04:10 [W] malfunction that typically puts a reference to the API object identification is about in a work you and these references are usually the namespace names of the APA objects and references are extracted from the work you buy a pool of
+00:04:19 [W] That's that use them to retrieve the whole API object Associated to the reference from the cache of the Informer.
+00:04:31 [W] And then the actual processing on that API object to things are worth mentioning here.
+00:04:34 [W] The first one is that informers are eventually consistent.
+00:04:37 [W] So if an API object goes through a sequence of States, there's no guarantee that there will be a notification for each intermediate States rather.
+00:04:43 [W] Those might be skipped.
+00:04:46 [W] And so the resulting behavior is level based and second the work you provides implicit locking on.
+00:04:52 [W] The references in it so I don't have time for the details.
+00:04:59 [W] But what these concretely means is that we have the guarantee that at any given time there will be at most one worker processing a given object reference.
+00:05:05 [W] Okay, we've concluded the background now we can look at costs itself and let's begin by say Pi users interact with costs just like they do with kubernetes by creating updating and deleting API objects and cost defines three custom
+00:05:15 [W] Object types served by custom API servers and these custom types are the supplement the network attachment that you'll see abrogated to n/a for the rest of the slides and the IP lock will talk about IP locks later in the talk.
+00:05:29 [W] Now let's focus on the first two and in this slide, you see examples of them and on the left you see a subnet APA object and a subnet describes an ipv4 subnetting within a vxlan virtual Network.
+00:05:44 [W] And so it's pack has a field called vni which contains a unique numeric identifier of the vxlan virtual Network.
+00:05:57 [W] The subnet is part of and it's packed and a subnet Speckles Has a Field which describes the pool of IP addresses allocatable to resources within the subnet.
+00:06:02 [W] It also have a status field more on that later on the right.
+00:06:05 [W] You see a network attachment API object and a network attachment describes a network interface within a vxlan virtual Network and it's pack has a subnet filled with the name of the subnet API object.
+00:06:18 [W] network attachment is part of and the cost control plane will choose an IP address from that subnet and assign it to the network attachment by writing it into its status guest ID field and the cost control plane. We also write other status field of an effort.
+00:06:32 [W] passion such as the guest Mac field which stores the vehicle mac-address of the network attachment and it will also write into the status the vni of the network attachment which is again the unique numeric identifier of the vxlan virtual Network where the network attachment
+00:06:45 [W] So Network attachments somehow represents the nodes in a vxlan overlay Network.
+00:06:56 [W] And so they must be bound and implemented on a note of the underlying Network.
+00:06:58 [W] And so there are spok have a note field that contains the name of the underlying Network where they will be implemented and cause further writes the status of network attachments by writing it to it the IP address of the underlying node where they're implemented finally
+00:07:11 [W] Vxlan virtual networks are not explicitly described by API objects, but they're only identified through a unique numeric identifier, which is again the VMI and so for the remainder of this talk be aware that I will be using the terms vni and vxlan virtual Network
+00:07:26 [W] as seen on IMS, so cost us to implement Network attachments and it does so by assigning to each Network attachment the vehicle at the address of you told Max address and by creating for it a Linux network interface on the underlay node of the network attachment
+00:07:41 [W] And the network interfaces of different network attachments that are within the same vxlan virtual Network must be able to communicate with each other via vxlan encapsulation.
+00:07:55 [W] And so every angle a note there's a virtual switch and cause further implements each Network attachment by connecting its network interface to the virtual switch on its underlying node and by configuring that virtual switch to encapsulate and
+00:08:06 [W] Capsule ate all the traffic that is sent and received from the network interface and encapsulation and decapsulation is performed as described by the VX time protocol.
+00:08:17 [W] So we've seen it's a pi now we can look at its architecture.
+00:08:21 [W] Oh, I'm sorry.
+00:08:22 [W] I'm talking about cost and it's very similar to kubernative architecture.
+00:08:36 [W] There is a group of API of custom API servers that serve the custom API objects and those custom API objects are stored in a dedicated at CD cluster and are implemented by a group of custom controllers that are built not from scratch, but by using
+00:08:40 [W] The standard kubernative API Machinery building blocks that I've mentioned before such as in former and work you and worker threads and more precisely. There are three custom controllers and you see two of them on the top right of this slide which are the
+00:08:55 [W] Validate on the iPhone controller those are single tones, but more on that later and then on every angle a node or worker node as we call them.
+00:09:07 [W] There's a cost agent called connection agent, which is responsible of implementing the network attachments that are bound to it snowed in the way.
+00:09:18 [W] I described in the previous slide and it does so by interacting with a local open V switch. Demon finally costs currently gets deployed as a kubernative workloads. So all of these components including a petabyte-scale
+00:09:24 [W] PA servers and exedy run with in pots managed by a kubernative cluster via deployment or a demon set. However conceptually nothing forbids you from deploying cost as a standalone system.
+00:09:38 [W] So, okay.
+00:09:40 [W] We've concluded a high-level overview of cost now, we can discuss some specific technical problems that we have to solve and that we believe have a relevance Beyond just costs and the first problem is that of enforcing a new variant across multiple API objects of the same type and
+00:09:54 [W] Sure that we have something an API objects and we can have multiple subunits that are within the same vxlan virtual Network.
+00:10:02 [W] that is perfectly fine.
+00:10:08 [W] But if that's the case, we want the pool of IP addresses of those subnets to be disjoint. And we also want those subnets to be within the same kubernative namespace just because it's simpler to think about all the resources within the same vxlan virtual Network as
+00:10:18 [W] Same kubernative namespace. And so ideally if existence of a subnet leads to a violation of one of our two invariants creation of that subnet should fail and the only way you can get this behavior is by validating subnets before they're actually created
+00:10:33 [W] Fail and the only way you can get this behavior is by validating subnets before they're actually created whereby created a mean persistent threats to do.
+00:10:41 [W] And so the validation logic should reside either in the API servers or invalidating web and it would look something like what you see in this slide.
+00:10:48 [W] So when a subnet as that does not exist yet is validated you would start by retrieving all the existing subnets in the same dsm-v from Network as s and then you would compare them one by one plus.
+00:11:00 [W] And if at least one conflict is foundation of s should fail.
+00:11:12 [W] Otherwise it succeeds and what I mean by conflict, is that s another subnet Mutual existence deep revelation of an environment such as because for instance because their pool of IP addresses overlap, so this is good but is not enough because when
+00:11:16 [W] Does not exist yet but is only compare coredns existing subnets.
+00:11:21 [W] So what might go wrong is that two conflicting subnets are valid created and validated more or less of the same time.
+00:11:28 [W] So they're validated in parallel.
+00:11:35 [W] And so when either one of those two conflicting subnets is validated the other one is not seen because it does not exist yet and so validation successfully completes for both subnets which both get created and so are in variants have been violated and we didn't
+00:11:44 [W] a to guarantee that this cannot happen in costs so we did the next best thing which is okay if two or more conflicting subnets ever come to this consumers of subnets will use at most one of them and ignore the others and we achieve this
+00:11:59 [W] An additional status field called validated and cost guarantees that if two or more conflicting subnets ever come to exist at most one of them will have validated equal to truth and that's how consumers will know that that's the subnet that they can use.
+00:12:15 [W] And we couldn't have validated being written either in the API servers or by a mutating webhook before the subnet is created because then we would have had the same race condition that I described in the two previous slides.
+00:12:28 [W] And so we had to introduce a dedicated custom Singleton controller the subnet validator whose role is that of validating subnets by running the exact same logic that I've shown before and by writing the status validated field of sadness
+00:12:43 [W] Why's the Summit validator is a pretty standard controller?
+00:12:53 [W] So it uses an Informer to be notified of subnets and it as a work queue and pull the worker threads and the reason validation works in the validator and not in. The API servers is because of to Joint reasons. Really the first one is that I like
+00:13:03 [W] Needed to submit that's something that already exists. And the second reason is that while subnets may be validated in parallel.
+00:13:12 [W] They're actually created that is persistent threat City sequentially. So if two or more conflicting subnets are created more or less of the same time, one of them is actually created less and so when the validator
+00:13:26 [W] At second sub net worth is created last we are guaranteed that the first Subnet already exists.
+00:13:41 [W] And so when the validator processes the second subnet, it will see the other conflicting subnet because it was created first and this will make validation of the second subnet fail, which is exactly what we want.
+00:13:47 [W] Now, there's one last subtilty that we have to mention though about the subnet validator and the subtlety subtools. The is that when the validator validates a subnet s and it retrieves all the
+00:14:00 [W] other existing subnets within the same vxlan virtual network access. It uses a direct least against the API servers and this might sound odd because remember that the validator has an Informer on subnets with a local cache and so it would be much
+00:14:11 [W] And it retrieves all the other existing subnets within the same vxlan virtual network access. It uses a direct list against the API servers and this might sound odd because remember that the validator has an Informer on subnets with a local cache
+00:14:13 [W] George III of the other existing subnets from that Informer cash.
+00:14:19 [W] However, there are edge cases where correctness would be violated and this slide shows an example.
+00:14:29 [W] So assume that the validator retrieves subnets not from the API servers without directly but from the cache of its Informer and assume that to completing subnets are created more or less at the same time and also assume the to validators are running
+00:14:36 [W] Now before said of the validator is a Singleton and so it's managed by a deployment we directly to Field of one but that is no hard guarantee.
+00:14:50 [W] There could be short transients because for instance because of a network partition when more than one validator is running at the same time.
+00:14:58 [W] And if this happens the gist of her problem is that there's no guarantee on the order with which API objects including subnets are added to Informer caches. So what might go wrong in this scenario, is that at the finops?
+00:15:07 [W] First submit validator. The first of the two conflicting subnets is added to the Informer cash and validated before the second subnet is added to the Informer cash.
+00:15:22 [W] And so the first validator doesn't see the second subject when validating first one and so validation of the first table complete successfully and the problem is that because of the lack of ordering guarantees things might happen in the opposite order
+00:15:31 [W] Kampala day trip. So what might go wrong is that the second submit might be added to the Informer cash and validated by the second validator even before the first Subnet is that the Tweets in former cash and so II validator validates the first Subnet without seeing
+00:15:48 [W] And that is that the Tweets in former cash and so II validator validates the first Subnet without seeing I'm sorry, and so II validator validates the second sub net without seeing the first one and so validation of the second submitted successfully completes.
+00:15:56 [W] And so validation of the second segment successfully completes.
+00:16:00 [W] And so we have to completely subnets that both have validated equal to true and the only way we found to avoid this is to make sure that if multiple validators are running they all get a consistent view of which subnets exist and that's what using directly
+00:16:11 [W] her ensures of the cost of a worse performance
+00:16:16 [W] Okay, we've concluded discussion of the first of our technical problems. The second problem is that of that we're going to discuss is that of assigning virtual IP addresses to network attachments while avoiding IP collisions?
+00:16:31 [W] And once again, there's a dedicated Singleton Kasten controller for this DIY pump controller and the icon controller is in charge of assigning addresses to network attachments and it keeps on Informer on subnets and it processes each subnet by initializing
+00:16:44 [W] With all the available light piece from that stubner and it also has an informal Network attachments and it initializes any processes are networked attachment by reading the name of its subnet from the spec using that name to retrieve the
+00:17:00 [W] Set of available like these from that submit and then it chooses one IP from the set and it assigns it to the network attachment by writing it into that Network attachment steps.
+00:17:15 [W] However, if this is the only thing happen controller that has we have a problem and once again the source of our problem is that even though the icon controllers intended to be a Singleton, there's no guarantee that for instance because of a network partition.
+00:17:26 [W] There will never be more I come controllers round.
+00:17:31 [W] And so what might go wrong is that if the item controller, like I've said so far only chooses an address by looking at its in memory set of available at peace.
+00:17:40 [W] What might go wrong is that if to - controllers running at the same time, they might choose the same IP address and assign it to two different network attachments that are within the same vxlan virtual Network.
+00:17:54 [W] And so we would have an IP address collision between the same virtual Network which we obviously don't want and the solution we found to prevent this from happening is to
+00:18:02 [W] I have the iPhone controller attempt to acquire a global lock on an IP address before actually signing that active and assignment proceeds only if acquisition of the lock is successful and interesting part is in how the lock is implemented a lock is
+00:18:14 [W] Like people custom API object and an appeal of object represents a lock on a virtual IP address within a vxlan virtual Network and the interesting part is in its name.
+00:18:29 [W] So for an MP walk on a bucolic address X within a virtual Network that has a vni why the name is a unique function of X and Y.
+00:18:41 [W] So if to - controllers attempted to block the same appear dress, they would attempt to create two IP lock objects that have the
+00:18:46 [W] the same name and that are within the same namespace and because kubernative API forbids naming conventions creation of one of the two locks would fail and the icon controller that experiences the failure would react by simply choosing
+00:18:59 [W] I forgot to its Network attachment and this way so collisions on IP addresses are avoided.
+00:19:12 [W] Okay. We've also done we're also done discussing the second technical problem.
+00:19:20 [W] Now, we can look at the third and final one and this is the problem of dynamic filtering and informers. But first we have to understand why we need this so to recap on every worker node or underlying note. There's a cost agent called connection engine that is responsible for
+00:19:27 [W] This so to recap on every worker node or underlying note.
+00:19:28 [W] There's a cost agent called connection agent that is responsible for implementing the local network attachments.
+00:19:39 [W] That is the network attachments that are bound to its and relay node and it implements them by creating for them a Linux network interface and configuring a local open V switch virtual switch.
+00:19:45 [W] However, if we want those local network attachments to be able to communicate with remote Network attachments that are in their own virtual Network that alone
+00:19:50 [W] is not enough and so we say that if a node there is at least one local network attachment with a v n IX V ni X is relevant to that node and what this practically means is that a connection agent on a node
+00:20:04 [W] That alone is not enough.
+00:20:05 [W] And so we say that if on a node there is at least one local network attachment with a v n IX V ni X is relevant to that node and what this practically means is that a connection agent on a node needs to be notified.
+00:20:06 [W] Side besides of local network attachment.
+00:20:10 [W] Oh, I'm sorry.
+00:20:11 [W] Let me take a step back step back.
+00:20:18 [W] So the consequence of the fact that the connection agent on a node must Implement local network attachments.
+00:20:23 [W] It means that it must keep it means that it must be notified of those local network attachments.
+00:20:26 [W] And so it has an Informer on local network attachments.
+00:20:31 [W] However, what I was saying is that this Informer on local network attachments alone is not enough and so as I was saying if on a node there
+00:20:38 [W] at least one local network attachment with a VIII and IX we say that v n IX is relevant on that node and what this practically means is that a connection agent on a node needs to be notified not only of local network attachments, but also of remote
+00:20:50 [W] on other modes so of network attachments of other nodes that have irrelevant vni and this slide shows the Y so say that we have to network attachments A and B that are within the same vxlan virtual Network and they want to
+00:21:05 [W] But say that they are on two different notes and I'll say that the metric attachment a wants to send data to network attachment B through its network interface and so a will either send an ARP request or an Ethernet frame to the
+00:21:21 [W] Don't be and that are pretend that our request or ethernet frame will use the as the destination the virtual IP address or the vehicle.
+00:21:32 [W] make a dress of view, but those virtual addresses are meaningless on the and relay Network.
+00:21:46 [W] And so what happens is that on a is node the vehicles which transparently intercept that the send traffic and encapsulate sit into a VX and packet that can travel on the and relay Network and so the destination of this
+00:21:51 [W] so this VX time packet is not the vehicle IP address of the remote Network attachment B, but it's the IP address of the underlying note of that remote Network attachment B is implemented and so the consequence is that to properly do the encapsulation and forwarding
+00:22:07 [W] switch on a snowed must be aware must be able to map the vni and virtual IP and V12 neck address of the remote Network attachment B to the IP address of the underlying node where that remote Network attachment B is implemented
+00:22:22 [W] Be to the IP address of the and really know where that remote Network attachment B is implemented but the vehicles which alone doesn't do anything so it can only know this mapping if the connection agent on it snowed on a is node has made it
+00:22:32 [W] Major on it snowed on a is node has made it aware of its mapping by appropriately configuring it.
+00:22:41 [W] And so the question becomes how does the connection agent on a is node know the mapping between these vni and virtual addresses to the IP address of the annual I knowed where B is implemented and the answer is that well this mapping
+00:22:51 [W] Actively stored only in the APA object of the remote Network attachment B.
+00:23:06 [W] And so the bottom line is that the connection agent on a is node to properly configure the virtual switch on its node must also be notified of the remote Network attachment B, even though that Network attachment is remote remote, like I said,
+00:23:11 [W] So to recap we've introduced the notion of relevant dni with respect to a node and we've established that to properly configure the vehicles which when it snowed a connection agent also needs to be notified of the remote Network attachments that have irrelevant BNI
+00:23:26 [W] They get things notice that the side of the Allies that are relevant to a node is dynamic it changes over time.
+00:23:37 [W] So for instance, if at one time, there are no network attachments that have a VIII and IX on a node v n IX is not relevant on the Node. But as soon as the first Network attachment would be n IX on that node is created via my ex has become
+00:23:48 [W] No, and when all the metric attachments that are VIII and IX on the Note are deleted VIII and IX ceases to be relevant from that node.
+00:23:59 [W] So more concretely. Our problem is ensuring that a connection agent on a node is notified only of the remote Network attachments that have irrelevant cni-genie and none of the other remote Network attachments because it doesn't care about those and
+00:24:14 [W] And because we could also say oh, we're not going to do that.
+00:24:30 [W] We're just going to keep a unique Informer on all remote Network attachments and it will be the connection agent itself that manually filters the remote Network attachments on the basis of whether there be a nice relevant or not,
+00:24:33 [W] scale because it would mean that the API servers would have to notify all of the worker nodes of all of the network attachments, even though most of those notifications wouldn't be would never be needed and Surfers would I'm
+00:24:48 [W] Question was since we're using formers to receive notifications and informers support filtering of API objects on which they receive notifications on the basis of the fields of those APA objects.
+00:25:05 [W] So they allow you to express a filter such as give you notifications for API objects of this type for whom the field acts as value y. Our first question was can we configure a single Informer to only filter in the remote
+00:25:18 [W] That I've irrelevant he and I and the answer is no because filters informers are only static so you can configure a filter in an Informer before you start the Informer, but you can never change it afterwards.
+00:25:34 [W] I want is the capability of filtering on the basis of a set of Vienna values that as we've seen is dynamic changes over time. And so our question was how can we synthesize Dynamic filtering out
+00:25:49 [W] Static filtering and the solution that we found was to have a dedicated Informer for each relevant vni.
+00:26:05 [W] So if on a node, there are P relevant BN is the connection agent on that node will have besides of an Informer on local network attachments one Informer for each relevant BNI that specifically filters
+00:26:12 [W] Specific vni and as soon as I knew VMI becomes relevant the connection agent starts an Informer dedicated to that vni and as soon as a vni ceases to be relevant the connection agent stops the Informer for that VMI.
+00:26:30 [W] And this ensures efficiency the delivery of notifications, but it introduces a knowledge problem that you normally don't have in standard kubernative controllers.
+00:26:40 [W] And the problem is that if you think about the kubernative controller pattern when a worker pops a namespace name or an object reference from the queue it needs to use that name says name to retrieve the whole API objects to process from
+00:26:54 [W] Former, but with our design there are potentially a lot of informers one for each relevant BMI, and so worker doesn't know from which in former to retrieve the network attachment that it must process.
+00:27:10 [W] And so the solution that we found was to Simply have each connection agent maintained and in memory map that Associates each namespace name to the informers where the network attachment that has that namespace name is stored and this way
+00:27:22 [W] My name is name from the work you Begins by Consulting this map and this way learns from which in former to retrieve the network attachment that it must process and entries are added and removed to and from the map by Informer
+00:27:38 [W] So for instance when there's a creation notification for a network attachment for a remote Network attachment at the Informer 4V n IX the creation notification Handler will update the map by adding the entry saying that the
+00:27:54 [W] Name of the network attachment. The notification is about must be used to retrieve the network attachment at the Informer for VIII and IX and when that same network attachment is deleted and the deletion notification hander executes that deletion notification Handler will remove
+00:28:10 [W] The the entry from the map now this works but there's one subtlety that we had to be careful with a necessity arises because there could be transients during which the same network attachment is stored.
+00:28:26 [W] In time into more than one Informer cash this problem arises because like any other employee object Network attachments can be updated.
+00:28:41 [W] But as a result of these updates their BMI their virtual Network can change.
+00:28:44 [W] So let's see an example to better understand say that on a node. There are two relevant VN is X and Y and so on that note there are two informers besides the one for local network attachments one for the remote Network attachments
+00:28:56 [W] And I X and 1 for the remote Network attachment so that v n iy now say that the network attachments that is remote with respect to the node in our example is created and it initially has VIII and IX and say that later it is updated and it's
+00:29:11 [W] Swipe so for this network attachment 3 notifications will be received at the node in our example first.
+00:29:28 [W] There will be a creation of difficult section at the Informer for Vienna X because that was the first vni of the network attachment and then when the Vienna of the network attachment changes from X to Y, there will be two notifications first.
+00:29:35 [W] There will be a delete notification for the network attachment at the Informer for vix that will remove the network attachment from that Informer cash.
+00:29:42 [W] Because X is no longer the BNI of our Network attention and then there will be a creation of if occation at the Informer 4V n iy which adds the network attachment to the cache of that in former because that's the new Vienna of the network attachment.
+00:29:57 [W] But the problem is that there is no the problem is that these three notifications are delivered to two different informers, and there's no guarantee on the order with which notifications.
+00:30:10 [W] Our the liver to two different two different informers.
+00:30:17 [W] And so what might go wrong is that out of the three notifications. The last one to be receive is not the creation of difficult.
+00:30:30 [W] Even for the new vni of the network attachment but is the deletion of the vacations for the odni of the network attachment X. And so if this happens the first the to First notifications that are received are the two creation of the vacations at the Informer for Vienna X and adding former for BNI,
+00:30:36 [W] right and if this happens, it means that before the last deletion notification is received the network attachment in our example is stored at the same time into two different informers the one for V and X and the 1 4 V ni Y at the sewing for
+00:30:51 [W] Pop's the namespace name of the network attachment in our example during this transient when that worker reads the map from name stage name to informers. It finds out that the map is ambiguous that it points to two different informers at the same time.
+00:31:06 [W] And so the worker doesn't know what's the Informer that contains the network attachment which it should process and we found that for a work at that is in this situation. It's enough to Simply drop the namespace name that need a spot and give up on processing that Network.
+00:31:21 [W] Attachment and so a worker in this situation simply pops a new namespace name and moves on for processing another Network attachment.
+00:31:36 [W] And the reason this works is that remember that informers are eventually consistent and So eventually we are guaranteed that the Informer for VIII and IX the odni of the network attachment at the Leisure notification for the network attachment will
+00:31:44 [W] Received and what about the lesion notification is received after some time.
+00:31:59 [W] The deletion notification Handler will remove from the map from these pests name to reformers the information that the network attachment in our example is stored at the Informer for Vienna X because it's no longer there and it will re add to the
+00:32:03 [W] You the namespace name of that Network attachment?
+00:32:11 [W] and so you worker will pop that namespace name from the queue and when that new worker consults the map from namespace name to informers all the ambiguity will have disappeared the Mac will univocal it pointed to the Informer for BNI. Why?
+00:32:22 [W] And so the worker will be able to complete to complete processing of the network attachment.
+00:32:35 [W] Okay, so this concludes discussion of the last technical problem that we had to solve and also concludes my talk.
+00:32:41 [W] So in summary, we prototyped an sdn using kubernative they play machinery and controller pattern to test and demonstrate that those are good and general enough building blocks.
+00:32:46 [W] not just for kubernative, but for other Cloud control planes as well and in the process 3
+00:32:52 [W] He challenges emerged and we had to be creative to find solutions to them.
+00:33:00 [W] But we believe that both those challenges themselves and our solution have a relevance Beyond discuss. And so this is it.
+00:33:12 [W] So, I thank you very much for your attention. And if you have any questions, I'll do my best to answer them either now if you have time, or you can email me or send me a DM on slack.
+00:33:17 [W] Thank you very much.
+00:33:18 [W] Hi everyone. Like I just said in the pre-recorded talk. If you have any questions, feel free to ask them in the Q&A box.
+00:33:34 [W] We have a couple of minutes left.
+00:33:35 [W] Okay.
+00:33:42 [W] So right keep my mood just ask the if the slides are available somewhere and the answer is yes, the slides are available on the
+00:34:00 [W] Scad page of my talk and after these so make sure to post them on the slack Channel dedicated to the extending kubernative track.
+00:34:12 [W] And before the question at the end up with suto asked if we have actually implemented the last controller we talked about which is the connection agent the one with multiple informers and the answer is yes implemented it and it's on GitHub open
+00:34:31 [W] I'll make sure to post a link to it on slack after the Q&A.
+00:34:39 [W] Okay, the ashes love Gore batik.
+00:34:52 [W] Sorry if I mispronounced your name asked the could you please once more Point problem which virtual networks help to solve?
+00:35:02 [W] Sure. So the sort of problem that costs a lot is that again of implementing and configuring the Exxon virtual Network?
+00:35:14 [W] Which are essentially be equalized ethernet networks that communicate via encapsulation on top of an underlay of Ip networks and those different virtual networks.
+00:35:28 [W] Mmm are typically isolated.
+00:35:38 [W] the the rest forces within a given beautiful Network can communicate can communicate with other resources within the same vxlan virtual network, but not with those
+00:35:43 [W] On other VX and V format works and you can have this is what vxlan does and you can have multiple use cases for these. Of course one really big use cases.
+00:35:55 [W] is that of implementing multi-tenancy in a cloud data center?
+00:36:01 [W] D up I'm gonna just the angle of the camera.
+00:36:02 [W] sorry, so the idea would be that if you have multiple tenants in a cloud data center.
+00:36:12 [W] you basically want to give each time the abstraction of a having his or her own dedicated vehicle private cloud and a really sort of at the bare bone a way to implement. This
+00:36:21 [W] Would be via vxlan we format so that could be a use case this way each separate canonical be isolated from the others and another characteristic of your clan, which makes it suitable for
+00:36:37 [W] Our data centers is that it's very scalable in terms of the number of different virtual networks.
+00:36:47 [W] You can support I don't remember the precise number I believe is 16 Mega different virtual networks, which again obviously is really desirable if you want to implement a cloud data centers Cloud Attis enter where you potentially have
+00:36:57 [W] a lot of different tenants
+00:36:59 [W] So Christopher God's asks, do you have plans to continue your work on this project eventually taking it to production and if this is the case if you put any thought into where the cluster that runs the
+00:37:19 [W] Operator would live. Okay. So yes, we don't consider me and the other author don't consider this project to be complete as I said, it was
+00:37:34 [W] my the other other was my supervisor while I was an intern at IBM and work this we've been also working on this since I got back although not as a very sort of satisfy me them because
+00:37:49 [W] We also have other things to do obviously, but yes, although at a slower Pace. We're still working on it.
+00:37:58 [W] What's what we have no plan to make it a production system so far, although if you if you're interested in that by all means let us know it as you know,
+00:38:12 [W] It's on GitHub.
+00:38:13 [W] It's open source.
+00:38:17 [W] One thing which we want to do, which is missing is do a performance study of the system.
+00:38:26 [W] And so we would like to serve characterize the time it takes to actually Implement Network attachments and Matrix like this via a modal and we ideally we would like
+00:38:38 [W] To we're planning to do this study at a reasonably High scale, but we are still working on that.
+00:38:46 [W] Okay, I'm told that time is running out.
+00:38:54 [W] So I really thank you for your interest. And if you have other questions, which I could not answer just write them on slack on the
+00:39:04 [W] slack channel on the cncf work space dedicated to the extent kubernative track. Okay.
+00:39:17 [W] Thank you very much for your attention, and I'll see you on slack.
+00:39:18 [W] Bye.
+00:39:19 [W] Very much for your attention, and I'll see you on slack.
+00:40:09 [W] Bye.

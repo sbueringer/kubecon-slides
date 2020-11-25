@@ -1,0 +1,188 @@
+﻿Cloud Event Horizon: KWVZ-7919 - events@cncf.io - Wednesday, August 19, 2020 11:45 AM - 1135 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:01 [W] Hello.
+00:00:02 [W] Hi, I'm Ian.
+00:00:03 [W] Thank you for coming to this session.
+00:00:04 [W] Today we're going to be looking at cloudevents and we're going to be looking at an event oriented machine learning workflow.
+00:00:13 [W] We're going to be checking out some interesting technology and been 200 mL + KF serving and tekton.
+00:00:21 [W] I'm going to be using them to kind of explore cloudevents and do something interesting with them in the process. Hopefully, I will show what cloudevents are but more like what can use it for and also explore some pretty interesting.
+00:00:33 [W] First off.
+00:00:39 [W] Hello, I'm Ian.
+00:00:43 [W] I work at the open source Technology Center at VMware and I've worked on basically infrastructure as a service in platforms as a service and application deployment system is in some form of
+00:00:54 [W] 17s years in the past. I've worked in a lot of different places, but some of the more recent ones have been Heroku engine yard dais and packet and I focused primarily on machine learning nowadays, which is
+00:01:10 [W] Kitchens, pretty awesome.
+00:01:14 [W] I thought for today we could use this objective to leverage an event oriented machine learning workflow and we can do that to do something useful with cloudevents because I feel like that's that's pretty much an interesting way to learn about something is to do something
+00:01:27 [W] And cloudevents that suspect is just begging to be used.
+00:01:32 [W] So to set some simple goals for our demonstration system our experiment system.
+00:01:43 [W] We want to be able to experiment locally and build and deploy in our staging cluster.
+00:01:47 [W] This is just because this is the way I work as when I'm doing any sort of data science or working with features or you know doing any sort of experimentation.
+00:02:01 [W] I'm generally starting by experimenting locally and then at some point I'm going to buildpacks.
+00:02:02 [W] Deploy, but that's going to happen in a cluster somewhere remotely. And one thing that our system should also provide or is desirable is the ability to share these train models with teammates easily.
+00:02:17 [W] So some way to like version these models and share them and have them be able to be used by colleagues in a really straightforward way is desirable.
+00:02:27 [W] And also, you know we need to build and deploy specific models.
+00:02:35 [W] So like not every model that gets deployed should be built into a Docker image and deploy to a canary just the ones that we really want to intentionally proceed with so some mechanism to handle that inherently and that should be handled from the CLI
+00:02:47 [W] Or we should be able to deploy via ci/cd and a headless mode.
+00:02:54 [W] Lastly our last simple goal is just a safe way to deploy the model API services. So some way to have something like a canary deployment where you're deploying the canary and it keeps getting some
+00:03:11 [W] You know, we're also want to take it one step further and say that we want to Auto promote that Canary if for you know, if it's getting 10% traffic for 10 minutes, let's say and there are it's below the threshold for whatever query want.
+00:03:27 [W] Then it should Auto promote. So we want to handle that as well.
+00:03:31 [W] To do that we're going to use these components.
+00:03:34 [W] We talked about cloudevents and specifically we're going to be making use of the Python SDK.
+00:03:41 [W] Bento MLA is a really interesting piece of technology that allows us to have some glue here where we can save our machine learning models and retrieve them in our CI pipeline.
+00:03:56 [W] We can also retrieve them though, like as a collie we could also, you know use it as a way to keep versions of our models. So it's a pretty flexible piece of code.
+00:04:07 [W] tekton is going to be the heart of the build system specifically tekton pipelines, but it's going to be tekton triggers that is doing a lot of the interesting work by receiving our events are cloudevents parsing them and creating a pipeline runs based
+00:04:22 [W] KF serving will also come into play that is how we're actually going to boot our Canary and promote it using the KF serving SDK and of course KF servings built on Canadians. Do we get lots of goodies for free there to like scaling to 0
+00:04:40 [W] This is how we're going to do our Auto promotions.
+00:04:48 [W] We're going to await specific criteria in Prometheus using Prometheus gate and that's going to allow us to say, you know what until this has been error free for 10 minutes.
+00:04:55 [W] We're not going to run the promotion to dig into the cloudevents very quickly to give some background on what cloudevents are there a vendor neutral specification for defining the format of an event.
+00:05:09 [W] It's just a way of having consensus about what an event format with the event envelope.
+00:05:11 [W] Should look like and it's not going to work of course for everything. But for most things having some sort of consensus when work and that and that really eliminates a lot of headache in the early stages of project, especially but
+00:05:26 [W] Format with the event envelope should look like and it's not going to work of course for everything. But for most things having some sort of consensus we can work and that and that really eliminates a lot of headache in the early stages of project especially
+00:05:27 [W] Thing that I like best about cloudevents is that they provide an SDK for python go Rost Ruby Java C sharp PHP. So if you're working in a across teams or inside one team or across languages
+00:05:42 [W] Times it's very nice to have those sdks around.
+00:05:48 [W] The spec for cloudevents is pretty simple.
+00:05:58 [W] There's four required Fields. The ID field is required as is a source where the source of the event is also the spec version.
+00:06:02 [W] in this case 1.0 and the type the type is an important field because it kind of works like a namespace a lot of times or you know a way of kind of really thinking about the hierarchy of your event structure as
+00:06:18 [W] And the content type is an optional field as its schema.
+00:06:26 [W] The extensions are optional as its subject and the payload, of course is where we're going to be including our payload which in our case will be serialized Json Syria is Json payload.
+00:06:40 [W] Which we will see here on the right here.
+00:06:44 [W] That is the Json payload.
+00:06:51 [W] We are sending from our local notebook up to our build context just has a service name and a service version provided that the rest of the magic can happen on the left.
+00:06:58 [W] There are the fields. We just discussed the content type is Json.
+00:07:03 [W] I am set to the source and the type is build duck. Canary dot release dot Yang coffee.
+00:07:09 [W] So been to a million mentioned is going to be a big part of this workflow.
+00:07:14 [W] We're envisioning here been to a male makes it easy to build API endpoints and to save Mo models and it supports most major Frameworks, which really is great because it supports tensorflow and Karis psyche it which were using.
+00:07:29 [W] Pi torch extra boost H2O and fast day I so again a lot of overlap here a lot of support for lots of different libraries means lots of interesting integration opportunities.
+00:07:46 [W] And really it can kind of also in a way store is a common interface to store indifferent to store and retrieve different model formats.
+00:07:54 [W] So across teams if someone is using Carris and the team is using psyche it and they're interacting. I mean, there isn't any reason that this same technique can be used.
+00:08:06 [W] Models in Ventura melter Managua grpc act the basically loaded into the service that you define.
+00:08:19 [W] So if you define a new service that you want to run an API for you load the model the train model, so to speak into that service and that will be allowed and that will allow you to save that.
+00:08:29 [W] Revision to a back end where it will be versioned and kept these models then once they're saved to that comment back and they can be served or retrieved anywhere via the CLI and the retrieved Parts really interesting because it gives you an entire
+00:08:46 [W] Used anywhere via the CLI and the retreat Parts really interesting because it gives you an entire build context with it.
+00:08:48 [W] That's where tekton comes in. The pipeline's for tekton provide resources for declaring ci/cd pipelines.
+00:09:01 [W] The pipeline's themselves are defined as sets of tasks to be executed in some defined order and tasks themselves are just Padre runs and they have multiple containers steps declared to accomplish the task so you could have a task with such steps.
+00:09:13 [W] the pipeline with three tasks
+00:09:16 [W] the input and output between steps is generally provided via a physical volume.
+00:09:22 [W] Triggers is a project.
+00:09:29 [W] I had the privilege of creating with a few wonderful people last year.
+00:09:39 [W] It's literally just at this point in HTTP event listener that accepts events and has some very powerful capability in that it allows you to extract information from those events and populate a templated template
+00:09:46 [W] or that accepts events and has some very powerful capability in that it allows you to extract information from those events and populate a templated templated kubernative resource as a result, and these resources are
+00:09:50 [W] Aras as a result, and these resources are limited to just tekton resources.
+00:09:57 [W] So you could template out a pipeline run for example, which is what we're doing.
+00:09:59 [W] It opens some doors to some really cool Integrations this being one of them, I think and task catalog is another thing that we're taking advantage of a lot of the stuff we're doing here has already been contributed to the task catalog and more will but it's just a
+00:10:12 [W] Advantage of a lot of the stuff we're doing here has already been contributed to the task catalog and more will but it's just a catalog of resources designed to be reused which is a beautiful thing when people stop having to
+00:10:19 [W] designed to be reused which is a beautiful thing when people stop having to rewrite the same thing over and over and over again, and we have a generic resource for it and there just yet a little composable pieces of code highly useful
+00:10:28 [W] I find that very unix-like.
+00:10:32 [W] Prometheus I mentioned as a component in our system because we need a way of automatically saying okay the canary has done well for the last 10 minutes, let's promote it but radius is just a systems and servicemeshcon system extremely popular as I'm sure most folks
+00:10:49 [W] exposure to Prometheus fundamentally stores data As Time series
+00:10:56 [W] and it collects or scrapes any configured targets and there's a number of ways to achieve being scraped for our purposes really interesting that exposes an HTTP API because that's what we're going to be using to mate range queries
+00:11:12 [W] Skate via the provided client libraries so that we could pause pipelines when we need to wait for conditions to be true such as when we want to wait to promote our canary.
+00:11:24 [W] And kubeflow serving lastly super interesting project. It builds a top K native.
+00:11:34 [W] And so we get that same scale to zero capability, but the inference services that KF serving builds, even further and introduces the default and Canary model right into the inference service.
+00:11:48 [W] So that's what we're going to be deploying is a canary with both a default and a canary in our infrastructure is and then the KFC servicemeshcon.
+00:11:55 [W] Will expose the predictor and that means that the deployed model server is going to be called the traffic is going to be routed to it. If it's not scaled up is going to be scaled up.
+00:12:10 [W] It's going to have its predict function called which we defined in Bento.
+00:12:12 [W] ommm bird and it's going to return the prediction.
+00:12:16 [W] So let's check out our demo environment.
+00:12:23 [W] We're going to have some aggregated Pavlov's dogs in one console and we're going to watch the MLM Ames base in another just because that's where are we going to we're going to populate our machine learning inference services,
+00:12:34 [W] word to our notebook here
+00:12:37 [W] So in our notebook here what we're doing this is setting the backend servers for bento mlperf had mentioned. So we're going to set that to our cluster so that we can save our models to it.
+00:12:52 [W] We're going to write our model this service.
+00:12:54 [W] You can see here.
+00:12:56 [W] This is how Bento emelda terminals that we're going to be Auto resolving dependencies and also that we're going to be serving a scikit-learn model.
+00:13:04 [W] So now we can have our Bento Emmaus service defined.
+00:13:08 [W] This little bit here is actually the scikit-learn demo data set.
+00:13:18 [W] We're going to be loading the iris flower data set and we're going to be using our recently defined Iris classifier as well.
+00:13:25 [W] So let's build and fit our model with the example data set. We're going to be using the svm SVC model.
+00:13:34 [W] And now let's pack that model into are bent event oml service and lastly we'll save that model to our Bento MLB connote while that's working.
+00:13:50 [W] I'll take a minute because it's actually saving the model there. We can see that Bento mellow. So provides a pretty interesting web uniform way better face shows us all sorts of interesting metadata about each service that
+00:14:03 [W] Lord and over here in this tab, we can see that the service is still chugging along. It's pushing up the Pickled model
+00:14:20 [W] Mlperf supports will save to whatever it is natively supposed to save to and bent them out just kind of handles the pickling and on pickling we can see that it was saved. We get a new unique identifier here and we
+00:14:36 [W] Artifacts are also saved to RS3 compatible back end.
+00:14:43 [W] So let's see what that looks like on the CLI.
+00:14:43 [W] Let's use this Bento mlc Li to list our results.
+00:14:49 [W] We can see we have a new release or excuse me, a new service that's been defined as of 23 seconds ago.
+00:15:02 [W] And if we if we Define that and we want to retrieve that service that we just defined.
+00:15:05 [W] This is interesting because it's not just going to retrieve just the model in the serialized format.
+00:15:13 [W] As you can see we've checked it out to Temp see we get an entire build context from Bento mlperf 10 are rated for free, which is really useful and that's what we're going to be using in our tekton cluster.
+00:15:26 [W] So let's create a cloudevents.
+00:15:42 [W] this classifier model that we just created and we're going to this version the one we just built to be built into an image and we're also specifying are build Canary dot release Dottie and coffee event that's going to signify
+00:15:58 [W] We're going to want to handle this. So let's go ahead and create that event.
+00:16:04 [W] Lastly let's again use the cloudevents SDK to send our cloudevents.
+00:16:27 [W] We can see here that the Bento mlc service in the step. The tekton step has already run and retrieved our Iris classifier version that we just built and now the canonical build
+00:16:43 [W] In the step the tekton step has already run and retrieved our Iris classifier version that we just built and now the canonical build step is going and this build step is going to do a whole bunch of things.
+00:16:47 [W] But while this takes a few minutes, let's go back and talk about what's going on here.
+00:16:54 [W] We can see in this diagram. If you start at the dashed developer local place if you were to go down that's what's going on now we
+00:17:02 [W] the pipeline event via cloudevents
+00:17:09 [W] and we go down this left side here been to a male retrieve the model artifact and there were bone cluster with the entire build Koster build context in-toto pre-populated into that directory finally
+00:17:25 [W] Task build all it has to do is take from there because it already has a defined Docker build contacts directory.
+00:17:33 [W] It just will say hey, I'm going to go and run this and build the image and save it to our Docker repository.
+00:17:41 [W] That's what's actually going to take the longest here.
+00:17:43 [W] It's probably going to take like three or four minutes.
+00:17:45 [W] So I'm going to talk slower. But once that image is built as you can see the next task here is for kubeflow serving service to chronosphere.
+00:17:55 [W] Create the to create a canary and that Canary is going to get 10 percent of the traffic and 90 percent of the traffic is going to continue going to our previously stable image
+00:18:11 [W] A canary and that Canary is going to get 10 percent of the traffic and 90 percent of the traffic is going to continue going to our previously stable image once that's been created
+00:18:15 [W] Spin create done. The final step is to send a cloudevents.
+00:18:41 [W] He says something like after five minutes of there not being any end points that have crashed allow the canary to be promoted and then 100 percent of the traffic will go to our Canary image and that's just the way of
+00:18:56 [W] There not being any end points that have crashed allow the canary to be promoted and then 100 percent of the traffic.
+00:18:59 [W] We would our Canary image now, that's just the way of kind of catching any obvious silly problems that you might otherwise push out and cause downtime if
+00:19:05 [W] I'm going to have to speed this up a little bit.
+00:19:11 [W] So this this event listener here the red parts are what I was mentioning earlier.
+00:19:17 [W] You can use these event listeners best to define the interceptors.
+00:19:21 [W] So you will match the headers in this case.
+00:19:25 [W] We know that the see E-Type will contain our event type so be with cloudevents.
+00:19:32 [W] It's really easy to standardize on using these types to do predictable things.
+00:19:34 [W] All the pipeline test will run.
+00:19:39 [W] I'll try and talk through quickly.
+00:19:44 [W] First we're going to do is been total amount to retrieve the build context next. We use canonical executor to build the context into an image canonical is a Docker image build utility, but it does not require
+00:19:54 [W] Build which makes it ideal in a CI form.
+00:19:59 [W] Then we're going to use the KF serving carry Creator Canary Creator task and will create a canary deployment for our new image.
+00:20:12 [W] Like we said it'll get 10% of traffic and then our Prometheus gate.
+00:20:13 [W] We'll wait five minutes without seeing any pot failure metrics.
+00:20:20 [W] Once it has it will allow the canary promoter to run.
+00:20:26 [W] So what we can do now is we can take a second and check out our Canary deployment. Once that's done. We can query our canary.
+00:20:29 [W] Or if it's already promoted unlikely our default endpoint and we can watch it pass from 10% to a hundred percent traffic.
+00:20:39 [W] So it looks like here we are looking at our buildpacks process still the canonical process.
+00:20:50 [W] You can see it's doing a whole lot of pip installing python modules.
+00:20:51 [W] It's just building away. And right now it is doing is pushing up all of the pushing up our Docker image layers up to my Docker Repository.
+00:21:05 [W] But let's let's get all the pods in our build namespace.
+00:21:11 [W] Quickly, but our canonical build is is taking much longer.
+00:21:32 [W] Not only because it's running a much more process and has intensive workloads building an image. But it also I think is doing like eight different steps.
+00:21:43 [W] there's a lot going on and we can see that it's finished now, so if we were to go back and watch our mlperf
+00:21:49 [W] Namespace we can see a lot has happened.
+00:21:55 [W] We have two pods initializing up here.
+00:21:59 [W] And even though we're set to Auto scale down to zero it will initially come up and boot these pods right off the bat and then if they don't get any traffic for a while to go to sleep, but we have you noticed we have two pods a
+00:22:10 [W] and even though we're set to Auto scale down to zero it will initially come up and boot these pods right off the bat and then if they don't get any traffic for a while to go to sleep, but we have you noticed we have two pods a canary in a default
+00:22:12 [W] We have two sets of services for Canary and default.
+00:22:20 [W] We have two routes for Canary default. So we're really just joining two deployments and I having the traffic routed 10 percent to one ninety percent of the other.
+00:22:28 [W] we can do is we can take our routes here, which is
+00:22:34 [W] model - in fact - predictor - Canary and then an X IP dot IO here.
+00:22:42 [W] And we can make a query on our mlperf that we just created.
+00:22:49 [W] so we will set reset service equal to this and we
+00:22:58 [W] simple curl
+00:23:02 [W] right
+00:23:09 [W] And we want to our put path as well to be set to something usable.
+00:23:24 [W] So we will create that input right now.
+00:23:29 [W] And then we should be able to make a prediction that we can see that we get our results here.
+00:23:40 [W] Stand we want to hurt.
+00:23:43 [W] Put path as well to be set to.
+00:23:43 [W] something usable
+00:23:43 [W] so we will create that input right now.
+00:23:44 [W] And then we should be able to make a prediction that we can see that we get our results here.
+00:23:44 [W] So we were able to query our Canary and we're able to get a result back and let's see what's going on in our logs.
+00:23:46 [W] So here you can see the Prometheus query is underway, and we're just awaiting promotion of the canary at this point.
+00:24:01 [W] You can see that the value here is four. So it's going to take a little bit for this namespace to settle and one sysdig.
+00:24:03 [W] Has it will run through a promotion step and we will see the canary become promoted.
+00:24:11 [W] And that is the entire Gemma.
+00:24:19 [W] Thank you for your patience as I work through this new format. And I find this a very interesting topic.
+00:24:27 [W] I'd love to talk more about this with you.
+00:24:31 [W] So please do engage about it and have a great day.
+00:24:32 [W] Yeah, so thank you so much for listening to this session. If there's any questions, I'd love to answer them about anything to do with cloudevents or Bento or anything else. We discussed her tekton
+00:24:54 [W] Please do stick around there will be a sponsored video right after this and I'll wait for a little bit for some questions better than that.
+00:25:08 [W] Thank you so much for the opportunity to speak.
+00:25:12 [W] All right. Looks like we have no questions.
+00:25:22 [W] So again, thank you so much and take care.
+00:25:25 [W] Cheers.

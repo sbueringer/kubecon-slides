@@ -1,0 +1,223 @@
+﻿Deep Dive into Cloud Provider for Azure: PPQU-2588 - events@cncf.io - Thursday, August 20, 2020 6:53 AM - 59 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:00:01 [W] Welcome to Deep dive into cloud provider for Azure.
+00:06:08 [W] My name is Ernest.
+00:06:10 [W] I'm a software engineer at Microsoft working on kubenetes and I'm here with Andy to give you guys a deep dive about provider on Azure.
+00:06:21 [W] So Andy, why don't you introduce yourself as well? However one my name is Andy John and also from Microsoft and walking on a joke or provider.
+00:06:28 [W] Cool. So in this presentation, we're going to talk about our mission.
+00:06:41 [W] We got deck into the implementation of the cloud provider adger some of our recent developments for kubenetes 118 and 119 release how we are validating kubenetes on Azure, and we're also going to show you guys
+00:06:50 [W] After file-based NFS service last but not least were also going to talk about what the next step is for kubenetes on Azure and how you guys can get involved and start contributing.
+00:07:04 [W] So our mission really is just to make a juror the best place where you can run your kubernative smorc load over the past half year a show with invested a lot to ensure that our customers have the smooth experience
+00:07:22 [W] Internet is workloads on Azure and one of the work items. I want to highlight as a with taken steps to improve the test coverage and prevent regression introduced to our end users
+00:07:37 [W] Test coverage and prevent regression introduced to our end users more specifically.
+00:07:39 [W] We now provide additional tests jobs that are available for our contributors to run against their holy Quest on kubenetes core repository.
+00:07:52 [W] We have boy Quest jobs and periodic jobs to validate as your resources that are tightly coupled to kubenetes such as a shield disc after file and load balancers in addition.
+00:08:01 [W] To that as more and more customers are onboarding their windows workloads kubernetes.
+00:08:10 [W] We are also planning to add poll question jobs that runs into and validations on Azure Windows clusters.
+00:08:19 [W] So overall we will continue contributing to kubenetes transparently while ensuring that our existing and potential customers can run kubenetes workload smoothly own a shirt infrastructure.
+00:08:29 [W] Honest, I know some of you guys might be wondering what happened to sick Azure and it is actually now a sub projects under after sick cloud provider.
+00:08:42 [W] And we're active in the provider Azure channel in the official kubenetes slack morgue.
+00:08:53 [W] So if you guys have any questions, feel free to reach out to us on get help or slack Channel. We also have a mailing list, but we're not as active us. We are on this like Chen and one of the projects that
+00:09:04 [W] On over the past two years is to move cloth dependence Logics from The Coop turbinate. He's repository out of it or out of tree and there are certain core components within tributaries.
+00:09:20 [W] that depends on the implementation provided by us the cloud provider for existence source for auditioning and load balancers are two of the most obvious example, and the reason why we're extracting these Cloud Logics to a separate projects is
+00:09:38 [W] Following first of all, we want to have a small code base which will which is going to be much easier for the core experience maintainers and developers from the cloud providers doing T. If you think about it if there are a hundred club for
+00:09:54 [W] Scalable to have a hundred cloud provider implementation living within kubenetes repository.
+00:10:03 [W] So what communities did is that?
+00:10:05 [W] It creates a cloud provider interface that each cloud provider must Implement.
+00:10:12 [W] So this way only the necessary logic is embedded within the kubenetes code base and not an external clock dependents Logics are implemented of somewhere else and second of all with separate projects. We can have release cycle
+00:10:23 [W] You're being a tease. So it's beneficial when we want to have one of the release of critical bug fix within the Cockerel and manager and you can release it quickly within a reasonable time frame instead of opening
+00:10:38 [W] Against the main kubenetes repository heard cherry-pick, you're committed to a release branch and and wait for a patch release.
+00:10:49 [W] So in the next slide, we're going to talk about in Death Wish communities core components are getting moved out of tree and which components aren't
+00:10:56 [W] so here's a very simplified architectural diagram of how kubenetes works with cloud provider. Adger on the top. You have the component of relationship between copper Vidor and the kubelet
+00:11:13 [W] With a provider Azure on the top you have the component relationship between conquer Vader and the kubelet + Q controller manager and for the kubelet you can think of
+00:11:18 [W] controller manager
+00:11:19 [W] and for the giblet you can think of killed Lester.
+00:11:19 [W] note agent that exists in each of your master and agent notes.
+00:11:30 [W] It is responsible for stuff like registering denotes with the API server as well as managing The Continuous runtime and fetching credential information to pull images from a private registry and then you have the coop controlling manager, which contains
+00:11:38 [W] A lot of controllers and each controllers has a Reconciliation Loop that reconcile for a specific communities resource and based on a diagram.
+00:11:54 [W] You can see that the cloud provider Azure sort of coexist between the kubelet and the control manager which add a lot of complexities through our development.
+00:11:59 [W] So after removing most of the cloudevents logic out of tree, you're left with three major interface as shown below first.
+00:12:14 [W] I want to talk about the external Cloud controller manager and Cloud node manager.
+00:12:22 [W] So for under Cloud controller manager, it contains all of the clouds specific Logics for kubeedge operations, and it consists of three major controllers versus to know of life cycle controllers, which basically reconcile
+00:12:29 [W] Notes on your kubenetes clusters and you have to service controller which reconcile the service resource for communities. And it also helps you to reconcile both balance a resource on Azure
+00:12:44 [W] And always we also have to around controller which reconcile the valance on Patrick and then you have the cloud manager which basically is as Damon set deployed to your kubenetes clusters, which essentially initialized new notes by applying
+00:13:00 [W] Can I just go sirs?
+00:13:01 [W] which essentially initialized new notes by applying appropriate ends before becoming available for other parts to schedule it to and it also helped us reconcile. No IP as well as an illegal.
+00:13:11 [W] and the next interface I want to talk about is the container storage interface also known as CSI is basically a standard for exposing external storage to containerized workloads for concubine and he's before CSI cloud provider like us
+00:13:27 [W] Implement individual storage plugins or thin kubenetes for now instead of developing individual Source plugins within a quarter kubenetes repository. You can now in Step implements to CSI drivers specific to your Source plug.
+00:13:44 [W] The visual Source plugins within the core creates repository you can now in Step implements to CSI drivers specific to your Source plug.
+00:13:49 [W] So now currently we have two main CSI drivers that be maintained actively they are active disc CSI driver SLS the actual file CSI tractor
+00:13:55 [W] last but not least. There are there is the external credential product provider as I mentioned earlier.
+00:14:04 [W] kubelet is responsible for fetching tokens to pull images from a private registry and we realized that different cloud provider Hester combed implementation implementation of how they achieve it.
+00:14:17 [W] So now that we have an external credential provider interface cloud provider like Badger now implement it and extract a lot.
+00:14:25 [W] In a separate projects.
+00:14:30 [W] So now with this external credential providers, we can fetch tokens from Azure active directory.
+00:14:39 [W] So that users don't have to provide credentials when pulling images from half a container registry.
+00:14:44 [W] So overall the goal of moving all these things out of tree is to make the development process more friendly and avoid redundant logic within the core kubernetes Repository.
+00:14:53 [W] So currently to extract it Logic for cloud control manager and Cloud node manager they all live within the grouping any six orc more specifically they're living in side the cloud provider actually
+00:15:08 [W] Currently the status is in beta and we're looking to move to ga suen.
+00:15:17 [W] And for the two main CSI drivers for Asha disc CSI drivers.
+00:15:20 [W] It is in beta right now and it is available on Windows clusters.
+00:15:25 [W] Well, but it is in Alpha and entry migration status is beta for Astrid is CSI driver.
+00:15:31 [W] For Astro File zettaset driver.
+00:15:38 [W] It is in beta and it is also in Alpha for Windows clusters and the entry migration status this Alpha and in terms of the external credential provider, it is not yet implemented.
+00:15:49 [W] There is a kubenetes and hand and and handsome proposal merged also known as a cap, but the extra actual interface is not yet implemented and what's in the corner kubeedge recall.
+00:16:01 [W] Stories or waiting for that but once it is available, we will start working on it.
+00:16:07 [W] In addition to all the cloud provider related projects that I mentioned in the last slide.
+00:16:25 [W] We also offer a variety of other open source projects, which allows you to seamlessly integrate their URL kubeedge workloads with in Azure.
+00:16:30 [W] We provide a couple ways to Provisions self-managed clusters on top of a tree infrastructures first.
+00:16:37 [W] API for a sure. We also have we also offer a PS engine where you can provision self-managed kubenetes clusters on a shirt with our templates. If you want to enable auto scaling you can try out the cluster
+00:16:54 [W] and if you want to if you want to allow your path to access a free resource with Azure active directory identity, so you can also try out a deep identity and if you want to mount any secrets from
+00:17:11 [W] Workloads, you can try out Superstar CSI drivers and last but not least if you want to mount mlops torch as a file system to your pots. You can try out Bluff UCSF drivers and these are there's some of the projects that we maintain and if you want to check out
+00:17:26 [W] Just wanted a project so you can always check out kubenetes sick organization on GitHub as well as the Azure pork Oh Yeah.
+00:17:36 [W] Andy yeah, now we are going to do a clicks goes through of the major bug fixes and features in 1018.
+00:17:54 [W] So in 1.18 in edge of Phi and this good entry Jarvis would have fixed a few boxes like the dangling Tech issue which would cause it has territory also for the I-25 driver. We use the
+00:18:04 [W] That prevents logging of 70 pounds options and we have also introduced used forced attached for adjective.
+00:18:34 [W] Independent ad tenant and the subscription and we also have added support for single stack IPv6 and in credential provider side, we have also added support for private as a cloud.
+00:18:50 [W] So next in one touch 1948 vitess can Define three drivers we have fixed some issues in the audio files in saturation, and we plan to competitor for the edge of file entry driver.
+00:19:06 [W] My voicing feature are copied her in 1.20.
+00:19:14 [W] And we also have added earlier shared disk support or low block and the ship to share this could mix user to attach one disc to multiple aging nodes and we have also added a tech support for
+00:19:26 [W] Jarvis and for the adjective skin to travel to CSI Java. My question is feature just goes better in 1.19.
+00:19:42 [W] And in the network side, we have also has fix some issues like public IP not showing up to therapy to as uvm's and there are four the credential provider side. We have also fitted to each back
+00:19:50 [W] Which which could which could cause poor image error using agent manager as a manager identity?
+00:19:58 [W] Okay. So next next I'm going to talk about the hard disk attached attached issue in edit. The screwdriver many customers may already hit this issue before the main suicide. Sometimes
+00:20:14 [W] Had to detach issuing a jet ski driver many customers may already hit this issue before the main issue is said sometimes says failure in detaching at the desk.
+00:20:19 [W] The field could be caused in a few possibilities.
+00:20:25 [W] for example, kubenetes controller module crash or let's start wearing this attached at the desk results provide a question or even as we impress so this could attach failure would happen.
+00:20:33 [W] happen. We are certain possibility then went to see
+00:20:35 [W] it should happen.
+00:20:38 [W] How do we mitigate this issue?
+00:20:43 [W] We have worked out two methods to mitigate this issue first from Community sites.
+00:20:48 [W] We want to detach audio disc using dangling error.
+00:20:52 [W] So this could be capturing attached stage know the one even party is removed in certain condition.
+00:20:59 [W] So with this feature one party has moved to know to either the screwdriver with the trigger dangling error and after a while this could be detached from
+00:21:06 [W] No, the one and that the feature is available in a few minutes versions and second from a joke our providers side. We have already switched to use to be detached setting to detach and a desk
+00:21:20 [W] attach a disc in the future and sometimes detached disk may fill in the middle which would attend VM into failed stage use to be detached sitting to detach a disk Kudo make VM continued attached if
+00:21:36 [W] Set would also solve the detect issue.
+00:21:45 [W] So these are the two methods to solve the disk detach issue next honest workers through how we passing a local provider projects.
+00:21:52 [W] All right.
+00:21:53 [W] Thanks Andy.
+00:21:58 [W] So as I mentioned earlier, we have invested a lot in the testing infrastructures and here I'm going to really quickly go through how we were testing kubernative on azure infrastructures.
+00:22:06 [W] I want to talk about the test surface structures and we actually utilized of testing from from the main group in Eddie's repo and if you guys don't know we use brow as the CI a-- a running and
+00:22:22 [W] Roger and probably still basically a community see I don't available for everyone to run tests on and the general testing flow is something like this.
+00:22:37 [W] It's very simple first. We build careers against a PR Branch if the test is running against appear will build kubernetes against a PR, but if we're building against a really stretch then we will check
+00:22:51 [W] Check out the release branch and then build communities from there.
+00:22:56 [W] So we build communities and then we'll have to push all the images and artifacts to Azure storage or after image after container registry with that upload. It will provision kubenetes clusters with
+00:23:08 [W] after container registry with that upload, it will provision kubenetes clusters with a gas engine that points the images to the custom-built kubenetes just that we built
+00:23:17 [W] Images to the custom-built kubernative suggest that we built in from Step.
+00:23:26 [W] So now we have a grenade classes running with custom kubenetes version. Now, we can run various validations against the Constitution and that's how we sort of built the Clusters in run validations against whatever changes are checked
+00:23:34 [W] And the test results for presubmit jobs and periodic jobs are available publicly.
+00:23:41 [W] You can check out test group / provider Azure.
+00:23:52 [W] You guys don't know task. It is simply a dashboard for the public to check out the test results from prowl and you can check out the historic test failure rate and also
+00:23:59 [W] Very easily see which test cases are they key is a very buildable dashboard.
+00:24:07 [W] And here's the screenshot of some of the pull request that we opened. And as you can see there are a couple of acid related PR jobs that we run. For example, here. We are
+00:24:24 [W] Performance tests against AKs engine clusters and we also run tests that are really the two Azure storage in here.
+00:24:36 [W] I'll be happy. We are running a ship discs and send validations on a - HSN Jay clusters. And also we're running the internet validations on and vmss clusters.
+00:24:50 [W] clusters. And as I mentioned earlier, we're starting to invest a lot in Windows testings. So as you can see we are running the same value.
+00:24:56 [W] Nations but on a Windows clusters and the same thing and we applied the same set of custom configurations on file as well. And in future we're planning to add more and more PR jobs to make sure that
+00:25:09 [W] We are gathering all the test signal from day one.
+00:25:14 [W] And here's a second example of a pull request from a ship discs CSI driver.
+00:25:27 [W] And so yeah, it is using the same see I guess the last slide but instead we are running end-to-end tests for the actual disc CSI driver and we're actually running.
+00:25:38 [W] Tell about nations against multiple classic configurations.
+00:25:44 [W] So here we are running the end-to-end tests on Windows posters on HSN Gene clusters with single availability Zone as well as a clusters with multiple availability zones and last but not least.
+00:25:58 [W] We're also testing the migrations.
+00:26:00 [W] So what that means is that we're trying to migrate the entry after disk driver to CSI drivers.
+00:26:09 [W] So that users who are using the entry drivers can seamlessly transition to use after discs.
+00:26:24 [W] Yes are drivers and we make sure that all the pr set checks into these kubenetes repositories are passing before we merge them to ensure that we have a consistent test signal against Master branch.
+00:26:33 [W] And with that I'm going to give it back to Andy's or the demo so next I'm going to demo the make this driver.
+00:26:44 [W] So let me share my screen first.
+00:26:47 [W] So could you see my screen now Ernest?
+00:26:52 [W] Yeah. Okay.
+00:26:54 [W] That's great.
+00:26:59 [W] Actually provides to NFS Services while years at the Fire based. It's based on photons one and another years another years blobstore debased.
+00:27:22 [W] They are four different workloads.
+00:27:27 [W] And we have already integrated and your file based interface service with other policies that driver so
+00:27:30 [W] so if you go to the audio file, she said driver page. Okay, let's skip the anyway, if you go to the item file CSI drama page and go to the NFL session and you can see we have already supports
+00:27:46 [W] we sacrifices a driver so
+00:27:47 [W] So if you go to the edge of fire CSI driver page, okay, let's skip the anyway, if you go to the item file CSI, Java page and go to the NFS sharing and you can see we have already supports
+00:27:49 [W] And now it's in August of a stage and only is the u.s.
+00:27:54 [W] Reading is available now and the to use this feature user first need to register.
+00:28:01 [W] I don't start NFS program.
+00:28:05 [W] So yeah this page and another one got confirmation from the edges start to team.
+00:28:14 [W] We need to register a lot of NFS file shares feature and the yacht screeching I've started down we need to install ci/cd.
+00:28:17 [W] Our first to Country only Master version is Portage and saying user need to create and add your stock account first.
+00:28:28 [W] We only support to bring your own story account in the first version and using YouTube Creator premium is dr. Kahn's and specify the story of account kind as file storage and
+00:28:41 [W] Plates and I just thought that counts first. We only support to bring your own storage account in the first version and using YouTube Creator premium it is dr. Kahn's and specify the story of
+00:28:44 [W] Enable https traffic only as Force because NFS in FA use under the protocol and the user also need to select virtual Network operating doubts in firewalls and
+00:28:57 [W] So to save time I've already waited and I just start accounts. So kids start your accounts name is Kuba count demo and the let's click into it.
+00:29:12 [W] Uh, and in the file was an opportunist works.
+00:29:19 [W] I've already select one subnets of the of of the a case cluster.
+00:29:22 [W] So let me show you so here is the egg has cluster.
+00:29:26 [W] It has two nodes and watching is one dot 18.4 and
+00:29:32 [W] To use this NFS feature. We need to create a starter class first.
+00:29:40 [W] So I have already prepared a study class and name is Ida Fire - CSI and it used the F5 CSI driver and I have already specified the soldier consecrated before the name is could become demo.
+00:29:56 [W] Use this NFS feature. We need to create a static ass first.
+00:29:57 [W] So I have already prepared a study class.
+00:29:57 [W] And name is Ida Fire - CSI and it used the F5 CSI driver and I have already specified the soldier consecrated before the name is could become demo. And if it's type-specific as NFS.
+00:30:00 [W] So we use.
+00:30:03 [W] Keep control to apply the start of class and then we can use this and NFS server.
+00:30:19 [W] So I will show you example to create a WordPress application based on DNA Fitzgerald the the step you quite simple.
+00:30:23 [W] didn't really need to First. We'd only need to add the Ripple.
+00:30:27 [W] And then you see Helm install to install the WordPress application just specify the storage class and the specify the system volume size.
+00:30:39 [W] Okay, so two parts are in creating stage.
+00:30:59 [W] So so the essential Parts one part is Milady be actually it's using as your desk to provision of PVC and another yes, what press front-end web page?
+00:31:03 [W] It will create an effect fresh air.
+00:31:05 [W] so now it's in writing stage and
+00:31:11 [W] Okay, so two parts are including stage.
+00:31:27 [W] So so the set two parts one party has murdered DB actually, it's using audio disc to provisioning of PVC and another yes what the Press front-end web page. It will create
+00:31:28 [W] That trades using either this Canada is using NFS + F5 driver and their let's go to the starter conch.
+00:31:38 [W] And the clicking to the five Cs.
+00:31:45 [W] You can see that a new NFS fascia is created.
+00:31:52 [W] And it's particle. Yes and Fs.
+00:31:55 [W] So finally you will get an working working WordPress application and it has proper type c because we use row two pallets of the so finally the user could use this fabric you to access the
+00:32:12 [W] Yeah, so here the WordPress application based on DNA test driver.
+00:32:22 [W] Okay.
+00:32:26 [W] So let's go back to the slides.
+00:32:31 [W] So here is our future plan.
+00:32:37 [W] We are still working on the car provider moving out of three is now in better and we are we are working on to make the J in the future.
+00:32:45 [W] And also we are working on earlier a case integration with all top three card provider and CSI drivers and also trying to work out first version of external credential provider for edger besides that we are also working on a grpc.
+00:32:58 [W] Provide a new features for example suppose sharing the same IP by multiple Services.
+00:33:08 [W] I just export for the CSI Java project. We will support broad-based MF s service to and also we will support any files that shot detach this code using dank real suppose on CSI General and also
+00:33:19 [W] Those CSI support we will move to better in the future.
+00:33:24 [W] And for the testing we were switched from a consenting to cap see for presubmit and periodical jobs.
+00:33:34 [W] Thanks, Andy.
+00:33:38 [W] And yeah.
+00:33:40 [W] Controversial definitely encouraged and here's how you can get involved.
+00:33:45 [W] You can join our Ash. Ash cloud provider Community meetings every other Mondays at 6 p.m.
+00:33:53 [W] Pacific time. And here's the link to our communities call and you can also check out the second link for our meeting notes and for all the code owners. You can check out this GitHub link to check out who
+00:34:07 [W] Of the cloud provider Azure code and obviously you can always reach out to us and ask any questions on the kubernative slack at providing a secure Channel and last but not least if you want to, you know,
+00:34:23 [W] Us to contribute to communities you can also check out this GitHub link to grabbin First issues and just start coding.
+00:34:34 [W] And yeah that will conclude our presentations and looking forward to answering all your questions.
+00:34:46 [W] Okay. Thank you everyone.
+00:34:50 [W] Now goes to the QA.
+00:35:15 [W] so I
+00:35:17 [W] got a question about your the prop CSI driver.
+00:35:23 [W] it J in the meantime about to the CSH gel or about to the props is I drove right through the sports the host of both use and also the interface protocol.
+00:35:34 [W] And the country is now in beta stage.
+00:35:39 [W] Maryam you want to check out this place? I'm gonna upload those PowerPoint slides to our slack Channel provider Azure app the official kubernative slack.
+00:36:09 [W] So yeah, feel free to check it out and reach out if you have any questions
+00:36:14 [W] Someone asks, please elaborate on how we can use Azure Secure Vault to store secrets.
+00:36:34 [W] I think you're referring to a sure key Vault to store secret and use it in your kubernative workloads.
+00:37:04 [W] To see us either same storage interface that I should this and after file system drivers use to talk to Patrick Evil and mount any secret from your cue ball to your kubernative
+00:37:20 [W] I can paste the to help link.
+00:37:26 [W] That's a answer to your question.
+00:37:27 [W] Go to the next question guys.
+00:38:27 [W] There's question to use CSS.
+00:38:35 [W] provider for SQL. We have a lot of steps.
+00:38:36 [W] right
+00:38:40 [W] Go to the next question guys.
+00:38:51 [W] There's question to use CSS.
+00:38:51 [W] I provider for SQL.
+00:38:51 [W] We have a lot of steps.
+00:38:51 [W] Right. Um
+00:38:52 [W] Indeed there are a lot of stuff but we're always constantly working on simplifying the user experience.
+00:38:57 [W] And if you have any questions, or you have any suggestions on Improvement, you can definitely open a GitHub issues on the GitHub and we'll definitely more than happy to address those concerns.
+00:39:04 [W] Questions or you have any suggestions on Improvement?
+00:39:06 [W] You can definitely open a GitHub issues on the GitHub and both definitely more than happy to address those concerns.
+00:39:06 [W] And I think that will conclude our live Q&A sessions.
+00:40:21 [W] So as if you have any questions definitely reach out to us on GitHub and slack. Thank you.
+00:40:22 [W] Thank you, very wet.

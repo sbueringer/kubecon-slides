@@ -1,0 +1,344 @@
+﻿Envoy, Take the Wheel: Real-time Adaptive Circuit Breaking: OVHG-8750 - events@cncf.io - Tuesday, August 18, 2020 11:38 AM - 60 minutes
+
+Participant: wordly [W] English (US)
+
+Transcription for wordly [W]
+
+00:01:46 [W] Hello everybody.
+00:01:49 [W] My name is Tony Allen. I'm a sophomore.
+00:01:51 [W] Hello everybody.
+00:07:13 [W] My name is Tony Allen.
+00:07:15 [W] I'm a software engineer at lift.
+00:07:17 [W] I work in the resilience group on Envoy related things and I'm going to talk a little bit about what we've been working on for the past year, which is the Adaptive concurrency control filter and Envoy.
+00:07:27 [W] So the adapter concurrency filter is an HTTP filter that was impolite an Envoy. It measures request latency baselines and samples requests that are coming in.
+00:07:43 [W] Lift. I work in the resilience group on Envoy related things and I'm going to talk a little bit about what we've been working on for the past year, which is the Adaptive concurrency control filter and Envoy.
+00:07:45 [W] So the adapted concurrency filter is an HDPE filter that was impolite an Envoy. It measures request latency baselines and samples requests that are coming in
+00:07:46 [W] That and Compares it to the Baseline.
+00:07:52 [W] So if sampled Leigh and sees are increasing from what the Baseline would be then will allow less request through the filter.
+00:08:00 [W] So this was inspired by a 20-18 blog post from Netflix engineering. So we took those ideas and implemented them inside of envoy with a few changes that I'll talk about later on.
+00:08:13 [W] The way we're going to do things here is we're going to talk a little bit about stimulating traffic.
+00:08:19 [W] So that's how I was able to test various workloads and develop the filter.
+00:08:31 [W] So I'm going to show various Concepts using simulations and I'll describe what the graphs look like first off and then we'll talk about concurrency and circuit breaking.
+00:08:34 [W] So why would one want to limit concurrency requests where Layton sees coming from that sort of stuff kind of detour Go off into a little bit about Envoy and Envoy filters which leads into
+00:08:49 [W] All how that was implemented and then Tales From Lifting for structure.
+00:08:54 [W] So this simulation framework that I'm using is something called buffer bloater.
+00:09:01 [W] I wrote it to test the Adaptive concurrency filter while developing it.
+00:09:07 [W] the way it works is it spins up a client and a server locally on the machine and I'd spin up a Envoy process the client would send requests to the envoy process which would route it to the server the server would
+00:09:23 [W] Sleep for some configurable amount of time and then send an HTTP 200 reply back through the envoy to the client.
+00:09:34 [W] So you'll have control over the RPS coming from the client and how long so you can do this in stages.
+00:09:46 [W] You can say, I want a hundred RPS and then bump up the 200 RPS for some amount of time.
+00:09:51 [W] The server also will have a configurable latency distribution so you can specify
+00:09:54 [W] You know what percentile you want to have what latency?
+00:09:57 [W] It will gather staffs and plot them which we'll see later on and it allows for cool simulations of like sir. Good server degradations ramp up sin RPS and that sort of stuff the adapt currency filter
+00:10:13 [W] Her to understand it you need to look at temporal behaviors. So this really helps out with that.
+00:10:24 [W] The source code can be found at the link in the bottom left there.
+00:10:27 [W] So this is a configuration file for this thing.
+00:10:34 [W] thing. The only things to note are that the client has RPS and adoration that you can specify and this can be staged so you can simulate burst in traffic or ramp down that sort of stuff the serverless.
+00:10:44 [W] itself will have
+00:10:46 [W] A latency profile and that also is staged.
+00:10:50 [W] The output from the simulations looks a little bit like this.
+00:11:00 [W] So at the very top you're going to have request latency. So each Blue Point represents a request and the y axis would be request latency in some unit of time.
+00:11:12 [W] The unit of time is really important for the stuffing trying to show the RPS is the second line there.
+00:11:17 [W] The RPS is static.
+00:11:19 [W] It doesn't change for the duration of that simulation and then timeouts below that there were no
+00:11:23 [W] Alison this one so you can see that there is a P99.
+00:11:27 [W] that's very obvious. And the request Layton sees you can see the P95 and the bulk of the request after that that profile didn't change through the stimulation.
+00:11:36 [W] Timeouts the number of requests that are in flight from the perspective of the client and then the request success rate.
+00:11:53 [W] So this is all the information.
+00:11:56 [W] I'm going to try and point out what the relevant pieces of info are for this as we move on.
+00:12:02 [W] So in the Netflix blog post in 2018, there was this interesting diagram.
+00:12:14 [W] So on the y-axis you have RPS and on the x-axis you have time and what is trying to show is that there's some capacity that lets say a server would have and that's you know, unknowable for the purposes of you know.
+00:12:26 [W] Any configurations?
+00:12:34 [W] So the RPS is stable in the beginning and it's below what the capacity the server is and then about halfway through it bumps up beyond what this capacity is and you'll notice that this latency in the blue line begins to increase at
+00:12:43 [W] And as it increases its going to go into timeout town and then at some point it's just gonna have this comic book explosion.
+00:12:56 [W] So I wanted to kind of understand what's going on. There can the simulation framework reproduce this long story short it can so the latency the top is steadily increasing from that Midway point that the RPS
+00:13:08 [W] Is beyond the capacity that server would be about three quarters of the way through we're seeing timeouts which will cause a success rate to plummet to zero and that's what we're seeing when there's that comic book explosion.
+00:13:23 [W] Nice, so let's talk about cues and concurrency now that the simulation has been explained.
+00:13:39 [W] So there's some fixed number of requests that A system can handle at any time and that's dictated by various resources available to whatever computer is running on right so CPU storage Network that sort of
+00:13:48 [W] anything beyond that is in like if
+00:13:52 [W] requests come in and need more resources that are available to that machine a queue is going to start to form if the incoming rate of requests doesn't change.
+00:14:06 [W] So that's what we're seeing here about the halfway point.
+00:14:13 [W] We're seeing the outstanding requests count just steadily increase and as it steadily increases we see the Layton sees steadily increase until some point all the requestor start timing out.
+00:14:24 [W] So not all this queuing is bad temporary increases in queuing delays are totally okay. This happens in real life all the time, right? There's unexpected bursts.
+00:14:37 [W] We recover from them.
+00:14:40 [W] So what you see here is a simulation where I bumped up the RPS to the same amount that we saw on the first simulation, but then quickly dropped it back down to normal levels and you'll see that at the bottom there the request queue
+00:14:54 [W] It's the form but then just as the RPS goes back down to normal levels.
+00:15:00 [W] The queue is burned down.
+00:15:02 [W] latency is returned back to normal. The success rate was unaffected there.
+00:15:05 [W] Now trouble kind of starts to form when latency is get too high.
+00:15:19 [W] The Layton sees increased due to queuing delays. And if we have a burst as we saw earlier, that just doesn't go away. It'll be get a negative negatively affect the caller's which lead to cascading failures and what we mean by this is
+00:15:26 [W] your server is going to be inundated with requests IQ is going to start to form Layton sees are going to increase all the callers to that service are also going to start to form queues because they're dependent on that service so that they
+00:15:42 [W] Service their owner Quest and then all the callers depend on that and next thing, you know, everyone has cues all the ladies have increased timeout Town comic book explosion.
+00:15:53 [W] So how do we fix this circuit breaking is the answer and Envoy today?
+00:15:59 [W] And the way those work there are five different circuit breakers, but the one we really care about is this Max request circuit breaker, which will limit the number of outstanding requests allowed to a particular cluster.
+00:16:15 [W] So if I'm an Envoy, I receive a request and I need to Route it to a cluster if that cluster has an upper bound on the number of outstanding requests and I have that many outstanding requests to that cluster.
+00:16:26 [W] I'm just going to return a 503 to whoever sent the request that's routed there.
+00:16:31 [W] So let's revisit that traffic overload scenario and see how circuit breaking would have affected this simulation.
+00:16:40 [W] You'll notice that with a well-configured circuit breaker the late Caesar under control. So if you pay attention the scales there at the Top If you can see it the P99 latency doesn't really increase half of what the request latency
+00:16:57 [W] non circuit breaker simulation shows
+00:17:00 [W] Now you can look at the time out frequencies.
+00:17:06 [W] There are no time outs with a well-configured circuit breaker scenario.
+00:17:09 [W] are five. Oh three responses and that's due to the circuit breaker rejecting requests that would have otherwise contributed to the queue. That would have formed.
+00:17:18 [W] And you'll see that the active requests count for the well-configured circuit breaker doesn't exceed whatever the max request setting was for this particular simulation.
+00:17:31 [W] So the success rate doesn't return doesn't plummet down to zero it about 3/4 of the way.
+00:17:35 [W] Now not all circuit breakers are configured well in real life.
+00:17:44 [W] They're notoriously hard to configure.
+00:17:51 [W] So if we have a poorly configured circuit breaker, that's still better than having no circuit breakers at all.
+00:17:54 [W] You'll see that in the poorly configured case the request latency.
+00:17:57 [W] These are much higher.
+00:17:58 [W] We're still getting some time outs.
+00:17:59 [W] or rather we're getting timeouts that we weren't seeing when the well configure case and the queue size is going to be much larger, right because we overshot with the circuit breaker or setting should have been and the success rates suffers because of the timeouts
+00:18:15 [W] The 503 s but it's still better than one we saw originally when there was no circuit breaking.
+00:18:22 [W] So how do we configure these things?
+00:18:28 [W] You need to understand the service limitations?
+00:18:29 [W] And this is done by performance testing profiling of a particular application or service you can ramp up the traffic. You can pay attention to the Layton sees see when it tips over see what the queue was at that particular time and then set the limit to that.
+00:18:43 [W] You'll also want to allow Headroom for births as we saw earlier.
+00:18:49 [W] we have burst.
+00:18:51 [W] They're okay if they go away quickly, and we want to keep the concert currency values up to date now.
+00:18:56 [W] This is pretty hard systems apologies change people push code that affects the performance characteristics of an application.
+00:19:04 [W] This is very hard.
+00:19:08 [W] So service owners really shouldn't have to profile a concurrency their application.
+00:19:14 [W] Ideally, they would just focus on the application and not have to think about Network related things. The whole point in Envoy is to abstract the network.
+00:19:26 [W] So it's hard also to account for births.
+00:19:28 [W] It's unclear.
+00:19:31 [W] What is acceptable. Like what is the time length for a burst?
+00:19:33 [W] How big can these cues get?
+00:19:34 [W] how do we measure when it burns down the Q of things return back to normal and manually keeping the concurrency value manually keeping the circuit breaker values up to date is very hard so
+00:19:49 [W] World we wouldn't have to do this manual configuration.
+00:19:57 [W] The system would figure out its own limits.
+00:20:05 [W] There's no need to know about system topology or hardware and then a lot of cases we can't know this if you're in a cloud vendor who knows what these things are running on and what abstractions they put in place.
+00:20:12 [W] We would also want it to adapt to changes. So if I push a commit that
+00:20:15 [W] Makes their performance characteristics of an application software or dramatically benefits the performance characteristics such that I can handle more requests simultaneously we want this thing to adapt to it and we want it to be cheap to compute because
+00:20:31 [W] Purposes to run an application not just to run Envoy.
+00:20:35 [W] We can do this in an Envoy filter.
+00:20:39 [W] But first we must talk about Envoy filters and how they work.
+00:20:44 [W] So an analogy.
+00:20:50 [W] I like to use here is pasta sauce is the pasta noodle what Envoy filters art Envoy?
+00:20:54 [W] So the pasta noodle. It's just a vessel for the pasta sauce. And Envoy is just a vessel for round white filters.
+00:21:00 [W] So here's a basic Envoy config. Okay, we don't have any filters configured here.
+00:21:06 [W] And I'm just going to spin up an Envoy with this configuration and run our Quest through it and see what it does.
+00:21:13 [W] And what ends up happening is that Envoy closes the connection because it has no filters.
+00:21:20 [W] So it has nothing to do.
+00:21:21 [W] So let's zoom in on an Envoy process and see what's going on in there.
+00:21:29 [W] So you'll see the greatest hits of on the way there The Listener The Listener filters Network filters The Listener is a construct inside of envoy that you just tell it.
+00:21:44 [W] I'd like to listen on some port and all the requests that come in that are destined to that Port hit that listener and then they kick off the chain of events that send things through the filters.
+00:21:53 [W] An Envoy is just a vessel for Envoy filters.
+00:22:01 [W] So here's a basic Envoy config. Okay, we don't have any filters configured here.
+00:22:02 [W] And I'm just going to spin up an Envoy with this configuration and run our Quest through it and see what it does.
+00:22:03 [W] And what ends up happening is that Envoy closes the connection because it has no filters. So it has nothing to do.
+00:22:03 [W] So let's zoom in on an Envoy process and see what's going on in there.
+00:22:04 [W] So you'll see the greatest hits of on the way there The Listener listener filters Network filters The Listener is a construct inside of envoy that you just tell it.
+00:22:07 [W] I'd like to listen on some port and all the requests that come in that are destined to that Port hit that listener and then they kick off the chain of events that send things through the filters.
+00:22:08 [W] The Listener filters are something that allows code to be executed upon accepting a connection.
+00:22:09 [W] So upon the first except on that socket we can run some code in these listener filters. So it's something that would change connection metadata if I wanted to change the remote IP or determine if something
+00:22:18 [W] A connection. So upon the first except on that socket we can run some code in these listener filters.
+00:22:19 [W] So it's something that would change connection metadata. If I wanted to change the remote IP or determine if something is TLS connection or not.
+00:22:23 [W] is where that kind of stuff would happen. You can also rate limit connection. So the local rate limit filter and Envoy is implemented as a listener filter.
+00:22:33 [W] Now the network filters are Envoy filters that operate on bytes that are coming in over a connection.
+00:22:44 [W] So there's read and write filters and the read filters execute code when data is received over a connection and the right filter just does something when data is
+00:22:57 [W] Now a really important Network filter is the HTTP Connection Manager filter and this is what has the HTTP filters that everyone knows and loves so it'll parsec raw bytes over the connection like any
+00:23:16 [W] the HTTP filters that everyone knows and loves so it'll parsec raw bytes over the connection like any network filter, but those bytes are converted into HTTP message objects, and this is going to allow Envoy to
+00:23:24 [W] Into HTTP message objects and this is going to allow Envoy to operate at a higher level of abstraction so we can do things on a per request basis instead of a per series of bytes basis.
+00:23:33 [W] Inside the HP Connection Manager.
+00:23:39 [W] We have an HTTP filter chain, and that's going to be agnostic to whatever the underlying request protocol is whether it be H1 H2 grpc quick. Whatever.
+00:23:48 [W] And these HTTP filters are going to have a decode step which is what which is what's going to operate on inbound requests.
+00:23:59 [W] So imagine. I'm an Envoy a I receive an HTTP request then I'm going to decode it and then send it along.
+00:24:07 [W] It'll go somewhere.
+00:24:11 [W] I'm going to get a reply back and then I'm going to perform the encode step and then return it where it needs to go not all HP filter is need to do things on the decode or the encode right? They can do one or the other or both.
+00:24:20 [W] So now they're all experts in Envoy filters.
+00:24:25 [W] Let's talk a little bit about adaptive concurrency.
+00:24:26 [W] I'm going to keep this as simple as I can.
+00:24:35 [W] It's a complicated concept, but I'm going to talk a little bit of a high level and gloss over some of the nitty-gritty details perhaps at a future time.
+00:24:42 [W] I can talk about Envoy for evil wizards or something but not today.
+00:24:44 [W] What those bites represent so it protects a Upstream server by enforcing an upper bound on outstanding requests similar to what a circuit breaker is going to do so we can turn away excessive traffic by
+00:25:09 [W] Ruiz and not forwarding it along to the application or trying to protect and this filter can sit in front of the circuit breaker and be used in conjunction with it.
+00:25:21 [W] So one reason you'd want to do this is if you want to toggle the adapter concurrency filter on or off then you still have circuit breakers protecting you and that case or you can compare the two.
+00:25:30 [W] So one important concept with the Adaptive concurrency filter, is this gradient?
+00:25:40 [W] So this was discussed in that 2018 Netflix blog post.
+00:25:45 [W] It's inspired from latency based TCP congestion control algorithms.
+00:25:58 [W] So, you know, everyone's first introduction to TCP is that will you know adjust our are TCP window if we drop packets or something like that, but those are drop base. That means some Nick buffer somewhere has filled up full of packets, right and
+00:26:02 [W] Request was dropped.
+00:26:10 [W] So we're adjusting it. Then the latency based algorithms are going to prevent that from happening or try to by observing whatever latency was measured during the handshake and adjusting the
+00:26:20 [W] A TCP window based on how long it takes requests to go over the network.
+00:26:28 [W] So we're kind of doing the same thing here.
+00:26:34 [W] We're going to measure some kind of Ideal latency and use that as our Baseline and that's what we'll call the rtt.
+00:26:36 [W] Ideal or the ideal round-trip time.
+00:26:47 [W] And then we're also going to measure just sampled requests, right? So once we have this ideal as we move forward sampling requests, we can slice up various time windows.
+00:26:51 [W] And then we can summarize them and call this an rtt sampled.
+00:26:53 [W] Now this gradient value which is related to these round trip times is nice because it informs what direction we want to take our concurrency limit in this filter.
+00:27:10 [W] So if the ideal round-trip time is less than the sampled round-trip time.
+00:27:13 [W] We know accuse formed right the sample Layton sees are increasing from what is ideal.
+00:27:19 [W] ideal. So we want to lower the concurrency limit if the ideal is roughly equal to the sampled.
+00:27:26 [W] Or the ideal is greater than the sample blatant sees right. We're doing pretty good so we can increase the currency limit and see what happens.
+00:27:36 [W] So we can represent the new limit like this will have the current limit. You just multiply it by the gradient and you get the behavior.
+00:27:45 [W] I mentioned a moment ago.
+00:27:46 [W] We also do you think what about had room for burst and also what if the rtt ideal is roughly equal to the rtt.
+00:27:57 [W] Sampled your gradient is going to be about one.
+00:28:04 [W] We're not really going to be changing the concurrency limit. So we need a mechanism to push the concurrency little bit wider.
+00:28:05 [W] and we can do that by just adding some Headroom value right which I think by default is going to be the square root of what the concurrency limit is or what the new concurrency limit is
+00:28:17 [W] So this behavior of having a currency value and then probing into their basically widening the concurrency element and allowing more requests through until latency begins to deviate which case we
+00:28:34 [W] Shown in this Netflix blog post figure and a simulation. I performed in Python.
+00:28:44 [W] I just scripted this up.
+00:28:46 [W] So you'll see an actual limit in Blue on the left side.
+00:28:51 [W] And then the same thing in Orange on the right side the way I simulated this was if the concurrency limit was larger than what the actual limits should be right then inject
+00:29:03 [W] See into this and then see what happens.
+00:29:10 [W] So we end up having is the scenario where we widening and currency limit wait for some kind of latency deviation to occur close the limit and then wait for things to return back to normal.
+00:29:20 [W] So you'll see this bobbing motion and it tends to hover around with the actual limit should be
+00:29:25 [W] this also adjusts itself to service degradations.
+00:29:34 [W] So you can imagine a scenario where the ideal concurrency will be lower or higher in the case of a patch that changes the poor man's characteristics for the better this methodology still ends up
+00:29:45 [W] Lining with the ideal home currency is in these simulations.
+00:29:48 [W] It's a little more complicated as I said earlier, right there's this buffer value and there's all kinds of stuff in there, but I'm not going to talk about that.
+00:30:01 [W] maybe folks have questions after I can answer them. So
+00:30:04 [W] let's run through life of a packet or a life of a request for the adapter concurrency filter.
+00:30:14 [W] You remember our fellow from earlier very smart.
+00:30:18 [W] He hasn't that currency filter circuit breaker, which will ignore we'll call this the lime surface.
+00:30:27 [W] So this lime service can handle one request at a time.
+00:30:27 [W] You can see the concurrency limits one.
+00:30:31 [W] We have no outstanding requests.
+00:30:37 [W] So when a request is coming in through the filter, it's going to hit the decode step in the filter and in there.
+00:30:43 [W] We're going to Mark a timestamp we're going to say what time is it right now? And then we're going to check against how many outstanding requests we have.
+00:30:54 [W] Right and if the outstanding requests or less than the concurrency limit, we can go ahead and just forward that request along. So while the lime service is inspecting this lime or whatever. It doesn't.
+00:30:57 [W] Another request is going to come in now our concurrency limits one our outstanding requests or one so we can't let this through we've already hit our concurrency limit.
+00:31:10 [W] So we just reject it with a 503.
+00:31:13 [W] Now lime service is done doing whatever it does and then it's gonna send a reply back and that's going to go through the encode step and we can derive the request latency at this point.
+00:31:30 [W] So we know when the request went through the filter and it was forward along the line service and then we know when the reply is coming back so we can just subtract the two and then get what the request latency is sample the value.
+00:31:42 [W] now our rtt, ideal we're going to want to periodically recalculate this and the way that this works is we're going to fix the concurrency limit to some low value that we can either specify
+00:32:00 [W] Fire because we know what our application should be able to handle at that were in the worst case like there's no reason that our application cannot handle whatever this low value is.
+00:32:11 [W] And then we'll aggregate all the samples and summarize it or you can just leave it at the default which I believe is three and then it's going to periodically recalculate the concurrency limit add another interval.
+00:32:27 [W] And that's also a sample or that's also summarized via percentiles.
+00:32:31 [W] So here's a basic config will have our concurrency limit update interval which in this case would be 500 milliseconds and then our main rtt recalculation, which is that rtt.
+00:32:44 [W] ideal and that's it about 300 seconds there.
+00:32:50 [W] So given these two things we've only specified two pieces of data.
+00:32:57 [W] How often am I updating my concurrency limit?
+00:33:05 [W] How often am I recalculating the ideal round trip time just in case service characteristic change or have a Noisy Neighbor or something like that?
+00:33:06 [W] So here's adapted currency filter in action compared to well configured circuit breaker. You'll see that
+00:33:14 [W] In the middle there in our scenario, the RPS is going to bump up and then accuse going to begin to form and then the filter is going to react to this increased latency do that Q lower the concurrency limit and you can see there that
+00:33:29 [W] There's increased 503 s there's a higher rate than there would be for the rest of the simulation the queue size burns down because we're not letting us many requests through and then latency is returned back to normal and then we're periodically just
+00:33:44 [W] Returning 503 s in scenarios where the latency gets higher than we would like now compare this with the will configure circuit breaker.
+00:33:55 [W] The latencies are tighter in the adapter.
+00:33:56 [W] you can current currency filter the success rates mostly the same.
+00:34:02 [W] And the Q sizes are roughly equivalent as well.
+00:34:09 [W] But what's interesting is that the adapted currency filter only needed two pieces of information.
+00:34:11 [W] It didn't need to know how many requests the service can handle we didn't have to do any kind of measurements of that kind.
+00:34:19 [W] We just have to know how often should it calculate what the ideal latency is and how often should it update the concurrency limit?
+00:34:26 [W] That's awesome.
+00:34:29 [W] Forget about circuit breakers.
+00:34:33 [W] No, I'm just kidding. We should probably use both if you want to toggle adapter concurrency on and off.
+00:34:37 [W] The configuration for adapting currency can get more complicated if you want it to right there's all kinds of values like a Jitter buffer value all that kind of stuff that you can specify but one thing.
+00:34:52 [W] I want to zoom in on as this Min can currency setting and that's just going to specify the minimum allowed concurrency limit.
+00:34:57 [W] Okay.
+00:35:01 [W] So when you're recalculating the main rtt, the ideal round-trip time, the filter will pin the concurrency limit to this value and then make its meshmark.
+00:35:07 [W] Germans
+00:35:08 [W] And see if limits. Okay, so when you're recalculating the main RCT the ideal round-trip time.
+00:35:15 [W] The filter will pin the concurrency limit to this value and then make its measurements.
+00:35:15 [W] If that value is too low what you can end up the scenario you can end up with is that the success rate is going to drop because we're rejecting lots of requests during the measurement window. So you'll see this periodic drop there.
+00:35:24 [W] Now this can be mitad mitigated with three tries.
+00:35:33 [W] Okay, so if I have a fleet of servers that are all going through this Minar TT calculation, I'll send a request to one.
+00:35:41 [W] It's going to return a 503 and then and you can just retry somewhere else and hopefully they're not in a measurement window.
+00:35:42 [W] We can help that along by introducing this Jitter value, which is going to randomly delay the calculations to prevent an entire fleet from sinking can imagine some scenario where you scale up and you have lots of servers that came up
+00:35:57 [W] I'm and started their main rtt. Measurements at the exact same time.
+00:36:03 [W] So with this Jitter value is going to do is introduce our random timer and then make sure that things don't line up so you can see here over multiple simulations the burst 950 threes during them in our duty measurement window.
+00:36:18 [W] don't line up right? So if you hit one and you're rejected and you retry on another the chances are very high that you're not going to hit by Minar TT window.
+00:36:29 [W] So I'll talk about our experiences at lift and default settings.
+00:36:34 [W] So we track the P95 Layton sees and we find that that's that's what we want.
+00:36:45 [W] But that's for the rtt.
+00:36:46 [W] ideal and the sample agencies and I didn't put this here but we by default take a measurement of 500 requests to calculate that P95 for them in R 2 T. We have a 500 milliseconds sampling window. So that's every 500
+00:37:00 [W] The concurrency limit there's a 50% Jitter and a three-minute Menard CT window.
+00:37:11 [W] So that means every three to four and a half minutes. There's going to be a RCT measurement window.
+00:37:15 [W] We have a hundred percent buffer, which means will allow.
+00:37:20 [W] A doubling of what the ideal latency is in our samples anything beyond that then we'll start to clamp down on the concurrency limit and we have a minimum currency of 25 by default.
+00:37:34 [W] Some Services change many of these values but the thing we find that people tend to change the most is the minimum concurrency. This is actually pretty easy to change folks. We'll just look in their dashboards and look at their
+00:37:50 [W] It's not on fire see what the number of active request is over seven days or so and then just pick something that's about that value because you know that things are fine there and we want to keep the Layton sees about where they would be there
+00:38:06 [W] For adopting the feature for a new service.
+00:38:14 [W] We always verify that the downstream callers to that service are retrying on 503 s it be unfortunate if they sent two requests were rejected by the filter because of some in arts ET calculation window and then never retried somewhere else where
+00:38:24 [W] Most likely would have succeeded. So we have an increased success rate with that because of this we use retry budgets in lieu of retry circuit breakers. You can imagine a scenario where you have very high RPS service and
+00:38:39 [W] You enter a Min rtt.
+00:38:41 [W] Measurement window and lots of requests get rejected.
+00:38:46 [W] So you have lots of retries and by default.
+00:38:48 [W] Envoy is retry circuit breaker setting is three active retries that are allowed the retry budgets do this as a percentage so you can say 25% of my outstanding requests
+00:39:01 [W] Allowed to be retries and you still get the protection from retry storms this way but it will scale with the number of outstanding requests you have for a service.
+00:39:10 [W] We then set the Min concurrency to roughly with the steady state number of active request was I said earlier.
+00:39:18 [W] Some general observations almost all the data concurrency events that I've witnessed are due to a service degradation not bikes in RPS.
+00:39:32 [W] So a bad deploy or an upstream dependency or like a third party that's having a latency or an outage.
+00:39:41 [W] That's where it's coming from.
+00:39:46 [W] It's never too much traffic is coming into an instance causing the latency still increase.
+00:39:47 [W] So let's take a look at that bad deploy scenario.
+00:39:54 [W] This was a situation where a service that lift had done a deployment and it had caused CPU utilization to increase on the majority of the nodes in that cluster
+00:40:07 [W] And it was independent of the number of requests that were coming in. So if you just sent it no request the CPU would still be redlining.
+00:40:14 [W] So that's a concurrency in this scenario notices that oh, okay, so that it doesn't know that the CPU utilization is increasing but it is seeing that the latency these are beginning to increase so it starts shedding tons of load.
+00:40:31 [W] And what it's doing is it's it's keeping the sampled round trip times within to X of the Minar TT because we have a hundred percent buffer value.
+00:40:46 [W] So the average Min rtt is in yellow there and green those are sampled round trip times and it stays roughly Within.
+00:40:54 [W] Well within a hundred percent of what the Menard TT is there.
+00:41:00 [W] so all that load shedding was just for the purposes of keeping those two lines close together.
+00:41:05 [W] As you can see, you know, a hundred percent CPU utilization isn't doing any favors to the request latency is there.
+00:41:12 [W] So thanks.
+00:41:15 [W] I'll take questions.
+00:41:16 [W] Okay, looks like the the first question is does adding a passive circuit breaker mess up the Adaptive concurrency.
+00:41:34 [W] No, it doesn't. So what you would the circuit breaking is occurring in the router filter, which is almost always the last one right? So if you set that circuit breaker value that the passive circuit breaker value to whatever the upper bounds
+00:41:45 [W] That would be on your adapted in currency filter because there's a Max concurrency limit that you can set their as long as it's you know that or above that then you're fine.
+00:41:56 [W] So typically what we would have done when I was at lift was to have both and then if you want to toggle on and off adaptive concurrency, just use that regular circuit breaker as a backstop.
+00:42:09 [W] So yeah, so no issues there.
+00:42:11 [W] Let's see the next one.
+00:42:18 [W] There's there's a lot of questions about a downloading the presentation and the links what I can do for the lynx is I'll just I'll just run through the presentation just put all those links on my my Twitter which I barely use but
+00:42:29 [W] That the handles in the very beginning of the presentation is Tony a 1:1 Iain, and I'll just put all the links there for those who want to see it.
+00:42:40 [W] Let's see.
+00:42:45 [W] Okay, and then is adaptive concurrency.
+00:42:48 [W] So is the adapter concurrency counter synced across all Envoy clients are local so all of the adapted concurrency that decision making and counters and everything.
+00:42:58 [W] It's / Envoy instance, right?
+00:43:01 [W] So it's all going to be local if let's say you have a fleet of five servers, right and each one has an Envoy sidecar and all the requests are going through that right the
+00:43:12 [W] Limits going to be independent for each one.
+00:43:16 [W] So if you have a single node, that's degraded for whatever reason right?
+00:43:19 [W] Let's say they're all on different servers and one of them has a Noisy Neighbor that's influencing performance the adapted currency filter for that one node.
+00:43:30 [W] It's going to adjust the concurrency limit just for that one. Now. The rest of them will make their own independent decisions.
+00:43:34 [W] This actually came in handy a few times it lifts. So one one issue that's worth mentioning is
+00:43:40 [W] a lot of people have like this front proxy right like a fleet of envoy server.
+00:43:50 [W] Is it just, you know come into some environment with with tons and tons of services and that the concurrency is not really good candidate for that.
+00:43:59 [W] Most useful and a scenario where you have a sidecar for each individual service and then you're trying to limit requests or shed load on the Ingress to the specific nodes.
+00:44:01 [W] Let's see when reducing concurrency.
+00:44:08 [W] Wouldn't you create a bottleneck and queue of requests waiting to be processed even if the error rate is decreased not necessarily because what you're doing is you're shedding the load so
+00:44:23 [W] if I understand the question correctly, the concern is that if the concurrency limit drops we have tons of requests coming in and you're rejecting some of them those requests would form a queue somehow what's going to
+00:44:38 [W] Bananas if you have retries enabled its and let's say you have a previous hosts retry predicate configured on your Envoy.
+00:44:47 [W] It's going to retry on a different node, and then it may or may not succeed there depending on what's going on in your environment, but then eventually it'll rot a retries and and it'll stop so when you're shedding the load you typically just
+00:44:59 [W] Turning the request away and only working on you're only working on what you can handle basically hopefully that answers if it doesn't shoot me an e-mail or tweet at me how be happy to answer more questions that
+00:45:15 [W] Let's see the next one. You've mentioned that you need to make sure that Downstream retries on 503 before enabling adapted concurrency would enabling retries on
+00:45:33 [W] What enabling Convoy retry on 503 or connection reset satisfy this requirement?
+00:45:48 [W] Yeah, so what I mean by make sure that your retry on Phi by 3 so that in your configuration on the the caller side, right?
+00:45:54 [W] So the people that are sending requests out to some service there. You can configure what your retry policy is going to be.
+00:45:59 [W] All right, so that's where you would configure like your retry budget or
+00:46:04 [W] like that what you would also what you can do is say you can retry on 5 XX or specifically 503.
+00:46:12 [W] He's right.
+00:46:17 [W] There's there's all there's basically an enum in that config that specifies under what conditions you will retry and all I mean is just make sure that 503 is covered because when we are shedding load, we're returning 503 s and if you're using grpc, then it's going to be whatever the
+00:46:27 [W] You know things like error code 3 or something the one the one that's the 503 equivalent for grpc.
+00:46:35 [W] So what you're going to be getting so Envoy you can specify depending on what your underlying protocol is what you want to retry on so 503 for HTTP and think service on available for grpc.
+00:46:48 [W] Well, this one's a long one.
+00:46:56 [W] Sorry the 503 is during the measurement window do they appear only in the early stage of the envoy processes Lifetime and then disappear when the concurrency limit goes up or can they be
+00:47:11 [W] Permanent problem during the envoy processes lifetime.
+00:47:18 [W] Okay, so I think I know what this is getting at if let's say you have a fleet of servers and then they all come up the exact same time. Right and there's kind of like a burst and 503 is and some of those simulations that's because the envoy process comes up
+00:47:30 [W] And I mean rtt measurement window.
+00:47:34 [W] So if your men can currency value is really low.
+00:47:41 [W] Let's say it's like three concurrent requests, right and your blasting your service with with our PCS.
+00:47:45 [W] You would see elevated 503.
+00:47:54 [W] s temporarily during in the very beginning, but then typically it'll go away because you know, you spend like some fraction of a second measuring your ideal latency or Menard CT and then
+00:48:02 [W] you kind of open the floodgates and let requests come through the scenarios in which that those five i3s would be an issue but continuously is if I mean your service is being hammered with requests like way more than it would be able to handle right?
+00:48:15 [W] So you just be consistently shedding lots of think that that elevated CPU case that really bad deploy that was mentioned a minute ago.
+00:48:25 [W] That would just be constantly shedding load right because it's I mean if there were other things going on, so that was a scenario where there was just a horrible degradation and it was perpetually doing 500 threes and you'd see elevated vivax axes, right?
+00:48:41 [W] And then there's another scenario where you just have way too much load coming in and you're shedding look constantly.
+00:48:46 [W] Those are the only times that I can imagine that being an issue you can you can make sure none of this happens right by just configuring that men can currency value to what it needs to be so
+00:48:59 [W] So what we would do was whenever a service wanted to adopt the Adaptive concurrency filter is just go to our dashboards and basically look at the number of active requests.
+00:49:08 [W] So would be like is the service on fire right now?
+00:49:09 [W] No, OK great.
+00:49:10 [W] Like is this?
+00:49:13 [W] Okay. Would you like to maintain this and people will typically be like, yes, so you just look at what their active request count is at a steady state and then like for the last like week or two and then I would just pick a name concurrency value.
+00:49:25 [W] That's pretty much at that.
+00:49:25 [W] and then we'd never run into issues right unless there's a major change in the character like the performance characteristics of that service, right or there's elevated load of some kind so
+00:49:40 [W] My question is how does this mechanism affect performance?
+00:49:54 [W] I mean, it's unclear was meant by performance.
+00:49:59 [W] So so how does it affect the latency of your request, right?
+00:50:09 [W] As you saw it keeps it under control basically, right so that the whole purpose in this is to keep your latency values reasonable for some definition of reasonable, right and it's doing
+00:50:14 [W] By shedding like you're getting rid of excess request. So there is some scenario where you're just letting in everything and your you have elevated latency is right, but let's say you're not fully timing out your throughput would be higher right, but then you have elevated
+00:50:29 [W] Layton sees and then you have this cascading failure scenario because that latency is kind of going to backpropagate until that like the origin of whatever kicked off this chain of requests and you're typically going to see a time out somewhere in there.
+00:50:40 [W] Right?
+00:50:43 [W] So we the goal is to keep the latency is under control if you're that targeting throughput then I am not sure I didn't really measure that because that that wasn't really a concern for us at the time.
+00:50:55 [W] Yeah, if there's a more specific definition of performance tweet at me or email me and I'll be happy to answer that or find me an Envoy Slack.
+00:51:07 [W] Okay, I think that was all the questions so I will be sure to right after this go and paste the links on my Twitter.
+00:51:20 [W] And okay. Thank you very much.
