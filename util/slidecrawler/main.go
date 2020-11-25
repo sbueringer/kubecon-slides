@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -150,10 +151,11 @@ func getAttachments(e event) ([]attachment, error) {
 
 const maxFileLength = 250
 
-var dropRegex = regexp.MustCompile(`([/?:]|( \(Slides Attached\)))`)
+var dropRegex = regexp.MustCompile(`([/?:]|%|( \(Slides Attached\)))`)
 
 func generateFilename(e event, href string) string {
 	filename := fmt.Sprintf("%s-%s", e.name, path.Base(href))
+	filename = strings.ReplaceAll(filename, "%20", " ")
 	filename = dropRegex.ReplaceAllString(filename, "")
 
 	if len(filename) > maxFileLength {
